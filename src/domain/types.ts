@@ -306,6 +306,10 @@ export interface PopupRecord {
   refreshedAt?: string;
   followSource: boolean;
   detached: boolean;
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
   zoom: number;
   query: string;
   settings: Record<string, ViewerSettingValue>;

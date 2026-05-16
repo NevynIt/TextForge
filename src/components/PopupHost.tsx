@@ -1,4 +1,5 @@
-import { Activity, Download, ExternalLink, RefreshCw, Search, Settings, X, ZoomIn, ZoomOut } from "lucide-preact";
+import type { JSX } from "preact";
+import { Activity, Download, ExternalLink, RefreshCw, RotateCcw, Search, Settings, X, ZoomIn, ZoomOut } from "lucide-preact";
 import type { PipelineTraceStep, PluginState, PopupRecord, TextDocument, ViewerControlDefinition, ViewerSettingValue } from "../domain/types";
 import { ViewerContent, viewerSnapshotHtml } from "./viewers";
 
@@ -19,9 +20,10 @@ export function PopupHost({ popups, documents, pluginStates, onLoadPlugin, onSet
       {popups.map((popup, index) => {
         const document = popup.documentId ? documents.find((candidate) => candidate.id === popup.documentId) : undefined;
         const stale = Boolean(document && popup.sourceVersion !== undefined && document.version > popup.sourceVersion);
+        const frame = popupFrame(popup, index);
         return (
-          <section class="popup-window" style={{ transform: `translate(${index * 18}px, ${index * 18}px)` }} key={popup.id}>
-            <header class="popup-header">
+          <section class="popup-window" style={popupStyle(frame, index)} key={popup.id}>
+            <header class="popup-header" onPointerDown={(event) => startPopupDrag(event, popup, frame, onUpdate)}>
               <div>
                 <strong>
                   {popup.documentIdentity ? (
@@ -60,6 +62,7 @@ export function PopupHost({ popups, documents, pluginStates, onLoadPlugin, onSet
                     </button>
                   </>
                 ) : null}
+                <WindowLayoutMenu popupId={popup.id} onUpdate={onUpdate} />
                 <button type="button" title="Close" onClick={() => onClose(popup.id)}>
                   <X size={16} />
                 </button>
@@ -83,17 +86,22 @@ export function PopupHost({ popups, documents, pluginStates, onLoadPlugin, onSet
                   </label>
                 ) : null}
                 {popup.result?.controls?.length ? (
-                  <details class="viewer-settings">
-                    <summary>
-                      <Settings size={15} />
-                      Controls
-                    </summary>
-                    <ViewerControls
-                      controls={popup.result.controls}
-                      settings={popup.settings}
-                      onChange={(key, value) => onUpdate(popup.id, { settings: { ...popup.settings, [key]: value } })}
-                    />
-                  </details>
+                  <>
+                    <button type="button" title="Reset controls" onClick={() => onUpdate(popup.id, { settings: defaultSettingsFromControls(popup.result?.controls || []) })}>
+                      <RotateCcw size={15} />
+                    </button>
+                    <details class="viewer-settings">
+                      <summary>
+                        <Settings size={15} />
+                        Controls
+                      </summary>
+                      <ViewerControls
+                        controls={popup.result.controls}
+                        settings={popup.settings}
+                        onChange={(key, value) => onUpdate(popup.id, { settings: { ...popup.settings, [key]: value } })}
+                      />
+                    </details>
+                  </>
                 ) : null}
                 {popup.refreshedAt ? <span>Refreshed {new Date(popup.refreshedAt).toLocaleTimeString()}</span> : null}
               </div>
@@ -104,11 +112,167 @@ export function PopupHost({ popups, documents, pluginStates, onLoadPlugin, onSet
               {popup.kind === "plugin-manager" ? <PluginManagerList states={pluginStates} onLoad={onLoadPlugin} onSetAutoload={onSetPluginAutoload} /> : null}
               {popup.kind === "pipeline-trace" ? <PipelineTrace trace={popup.trace || []} /> : null}
             </main>
+            <div class="popup-resize-handle" title="Resize" onPointerDown={(event) => startPopupResize(event, popup, frame, onUpdate)} />
           </section>
         );
       })}
     </div>
   );
+}
+
+interface PopupFrame {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const MIN_POPUP_WIDTH = 320;
+const MIN_POPUP_HEIGHT = 260;
+
+function popupStyle(frame: PopupFrame, index: number): JSX.CSSProperties {
+  return {
+    left: `${frame.x}px`,
+    top: `${frame.y}px`,
+    width: `${frame.width}px`,
+    height: `${frame.height}px`,
+    zIndex: 20 + index
+  };
+}
+
+function popupFrame(popup: PopupRecord, index: number): PopupFrame {
+  const viewport = viewportSize();
+  const width = clamp(finiteNumber(popup.width, popup.kind === "viewer" ? 920 : 760), MIN_POPUP_WIDTH, Math.max(MIN_POPUP_WIDTH, viewport.width - 16));
+  const height = clamp(finiteNumber(popup.height, popup.kind === "viewer" ? 680 : 560), MIN_POPUP_HEIGHT, Math.max(MIN_POPUP_HEIGHT, viewport.height - 16));
+  const fallbackX = viewport.width - width - 28 + index * 18;
+  const fallbackY = 96 + index * 18;
+  return {
+    x: clamp(finiteNumber(popup.x, fallbackX), 8, Math.max(8, viewport.width - width - 8)),
+    y: clamp(finiteNumber(popup.y, fallbackY), 8, Math.max(8, viewport.height - height - 8)),
+    width,
+    height
+  };
+}
+
+function startPopupDrag(
+  event: JSX.TargetedPointerEvent<HTMLElement>,
+  popup: PopupRecord,
+  frame: PopupFrame,
+  onUpdate: PopupHostProps["onUpdate"]
+): void {
+  if (event.button !== 0 || isInteractiveTarget(event.target)) {
+    return;
+  }
+  event.preventDefault();
+  const startX = event.clientX;
+  const startY = event.clientY;
+
+  const move = (moveEvent: PointerEvent) => {
+    const viewport = viewportSize();
+    onUpdate(popup.id, {
+      x: Math.round(clamp(frame.x + moveEvent.clientX - startX, 8, Math.max(8, viewport.width - frame.width - 8))),
+      y: Math.round(clamp(frame.y + moveEvent.clientY - startY, 8, Math.max(8, viewport.height - frame.height - 8)))
+    });
+  };
+  const stop = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", stop, { once: true });
+}
+
+function startPopupResize(
+  event: JSX.TargetedPointerEvent<HTMLDivElement>,
+  popup: PopupRecord,
+  frame: PopupFrame,
+  onUpdate: PopupHostProps["onUpdate"]
+): void {
+  if (event.button !== 0) {
+    return;
+  }
+  event.preventDefault();
+  event.stopPropagation();
+  event.currentTarget.setPointerCapture?.(event.pointerId);
+  const startX = event.clientX;
+  const startY = event.clientY;
+
+  const move = (moveEvent: PointerEvent) => {
+    const viewport = viewportSize();
+    onUpdate(popup.id, {
+      width: Math.round(clamp(frame.width + moveEvent.clientX - startX, MIN_POPUP_WIDTH, Math.max(MIN_POPUP_WIDTH, viewport.width - frame.x - 8))),
+      height: Math.round(clamp(frame.height + moveEvent.clientY - startY, MIN_POPUP_HEIGHT, Math.max(MIN_POPUP_HEIGHT, viewport.height - frame.y - 8)))
+    });
+  };
+  const stop = () => {
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", stop);
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", stop, { once: true });
+}
+
+function isInteractiveTarget(target: EventTarget | null): boolean {
+  return target instanceof Element && Boolean(target.closest("button,input,select,textarea,label,a,summary,.popup-actions"));
+}
+
+function defaultSettingsFromControls(controls: ViewerControlDefinition[]): Record<string, ViewerSettingValue> {
+  return Object.fromEntries(controls.map((control) => [control.id, control.defaultValue]));
+}
+
+function viewportSize(): { width: number; height: number } {
+  if (typeof window === "undefined") {
+    return { width: 1200, height: 800 };
+  }
+  return { width: window.innerWidth || 1200, height: window.innerHeight || 800 };
+}
+
+function finiteNumber(value: unknown, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max);
+}
+
+function WindowLayoutMenu({ popupId, onUpdate }: { popupId: string; onUpdate: PopupHostProps["onUpdate"] }) {
+  return (
+    <details class="window-layout-menu">
+      <summary title="Window layout" aria-label="Window layout">
+        <span class="quadrant-glyph quadrant-glyph-menu" />
+      </summary>
+      <div class="window-layout-panel" aria-label="Window layout controls">
+        <button type="button" title="Maximize" aria-label="Maximize" onClick={() => onUpdate(popupId, layoutPatch("max"))}>
+          <span class="quadrant-glyph quadrant-glyph-max" />
+        </button>
+        <button type="button" title="Top left" aria-label="Top left" onClick={() => onUpdate(popupId, layoutPatch("top-left"))}>
+          <span class="quadrant-glyph quadrant-glyph-top-left" />
+        </button>
+        <button type="button" title="Top right" aria-label="Top right" onClick={() => onUpdate(popupId, layoutPatch("top-right"))}>
+          <span class="quadrant-glyph quadrant-glyph-top-right" />
+        </button>
+        <button type="button" title="Bottom left" aria-label="Bottom left" onClick={() => onUpdate(popupId, layoutPatch("bottom-left"))}>
+          <span class="quadrant-glyph quadrant-glyph-bottom-left" />
+        </button>
+        <button type="button" title="Bottom right" aria-label="Bottom right" onClick={() => onUpdate(popupId, layoutPatch("bottom-right"))}>
+          <span class="quadrant-glyph quadrant-glyph-bottom-right" />
+        </button>
+      </div>
+    </details>
+  );
+}
+
+function layoutPatch(layout: "max" | "top-left" | "top-right" | "bottom-left" | "bottom-right"): Partial<PopupRecord> {
+  const viewport = viewportSize();
+  const gap = 8;
+  if (layout === "max") {
+    return { x: gap, y: gap, width: viewport.width - gap * 2, height: viewport.height - gap * 2 };
+  }
+  const width = Math.floor((viewport.width - gap * 3) / 2);
+  const height = Math.floor((viewport.height - gap * 3) / 2);
+  const left = layout.endsWith("left") ? gap : gap * 2 + width;
+  const top = layout.startsWith("top") ? gap : gap * 2 + height;
+  return { x: left, y: top, width, height };
 }
 
 function DiagnosticsList({ diagnostics }: { diagnostics: NonNullable<PopupRecord["diagnostics"]> }) {
@@ -303,13 +467,45 @@ function exportPopup(popup: PopupRecord): void {
   if (!popup.result) {
     return;
   }
-  const extension = popup.result.kind === "svg" ? "svg" : "html";
-  const content = extension === "svg" ? viewerSnapshotHtml(popup.result) : `<!doctype html><meta charset="utf-8">${viewerSnapshotHtml(popup.result)}`;
-  const blob = new Blob([content], { type: extension === "svg" ? "image/svg+xml" : "text/html" });
+  const payload = exportPayload(popup.result);
+  const blob = new Blob([payload.content], { type: payload.type });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${popup.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "textforge-view"}.${extension}`;
+  anchor.download = `${popup.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "textforge-view"}.${payload.extension}`;
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function exportPayload(result: NonNullable<PopupRecord["result"]>): { content: string; extension: string; type: string } {
+  if (result.kind === "svg") {
+    return { content: viewerSnapshotHtml(result), extension: "svg", type: "image/svg+xml" };
+  }
+  if (result.kind === "table") {
+    const extension = result.table.delimiter === "\t" ? "tsv" : "csv";
+    return { content: tableToDelimited(result.table.columns, result.table.rows, result.table.delimiter), extension, type: "text/plain" };
+  }
+  if (result.kind === "tree" || result.kind === "mindmap") {
+    return { content: JSON.stringify(result.nodes, null, 2), extension: "json", type: "application/json" };
+  }
+  if (result.kind === "graph") {
+    return { content: JSON.stringify(result.graph, null, 2), extension: "json", type: "application/json" };
+  }
+  return {
+    content: `<!doctype html><meta charset="utf-8">${viewerSnapshotHtml(result)}`,
+    extension: "html",
+    type: "text/html"
+  };
+}
+
+function tableToDelimited(columns: string[], rows: string[][], delimiter: "," | "\t"): string {
+  const lines = [columns, ...rows].map((row) => row.map((cell) => escapeDelimitedCell(cell, delimiter)).join(delimiter));
+  return `${lines.join("\n")}\n`;
+}
+
+function escapeDelimitedCell(value: string, delimiter: "," | "\t"): string {
+  if (!value.includes(delimiter) && !value.includes("\n") && !value.includes('"')) {
+    return value;
+  }
+  return `"${value.replace(/"/g, '""')}"`;
 }

@@ -1,5 +1,181 @@
 import type { TextForgePlugin } from "../domain/types";
 
+const htmlControls = [
+  {
+    id: "readingTheme",
+    label: "Reading theme",
+    type: "select" as const,
+    defaultValue: "light",
+    group: "Presentation",
+    options: [
+      { label: "Light", value: "light" },
+      { label: "Sepia", value: "sepia" },
+      { label: "Dark", value: "dark" }
+    ]
+  },
+  {
+    id: "contentWidth",
+    label: "Content width",
+    type: "select" as const,
+    defaultValue: "normal",
+    group: "Presentation",
+    options: [
+      { label: "Normal", value: "normal" },
+      { label: "Wide", value: "wide" },
+      { label: "Full", value: "full" }
+    ]
+  }
+];
+
+const svgControls = [
+  {
+    id: "svgBackground",
+    label: "Background",
+    type: "select" as const,
+    defaultValue: "white",
+    group: "Presentation",
+    options: [
+      { label: "White", value: "white" },
+      { label: "Transparent", value: "transparent" },
+      { label: "Checker", value: "checker" },
+      { label: "Dark", value: "dark" }
+    ]
+  },
+  {
+    id: "fitMode",
+    label: "Fit mode",
+    type: "select" as const,
+    defaultValue: "contain",
+    group: "Presentation",
+    options: [
+      { label: "Contain", value: "contain" },
+      { label: "Actual size", value: "actual" },
+      { label: "Full width", value: "full" }
+    ]
+  }
+];
+
+const treeControls = [
+  {
+    id: "expandDepth",
+    label: "Expand depth",
+    type: "range" as const,
+    defaultValue: 3,
+    min: 0,
+    max: 8,
+    step: 1,
+    group: "Structure"
+  },
+  {
+    id: "depthLimit",
+    label: "Depth limit",
+    type: "range" as const,
+    defaultValue: 0,
+    min: 0,
+    max: 12,
+    step: 1,
+    group: "Structure"
+  },
+  {
+    id: "showDetails",
+    label: "Show details",
+    type: "boolean" as const,
+    defaultValue: true,
+    group: "Inspection"
+  },
+  {
+    id: "density",
+    label: "Density",
+    type: "select" as const,
+    defaultValue: "comfortable",
+    group: "Presentation",
+    options: [
+      { label: "Comfortable", value: "comfortable" },
+      { label: "Compact", value: "compact" }
+    ]
+  }
+];
+
+const tableControls = [
+  {
+    id: "sortColumn",
+    label: "Sort column",
+    type: "text" as const,
+    defaultValue: "",
+    group: "Table"
+  },
+  {
+    id: "sortDirection",
+    label: "Direction",
+    type: "select" as const,
+    defaultValue: "asc",
+    group: "Table",
+    options: [
+      { label: "Ascending", value: "asc" },
+      { label: "Descending", value: "desc" }
+    ]
+  },
+  {
+    id: "maxRows",
+    label: "Max rows",
+    type: "range" as const,
+    defaultValue: 1000,
+    min: 0,
+    max: 5000,
+    step: 50,
+    group: "Table"
+  }
+];
+
+const mindmapControls = [
+  {
+    id: "mindmapMode",
+    label: "Mode",
+    type: "select" as const,
+    defaultValue: "full",
+    group: "Layout",
+    options: [
+      { label: "Balanced", value: "full" },
+      { label: "Right side", value: "side" }
+    ]
+  },
+  {
+    id: "initialDepth",
+    label: "Initial depth",
+    type: "select" as const,
+    defaultValue: "depth2",
+    group: "Layout",
+    options: [
+      { label: "Collapsed", value: "collapsed" },
+      { label: "Depth 2", value: "depth2" },
+      { label: "All", value: "all" }
+    ]
+  },
+  {
+    id: "mindmapTheme",
+    label: "Theme",
+    type: "select" as const,
+    defaultValue: "textforge",
+    group: "Presentation",
+    options: [
+      { label: "TextForge", value: "textforge" },
+      { label: "Primary", value: "primary" },
+      { label: "Greensea", value: "greensea" },
+      { label: "Warning", value: "warning" }
+    ]
+  },
+  {
+    id: "textScale",
+    label: "Text scale",
+    type: "range" as const,
+    defaultValue: 1,
+    min: 0.7,
+    max: 1.6,
+    step: 0.1,
+    group: "Presentation"
+  }
+];
+
 const graphControls = [
   {
     id: "layout",
@@ -27,6 +203,16 @@ const graphControls = [
     group: "Node style"
   },
   {
+    id: "layoutIterations",
+    label: "Layout iterations",
+    type: "range" as const,
+    defaultValue: 120,
+    min: 10,
+    max: 500,
+    step: 10,
+    group: "Layout"
+  },
+  {
     id: "edgeWidth",
     label: "Edge width",
     type: "range" as const,
@@ -44,6 +230,18 @@ const graphControls = [
     group: "Labels"
   },
   {
+    id: "labelMode",
+    label: "Label mode",
+    type: "select" as const,
+    defaultValue: "auto",
+    group: "Labels",
+    options: [
+      { label: "Auto", value: "auto" },
+      { label: "All", value: "all" },
+      { label: "None", value: "none" }
+    ]
+  },
+  {
     id: "showEdgeLabels",
     label: "Show edge labels",
     type: "boolean" as const,
@@ -51,11 +249,37 @@ const graphControls = [
     group: "Labels"
   },
   {
+    id: "filterToMatches",
+    label: "Filter to search matches",
+    type: "boolean" as const,
+    defaultValue: false,
+    group: "Filtering"
+  },
+  {
     id: "colorByType",
     label: "Colour by type",
     type: "boolean" as const,
     defaultValue: true,
     group: "Node style"
+  },
+  {
+    id: "sizeMetric",
+    label: "Size metric",
+    type: "select" as const,
+    defaultValue: "fixed",
+    group: "Node style",
+    options: [
+      { label: "Fixed", value: "fixed" },
+      { label: "Degree", value: "degree" },
+      { label: "PageRank", value: "pagerank" }
+    ]
+  },
+  {
+    id: "focusNeighbors",
+    label: "Focus selected neighbors",
+    type: "boolean" as const,
+    defaultValue: false,
+    group: "Filtering"
   },
   {
     id: "performanceMode",
@@ -90,7 +314,8 @@ const plugin: TextForgePlugin = {
           kind: "html",
           title: "HTML Viewer",
           html: value.html,
-          capabilities: { zoom: true, search: true },
+          capabilities: { zoom: true, search: true, export: true, presets: true },
+          controls: htmlControls,
           diagnostics: value.diagnostics
         };
       }
@@ -109,7 +334,8 @@ const plugin: TextForgePlugin = {
           kind: "tree",
           title: "Tree Viewer",
           nodes: value.data,
-          capabilities: { zoom: true, search: true, fold: true, inspect: true },
+          capabilities: { zoom: true, search: true, fold: true, inspect: true, export: true, presets: true },
+          controls: treeControls,
           diagnostics: value.diagnostics
         };
       }
@@ -128,7 +354,8 @@ const plugin: TextForgePlugin = {
           kind: "table",
           title: "Table Viewer",
           table: value.data,
-          capabilities: { zoom: true, search: true, filter: true, inspect: true },
+          capabilities: { zoom: true, search: true, filter: true, inspect: true, export: true, presets: true },
+          controls: tableControls,
           diagnostics: value.diagnostics
         };
       }
@@ -147,7 +374,8 @@ const plugin: TextForgePlugin = {
           kind: "svg",
           title: "SVG Viewer",
           svg: value.svg,
-          capabilities: { zoom: true, pan: true, search: true },
+          capabilities: { zoom: true, pan: true, search: true, export: true, presets: true },
+          controls: svgControls,
           diagnostics: value.diagnostics
         };
       }
@@ -166,7 +394,8 @@ const plugin: TextForgePlugin = {
           kind: "mindmap",
           title: "Mind Map Viewer",
           nodes: value.data,
-          capabilities: { zoom: true, pan: true, search: true, fold: true, inspect: true },
+          capabilities: { zoom: true, pan: true, search: true, fold: true, inspect: true, export: true, presets: true },
+          controls: mindmapControls,
           diagnostics: value.diagnostics
         };
       }
@@ -209,7 +438,20 @@ const plugin: TextForgePlugin = {
           engine: "sigma",
           capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true, select: true, export: true, presets: true, tooltips: true },
           controls: graphControls.map((control) =>
-            control.id === "layout" ? { ...control, defaultValue: "circle" } : control
+            control.id === "layout"
+              ? {
+                  ...control,
+                  defaultValue: "forceatlas2",
+                  options: [
+                    { label: "ForceAtlas2", value: "forceatlas2" },
+                    { label: "Noverlap", value: "noverlap" },
+                    { label: "Circular", value: "circular" },
+                    { label: "Random", value: "random" }
+                  ]
+                }
+              : control.id === "sizeMetric"
+                ? { ...control, defaultValue: "degree" }
+                : control
           ),
           diagnostics: value.diagnostics
         };

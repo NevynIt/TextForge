@@ -24,6 +24,8 @@ export function createViewerPopup(
     refreshedAt: now,
     followSource: false,
     detached: false,
+    width: 920,
+    height: 680,
     zoom: 1,
     query: "",
     settings: defaultSettings(result)
@@ -46,6 +48,8 @@ export function createDiagnosticsPopup(document: TextDocument, diagnostics: Diag
     refreshedAt: now,
     followSource: false,
     detached: false,
+    width: 760,
+    height: 560,
     zoom: 1,
     query: "",
     settings: {}
@@ -62,6 +66,8 @@ export function createToolPopup(kind: "plugin-manager" | "pipeline-trace", title
     createdAt: now,
     followSource: false,
     detached: false,
+    width: 760,
+    height: 560,
     zoom: 1,
     query: "",
     settings: {}
