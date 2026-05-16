@@ -23,4 +23,6 @@ npm run dev
 npm run check
 ```
 
-`npm run build` creates a file-openable static build in `dist/` with relative asset paths. The browser extension manifest is copied to `dist/manifest.json`.
+`npm run build` creates a file-openable static build in `dist/`. Open `dist/index.html` directly with `file://` to run without a server. The browser extension manifest is copied to `dist/manifest.json`.
+
+`npm run build:module` keeps the regular Vite module/chunk build available for debugging, but the default production build is the local-file build.
