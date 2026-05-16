@@ -5,6 +5,10 @@ interface StoredWorkspace {
   documents: TextDocument[];
 }
 
+export interface PluginPreferences {
+  autoloadPluginIds: string[];
+}
+
 export class TextForgeStorage {
   private db: IDBDatabase | null = null;
   private idbUnavailable = false;
@@ -33,6 +37,14 @@ export class TextForgeStorage {
 
   async saveWorkspace(workspace: StoredWorkspace): Promise<void> {
     await this.set("workspace", workspace);
+  }
+
+  async loadPluginPreferences(): Promise<PluginPreferences> {
+    return (await this.get<PluginPreferences>("pluginPreferences")) || { autoloadPluginIds: [] };
+  }
+
+  async savePluginPreferences(preferences: PluginPreferences): Promise<void> {
+    await this.set("pluginPreferences", preferences);
   }
 
   async get<T>(key: string): Promise<T | null> {

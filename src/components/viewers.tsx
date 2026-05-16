@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { GraphModel, TableModel, TreeNode, ViewerResult } from "../domain/types";
+import type { GraphModel, TableModel, TreeNode, ViewerResult, ViewerSettingValue } from "../domain/types";
 import { escapeHtml } from "../parsers/source";
 
 interface ViewerContentProps {
   result: ViewerResult;
   query: string;
   zoom: number;
+  settings: Record<string, ViewerSettingValue>;
 }
 
-export function ViewerContent({ result, query, zoom }: ViewerContentProps) {
+export function ViewerContent({ result, query, zoom, settings }: ViewerContentProps) {
   const style = { "--viewer-zoom": String(zoom) };
   if (result.kind === "html") {
     return <div class="viewer-content viewer-html" style={style} dangerouslySetInnerHTML={{ __html: result.html }} />;
@@ -40,7 +41,7 @@ export function ViewerContent({ result, query, zoom }: ViewerContentProps) {
   if (result.kind === "graph") {
     return (
       <div class="viewer-content viewer-graph" style={style}>
-        <GraphView graph={result.graph} engine={result.engine} query={query} />
+        <GraphView graph={result.graph} engine={result.engine} query={query} settings={settings} />
       </div>
     );
   }
@@ -139,10 +140,28 @@ function MindMapNode({ node, depth }: { node: TreeNode; depth: number }) {
   );
 }
 
-function GraphView({ graph, engine, query }: { graph: GraphModel; engine: "cytoscape" | "sigma" | "static"; query: string }) {
+function GraphView({
+  graph,
+  engine,
+  query,
+  settings
+}: {
+  graph: GraphModel;
+  engine: "cytoscape" | "sigma" | "static";
+  query: string;
+  settings: Record<string, ViewerSettingValue>;
+}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState<{ id: string; label: string; kind: "node" | "edge"; type?: string } | null>(null);
   const highlighted = useMemo(() => query.trim().toLowerCase(), [query]);
+  const layout = stringSetting(settings.layout, engine === "sigma" ? "circle" : "breadthfirst");
+  const nodeSize = numberSetting(settings.nodeSize, 18);
+  const edgeWidth = numberSetting(settings.edgeWidth, 1.5);
+  const showLabels = booleanSetting(settings.showLabels, true);
+  const showEdgeLabels = booleanSetting(settings.showEdgeLabels, false);
+  const colorByType = booleanSetting(settings.colorByType, true);
+  const performanceMode = stringSetting(settings.performanceMode, "balanced");
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -166,6 +185,8 @@ function GraphView({ graph, engine, query }: { graph: GraphModel; engine: "cytos
                 id: node.id,
                 label: node.label,
                 kind: node.type || "node",
+                size: node.size || nodeSize,
+                color: node.color || typeColor(colorByType ? node.type || "node" : "node"),
                 matched: highlighted && node.label.toLowerCase().includes(highlighted)
               }
             })),
@@ -174,7 +195,9 @@ function GraphView({ graph, engine, query }: { graph: GraphModel; engine: "cytos
                 id: edge.id || `edge-${index}`,
                 source: edge.source,
                 target: edge.target,
-                label: edge.label || edge.type || ""
+                label: edge.label || edge.type || "",
+                width: edge.width || edgeWidth,
+                color: edge.color || "#87939f"
               }
             }))
           ],
@@ -182,10 +205,12 @@ function GraphView({ graph, engine, query }: { graph: GraphModel; engine: "cytos
             {
               selector: "node",
               style: {
-                label: "data(label)",
-                "background-color": "#3a6ea5",
+                label: showLabels && performanceMode !== "dense" ? "data(label)" : "",
+                "background-color": "data(color)",
+                width: "data(size)",
+                height: "data(size)",
                 color: "#202225",
-                "font-size": 11,
+                "font-size": performanceMode === "readable" ? 13 : 11,
                 "text-valign": "bottom",
                 "text-margin-y": 5
               }
@@ -197,17 +222,26 @@ function GraphView({ graph, engine, query }: { graph: GraphModel; engine: "cytos
             {
               selector: "edge",
               style: {
-                width: 1.5,
-                "line-color": "#87939f",
-                "target-arrow-color": "#87939f",
+                width: "data(width)",
+                "line-color": "data(color)",
+                "target-arrow-color": "data(color)",
                 "target-arrow-shape": graph.directed ? "triangle" : "none",
                 "curve-style": "bezier",
-                label: "data(label)",
+                label: showEdgeLabels && performanceMode === "readable" ? "data(label)" : "",
                 "font-size": 9
               }
             }
           ],
-          layout: { name: "breadthfirst", directed: graph.directed !== false, padding: 40 }
+          layout: { name: layout, directed: graph.directed !== false, padding: 40, animate: performanceMode === "readable" } as never
+        });
+        cy.on("select", "node, edge", (event) => {
+          const target = event.target;
+          setSelected({
+            id: target.id(),
+            label: String(target.data("label") || target.id()),
+            kind: target.isNode() ? "node" : "edge",
+            type: String(target.data("kind") || target.data("label") || "")
+          });
         });
         cleanup = () => cy.destroy();
         return;
@@ -219,21 +253,34 @@ function GraphView({ graph, engine, query }: { graph: GraphModel; engine: "cytos
         const g = new Graphology({ type: graph.directed === false ? "undirected" : "directed" });
         const count = Math.max(1, graph.nodes.length);
         graph.nodes.forEach((node, index) => {
-          const angle = (Math.PI * 2 * index) / count;
+          const coordinates = sigmaCoordinates(index, count, layout);
           g.addNode(node.id, {
-            x: Math.cos(angle),
-            y: Math.sin(angle),
-            size: 8,
-            label: node.label,
-            color: highlighted && node.label.toLowerCase().includes(highlighted) ? "#cf6f2a" : "#3a6ea5"
+            x: node.x ?? coordinates.x,
+            y: node.y ?? coordinates.y,
+            size: node.size || nodeSize / 2,
+            label: showLabels && performanceMode !== "dense" ? node.label : "",
+            color: highlighted && node.label.toLowerCase().includes(highlighted) ? "#cf6f2a" : node.color || typeColor(colorByType ? node.type || "node" : "node"),
+            kind: node.type || "node"
           });
         });
         graph.edges.forEach((edge, index) => {
           if (g.hasNode(edge.source) && g.hasNode(edge.target)) {
-            g.addEdgeWithKey(edge.id || `edge-${index}`, edge.source, edge.target, { label: edge.label || edge.type || "" });
+            g.addEdgeWithKey(edge.id || `edge-${index}`, edge.source, edge.target, {
+              label: showEdgeLabels && performanceMode === "readable" ? edge.label || edge.type || "" : "",
+              size: edge.width || edgeWidth,
+              color: edge.color || "#87939f"
+            });
           }
         });
         const renderer = new Sigma(g, containerRef.current);
+        renderer.on("clickNode", ({ node }) => {
+          setSelected({
+            id: node,
+            label: String(g.getNodeAttribute(node, "label") || node),
+            kind: "node",
+            type: String(g.getNodeAttribute(node, "kind") || "")
+          });
+        });
         cleanup = () => renderer.kill();
       }
     }
@@ -243,12 +290,32 @@ function GraphView({ graph, engine, query }: { graph: GraphModel; engine: "cytos
     });
 
     return () => cleanup?.();
-  }, [graph, engine, highlighted]);
+  }, [graph, engine, highlighted, layout, nodeSize, edgeWidth, showLabels, showEdgeLabels, colorByType, performanceMode]);
 
   if (error) {
     return <StaticGraph graph={graph} error={error} />;
   }
-  return <div class="graph-canvas" ref={containerRef} />;
+  return (
+    <div class="graph-view-wrap">
+      <div class="graph-canvas" ref={containerRef} />
+      <aside class="graph-inspector">
+        <strong>Inspector</strong>
+        {selected ? (
+          <>
+            <span>{selected.kind}</span>
+            <h3>{selected.label}</h3>
+            <p>{selected.id}</p>
+            {selected.type ? <p>{selected.type}</p> : null}
+          </>
+        ) : (
+          <p>Select a node or edge.</p>
+        )}
+        <small>
+          {graph.nodes.length} nodes · {graph.edges.length} edges · {layout}
+        </small>
+      </aside>
+    </div>
+  );
 }
 
 function StaticGraph({ graph, error }: { graph: GraphModel; error: string }) {
@@ -265,6 +332,40 @@ function StaticGraph({ graph, error }: { graph: GraphModel; error: string }) {
       </ul>
     </div>
   );
+}
+
+function stringSetting(value: ViewerSettingValue | undefined, fallback: string): string {
+  return typeof value === "string" ? value : fallback;
+}
+
+function numberSetting(value: ViewerSettingValue | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
+function booleanSetting(value: ViewerSettingValue | undefined, fallback: boolean): boolean {
+  return typeof value === "boolean" ? value : fallback;
+}
+
+function typeColor(type: string): string {
+  const palette = ["#3a6ea5", "#7b8f3a", "#b26b2e", "#8f5c8a", "#2f8f83", "#9a514e"];
+  let hash = 0;
+  for (let index = 0; index < type.length; index += 1) {
+    hash = (hash * 29 + type.charCodeAt(index)) >>> 0;
+  }
+  return palette[hash % palette.length];
+}
+
+function sigmaCoordinates(index: number, count: number, layout: string): { x: number; y: number } {
+  if (layout === "grid") {
+    const width = Math.ceil(Math.sqrt(count));
+    return { x: (index % width) - width / 2, y: Math.floor(index / width) - width / 2 };
+  }
+  if (layout === "random") {
+    const hash = (index * 9301 + 49297) % 233280;
+    return { x: hash / 116640 - 1, y: ((hash * 37) % 233280) / 116640 - 1 };
+  }
+  const angle = (Math.PI * 2 * index) / Math.max(1, count);
+  return { x: Math.cos(angle), y: Math.sin(angle) };
 }
 
 function filterTree(nodes: TreeNode[], query: string): TreeNode[] {

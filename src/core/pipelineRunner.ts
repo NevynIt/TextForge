@@ -12,6 +12,7 @@ import type {
 } from "../domain/types";
 import { PluginRegistry } from "./pluginRegistry";
 import { RuntimeLoader } from "./runtimeLoader";
+import { createId } from "./id";
 
 export class PipelineRunner {
   constructor(
@@ -28,6 +29,7 @@ export class PipelineRunner {
   }
 
   async runPipeline(pipeline: PipelineContribution, document: TextDocument): Promise<PipelineRunResult> {
+    const pipelineRunId = createId("run");
     let value: PipelineValue = {
       kind: "text",
       languageId: document.languageId,
@@ -77,14 +79,16 @@ export class PipelineRunner {
       try {
         if (contribution.kind === "transformer") {
           value = await (contribution as TransformerContribution).transform(value, { runtime: this.runtime });
-          diagnostics.push(...(value.diagnostics || []));
+          const stepDiagnostics = annotateDiagnostics(value.diagnostics || [], document, pipeline.id, pipelineRunId, stepId, contribution.id);
+          value = { ...value, diagnostics: stepDiagnostics };
+          diagnostics.push(...stepDiagnostics);
           trace.push({
             stepId,
             contributionKind: "transformer",
             status: "available",
             inputType,
             outputType: describeValue(value),
-            diagnostics: value.diagnostics || [],
+            diagnostics: stepDiagnostics,
             serializedValue: serializePipelineValue(value)
           });
           continue;
@@ -92,28 +96,32 @@ export class PipelineRunner {
 
         if (contribution.kind === "viewer") {
           const viewerResult = await (contribution as ViewerContribution).render(value, { runtime: this.runtime });
-          diagnostics.push(...(viewerResult.diagnostics || []));
+          const stepDiagnostics = annotateDiagnostics(viewerResult.diagnostics || [], document, pipeline.id, pipelineRunId, stepId, contribution.id);
+          diagnostics.push(...stepDiagnostics);
           trace.push({
             stepId,
             contributionKind: "viewer",
             status: "available",
             inputType,
             outputType: viewerResult.kind,
-            diagnostics: viewerResult.diagnostics || []
+            diagnostics: stepDiagnostics
           });
-          return { pipeline, status: "available", trace, value, viewerResult, diagnostics };
+          return { pipeline, status: "available", trace, value, viewerResult: { ...viewerResult, diagnostics: stepDiagnostics }, diagnostics };
         }
 
         if (contribution.kind === "editor") {
           const editorResult = await (contribution as EditorContribution).create(value, { runtime: this.runtime });
+          const stepDiagnostics = annotateDiagnostics(editorResult.diagnostics || [], document, pipeline.id, pipelineRunId, stepId, contribution.id);
+          diagnostics.push(...stepDiagnostics);
           trace.push({
             stepId,
             contributionKind: "editor",
             status: "available",
             inputType,
-            outputType: editorResult.kind
+            outputType: editorResult.kind,
+            diagnostics: stepDiagnostics
           });
-          return { pipeline, status: "available", trace, value, editorResult, diagnostics };
+          return { pipeline, status: "available", trace, value, editorResult: { ...editorResult, diagnostics: stepDiagnostics }, diagnostics };
         }
 
         trace.push({
@@ -138,6 +146,32 @@ export class PipelineRunner {
 
     return { pipeline, status: "available", trace, value, diagnostics };
   }
+}
+
+function annotateDiagnostics(
+  items: Diagnostic[],
+  document: TextDocument,
+  pipelineId: string,
+  pipelineRunId: string,
+  pipelineStepId: string,
+  contributionId: string
+): Diagnostic[] {
+  return items.map((diagnostic, index) => ({
+    ...diagnostic,
+    id: diagnostic.id || `${pipelineRunId}-${pipelineStepId}-${index}`,
+    documentId: diagnostic.documentId || document.id,
+    documentVersion: diagnostic.documentVersion || document.version,
+    languageId: diagnostic.languageId || document.languageId,
+    pipelineId: diagnostic.pipelineId || pipelineId,
+    pipelineRunId: diagnostic.pipelineRunId || pipelineRunId,
+    pipelineStepId: diagnostic.pipelineStepId || pipelineStepId,
+    contributionId: diagnostic.contributionId || contributionId,
+    from: diagnostic.from ?? diagnostic.range?.from,
+    to: diagnostic.to ?? diagnostic.range?.to,
+    line: diagnostic.line ?? diagnostic.range?.line,
+    column: diagnostic.column ?? diagnostic.range?.column,
+    target: { ...(diagnostic.target || {}), documentId: document.id }
+  }));
 }
 
 export function describeValue(value: PipelineValue): string {

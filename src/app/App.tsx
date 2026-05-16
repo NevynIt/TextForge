@@ -57,6 +57,7 @@ export function App() {
   const [status, setStatus] = useState("Starting TextForge.");
   const [lastTrace, setLastTrace] = useState<PipelineTraceStep[]>([]);
   const [ready, setReady] = useState(false);
+  const [pluginRevision, setPluginRevision] = useState(0);
   const popupsRef = useRef(popups);
   popupsRef.current = popups;
 
@@ -64,7 +65,19 @@ export function App() {
     let cancelled = false;
     services.storage
       .init()
-      .then(() => services.storage.loadWorkspace())
+      .then(async () => {
+        const preferences = await services.storage.loadPluginPreferences();
+        preferences.autoloadPluginIds.forEach((pluginId) => services.plugins.setAutoload(pluginId, true));
+        for (const pluginId of services.plugins.listAutoloadPluginIds()) {
+          try {
+            await services.plugins.loadPlugin(pluginId);
+          } catch {
+            // The plugin manager displays the stored load error.
+          }
+        }
+        setPluginRevision((value) => value + 1);
+        return services.storage.loadWorkspace();
+      })
       .then((stored) => {
         if (cancelled) {
           return;
@@ -111,6 +124,7 @@ export function App() {
     ? workspace.documents.find((document) => document.id === workspace.activeDocumentId)
     : undefined;
   const pipelines = activeDocument ? services.plugins.listPipelinesForLanguage(activeDocument.languageId) : [];
+  const pluginStates = useMemo(() => services.plugins.listPluginStates(), [services, pluginRevision]);
 
   function commitWorkspace(nextStatus?: string): void {
     const snapshot = services.workspace.snapshot();
@@ -219,7 +233,17 @@ export function App() {
       setStatus(`${pipeline?.name || pipelineId} opened.`);
       return;
     }
-    setPopups((items) => [...items, createToolPopup("pipeline-trace", "Pipeline Trace", result.trace)]);
+    setPopups((items) => [
+      ...items,
+      {
+        ...createToolPopup("pipeline-trace", "Pipeline Trace", result.trace),
+        documentId: activeDocument.id,
+        documentName: activeDocument.fileName,
+        documentLanguageId: activeDocument.languageId,
+        documentIdentity: activeDocument.identity,
+        sourceVersion: activeDocument.version
+      }
+    ]);
     setStatus(result.status === "available" ? "Pipeline complete." : `Pipeline ${result.status}.`);
   }
 
@@ -252,6 +276,7 @@ export function App() {
               sourceVersion: document.version,
               documentName: document.fileName,
               documentLanguageId: document.languageId,
+              documentIdentity: document.identity,
               refreshedAt: new Date().toISOString()
             }
           : item
@@ -268,8 +293,40 @@ export function App() {
     setPopups((items) => [...items, createToolPopup("plugin-manager", "Plugin Manager")]);
   }
 
+  async function loadPluginNow(pluginId: string): Promise<void> {
+    try {
+      await services.plugins.loadPlugin(pluginId);
+      setPluginRevision((value) => value + 1);
+      setStatus(`Loaded plugin ${pluginId}.`);
+    } catch (error) {
+      setPluginRevision((value) => value + 1);
+      setStatus(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  async function setPluginAutoload(pluginId: string, autoload: boolean): Promise<void> {
+    services.plugins.setAutoload(pluginId, autoload);
+    setPluginRevision((value) => value + 1);
+    await services.storage.savePluginPreferences({
+      autoloadPluginIds: services.plugins.listAutoloadPluginIds()
+    });
+    setStatus(`${autoload ? "Enabled" : "Disabled"} autoload for ${pluginId}.`);
+  }
+
   function openPipelineTrace(): void {
-    setPopups((items) => [...items, createToolPopup("pipeline-trace", "Pipeline Trace", lastTrace)]);
+    setPopups((items) => [
+      ...items,
+      activeDocument
+        ? {
+            ...createToolPopup("pipeline-trace", "Pipeline Trace", lastTrace),
+            documentId: activeDocument.id,
+            documentName: activeDocument.fileName,
+            documentLanguageId: activeDocument.languageId,
+            documentIdentity: activeDocument.identity,
+            sourceVersion: activeDocument.version
+          }
+        : createToolPopup("pipeline-trace", "Pipeline Trace", lastTrace)
+    ]);
   }
 
   return (
@@ -316,7 +373,9 @@ export function App() {
             onClick={() => switchDocument(document.id)}
             key={document.id}
             title={`${document.id} · ${document.languageId} · v${document.version}`}
+            style={{ "--doc-color": document.identity.color }}
           >
+            <span class="document-badge">{document.identity.badgeLabel}</span>
             <span>{document.dirty ? "• " : ""}{document.fileName}</span>
             <X
               size={14}
@@ -330,6 +389,12 @@ export function App() {
       </nav>
 
       <section class="actionbar">
+        {activeDocument ? (
+          <div class="active-document-chip" style={{ "--doc-color": activeDocument.identity.color }}>
+            <span class="document-badge">{activeDocument.identity.badgeLabel}</span>
+            <strong>{activeDocument.fileName}</strong>
+          </div>
+        ) : null}
         <label>
           Language
           <select value={activeDocument?.languageId || "text.plain"} onChange={(event) => updateLanguage(event.currentTarget.value)} disabled={!activeDocument}>
@@ -379,7 +444,9 @@ export function App() {
       <PopupHost
         popups={popups}
         documents={workspace.documents}
-        pluginStates={services.plugins.listPluginStates()}
+        pluginStates={pluginStates}
+        onLoadPlugin={(pluginId) => void loadPluginNow(pluginId)}
+        onSetPluginAutoload={(pluginId, autoload) => void setPluginAutoload(pluginId, autoload)}
         onClose={(id) => setPopups((items) => items.filter((popup) => popup.id !== id))}
         onRefresh={(id) => void refreshPopup(id)}
         onUpdate={updatePopup}

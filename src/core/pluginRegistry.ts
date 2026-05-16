@@ -38,7 +38,8 @@ export class PluginRegistry {
         id: entry.id,
         name: entry.name,
         version: entry.version,
-        status: "metadata",
+        status: "available",
+        autoload: Boolean(entry.autoLoad),
         contributionIds: entry.contributionIds.slice()
       });
       for (const language of entry.languages || []) {
@@ -55,6 +56,20 @@ export class PluginRegistry {
 
   listPluginStates(): PluginState[] {
     return Array.from(this.states.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  listAutoloadPluginIds(): string[] {
+    return this.listPluginStates()
+      .filter((state) => state.autoload)
+      .map((state) => state.id);
+  }
+
+  setAutoload(pluginId: string, autoload: boolean): void {
+    const state = this.states.get(pluginId);
+    if (!state) {
+      return;
+    }
+    this.states.set(pluginId, { ...state, autoload });
   }
 
   listLanguages(): LanguageDefinition[] {
@@ -79,10 +94,6 @@ export class PluginRegistry {
     if (!ownerId) {
       return "missing-contribution";
     }
-    const state = this.states.get(ownerId);
-    if (state?.status === "disabled") {
-      return "disabled-plugin";
-    }
     if (!this.manifests.has(ownerId)) {
       return "missing-plugin";
     }
@@ -95,9 +106,6 @@ export class PluginRegistry {
       throw new Error(`Plugin "${pluginId}" is not packaged.`);
     }
     const state = this.states.get(pluginId);
-    if (state?.status === "disabled") {
-      throw new Error(`Plugin "${pluginId}" is disabled.`);
-    }
     if (state?.status === "loaded") {
       return this.buildLoadedPlugin(pluginId);
     }
@@ -110,6 +118,7 @@ export class PluginRegistry {
         name: manifest.name,
         version: manifest.version,
         status: "loaded",
+        autoload: state?.autoload || Boolean(manifest.autoLoad),
         contributionIds: manifest.contributionIds.slice()
       });
       return plugin;
@@ -119,22 +128,12 @@ export class PluginRegistry {
         name: manifest.name,
         version: manifest.version,
         status: "failed",
+        autoload: state?.autoload || Boolean(manifest.autoLoad),
         contributionIds: manifest.contributionIds.slice(),
         error: error instanceof Error ? error.message : String(error)
       });
       throw error;
     }
-  }
-
-  setPluginEnabled(pluginId: string, enabled: boolean): void {
-    const state = this.states.get(pluginId);
-    if (!state) {
-      return;
-    }
-    this.states.set(pluginId, {
-      ...state,
-      status: enabled ? (state.status === "disabled" ? "metadata" : state.status) : "disabled"
-    });
   }
 
   async resolveContribution(id: string): Promise<Contribution | undefined> {

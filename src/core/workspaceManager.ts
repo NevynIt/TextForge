@@ -1,4 +1,4 @@
-import type { TextDocument } from "../domain/types";
+import type { DocumentIdentity, TextDocument } from "../domain/types";
 import { createId } from "./id";
 
 export class WorkspaceManager {
@@ -15,13 +15,13 @@ export class WorkspaceManager {
       text: input.text || "",
       version: input.version || 1,
       dirty: input.dirty ?? false,
+      identity: input.identity || createDocumentIdentity(input.id || ""),
       createdAt: input.createdAt || now,
       updatedAt: input.updatedAt || now
     };
     this.records.set(document.id, document);
     this.order.push(document.id);
     this.activeDocumentId = document.id;
-    this.recomputeDuplicateNames();
     return document;
   }
 
@@ -60,7 +60,6 @@ export class WorkspaceManager {
     if (this.activeDocumentId === id) {
       this.activeDocumentId = this.order[index] || this.order[index - 1] || null;
     }
-    this.recomputeDuplicateNames();
     return document;
   }
 
@@ -107,11 +106,13 @@ export class WorkspaceManager {
     this.records.clear();
     this.order = [];
     for (const document of documents) {
-      this.records.set(document.id, document);
+      this.records.set(document.id, {
+        ...document,
+        identity: document.identity || createDocumentIdentity(document.id)
+      });
       this.order.push(document.id);
     }
     this.activeDocumentId = activeDocumentId && this.records.has(activeDocumentId) ? activeDocumentId : this.order[0] || null;
-    this.recomputeDuplicateNames();
   }
 
   snapshot(): { documents: TextDocument[]; activeDocumentId: string | null } {
@@ -121,28 +122,32 @@ export class WorkspaceManager {
     };
   }
 
-  private recomputeDuplicateNames(): void {
-    const counts = new Map<string, number>();
-    for (const id of this.order) {
-      const document = this.records.get(id);
-      if (!document) {
-        continue;
-      }
-      const baseName = document.fileName.replace(/\s+\(\d+\)(\.[^.]+)?$/, "$1") || "untitled.txt";
-      const next = (counts.get(baseName) || 0) + 1;
-      counts.set(baseName, next);
-      this.records.set(id, {
-        ...document,
-        fileName: next === 1 ? baseName : withDuplicateSuffix(baseName, next)
-      });
-    }
-  }
 }
 
-function withDuplicateSuffix(fileName: string, index: number): string {
-  const dot = fileName.lastIndexOf(".");
-  if (dot <= 0) {
-    return `${fileName} (${index})`;
+const identityPalette = [
+  "#3a6ea5",
+  "#7b8f3a",
+  "#b26b2e",
+  "#8f5c8a",
+  "#2f8f83",
+  "#9a514e",
+  "#5967b1",
+  "#8a6b2f",
+  "#49775d",
+  "#6d5a9c"
+];
+
+export function createDocumentIdentity(seed: string): DocumentIdentity {
+  const source = seed || createId("identity");
+  let hash = 0;
+  for (let index = 0; index < source.length; index += 1) {
+    hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
   }
-  return `${fileName.slice(0, dot)} (${index})${fileName.slice(dot)}`;
+  const first = String.fromCharCode(65 + (hash % 26));
+  const second = ((Math.floor(hash / 26) % 9) + 1).toString();
+  return {
+    color: identityPalette[hash % identityPalette.length],
+    badgeLabel: `${first}${second}`,
+    badgeKind: "generated"
+  };
 }

@@ -1,5 +1,76 @@
 import type { TextForgePlugin } from "../domain/types";
 
+const graphControls = [
+  {
+    id: "layout",
+    label: "Layout",
+    type: "select" as const,
+    defaultValue: "breadthfirst",
+    group: "Layout",
+    options: [
+      { label: "Breadth-first", value: "breadthfirst" },
+      { label: "Circle", value: "circle" },
+      { label: "Concentric", value: "concentric" },
+      { label: "Grid", value: "grid" },
+      { label: "Cose", value: "cose" },
+      { label: "Random", value: "random" }
+    ]
+  },
+  {
+    id: "nodeSize",
+    label: "Node size",
+    type: "range" as const,
+    defaultValue: 18,
+    min: 6,
+    max: 48,
+    step: 1,
+    group: "Node style"
+  },
+  {
+    id: "edgeWidth",
+    label: "Edge width",
+    type: "range" as const,
+    defaultValue: 1.5,
+    min: 0.5,
+    max: 8,
+    step: 0.5,
+    group: "Edge style"
+  },
+  {
+    id: "showLabels",
+    label: "Show labels",
+    type: "boolean" as const,
+    defaultValue: true,
+    group: "Labels"
+  },
+  {
+    id: "showEdgeLabels",
+    label: "Show edge labels",
+    type: "boolean" as const,
+    defaultValue: false,
+    group: "Labels"
+  },
+  {
+    id: "colorByType",
+    label: "Colour by type",
+    type: "boolean" as const,
+    defaultValue: true,
+    group: "Node style"
+  },
+  {
+    id: "performanceMode",
+    label: "Performance mode",
+    type: "select" as const,
+    defaultValue: "balanced",
+    group: "Performance",
+    options: [
+      { label: "Readable", value: "readable" },
+      { label: "Balanced", value: "balanced" },
+      { label: "Dense", value: "dense" }
+    ]
+  }
+];
+
 const plugin: TextForgePlugin = {
   id: "viewer-core",
   name: "Viewer Core",
@@ -115,7 +186,8 @@ const plugin: TextForgePlugin = {
           title: "Cytoscape Graph Viewer",
           graph: value.data,
           engine: "cytoscape",
-          capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true },
+          capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true, select: true, export: true, presets: true, tooltips: true },
+          controls: graphControls,
           diagnostics: value.diagnostics
         };
       }
@@ -135,7 +207,10 @@ const plugin: TextForgePlugin = {
           title: "Sigma/Graphology Viewer",
           graph: value.data,
           engine: "sigma",
-          capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true },
+          capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true, select: true, export: true, presets: true, tooltips: true },
+          controls: graphControls.map((control) =>
+            control.id === "layout" ? { ...control, defaultValue: "circle" } : control
+          ),
           diagnostics: value.diagnostics
         };
       }

@@ -9,8 +9,15 @@ export interface TextDocument {
   text: string;
   version: number;
   dirty: boolean;
+  identity: DocumentIdentity;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface DocumentIdentity {
+  color: string;
+  badgeLabel: string;
+  badgeKind?: string;
 }
 
 export interface LanguageDefinition {
@@ -28,7 +35,19 @@ export interface Diagnostic {
   source: string;
   severity: Severity;
   message: string;
-  languageId: string;
+  languageId?: string;
+  documentId?: string;
+  documentVersion?: number;
+  pipelineId?: string;
+  pipelineRunId?: string;
+  pipelineStepId?: string;
+  contributionId?: string;
+  from?: number;
+  to?: number;
+  line?: number;
+  column?: number;
+  modelPath?: string;
+  fixAction?: unknown;
   range?: SourceRange;
   target?: Record<string, unknown>;
   stepId?: string;
@@ -65,6 +84,15 @@ export interface GraphNode {
   id: string;
   label: string;
   type?: string;
+  x?: number;
+  y?: number;
+  size?: number;
+  color?: string;
+  parent?: string;
+  classes?: string[];
+  hidden?: boolean;
+  metrics?: Record<string, number>;
+  sourceRange?: SourceRange;
   data?: Record<string, unknown>;
 }
 
@@ -74,13 +102,26 @@ export interface GraphEdge {
   target: string;
   label?: string;
   type?: string;
+  weight?: number;
+  width?: number;
+  color?: string;
+  curve?: "straight" | "bezier" | "taxi";
+  classes?: string[];
+  hidden?: boolean;
+  sourceRange?: SourceRange;
   data?: Record<string, unknown>;
 }
 
 export interface GraphModel {
+  graph?: {
+    id?: string;
+    label?: string;
+    attrs?: Record<string, unknown>;
+  };
   nodes: GraphNode[];
   edges: Array<Required<Pick<GraphEdge, "source" | "target">> & Omit<GraphEdge, "source" | "target">>;
   directed?: boolean;
+  layouts?: Record<string, unknown>;
   diagnostics?: Diagnostic[];
 }
 
@@ -99,16 +140,46 @@ export interface ViewerCapabilities {
   filter?: boolean;
   fold?: boolean;
   inspect?: boolean;
+  select?: boolean;
+  hover?: boolean;
+  export?: boolean;
+  presets?: boolean;
+  animation?: boolean;
+  tooltips?: boolean;
+  legend?: boolean;
+  minimap?: boolean;
+  shortcuts?: boolean;
+}
+
+export type ViewerSettingValue = string | number | boolean | string[] | null;
+
+export interface ViewerControlDefinition {
+  id: string;
+  label: string;
+  type: "select" | "boolean" | "number" | "range" | "text" | "multi-select";
+  defaultValue: ViewerSettingValue;
+  options?: Array<{ label: string; value: ViewerSettingValue }>;
+  group?: string;
+  min?: number;
+  max?: number;
+  step?: number;
+}
+
+interface ViewerResultBase {
+  title: string;
+  capabilities?: ViewerCapabilities;
+  controls?: ViewerControlDefinition[];
+  diagnostics?: Diagnostic[];
 }
 
 export type ViewerResult =
-  | { kind: "html"; title: string; html: string; capabilities?: ViewerCapabilities; diagnostics?: Diagnostic[] }
-  | { kind: "svg"; title: string; svg: string; capabilities?: ViewerCapabilities; diagnostics?: Diagnostic[] }
-  | { kind: "tree"; title: string; nodes: TreeNode[]; capabilities?: ViewerCapabilities; diagnostics?: Diagnostic[] }
-  | { kind: "table"; title: string; table: TableModel; capabilities?: ViewerCapabilities; diagnostics?: Diagnostic[] }
-  | { kind: "graph"; title: string; graph: GraphModel; engine: "cytoscape" | "sigma" | "static"; capabilities?: ViewerCapabilities; diagnostics?: Diagnostic[] }
-  | { kind: "mindmap"; title: string; nodes: TreeNode[]; capabilities?: ViewerCapabilities; diagnostics?: Diagnostic[] }
-  | { kind: "editor-skeleton"; title: string; editorKind: "tree" | "graph"; message: string; capabilities?: ViewerCapabilities; diagnostics?: Diagnostic[] };
+  | (ViewerResultBase & { kind: "html"; html: string })
+  | (ViewerResultBase & { kind: "svg"; svg: string })
+  | (ViewerResultBase & { kind: "tree"; nodes: TreeNode[] })
+  | (ViewerResultBase & { kind: "table"; table: TableModel })
+  | (ViewerResultBase & { kind: "graph"; graph: GraphModel; engine: "cytoscape" | "sigma" | "static" })
+  | (ViewerResultBase & { kind: "mindmap"; nodes: TreeNode[] })
+  | (ViewerResultBase & { kind: "editor-skeleton"; editorKind: "tree" | "graph"; message: string });
 
 export interface RuntimeLoader {
   load<T>(id: string, loader: () => Promise<T>): Promise<T>;
@@ -190,7 +261,8 @@ export interface PluginState {
   id: string;
   name: string;
   version: string;
-  status: "metadata" | "loaded" | "disabled" | "failed";
+  status: "available" | "loaded" | "failed";
+  autoload: boolean;
   error?: string;
   contributionIds: string[];
 }
@@ -224,6 +296,7 @@ export interface PopupRecord {
   documentName?: string;
   documentLanguageId?: string;
   sourceVersion?: number;
+  documentIdentity?: DocumentIdentity;
   pipelineId?: string;
   contributionId?: string;
   result?: ViewerResult;
@@ -235,4 +308,6 @@ export interface PopupRecord {
   detached: boolean;
   zoom: number;
   query: string;
+  settings: Record<string, ViewerSettingValue>;
+  selectedItemId?: string;
 }

@@ -22,6 +22,8 @@ describe("WorkspaceManager", () => {
 
     expect(first.id).not.toBe(second.id);
     expect(workspace.getActiveDocument()?.text).toBe("# A");
-    expect(workspace.listDocuments().map((doc) => doc.fileName)).toEqual(["notes.md", "notes (2).md"]);
+    expect(workspace.listDocuments().map((doc) => doc.fileName)).toEqual(["notes.md", "notes.md"]);
+    expect(workspace.listDocuments()[0].identity.badgeLabel).toBeTruthy();
+    expect(workspace.listDocuments()[1].identity.badgeLabel).toBeTruthy();
   });
 });

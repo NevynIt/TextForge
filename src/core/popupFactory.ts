@@ -14,6 +14,7 @@ export function createViewerPopup(
     documentId: document.id,
     documentName: document.fileName,
     documentLanguageId: document.languageId,
+    documentIdentity: document.identity,
     sourceVersion: document.version,
     pipelineId: options.pipelineId,
     contributionId: options.contributionId,
@@ -24,7 +25,8 @@ export function createViewerPopup(
     followSource: false,
     detached: false,
     zoom: 1,
-    query: ""
+    query: "",
+    settings: defaultSettings(result)
   };
 }
 
@@ -37,6 +39,7 @@ export function createDiagnosticsPopup(document: TextDocument, diagnostics: Diag
     documentId: document.id,
     documentName: document.fileName,
     documentLanguageId: document.languageId,
+    documentIdentity: document.identity,
     sourceVersion: document.version,
     diagnostics,
     createdAt: now,
@@ -44,7 +47,8 @@ export function createDiagnosticsPopup(document: TextDocument, diagnostics: Diag
     followSource: false,
     detached: false,
     zoom: 1,
-    query: ""
+    query: "",
+    settings: {}
   };
 }
 
@@ -59,6 +63,11 @@ export function createToolPopup(kind: "plugin-manager" | "pipeline-trace", title
     followSource: false,
     detached: false,
     zoom: 1,
-    query: ""
+    query: "",
+    settings: {}
   };
+}
+
+function defaultSettings(result: ViewerResult): Record<string, string | number | boolean | string[] | null> {
+  return Object.fromEntries((result.controls || []).map((control) => [control.id, control.defaultValue]));
 }

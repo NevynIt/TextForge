@@ -20,6 +20,7 @@ describe("PipelineRunner", () => {
       text: "{\"name\":\"TextForge\"}",
       version: 1,
       dirty: false,
+      identity: { color: "#3a6ea5", badgeLabel: "T1" },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -43,6 +44,7 @@ describe("PipelineRunner", () => {
       text: "text",
       version: 1,
       dirty: false,
+      identity: { color: "#3a6ea5", badgeLabel: "T1" },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
