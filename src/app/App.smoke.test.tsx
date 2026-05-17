@@ -6,10 +6,13 @@ import { App } from "./App";
 
 describe("App smoke", () => {
   it("renders the workbench shell", async () => {
-    render(<App />);
+    const { container } = render(<App />);
 
-    await waitFor(() => expect(screen.getByText("TextForge")).toBeTruthy());
-    expect(screen.getByText("Language")).toBeTruthy();
-    expect(screen.getByText("Pipeline")).toBeTruthy();
+    await waitFor(() => expect(screen.getByText("Ready.")).toBeTruthy());
+    expect(screen.getByText("TextForge")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "New" })).toBeTruthy();
+    expect((container.querySelector(".actionbar select") as HTMLSelectElement | null)?.disabled).toBe(false);
+    expect(screen.getByLabelText("Pipeline")).toBeTruthy();
+    expect(screen.queryByText("No document open.")).toBeNull();
   });
 });

@@ -1,6 +1,5 @@
 import type { LuaActionDescriptor, LuaRunRequest, LuaRunResult } from "./types";
 import { defaultLuaLimits } from "./types";
-import { executeLuaInProcess } from "./luaRuntimeCore";
 
 interface PendingLuaRun {
   resolve: (result: LuaRunResult) => void;
@@ -14,12 +13,17 @@ export class LuaTransformService {
   private pending = new Map<string, PendingLuaRun>();
 
   async run(request: LuaRunRequest): Promise<LuaRunResult> {
-    if (typeof Worker === "undefined") {
-      return executeLuaInProcess(request);
+    if (typeof Worker === "undefined" || isLocalFileProtocol()) {
+      return runInProcess(request);
     }
     const id = `lua-${++this.sequence}`;
     const limits = { ...defaultLuaLimits, ...(request.limits || {}) };
-    const worker = new Worker(new URL("./luaWorker.ts", import.meta.url), { type: "module" });
+    let worker: Worker;
+    try {
+      worker = new Worker(new URL("./luaWorker.ts", import.meta.url), { type: "module" });
+    } catch {
+      return runInProcess(request);
+    }
     return new Promise<LuaRunResult>((resolve, reject) => {
       const timer = window.setTimeout(() => {
         this.pending.delete(id);
@@ -62,4 +66,13 @@ export class LuaTransformService {
     }
     return result.actions || [];
   }
+}
+
+function isLocalFileProtocol(): boolean {
+  return typeof window !== "undefined" && window.location.protocol === "file:";
+}
+
+async function runInProcess(request: LuaRunRequest): Promise<LuaRunResult> {
+  const { executeLuaInProcess } = await import("./luaRuntimeCore");
+  return executeLuaInProcess(request);
 }

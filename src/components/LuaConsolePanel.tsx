@@ -1,7 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
-import { SearchAddon } from "@xterm/addon-search";
+import type { Terminal as XTermTerminal } from "@xterm/xterm";
 import "@xterm/xterm/css/xterm.css";
 import type { PipelineValue, TextDocument } from "../domain/types";
 import type { RegisteredLuaAction } from "../lua/luaScriptRegistry";
@@ -23,8 +21,8 @@ export function LuaConsolePanel({
   onOpenResult
 }: LuaConsolePanelProps) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const terminalRef = useRef<Terminal | null>(null);
-  const fitRef = useRef<FitAddon | null>(null);
+  const terminalRef = useRef<XTermTerminal | null>(null);
+  const fitRef = useRef<{ fit: () => void } | null>(null);
   const inputRef = useRef("");
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
@@ -35,37 +33,49 @@ export function LuaConsolePanel({
     if (!hostRef.current || terminalRef.current) {
       return;
     }
-    const terminal = new Terminal({
-      convertEol: true,
-      cursorBlink: true,
-      fontFamily: "Consolas, 'Liberation Mono', monospace",
-      fontSize: 13,
-      theme: {
-        background: "#151c21",
-        foreground: "#f6f3e8",
-        cursor: "#f6f3e8",
-        selectionBackground: "#35566a"
-      }
-    });
-    const fit = new FitAddon();
-    const search = new SearchAddon();
-    terminal.loadAddon(fit);
-    terminal.loadAddon(search);
-    terminal.open(hostRef.current);
-    fit.fit();
-    writeIntro(terminal);
-    terminalRef.current = terminal;
-    fitRef.current = fit;
-
-    const resize = () => fit.fit();
+    let disposed = false;
+    let cleanup = () => {};
+    const resize = () => fitRef.current?.fit();
     window.addEventListener("resize", resize);
-    const disposable = terminal.onData((data) => {
-      void handleTerminalData(data);
-    });
+    void Promise.all([import("@xterm/xterm"), import("@xterm/addon-fit"), import("@xterm/addon-search")]).then(
+      ([terminalMod, fitMod, searchMod]) => {
+        if (disposed || !hostRef.current) {
+          return;
+        }
+        const terminal = new terminalMod.Terminal({
+          convertEol: true,
+          cursorBlink: true,
+          fontFamily: "Consolas, 'Liberation Mono', monospace",
+          fontSize: 13,
+          theme: {
+            background: "#151c21",
+            foreground: "#f6f3e8",
+            cursor: "#f6f3e8",
+            selectionBackground: "#35566a"
+          }
+        });
+        const fit = new fitMod.FitAddon();
+        const search = new searchMod.SearchAddon();
+        terminal.loadAddon(fit);
+        terminal.loadAddon(search);
+        terminal.open(hostRef.current);
+        fit.fit();
+        writeIntro(terminal);
+        terminalRef.current = terminal;
+        fitRef.current = fit;
+        const disposable = terminal.onData((data) => {
+          void handleTerminalData(data);
+        });
+        cleanup = () => {
+          disposable.dispose();
+          terminal.dispose();
+        };
+      }
+    );
     return () => {
-      disposable.dispose();
+      disposed = true;
       window.removeEventListener("resize", resize);
-      terminal.dispose();
+      cleanup();
       terminalRef.current = null;
       fitRef.current = null;
     };
@@ -173,7 +183,7 @@ export function LuaConsolePanel({
   );
 }
 
-function writeIntro(terminal: Terminal | null): void {
+function writeIntro(terminal: XTermTerminal | null): void {
   terminal?.write("TextForge Lua Console\r\n");
   terminal?.write("Commands run locally in the same sandbox used by Lua actions.\r\n");
   terminal?.write("> ");
