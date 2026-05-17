@@ -720,6 +720,62 @@ button:disabled {
   overflow: auto;
 }
 
+.tf-embedded-artifact {
+  margin: 16px 0;
+  border: 1px solid #d8d4c8;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #fffefa;
+}
+
+.tf-artifact-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-bottom: 1px solid #d8d4c8;
+  background: #f0eee7;
+}
+
+.tf-artifact-toolbar span {
+  margin-right: auto;
+  color: #4f5558;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.tf-artifact-toolbar button {
+  border: 1px solid #bbb6a8;
+  border-radius: 5px;
+  background: #fffefa;
+  color: #202225;
+  padding: 4px 7px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tf-artifact-body {
+  min-height: 180px;
+  overflow: hidden;
+  padding: 12px;
+  cursor: grab;
+  background: #fbfbf8;
+}
+
+.tf-artifact-body:active {
+  cursor: grabbing;
+}
+
+.tf-artifact-body > svg {
+  transform: translate(var(--artifact-x, 0), var(--artifact-y, 0)) scale(var(--artifact-scale, 1));
+  transform-origin: 0 0;
+}
+
+.tf-math-block {
+  margin: 16px 0;
+  overflow-x: auto;
+}
+
 .source-viewer {
   max-width: none;
 }
@@ -1518,6 +1574,88 @@ button:disabled {
   border-radius: 8px;
   background: #20272b;
   color: #f6f3e8;
+}
+
+.resource-browser-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100%;
+  background: #f8f6ef;
+}
+
+.resource-browser-layout {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.8fr) minmax(320px, 1.2fr);
+  min-height: 0;
+}
+
+.resource-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-content: start;
+  gap: 12px;
+  overflow: auto;
+  padding: 14px;
+  border-right: 1px solid #d8d4c8;
+}
+
+.resource-grid article {
+  margin: 0;
+}
+
+.resource-grid article button {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 11px;
+  border: 1px solid #d8d4c8;
+  border-radius: 8px;
+  background: #fffefa;
+  color: #202225;
+  text-align: left;
+  cursor: pointer;
+}
+
+.resource-grid article.active button {
+  border-color: #317a73;
+  box-shadow: 0 0 0 2px rgba(49, 122, 115, 0.16);
+}
+
+.resource-grid article span,
+.resource-grid article small {
+  color: #636866;
+}
+
+.resource-preview {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-width: 0;
+  min-height: 0;
+}
+
+.resource-preview header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #d8d4c8;
+  background: #fffefa;
+}
+
+.resource-preview header span {
+  color: #636866;
+  font-size: 12px;
+}
+
+.resource-preview pre {
+  margin: 0;
+  overflow: auto;
+  padding: 14px;
+  background: #fbfbf8;
+  color: #202225;
+  font: 12px/1.45 Consolas, "Liberation Mono", monospace;
+  white-space: pre-wrap;
 }
 
 .trace-list li div {

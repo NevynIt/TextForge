@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import {
   Bug,
+  BookOpen,
   Download,
   FilePlus2,
   FolderOpen,
@@ -29,6 +30,7 @@ import { PopupHost } from "../components/PopupHost";
 import { LuaTransformService } from "../lua/luaTransformService";
 import { buildLuaActionsPlugin, type RegisteredLuaAction } from "../lua/luaScriptRegistry";
 import type { LuaRunResult } from "../lua/types";
+import { textForgeResources, type TextForgeResource } from "../resources/resourceCatalog";
 
 interface AppServices {
   languages: LanguageRegistry;
@@ -124,6 +126,9 @@ export function App() {
         services.plugins.replaceGeneratedPlugin(plugin);
         setLuaActions(actions);
         setPluginRevision((value) => value + 1);
+      }).catch((error) => {
+        setLuaActions([]);
+        setStatus(error instanceof Error ? `Lua action scan failed: ${error.message}` : "Lua action scan failed.");
       });
     }, 350);
     return () => window.clearTimeout(timer);
@@ -419,6 +424,10 @@ export function App() {
     upsertPopup(createToolPopup("lua-scripts", "Lua Scripts"), (popup) => popup.kind === "lua-scripts");
   }
 
+  function openResourceBrowser(): void {
+    upsertPopup(createToolPopup("resource-browser", "Resource Browser"), (popup) => popup.kind === "resource-browser");
+  }
+
   function newLuaScript(): void {
     services.workspace.openDocument({
       fileName: "transform.lua",
@@ -463,6 +472,42 @@ export function App() {
     commitWorkspace(`Opened Lua result as ${document.fileName}.`);
   }
 
+  function openResource(resource: TextForgeResource): void {
+    const document = services.workspace.openDocument({
+      fileName: resource.path,
+      languageId: resource.languageId,
+      text: resource.text,
+      dirty: true
+    });
+    commitWorkspace(`Opened ${document.fileName}.`);
+  }
+
+  function openSvgArtifact(originPopupId: string, svg: string, title: string): void {
+    const origin = popupsRef.current.find((popup) => popup.id === originPopupId);
+    const document = origin?.documentId ? services.workspace.getDocument(origin.documentId) : activeDocument;
+    if (!document) {
+      return;
+    }
+    setPopups((items) => [
+      ...items,
+      createViewerPopup(
+        document,
+        {
+          kind: "svg",
+          title,
+          svg,
+          capabilities: { zoom: true, pan: true, search: true, export: true }
+        },
+        {
+          pipelineId: origin?.pipelineId,
+          contributionId: "markdown-embedded-artifact",
+          trace: origin?.trace
+        }
+      )
+    ]);
+    setStatus(`Opened ${title}.`);
+  }
+
   return (
     <div class="app-shell">
       <header class="topbar">
@@ -503,6 +548,10 @@ export function App() {
           <button type="button" onClick={openLuaScripts}>
             <ScrollText size={16} />
             Scripts
+          </button>
+          <button type="button" onClick={openResourceBrowser}>
+            <BookOpen size={16} />
+            Resources
           </button>
         </div>
       </header>
@@ -656,10 +705,13 @@ export function App() {
         activeDocument={activeDocument}
         pluginStates={pluginStates}
         luaActions={luaActions}
+        resources={textForgeResources}
         onRunLuaCommand={runLuaConsoleCommand}
         onRunActiveLuaDocument={runActiveLuaDocument}
         onOpenLuaResult={openLuaResult}
         onNewLuaScript={newLuaScript}
+        onOpenResource={openResource}
+        onOpenSvgArtifact={openSvgArtifact}
         onClose={(id) => setPopups((items) => items.filter((popup) => popup.id !== id))}
         onRefresh={(id) => void refreshPopup(id)}
         onUpdate={updatePopup}

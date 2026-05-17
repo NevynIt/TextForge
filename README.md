@@ -1,6 +1,6 @@
 # TextForge
 
-TextForge is a local-first text workbench for editing, visualising, and transforming structured text.
+TextForge is a local-first, text-first workbench for editing, visualizing, and transforming structured text.
 
 ## Version 1
 
@@ -8,14 +8,25 @@ The first implementation is a static Preact + CodeMirror workbench with:
 
 - multi-document tabs;
 - broad text languages for plain text, Markdown, ITT, JSON, XML, CSV, Mermaid, Graphviz DOT, JavaScript, and Python;
-- a plain JavaScript-shaped plugin API;
-- lazy local plugin/runtime loading;
+- trusted internal TypeScript/JavaScript plugins for packaged parsers, viewers, renderers, and pipelines;
+- safe Lua scripting for user-authored transformations;
+- lazy local runtime loading;
 - pipeline actions that connect contributions by ID;
-- popup-hosted viewers, diagnostics, plugin manager, and pipeline traces;
+- popup-hosted viewers, diagnostics, Lua console, resource browser, plugin manager, and pipeline traces;
 - IndexedDB persistence with localStorage fallback;
 - no app-code network APIs and an extension CSP with `connect-src 'none'`.
 
 The packaged V1 viewers include rendered HTML, read-only syntax-highlighted source HTML, SVG, table, tree, jsMind mind-map, Cytoscape graph, and Sigma/Graphology graph popups.
+
+## Core Ideas
+
+- Text remains the source of truth.
+- Visualizations and generated artifacts are derived, inspectable, and reproducible.
+- Everything runs locally in the browser/client with no back-end and no network activity.
+- User extensibility is Lua, running in a restricted sandbox with bundled libraries and host APIs.
+- Application extensibility is trusted internal TypeScript/JavaScript plugins that are packaged with TextForge.
+- Markdown, ITT, Mermaid, Graphviz DOT, delimited text, JSON, XML, Lua, JavaScript, Python, and graph/tree views share one local workbench.
+- Lua Console provides quick commands and manual pipeline execution without attaching to any real shell.
 
 V1 document badges use deterministic one-layer [shapez.io viewer](https://viewer.shapez.io/) shape codes instead of colour/letter counters. Shape strings follow the shapez viewer format: four quadrants, starting in the upper-right and moving clockwise; each quadrant is a shape letter plus a colour letter, with no layer separator for these single-layer badges.
 
@@ -26,6 +37,10 @@ Viewer-specific style support is documented in:
 - `docs/itt-graph-style-support.md`
 
 ITT `%style` directives support the selector forms from the ITT whitepaper (`*`, `&id`, `[type]`, `#tag`, `{key=value}`, `->`, `->[type]`, and `=>`) and may be written on one line or as multiline blocks. ITT `%include` directives are resolved only against files currently open in the editor.
+
+## Markdown Viewer Reference
+
+The Markdown HTML viewer intentionally overlaps with ideas from [ThisIs-Developer/Markdown-Viewer](https://github.com/ThisIs-Developer/Markdown-Viewer), especially live Markdown rendering, local diagram rendering, math support, export tools, and embedded diagram controls. TextForge adapts those ideas into a broader text workbench with ITT, graph, tree, and Lua transformation workflows.
 
 ## Development
 

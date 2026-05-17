@@ -3,6 +3,16 @@ declare module "*.lua?raw" {
   export default source;
 }
 
+declare module "*.md?raw" {
+  const source: string;
+  export default source;
+}
+
+declare module "*.itt?raw" {
+  const source: string;
+  export default source;
+}
+
 declare module "*.css" {
   const css: string;
   export default css;

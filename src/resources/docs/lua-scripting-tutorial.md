@@ -1,8 +1,6 @@
-# TextForge Lua Extension Development
+# TextForge Lua Scripting Tutorial
 
-TextForge no longer exposes user-uploaded JavaScript plugins. User extensibility is Lua; trusted TypeScript/JavaScript plugins remain an internal application mechanism for packaged parsers, viewers, serializers, and pipelines.
-
-Lua scripts run locally in a restricted Fengari sandbox. They do not receive browser globals, DOM access, network APIs, filesystem APIs, or JavaScript interop.
+Lua scripts run locally in a restricted Fengari sandbox. They do not receive browser globals, DOM access, networking APIs, filesystem APIs, or JavaScript interop.
 
 ## Minimal Transform
 
@@ -33,11 +31,8 @@ return {
 }
 ```
 
-## Host API
+## Built-In Bridges
 
-- `input.text`
-- `input.languageId`
-- `input.fileName`
 - `input:parse_itt()`
 - `input:parse_markdown()`
 - `input:emit_text(languageId, text)`
@@ -60,5 +55,3 @@ return {
 - `tf.pipeline`
 - `tf.actions`
 - `tf.console`
-
-Unknown modules fail with a TextForge module-not-found error. There is no filesystem, network, native library, or JavaScript module searcher.

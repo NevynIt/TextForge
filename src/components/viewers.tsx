@@ -16,6 +16,7 @@ interface ViewerContentProps {
   toolbarAction?: ViewerToolbarAction;
   onSearchStateChange?: (state: { count: number; index: number }) => void;
   onZoomChange?: (zoom: number) => void;
+  onOpenSvgArtifact?: (svg: string, title: string) => void;
 }
 
 export interface ViewerSearchCommand {
@@ -28,7 +29,17 @@ export interface ViewerToolbarAction {
   action: string;
 }
 
-export function ViewerContent({ result, query, zoom, settings, searchCommand, toolbarAction, onSearchStateChange, onZoomChange }: ViewerContentProps) {
+export function ViewerContent({
+  result,
+  query,
+  zoom,
+  settings,
+  searchCommand,
+  toolbarAction,
+  onSearchStateChange,
+  onZoomChange,
+  onOpenSvgArtifact
+}: ViewerContentProps) {
   const style = { "--viewer-zoom": String(zoom) };
   if (result.kind === "html") {
     return (
@@ -40,6 +51,7 @@ export function ViewerContent({ result, query, zoom, settings, searchCommand, to
         searchCommand={searchCommand}
         toolbarAction={toolbarAction}
         onSearchStateChange={onSearchStateChange}
+        onOpenSvgArtifact={onOpenSvgArtifact}
       />
     );
   }
@@ -117,7 +129,8 @@ function HtmlView({
   settings,
   searchCommand,
   toolbarAction,
-  onSearchStateChange
+  onSearchStateChange,
+  onOpenSvgArtifact
 }: {
   html: string;
   query: string;
@@ -126,11 +139,14 @@ function HtmlView({
   searchCommand?: ViewerSearchCommand;
   toolbarAction?: ViewerToolbarAction;
   onSearchStateChange?: (state: { count: number; index: number }) => void;
+  onOpenSvgArtifact?: (svg: string, title: string) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const openSvgArtifactRef = useRef(onOpenSvgArtifact);
   const [findState, setFindState] = useState<FindState>({ count: 0, activeIndex: -1, markers: [] });
   const theme = safeClassName(stringSetting(settings.readingTheme, "light"));
   const width = safeClassName(stringSetting(settings.contentWidth, "normal"));
+  openSvgArtifactRef.current = onOpenSvgArtifact;
 
   useEffect(() => {
     if (!ref.current) {
@@ -138,6 +154,7 @@ function HtmlView({
     }
     ref.current.innerHTML = html;
     enhanceHtmlHeadings(ref.current);
+    enhanceMarkdownArtifacts(ref.current, (svg, title) => openSvgArtifactRef.current?.(svg, title));
     const matches = highlightTextNodes(ref.current, query);
     setFindState({
       count: matches.length,
@@ -2624,6 +2641,124 @@ function enhanceHtmlHeadings(root: HTMLElement): void {
     });
     heading.prepend(button);
   });
+}
+
+function enhanceMarkdownArtifacts(root: HTMLElement, onOpenSvgArtifact?: (svg: string, title: string) => void): void {
+  root.querySelectorAll<HTMLElement>(".tf-embedded-artifact").forEach((artifact) => {
+    const body = artifact.querySelector<HTMLElement>(".tf-artifact-body");
+    if (!body || artifact.dataset.enhanced === "true") {
+      return;
+    }
+    artifact.dataset.enhanced = "true";
+    const view = { scale: 1, x: 0, y: 0 };
+    const apply = () => {
+      body.style.setProperty("--artifact-scale", String(view.scale));
+      body.style.setProperty("--artifact-x", `${view.x}px`);
+      body.style.setProperty("--artifact-y", `${view.y}px`);
+    };
+    apply();
+    let drag: { x: number; y: number; startX: number; startY: number } | null = null;
+    body.addEventListener("pointerdown", (event) => {
+      if (event.button !== 0) {
+        return;
+      }
+      drag = { x: event.clientX, y: event.clientY, startX: view.x, startY: view.y };
+      body.setPointerCapture(event.pointerId);
+    });
+    body.addEventListener("pointermove", (event) => {
+      if (!drag) {
+        return;
+      }
+      view.x = drag.startX + event.clientX - drag.x;
+      view.y = drag.startY + event.clientY - drag.y;
+      apply();
+    });
+    body.addEventListener("pointerup", () => {
+      drag = null;
+    });
+    body.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      view.scale = clamp(view.scale + (event.deltaY > 0 ? -0.1 : 0.1), 0.2, 5);
+      apply();
+    }, { passive: false });
+    artifact.querySelectorAll<HTMLButtonElement>("[data-artifact-action]").forEach((button) => {
+      button.addEventListener("click", () => handleArtifactAction(button.dataset.artifactAction || "", artifact, body, view, apply, onOpenSvgArtifact));
+    });
+  });
+}
+
+function handleArtifactAction(
+  action: string,
+  artifact: HTMLElement,
+  body: HTMLElement,
+  view: { scale: number; x: number; y: number },
+  apply: () => void,
+  onOpenSvgArtifact?: (svg: string, title: string) => void
+): void {
+  const svg = body.querySelector("svg")?.outerHTML || "";
+  if (action === "copy-source") {
+    void writeClipboard(decodeURIComponent(artifact.dataset.source || ""));
+  } else if (action === "copy-svg" && svg) {
+    void writeClipboard(svg);
+  } else if (action === "download-svg" && svg) {
+    downloadText(svg, `${artifact.dataset.artifactKind || "diagram"}.svg`, "image/svg+xml");
+  } else if (action === "download-png" && svg) {
+    void downloadSvgPng(svg, `${artifact.dataset.artifactKind || "diagram"}.png`);
+  } else if (action === "popout-svg" && svg) {
+    onOpenSvgArtifact?.(svg, `${artifact.dataset.artifactKind || "diagram"} SVG`);
+  } else if (action === "reset-view") {
+    view.scale = 1;
+    view.x = 0;
+    view.y = 0;
+    apply();
+  }
+}
+
+async function writeClipboard(text: string): Promise<void> {
+  try {
+    await navigator.clipboard?.writeText(text);
+  } catch {
+    // Clipboard permission is browser-controlled; the source remains visible in the document.
+  }
+}
+
+function downloadText(text: string, fileName: string, type: string): void {
+  const blob = new Blob([text], { type });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = fileName;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+async function downloadSvgPng(svg: string, fileName: string): Promise<void> {
+  const blob = new Blob([svg], { type: "image/svg+xml" });
+  const url = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Unable to render SVG as PNG."));
+      image.src = url;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, image.naturalWidth || 1200);
+    canvas.height = Math.max(1, image.naturalHeight || 800);
+    canvas.getContext("2d")?.drawImage(image, 0, 0);
+    canvas.toBlob((png) => {
+      if (png) {
+        const pngUrl = URL.createObjectURL(png);
+        const anchor = document.createElement("a");
+        anchor.href = pngUrl;
+        anchor.download = fileName;
+        anchor.click();
+        URL.revokeObjectURL(pngUrl);
+      }
+    }, "image/png");
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function headingSectionElements(heading: Element): HTMLElement[] {

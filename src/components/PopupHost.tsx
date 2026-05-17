@@ -32,8 +32,10 @@ import {
 import type { PipelineTraceStep, PipelineValue, PluginState, PopupRecord, TextDocument, ViewerControlDefinition, ViewerSettingValue } from "../domain/types";
 import type { RegisteredLuaAction } from "../lua/luaScriptRegistry";
 import type { LuaRunResult } from "../lua/types";
+import type { TextForgeResource } from "../resources/resourceCatalog";
 import { DocumentBadge, documentBadgeSvgMarkup } from "./DocumentBadge";
 import { LuaConsolePanel, LuaScriptManagerPanel } from "./LuaConsolePanel";
+import { ResourceBrowserPanel } from "./ResourceBrowserPanel";
 import { ViewerContent, viewerSnapshotHtml } from "./viewers";
 
 interface PopupHostProps {
@@ -42,10 +44,13 @@ interface PopupHostProps {
   activeDocument?: TextDocument;
   pluginStates: PluginState[];
   luaActions: RegisteredLuaAction[];
+  resources: TextForgeResource[];
   onRunLuaCommand: (source: string) => Promise<LuaRunResult>;
   onRunActiveLuaDocument: () => Promise<LuaRunResult>;
   onOpenLuaResult: (value: PipelineValue) => void;
   onNewLuaScript: () => void;
+  onOpenResource: (resource: TextForgeResource) => void;
+  onOpenSvgArtifact: (originPopupId: string, svg: string, title: string) => void;
   onClose: (id: string) => void;
   onRefresh: (id: string) => void;
   onUpdate: (id: string, patch: Partial<PopupRecord>) => void;
@@ -58,10 +63,13 @@ export function PopupHost({
   activeDocument,
   pluginStates,
   luaActions,
+  resources,
   onRunLuaCommand,
   onRunActiveLuaDocument,
   onOpenLuaResult,
   onNewLuaScript,
+  onOpenResource,
+  onOpenSvgArtifact,
   onClose,
   onRefresh,
   onUpdate,
@@ -265,6 +273,7 @@ export function PopupHost({
                       : undefined
                   }
                   onZoomChange={(zoom) => onUpdate(popup.id, { zoom })}
+                  onOpenSvgArtifact={(svg, title) => onOpenSvgArtifact(popup.id, svg, title)}
                   onSearchStateChange={(state) => {
                     if (popup.searchCount !== state.count || popup.searchIndex !== state.index) {
                       onUpdate(popup.id, { searchCount: state.count, searchIndex: state.index });
@@ -292,6 +301,9 @@ export function PopupHost({
               ) : null}
               {popup.kind === "lua-scripts" ? (
                 <LuaScriptManagerPanel documents={documents} actions={luaActions} onNewScript={onNewLuaScript} />
+              ) : null}
+              {popup.kind === "resource-browser" ? (
+                <ResourceBrowserPanel resources={resources} onOpenResource={onOpenResource} />
               ) : null}
             </main>
             <div class="popup-resize-handle" title="Resize" onPointerDown={(event) => startPopupResize(event, popup, frame, onUpdate)} />
