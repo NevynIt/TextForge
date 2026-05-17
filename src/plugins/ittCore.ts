@@ -11,8 +11,12 @@ const plugin: TextForgePlugin = {
       id: "itt-linter",
       name: "Indented Tree Parser",
       accepts: "text.indented-tree",
-      lint(document) {
-        return parseIndentedTree(document.text, document.languageId).diagnostics;
+      lint(document, context) {
+        return parseIndentedTree(document.text, document.languageId, {
+          currentDocumentId: document.id,
+          currentFileName: document.fileName,
+          includeDocuments: context.documents || []
+        }).diagnostics;
       }
     }
   ],
@@ -23,11 +27,15 @@ const plugin: TextForgePlugin = {
       name: "ITT to Tree Model",
       input: "text.indented-tree",
       output: "model.tree",
-      transform(value) {
+      transform(value, context) {
         if (value.kind !== "text") {
           throw new Error("ITT tree transformer requires text input.");
         }
-        const parsed = parseIndentedTree(value.text, value.languageId);
+        const parsed = parseIndentedTree(value.text, value.languageId, {
+          currentDocumentId: value.documentId,
+          currentFileName: value.fileName,
+          includeDocuments: context.documents || []
+        });
         return {
           kind: "model",
           modelType: "model.tree",
@@ -42,11 +50,15 @@ const plugin: TextForgePlugin = {
       name: "ITT to Graph Model",
       input: "text.indented-tree",
       output: "model.graph",
-      transform(value) {
+      transform(value, context) {
         if (value.kind !== "text") {
           throw new Error("ITT graph transformer requires text input.");
         }
-        const parsed = parseIndentedTree(value.text, value.languageId);
+        const parsed = parseIndentedTree(value.text, value.languageId, {
+          currentDocumentId: value.documentId,
+          currentFileName: value.fileName,
+          includeDocuments: context.documents || []
+        });
         return {
           kind: "model",
           modelType: "model.graph",

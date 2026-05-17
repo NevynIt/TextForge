@@ -377,6 +377,7 @@ function TreeItem({
   const depthLimit = 0;
   const canShowChildren = hasChildren && (depthLimit === 0 || depth < depthLimit);
   const [open, setOpen] = useState(canShowChildren && depth < expandDepth);
+  const nodeStyle = treeNodeVisualStyle(node);
 
   useEffect(() => {
     setOpen(canShowChildren && depth < expandDepth);
@@ -398,7 +399,8 @@ function TreeItem({
       <li>
         <div
           id={treeDomId(node.id)}
-          class={`tree-leaf-row ${selectedId === node.id ? "tree-selected" : ""}`}
+          class={`tree-leaf-row tree-node-row ${selectedId === node.id ? "tree-selected" : ""}`}
+          style={nodeStyle}
           onClick={() => onSelect(node.id)}
         >
           <span class="node-label">{renderHighlighted(node.label, query)}</span>
@@ -418,7 +420,8 @@ function TreeItem({
       <details ref={detailsRef} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
         <summary
           id={treeDomId(node.id)}
-          class={selectedId === node.id ? "tree-selected" : ""}
+          class={`tree-node-row ${selectedId === node.id ? "tree-selected" : ""}`}
+          style={nodeStyle}
           onClick={(event) => {
             onSelect(node.id);
             if (!event.shiftKey) {
@@ -600,18 +603,24 @@ function MindMapView({
   const initialDepth = stringSetting(settings.initialDepth, "depth2");
   const theme = safeClassName(stringSetting(settings.mindmapTheme, "textforge"));
   const textScale = numberSetting(settings.textScale, 1);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
+  const panRef = useRef(pan);
+
+  useEffect(() => {
+    panRef.current = pan;
+  }, [pan]);
 
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) {
       return;
     }
-    let drag: { id: number; x: number; y: number; left: number; top: number; moved: boolean } | null = null;
+    let drag: { id: number; x: number; y: number; panX: number; panY: number; moved: boolean } | null = null;
     const start = (event: PointerEvent) => {
       if (event.button !== 0 || event.target instanceof Element && event.target.closest("button,a,input,select,textarea,jmnode,jmexpander")) {
         return;
       }
-      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop, moved: false };
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, panX: panRef.current.x, panY: panRef.current.y, moved: false };
       viewport.setPointerCapture?.(event.pointerId);
       viewport.classList.add("is-panning");
     };
@@ -625,8 +634,7 @@ function MindMapView({
         drag.moved = true;
         event.preventDefault();
       }
-      viewport.scrollLeft = drag.left - deltaX;
-      viewport.scrollTop = drag.top - deltaY;
+      setPan({ x: drag.panX + deltaX, y: drag.panY + deltaY });
     };
     const stop = (event: PointerEvent) => {
       if (!drag || drag.id !== event.pointerId) {
@@ -721,13 +729,12 @@ function MindMapView({
     } else {
       instance.expand_all?.();
     }
-    setMindMapZoom(instance, zoom);
     renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
-    centerMindMapNode(viewport, host, mind.data.id);
+    centerMindMapNode(viewport, host, mind.data.id, zoom, setPan);
     window.setTimeout(() => {
       instance.resize?.();
-      setMindMapZoom(instance, zoom);
       renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
+      centerMindMapNode(viewport, host, mind.data.id, zoom, setPan);
     }, 0);
 
     return () => {
@@ -774,9 +781,9 @@ function MindMapView({
     window.requestAnimationFrame(() => {
       instance.select_node?.(activeMatch.id);
       renderMindMapDecorations(host, nodes, query, activeMatch.id);
-      centerMindMapNode(viewport, host, activeMatch.id);
+      centerMindMapNode(viewport, host, activeMatch.id, zoom, setPan);
     });
-  }, [query, searchMatches, activeMatchIndex, nodes]);
+  }, [query, searchMatches, activeMatchIndex, nodes, zoom]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -784,7 +791,6 @@ function MindMapView({
     if (!host || !instance) {
       return;
     }
-    setMindMapZoom(instance, zoom);
     window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || ""));
   }, [zoom]);
 
@@ -799,10 +805,9 @@ function MindMapView({
       return;
     }
     if (toolbarAction.action === "mindmap-center") {
-      centerMindMapNode(viewport, host, mind.data.id);
+      centerMindMapNode(viewport, host, mind.data.id, zoom, setPan);
     } else if (toolbarAction.action === "mindmap-fit") {
-      fitMindMap(instance, viewport, host, nodes);
-      onZoomChange?.(mindMapZoom(instance));
+      fitMindMap(viewport, host, onZoomChange, setPan);
     } else if (toolbarAction.action === "mindmap-fold-all") {
       instance.collapse_all?.();
       renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
@@ -823,10 +828,18 @@ function MindMapView({
         ref={viewportRef}
         onWheel={(event) => {
           event.preventDefault();
-          onZoomChange?.(clamp(zoom + (event.deltaY > 0 ? -0.1 : 0.1), 0.1, 5));
+          const nextZoom = clamp(zoom + (event.deltaY > 0 ? -0.1 : 0.1), 0.1, 5);
+          const rect = event.currentTarget.getBoundingClientRect();
+          const pointerX = event.clientX - rect.left;
+          const pointerY = event.clientY - rect.top;
+          setPan((current) => ({
+            x: pointerX - ((pointerX - current.x) / zoom) * nextZoom,
+            y: pointerY - ((pointerY - current.y) / zoom) * nextZoom
+          }));
+          onZoomChange?.(nextZoom);
         }}
       >
-        <div class="jsmind-viewer-host" ref={hostRef} />
+        <div class="jsmind-viewer-host" ref={hostRef} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }} />
       </div>
     </section>
   );
@@ -934,26 +947,45 @@ function GraphView({
         const cy = mod.default({
           container: containerRef.current,
           elements: [
-            ...visibleGraph.nodes.map((node) => ({
-              data: {
-                id: node.id,
-                label: node.label,
-                kind: node.type || "node",
-                size: node.size || nodeSize,
-                color: graphNodeColor(node),
-                matched: highlighted && node.label.toLowerCase().includes(highlighted)
-              }
-            })),
-            ...visibleGraph.edges.map((edge, index) => ({
-              data: {
-                id: edge.id || `edge-${index}`,
-                source: edge.source,
-                target: edge.target,
-                label: edge.label || edge.type || "",
-                width: edge.width || edgeWidth,
-                color: edge.color || "#87939f"
-              }
-            }))
+            ...visibleGraph.nodes.map((node) => {
+              const visual = graphNodeVisual(node, nodeSize);
+              return {
+                data: {
+                  id: node.id,
+                  label: node.label,
+                  kind: node.type || "node",
+                  size: visual.size,
+                  color: visual.color,
+                  textColor: visual.textColor,
+                  fontSize: visual.fontSize,
+                  fontWeight: visual.fontWeight,
+                  borderColor: visual.borderColor,
+                  borderWidth: visual.borderWidth,
+                  shape: visual.shape,
+                  opacity: visual.opacity,
+                  details: graphNodeDetails(node),
+                  matched: highlighted && node.label.toLowerCase().includes(highlighted)
+                }
+              };
+            }),
+            ...visibleGraph.edges.map((edge, index) => {
+              const visual = graphEdgeVisual(edge, edgeWidth);
+              return {
+                data: {
+                  id: edge.id || `edge-${index}`,
+                  source: edge.source,
+                  target: edge.target,
+                  label: edge.label || edge.type || "",
+                  kind: edge.type || "edge",
+                  width: visual.width,
+                  color: visual.color,
+                  lineStyle: visual.lineStyle,
+                  curveStyle: visual.curveStyle,
+                  opacity: visual.opacity,
+                  details: edge.details || stringDataValue(edge.data?.details)
+                }
+              };
+            })
           ],
           style: cytoscapeStyle(showLabels, showEdgeLabels, showArrows, performanceMode, visibleGraph.directed !== false) as never,
           layout: cytoscapeLayoutOptions(layout, visibleGraph, performanceMode, containerRef.current) as never
@@ -998,25 +1030,35 @@ function GraphView({
         const pagerank = pagerankModule.default;
         const g = new Graphology({ type: "mixed", multi: true, allowSelfLoops: true });
         visibleGraph.nodes.forEach((node) => {
+          const visual = graphNodeVisual(node, nodeSize / 2);
           g.addNode(node.id, {
             x: Number.isFinite(node.x) ? node.x : 0,
             y: Number.isFinite(node.y) ? node.y : 0,
-            baseSize: node.size || nodeSize / 2,
-            size: node.size || nodeSize / 2,
+            baseSize: visual.size,
+            size: visual.size,
             label: node.label,
-            color: highlighted && node.label.toLowerCase().includes(highlighted) ? "#cf6f2a" : graphNodeColor(node),
+            color: highlighted && node.label.toLowerCase().includes(highlighted) ? "#cf6f2a" : visual.color,
+            labelColor: visual.textColor,
             kind: node.type || "node",
+            depth: node.data?.depth,
+            rank: node.data?.rank,
+            details: graphNodeDetails(node),
+            style: node.style || node.data?.style,
             matched: Boolean(highlighted && [node.id, node.label, node.type].filter(Boolean).join(" ").toLowerCase().includes(highlighted))
           });
         });
         visibleGraph.edges.forEach((edge, index) => {
           if (g.hasNode(edge.source) && g.hasNode(edge.target)) {
             const edgeKey = uniqueGraphologyEdgeKey(g, edge.id || `edge-${index}`);
+            const visual = graphEdgeVisual(edge, edgeWidth);
             const attrs = {
               label: edge.label || edge.type || "",
-              size: edge.width || edgeWidth,
-              color: edge.color || "#87939f",
+              size: visual.width,
+              color: visual.color,
               type: visibleGraph.directed !== false && showArrows ? "arrow" : "line",
+              kind: edge.type || "edge",
+              details: edge.details || stringDataValue(edge.data?.details),
+              style: edge.style || edge.data?.style,
               matched: Boolean(highlighted && [edge.id, edge.label, edge.type].filter(Boolean).join(" ").toLowerCase().includes(highlighted))
             };
             if (visibleGraph.directed === false) {
@@ -1079,6 +1121,7 @@ function GraphView({
               ...data,
               label: labelMode === "none" || !showLabels || performanceMode === "dense" ? "" : String(data.label || ""),
               color: selected ? "#111827" : mutedByFocus || mutedBySearch ? "#bac2c7" : String(data.color || "#3a6ea5"),
+              labelColor: { color: String(data.labelColor || "#202225") },
               size: selected ? Math.max(5, Number(data.size) * 1.25) : mutedByFocus || mutedBySearch ? Math.max(2, Number(data.size) * 0.5) : Number(data.size) || nodeSize / 2,
               forceLabel: labelMode === "all" || selected || matchedNodes.has(node),
               highlighted: selected || matchedNodes.has(node),
@@ -1242,16 +1285,30 @@ function GraphView({
       if (!node) {
         return;
       }
-      element.data("size", node.size || nodeSize);
-      element.data("color", graphNodeColor(node));
+      const visual = graphNodeVisual(node, nodeSize);
+      element.data("size", visual.size);
+      element.data("color", visual.color);
+      element.data("textColor", visual.textColor);
+      element.data("fontSize", visual.fontSize);
+      element.data("fontWeight", visual.fontWeight);
+      element.data("borderColor", visual.borderColor);
+      element.data("borderWidth", visual.borderWidth);
+      element.data("shape", visual.shape);
+      element.data("opacity", visual.opacity);
+      element.data("details", graphNodeDetails(node));
     });
     cy.edges().forEach((element) => {
       const edge = edges.get(element.id());
       if (!edge) {
         return;
       }
-      element.data("width", edge.width || edgeWidth);
-      element.data("color", edge.color || "#87939f");
+      const visual = graphEdgeVisual(edge, edgeWidth);
+      element.data("width", visual.width);
+      element.data("color", visual.color);
+      element.data("lineStyle", visual.lineStyle);
+      element.data("curveStyle", visual.curveStyle);
+      element.data("opacity", visual.opacity);
+      element.data("details", edge.details || stringDataValue(edge.data?.details));
     });
   }, [visibleGraph, nodeSize, edgeWidth]);
 
@@ -1292,6 +1349,7 @@ function GraphView({
             ? {
                 kind: selected.kind,
                 title: selected.label,
+                details: selected.details,
                 rows: [
                   { label: "ID", value: selected.id },
                   ...(selected.type ? [{ label: "Type", value: selected.type }] : []),
@@ -1328,6 +1386,7 @@ interface GraphSelection {
   label: string;
   kind: "node" | "edge" | "selection";
   type?: string;
+  details?: string;
   rows: InspectorItem["rows"];
 }
 
@@ -1370,12 +1429,17 @@ function cytoscapeStyle(showLabels: boolean, showEdgeLabels: boolean, showArrows
       style: {
         label: showLabels && performanceMode !== "dense" ? "data(label)" : "",
         "background-color": "data(color)",
+        shape: "data(shape)",
         width: "data(size)",
         height: "data(size)",
-        color: "#202225",
-        "font-size": performanceMode === "readable" ? 13 : 11,
+        color: "data(textColor)",
+        "font-size": "data(fontSize)",
+        "font-weight": "data(fontWeight)",
         "text-valign": "bottom",
-        "text-margin-y": 5
+        "text-margin-y": 5,
+        "border-color": "data(borderColor)",
+        "border-width": "data(borderWidth)",
+        opacity: "data(opacity)"
       }
     },
     {
@@ -1403,9 +1467,11 @@ function cytoscapeStyle(showLabels: boolean, showEdgeLabels: boolean, showArrows
         "line-color": "data(color)",
         "target-arrow-color": "data(color)",
         "target-arrow-shape": directed && showArrows ? "triangle" : "none",
-        "curve-style": "bezier",
+        "curve-style": "data(curveStyle)",
+        "line-style": "data(lineStyle)",
         label: showEdgeLabels && performanceMode === "readable" ? "data(label)" : "",
-        "font-size": 9
+        "font-size": 9,
+        opacity: "data(opacity)"
       }
     },
     {
@@ -1504,6 +1570,7 @@ function cytoscapeSelection(cy: unknown): GraphSelection | null {
       label: String(element.data("label") || element.id()),
       kind: element.isNode() ? "node" : "edge",
       type: String(element.data("kind") || element.data("label") || ""),
+      details: stringDataValue(element.data("details")),
       rows: graphElementRows(element)
     };
   }
@@ -1531,6 +1598,7 @@ function sigmaSelectionFromSets(graph: GraphologyLike, selectedNodes: Set<string
       label: String(graph.getNodeAttribute?.(node, "label") || node),
       kind: "node",
       type: String(graph.getNodeAttribute?.(node, "kind") || ""),
+      details: stringDataValue(graph.getNodeAttribute?.(node, "details")),
       rows: sigmaNodeRows(graph, node)
     };
   }
@@ -1540,6 +1608,8 @@ function sigmaSelectionFromSets(graph: GraphologyLike, selectedNodes: Set<string
       id: edge,
       label: String(graph.getEdgeAttribute?.(edge, "label") || edge),
       kind: "edge",
+      type: String(graph.getEdgeAttribute?.(edge, "kind") || ""),
+      details: stringDataValue(graph.getEdgeAttribute?.(edge, "details")),
       rows: sigmaEdgeRows(graph, edge)
     };
   }
@@ -1617,6 +1687,7 @@ function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] 
         label: node.label,
         kind: "node",
         type: node.type,
+        details: graphNodeDetails(node),
         rows: [
           { label: "Degree", value: String(graph.edges.filter((edge) => edge.source === node.id || edge.target === node.id).length) }
         ]
@@ -1632,6 +1703,7 @@ function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] 
         label: edge.label || edge.type || id,
         kind: "edge",
         type: edge.type,
+        details: edge.details || stringDataValue(edge.data?.details),
         rows: [
           { label: "Source", value: edge.source },
           { label: "Target", value: edge.target },
@@ -1658,6 +1730,7 @@ function ViewerInspector({ title, item, emptyText }: { title: string; item: Insp
         <>
           <span>{item.kind}</span>
           <h3>{item.title}</h3>
+          {item.details ? <pre>{item.details}</pre> : null}
           <dl>
             {item.rows.map((row) => (
               <div key={row.label}>
@@ -1666,7 +1739,6 @@ function ViewerInspector({ title, item, emptyText }: { title: string; item: Insp
               </div>
             ))}
           </dl>
-          {item.details ? <pre>{item.details}</pre> : null}
         </>
       ) : (
         <p>{emptyText}</p>
@@ -1710,6 +1782,133 @@ function graphNodeColor(node: GraphModel["nodes"][number]): string {
 function depthColor(depth: number): string {
   const palette = ["#3a6ea5", "#5aa36f", "#d7a12f", "#8b67c7", "#4bb3b4", "#9a514e"];
   return palette[Math.max(0, Math.round(depth)) % palette.length];
+}
+
+function effectiveViewerStyle(node: TreeNode): Record<string, string> {
+  return { ...(node.style || {}), ...(node.attributes || {}) };
+}
+
+function treeNodeVisualStyle(node: TreeNode): JSX.CSSProperties {
+  const style = effectiveViewerStyle(node);
+  const background = safeCssColor(firstStyleAttribute(style, ["background-color", "backgroundColor", "background", "bg", "fill"]));
+  const foreground = safeCssColor(firstStyleAttribute(style, ["foreground-color", "foregroundColor", "text-color", "textColor", "fg", "color"]));
+  const borderColor = safeCssColor(firstStyleAttribute(style, ["border-color", "borderColor", "stroke"]));
+  const borderWidth = safeCssLength(firstStyleAttribute(style, ["border-width", "borderWidth", "stroke-width"]));
+  const fontSize = safeCssLength(firstStyleAttribute(style, ["font-size", "fontSize"]));
+  const fontWeight = safeCssFontWeight(firstStyleAttribute(style, ["font-weight", "fontWeight", "weight"]));
+  const fontStyle = safeCssFontStyle(firstStyleAttribute(style, ["font-style", "fontStyle", "style"]));
+  const opacity = safeCssOpacity(firstStyleAttribute(style, ["opacity"]));
+  const shape = firstStyleAttribute(style, ["shape", "node-shape", "nodeShape"])?.toLowerCase();
+  return {
+    ...(background ? { backgroundColor: background } : {}),
+    ...(foreground ? { color: foreground } : {}),
+    ...(borderColor ? { borderColor, borderStyle: "solid" } : {}),
+    ...(borderWidth ? { borderWidth, borderStyle: "solid" } : {}),
+    ...(fontSize ? { fontSize } : {}),
+    ...(fontWeight ? { fontWeight } : {}),
+    ...(fontStyle ? { fontStyle } : {}),
+    ...(opacity ? { opacity } : {}),
+    ...(shape ? { borderRadius: mindMapShapeRadius(shape) } : {})
+  };
+}
+
+function graphNodeVisual(node: GraphModel["nodes"][number], fallbackSize: number) {
+  const style = graphStyleRecord(node.style || node.data?.style);
+  const color = node.color || safeCssColor(firstStyleAttribute(style, ["background-color", "backgroundColor", "background", "bg", "fill"])) || graphNodeColor(node);
+  const textColor = safeCssColor(firstStyleAttribute(style, ["foreground-color", "foregroundColor", "text-color", "textColor", "fg", "color"])) || "#202225";
+  const fontSize = safePositiveNumber(firstStyleAttribute(style, ["font-size", "fontSize"])) || 12;
+  const fontWeight = safeCssFontWeight(firstStyleAttribute(style, ["font-weight", "fontWeight", "weight"])) || "500";
+  const borderColor = safeCssColor(firstStyleAttribute(style, ["border-color", "borderColor", "stroke"])) || "#7d8b94";
+  const borderWidth = safePositiveNumber(firstStyleAttribute(style, ["border-width", "borderWidth", "stroke-width"])) || 0;
+  const opacity = safeCssOpacity(firstStyleAttribute(style, ["opacity"])) || "1";
+  const shape = cytoscapeNodeShape(firstStyleAttribute(style, ["shape", "node-shape", "nodeShape"]));
+  return {
+    color,
+    textColor,
+    fontSize,
+    fontWeight,
+    borderColor,
+    borderWidth,
+    opacity,
+    shape,
+    size: node.size || safePositiveNumber(firstStyleAttribute(style, ["size", "node-size", "nodeSize", "width"])) || fallbackSize
+  };
+}
+
+function graphEdgeVisual(edge: GraphModel["edges"][number], fallbackWidth: number) {
+  const style = graphStyleRecord(edge.style || edge.data?.style);
+  const lineStyle = edgeLineStyle(style);
+  return {
+    color: edge.color || safeCssColor(firstStyleAttribute(style, ["stroke", "line-color", "lineColor", "edge-color", "edgeColor", "link-color", "linkColor", "color"])) || "#87939f",
+    width: edge.width || safePositiveNumber(firstStyleAttribute(style, ["stroke-width", "line-width", "lineWidth", "edge-width", "edgeWidth", "link-width", "linkWidth", "width"])) || fallbackWidth,
+    lineStyle,
+    curveStyle: cytoscapeCurveStyle(firstStyleAttribute(style, ["curve", "curve-style", "curveStyle"])),
+    opacity: safeCssOpacity(firstStyleAttribute(style, ["opacity"])) || "1"
+  };
+}
+
+function graphStyleRecord(value: unknown): Record<string, string> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>)
+      .filter(([key, item]) => key && (typeof item === "string" || typeof item === "number"))
+      .map(([key, item]) => [key, String(item)])
+  );
+}
+
+function graphNodeDetails(node: GraphModel["nodes"][number]): string | undefined {
+  return node.details || stringDataValue(node.data?.details);
+}
+
+function stringDataValue(value: unknown): string | undefined {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function safeCssFontWeight(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed && /^(normal|bold|bolder|lighter|[1-9]00)$/i.test(trimmed) ? trimmed : undefined;
+}
+
+function safeCssFontStyle(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed && /^(normal|italic|oblique)$/i.test(trimmed) ? trimmed : undefined;
+}
+
+function safeCssOpacity(value: string | undefined): string | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? String(clamp(parsed, 0, 1)) : undefined;
+}
+
+function cytoscapeNodeShape(value: string | undefined): string {
+  const shape = value?.trim().toLowerCase();
+  if (shape === "rectangle" || shape === "square") {
+    return "rectangle";
+  }
+  if (shape === "round" || shape === "rounded" || shape === "pill" || shape === "capsule") {
+    return "round-rectangle";
+  }
+  if (shape === "diamond" || shape === "hexagon" || shape === "heptagon" || shape === "octagon" || shape === "star" || shape === "triangle" || shape === "vee" || shape === "tag") {
+    return shape;
+  }
+  return "ellipse";
+}
+
+function cytoscapeCurveStyle(value: string | undefined): string {
+  const curve = value?.trim().toLowerCase();
+  if (curve === "straight" || curve === "taxi" || curve === "segments" || curve === "haystack") {
+    return curve;
+  }
+  return "bezier";
+}
+
+function edgeLineStyle(style: Record<string, string>): string {
+  const lineStyle = firstStyleAttribute(style, ["line-style", "lineStyle", "stroke-style", "strokeStyle"])?.trim().toLowerCase();
+  if (lineStyle === "dashed" || lineStyle === "dotted" || lineStyle === "solid") {
+    return lineStyle;
+  }
+  return firstStyleAttribute(style, ["stroke-dasharray", "strokeDasharray"]) ? "dashed" : "solid";
 }
 
 function indexTreeNodes(nodes: TreeNode[], map = new Map<string, TreeNode>()): Map<string, TreeNode> {
@@ -1791,7 +1990,7 @@ function treeNodeToJsMind(node: TreeNode, index: number): JsMindNode {
     topic: node.type ? `${node.label} (${node.type})` : node.label,
     expanded: true,
     direction: index % 2 === 0 ? "right" : "left",
-    ...mindMapStyleData(node.attributes),
+    ...mindMapStyleData(effectiveViewerStyle(node)),
     children: node.children.map((child, childIndex) => treeNodeToJsMind(child, childIndex))
   };
 }
@@ -1862,7 +2061,7 @@ function applyMindMapNodeStyles(host: HTMLElement, nodes: TreeNode[]): void {
     if (!element) {
       return;
     }
-    const attrs = node.attributes || {};
+    const attrs = effectiveViewerStyle(node);
     const borderColor = safeCssColor(firstStyleAttribute(attrs, ["border-color", "borderColor", "border", "stroke"]));
     const borderWidth = safeCssLength(firstStyleAttribute(attrs, ["border-width", "borderWidth"]));
     const shape = firstStyleAttribute(attrs, ["shape", "node-shape", "nodeShape"])?.toLowerCase();
@@ -1899,8 +2098,8 @@ function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[]): void {
           source: node,
           target,
           type: link.type,
-          color: link.color || safeCssColor(firstStyleAttribute(node.attributes || {}, ["link-color", "linkColor", "line-color", "lineColor"])),
-          width: link.width || safePositiveNumber(firstStyleAttribute(node.attributes || {}, ["link-width", "linkWidth", "line-width", "lineWidth"]))
+          color: link.color || safeCssColor(firstStyleAttribute({ ...(node.attributes || {}), ...(link.style || {}) }, ["stroke", "link-color", "linkColor", "line-color", "lineColor", "edge-color", "edgeColor"])),
+          width: link.width || safePositiveNumber(firstStyleAttribute({ ...(node.attributes || {}), ...(link.style || {}) }, ["stroke-width", "link-width", "linkWidth", "line-width", "lineWidth", "edge-width", "edgeWidth"]))
         });
       }
     });
@@ -1926,19 +2125,16 @@ function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[]): void {
   marker.append(markerPath);
   defs.append(marker);
   svg.append(defs);
-  const panelRect = panel.getBoundingClientRect();
   links.forEach((link, index) => {
     const source = jsMindElementById(host, link.source.id);
     const target = jsMindElementById(host, link.target.id);
     if (!source || !target || source.offsetParent === null || target.offsetParent === null) {
       return;
     }
-    const sourceRect = source.getBoundingClientRect();
-    const targetRect = target.getBoundingClientRect();
-    const sx = sourceRect.left - panelRect.left + panel.scrollLeft + sourceRect.width / 2;
-    const sy = sourceRect.top - panelRect.top + panel.scrollTop + sourceRect.height / 2;
-    const tx = targetRect.left - panelRect.left + panel.scrollLeft + targetRect.width / 2;
-    const ty = targetRect.top - panelRect.top + panel.scrollTop + targetRect.height / 2;
+    const sx = source.offsetLeft + source.offsetWidth / 2;
+    const sy = source.offsetTop + source.offsetHeight / 2;
+    const tx = target.offsetLeft + target.offsetWidth / 2;
+    const ty = target.offsetTop + target.offsetHeight / 2;
     const midX = sx + (tx - sx) * 0.5;
     const path = document.createElementNS(SVG_NAMESPACE, "path");
     path.setAttribute("d", `M ${sx} ${sy} C ${midX} ${sy}, ${midX} ${ty}, ${tx} ${ty}`);
@@ -1957,8 +2153,8 @@ function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[]): void {
 
 function mindMapStyleData(attributes: TreeNode["attributes"]): Partial<JsMindNode> {
   const attrs = attributes || {};
-  const background = safeCssColor(firstStyleAttribute(attrs, ["background-color", "backgroundColor", "background", "bg", "fill", "color"]));
-  const foreground = safeCssColor(firstStyleAttribute(attrs, ["foreground-color", "foregroundColor", "text-color", "textColor", "fg"]));
+  const background = safeCssColor(firstStyleAttribute(attrs, ["background-color", "backgroundColor", "background", "bg", "fill"]));
+  const foreground = safeCssColor(firstStyleAttribute(attrs, ["foreground-color", "foregroundColor", "text-color", "textColor", "fg", "color"]));
   const fontSize = safeCssLength(firstStyleAttribute(attrs, ["font-size", "fontSize"]));
   const fontWeight = firstStyleAttribute(attrs, ["font-weight", "fontWeight", "weight"]);
   const fontStyle = firstStyleAttribute(attrs, ["font-style", "fontStyle", "style"]);
@@ -1999,7 +2195,7 @@ function safeCssLength(value: string | undefined): string | undefined {
 }
 
 function safePositiveNumber(value: string | undefined): number | undefined {
-  const parsed = Number(value);
+  const parsed = value ? Number.parseFloat(value) : Number.NaN;
   return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
 }
 
@@ -2016,92 +2212,71 @@ function mindMapShapeRadius(shape: string): string {
   return "8px";
 }
 
-function centerMindMapNode(viewport: HTMLElement | null, host: HTMLElement, id: string): void {
+function centerMindMapNode(
+  viewport: HTMLElement | null,
+  host: HTMLElement,
+  id: string,
+  zoom: number,
+  setPan: (pan: { x: number; y: number }) => void
+): void {
   const element = jsMindElementById(host, id);
   if (!viewport || !element) {
     return;
   }
-  const viewportRect = viewport.getBoundingClientRect();
-  const elementRect = element.getBoundingClientRect();
-  viewport.scrollBy({
-    left: elementRect.left + elementRect.width / 2 - (viewportRect.left + viewportRect.width / 2),
-    top: elementRect.top + elementRect.height / 2 - (viewportRect.top + viewportRect.height / 2),
-    behavior: "smooth"
+  setPan({
+    x: viewport.clientWidth / 2 - (element.offsetLeft + element.offsetWidth / 2) * zoom,
+    y: viewport.clientHeight / 2 - (element.offsetTop + element.offsetHeight / 2) * zoom
   });
 }
 
-function fitMindMap(instance: jsMind, viewport: HTMLElement, host: HTMLElement, nodes: TreeNode[]): void {
+function fitMindMap(
+  viewport: HTMLElement,
+  host: HTMLElement,
+  onZoomChange: ((zoom: number) => void) | undefined,
+  setPan: (pan: { x: number; y: number }) => void
+): void {
   const visibleNodes = visibleJsMindNodes(host);
   if (!visibleNodes.length) {
-    centerMindMapNode(viewport, host, "root");
+    centerMindMapNode(viewport, host, "root", 1, setPan);
     return;
   }
-  const bounds = elementBounds(visibleNodes);
+  const bounds = elementOffsetBounds(visibleNodes);
   const availableWidth = Math.max(120, viewport.clientWidth - 80);
   const availableHeight = Math.max(120, viewport.clientHeight - 80);
-  const scale = Math.min(availableWidth / Math.max(1, bounds.width), availableHeight / Math.max(1, bounds.height), 1.6);
-  setMindMapZoom(instance, clamp(mindMapZoom(instance) * scale, 0.1, 2.1));
-  window.requestAnimationFrame(() => {
-    renderMindMapDecorations(host, nodes);
-    centerMindMapBounds(viewport, visibleJsMindNodes(host));
+  const nextZoom = clamp(Math.min(availableWidth / Math.max(1, bounds.width), availableHeight / Math.max(1, bounds.height), 1.6), 0.1, 2.1);
+  onZoomChange?.(nextZoom);
+  centerMindMapBounds(viewport, bounds, nextZoom, setPan);
+}
+
+function centerMindMapBounds(
+  viewport: HTMLElement,
+  bounds: ElementOffsetBounds,
+  zoom: number,
+  setPan: (pan: { x: number; y: number }) => void
+): void {
+  setPan({
+    x: viewport.clientWidth / 2 - (bounds.left + bounds.width / 2) * zoom,
+    y: viewport.clientHeight / 2 - (bounds.top + bounds.height / 2) * zoom
   });
 }
 
-function centerMindMapBounds(viewport: HTMLElement, elements: HTMLElement[]): void {
-  if (!elements.length) {
-    return;
-  }
-  const viewportRect = viewport.getBoundingClientRect();
-  const bounds = elementBounds(elements);
-  viewport.scrollBy({
-    left: bounds.left + bounds.width / 2 - (viewportRect.left + viewportRect.width / 2),
-    top: bounds.top + bounds.height / 2 - (viewportRect.top + viewportRect.height / 2),
-    behavior: "smooth"
-  });
+interface ElementOffsetBounds {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 }
 
-function elementBounds(elements: HTMLElement[]): DOMRect {
-  const rects = elements.map((element) => element.getBoundingClientRect());
-  const left = Math.min(...rects.map((rect) => rect.left));
-  const top = Math.min(...rects.map((rect) => rect.top));
-  const right = Math.max(...rects.map((rect) => rect.right));
-  const bottom = Math.max(...rects.map((rect) => rect.bottom));
-  return new DOMRect(left, top, right - left, bottom - top);
+function elementOffsetBounds(elements: HTMLElement[]): ElementOffsetBounds {
+  const left = Math.min(...elements.map((element) => element.offsetLeft));
+  const top = Math.min(...elements.map((element) => element.offsetTop));
+  const right = Math.max(...elements.map((element) => element.offsetLeft + element.offsetWidth));
+  const bottom = Math.max(...elements.map((element) => element.offsetTop + element.offsetHeight));
+  return { left, top, width: right - left, height: bottom - top };
 }
 
 function visibleJsMindNodes(host: HTMLElement): HTMLElement[] {
   return Array.from(host.querySelectorAll<HTMLElement>("jmnode")).filter((element) => element.offsetParent !== null);
-}
-
-function setMindMapZoom(instance: jsMind, zoom: number): void {
-  const view = instanceView(instance);
-  if (view?.set_zoom) {
-    if (!view.set_zoom(zoom)) {
-      forceMindMapZoom(view, zoom);
-    }
-    return;
-  }
-  view?.setZoom?.(zoom);
-}
-
-function forceMindMapZoom(view: JsMindViewHandle, zoom: number): void {
-  view.zoom_current = zoom;
-  view.actualZoom = zoom;
-  const panel = view.e_panel;
-  if (panel) {
-    Array.from(panel.children).forEach((child) => {
-      if (child instanceof HTMLElement) {
-        child.style.zoom = String(zoom);
-      }
-    });
-  }
-  view._show?.();
-}
-
-function mindMapZoom(instance: jsMind): number {
-  const view = instanceView(instance);
-  const zoom = view?.zoom_current ?? view?.actualZoom;
-  return typeof zoom === "number" && Number.isFinite(zoom) ? zoom : 1;
 }
 
 function jsMindElementById(host: HTMLElement, id: string): HTMLElement | null {
@@ -2162,12 +2337,6 @@ function instanceView(instance: jsMind): JsMindViewHandle | undefined {
 
 interface JsMindViewHandle {
   get_binded_nodeid?: (target: Element) => string;
-  set_zoom?: (zoom: number) => boolean;
-  setZoom?: (zoom: number) => boolean;
-  zoom_current?: number;
-  actualZoom?: number;
-  e_panel?: HTMLElement;
-  _show?: () => void;
 }
 
 interface JsMindRuntimeNode {

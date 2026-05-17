@@ -5,7 +5,8 @@ import { RuntimeLoader } from "./runtimeLoader";
 export class DiagnosticsService {
   constructor(
     private registry: PluginRegistry,
-    private runtime: RuntimeLoader
+    private runtime: RuntimeLoader,
+    private documentsProvider: () => TextDocument[] = () => []
   ) {}
 
   async run(document: TextDocument): Promise<Diagnostic[]> {
@@ -17,7 +18,7 @@ export class DiagnosticsService {
       }
       try {
         const linter = contribution as LinterContribution;
-        const results = await linter.lint(document, { runtime: this.runtime });
+        const results = await linter.lint(document, { runtime: this.runtime, documents: this.documentsProvider() });
         diagnostics.push(
           ...results.map((diagnostic, index) => ({
             ...diagnostic,

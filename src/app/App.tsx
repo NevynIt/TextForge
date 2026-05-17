@@ -41,14 +41,15 @@ export function App() {
     registerBaseLanguages(languages);
     const runtime = new RuntimeLoader();
     const plugins = new PluginRegistry(languages);
+    const workspace = new WorkspaceManager();
     plugins.registerManifest(pluginManifest);
     return {
       languages,
       runtime,
       plugins,
-      workspace: new WorkspaceManager(),
-      pipelines: new PipelineRunner(plugins, runtime),
-      diagnostics: new DiagnosticsService(plugins, runtime),
+      workspace,
+      pipelines: new PipelineRunner(plugins, runtime, () => workspace.listDocuments()),
+      diagnostics: new DiagnosticsService(plugins, runtime, () => workspace.listDocuments()),
       storage: new TextForgeStorage()
     };
   }, []);

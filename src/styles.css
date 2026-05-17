@@ -320,7 +320,7 @@ button:disabled {
   position: relative;
 }
 
-.window-layout-menu summary {
+.window-layout-menu > button {
   display: inline-grid;
   place-items: center;
   width: 30px;
@@ -329,11 +329,6 @@ button:disabled {
   border-radius: 6px;
   background: #394851;
   cursor: pointer;
-  list-style: none;
-}
-
-.window-layout-menu summary::-webkit-details-marker {
-  display: none;
 }
 
 .window-layout-panel {
@@ -341,14 +336,19 @@ button:disabled {
   top: 36px;
   right: 0;
   z-index: 8;
-  display: grid;
-  grid-template-columns: repeat(2, 30px);
+  display: none;
+  grid-template-columns: repeat(4, 30px);
   gap: 6px;
   padding: 8px;
   border: 1px solid #5d6a72;
   border-radius: 8px;
   background: #28343c;
   box-shadow: 0 10px 24px rgba(32, 34, 37, 0.24);
+}
+
+.window-layout-menu:hover .window-layout-panel,
+.window-layout-menu:focus-within .window-layout-panel {
+  display: grid;
 }
 
 .quadrant-glyph {
@@ -401,12 +401,40 @@ button:disabled {
     linear-gradient(rgba(255, 254, 250, 0.42), rgba(255, 254, 250, 0.42)) 100% 100% / 50% 50% no-repeat;
 }
 
+.quadrant-glyph-top {
+  background:
+    linear-gradient(currentColor, currentColor) 50% 0 / 1px 100% no-repeat,
+    linear-gradient(currentColor, currentColor) 0 50% / 100% 1px no-repeat,
+    linear-gradient(rgba(255, 254, 250, 0.42), rgba(255, 254, 250, 0.42)) 0 0 / 100% 50% no-repeat;
+}
+
+.quadrant-glyph-bottom {
+  background:
+    linear-gradient(currentColor, currentColor) 50% 0 / 1px 100% no-repeat,
+    linear-gradient(currentColor, currentColor) 0 50% / 100% 1px no-repeat,
+    linear-gradient(rgba(255, 254, 250, 0.42), rgba(255, 254, 250, 0.42)) 0 100% / 100% 50% no-repeat;
+}
+
+.quadrant-glyph-left {
+  background:
+    linear-gradient(currentColor, currentColor) 50% 0 / 1px 100% no-repeat,
+    linear-gradient(currentColor, currentColor) 0 50% / 100% 1px no-repeat,
+    linear-gradient(rgba(255, 254, 250, 0.42), rgba(255, 254, 250, 0.42)) 0 0 / 50% 100% no-repeat;
+}
+
+.quadrant-glyph-right {
+  background:
+    linear-gradient(currentColor, currentColor) 50% 0 / 1px 100% no-repeat,
+    linear-gradient(currentColor, currentColor) 0 50% / 100% 1px no-repeat,
+    linear-gradient(rgba(255, 254, 250, 0.42), rgba(255, 254, 250, 0.42)) 100% 0 / 50% 100% no-repeat;
+}
+
 .popup-actions,
 .popup-actions * {
   cursor: default;
 }
 
-.window-layout-menu summary,
+.window-layout-menu > button,
 .window-layout-panel button {
   cursor: pointer;
 }
@@ -864,6 +892,12 @@ button:disabled {
   line-height: 1.9;
 }
 
+.tree-node-row {
+  border: 0 solid transparent;
+  border-radius: 6px;
+  padding: 1px 4px;
+}
+
 .tree-pruned {
   display: inline-flex;
   margin: 4px 0 4px 22px;
@@ -973,10 +1007,11 @@ button:disabled {
   height: 100%;
   border: 1px solid #d4d1c7;
   background: #ffffff;
-  overflow: auto;
+  overflow: hidden;
   position: relative;
   cursor: grab;
   overscroll-behavior: contain;
+  touch-action: none;
 }
 
 .jsmind-viewer-viewport.is-panning {
@@ -991,6 +1026,8 @@ button:disabled {
   width: max(4200px, 300%);
   overflow: hidden;
   position: relative;
+  transform-origin: 0 0;
+  will-change: transform;
   background:
     linear-gradient(#eef1ee 1px, transparent 1px),
     linear-gradient(90deg, #eef1ee 1px, transparent 1px),
@@ -1134,6 +1171,10 @@ button:disabled {
 }
 
 .viewer-inspector pre {
+  margin: 8px 0 10px;
+  border-left: 3px solid #d7a12f;
+  padding: 7px 9px;
+  background: #fff8df;
   max-height: 180px;
   white-space: pre-wrap;
 }

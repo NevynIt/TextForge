@@ -1,5 +1,4 @@
 import type { JSX } from "preact";
-import { useRef } from "preact/hooks";
 import {
   Activity,
   ArrowRight,
@@ -96,7 +95,7 @@ export function PopupHost({
                     <button type="button" title="Open external snapshot window" onClick={() => detachPopup(popup)}>
                       <ExternalLink size={16} />
                     </button>
-                    <button type="button" title="Export snapshot" onClick={() => exportPopup(popup)}>
+                    <button type="button" title={`Export snapshot as ${exportFileName(popup)}`} onClick={() => exportPopup(popup)}>
                       <Download size={16} />
                     </button>
                   </>
@@ -416,20 +415,18 @@ function toolbarActionPatch(popup: PopupRecord, action: string): Partial<PopupRe
   };
 }
 
+type WindowLayoutTarget = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "top" | "bottom" | "left" | "right";
+
 function WindowQuadrantMenu({ popupId, onUpdate }: { popupId: string; onUpdate: PopupHostProps["onUpdate"] }) {
-  const detailsRef = useRef<HTMLDetailsElement>(null);
-  function apply(layout: "top-left" | "top-right" | "bottom-left" | "bottom-right"): void {
+  function apply(layout: WindowLayoutTarget): void {
     onUpdate(popupId, layoutPatch(layout));
-    if (detailsRef.current) {
-      detailsRef.current.open = false;
-    }
   }
 
   return (
-    <details ref={detailsRef} class="window-layout-menu">
-      <summary title="Quadrants" aria-label="Quadrants">
+    <div class="window-layout-menu">
+      <button type="button" title="Window layout" aria-label="Window layout">
         <span class="quadrant-glyph quadrant-glyph-menu" />
-      </summary>
+      </button>
       <div class="window-layout-panel" aria-label="Window layout controls">
         <button type="button" title="Top left" aria-label="Top left" onClick={() => apply("top-left")}>
           <span class="quadrant-glyph quadrant-glyph-top-left" />
@@ -443,16 +440,36 @@ function WindowQuadrantMenu({ popupId, onUpdate }: { popupId: string; onUpdate: 
         <button type="button" title="Bottom right" aria-label="Bottom right" onClick={() => apply("bottom-right")}>
           <span class="quadrant-glyph quadrant-glyph-bottom-right" />
         </button>
+        <button type="button" title="Top left and right" aria-label="Top left and right" onClick={() => apply("top")}>
+          <span class="quadrant-glyph quadrant-glyph-top" />
+        </button>
+        <button type="button" title="Bottom left and right" aria-label="Bottom left and right" onClick={() => apply("bottom")}>
+          <span class="quadrant-glyph quadrant-glyph-bottom" />
+        </button>
+        <button type="button" title="Left top and bottom" aria-label="Left top and bottom" onClick={() => apply("left")}>
+          <span class="quadrant-glyph quadrant-glyph-left" />
+        </button>
+        <button type="button" title="Right top and bottom" aria-label="Right top and bottom" onClick={() => apply("right")}>
+          <span class="quadrant-glyph quadrant-glyph-right" />
+        </button>
       </div>
-    </details>
+    </div>
   );
 }
 
-function layoutPatch(layout: "max" | "top-left" | "top-right" | "bottom-left" | "bottom-right"): Partial<PopupRecord> {
+function layoutPatch(layout: "max" | WindowLayoutTarget): Partial<PopupRecord> {
   const viewport = viewportSize();
   const gap = 8;
   if (layout === "max") {
     return { x: gap, y: gap, width: viewport.width - gap * 2, height: viewport.height - gap * 2 };
+  }
+  if (layout === "top" || layout === "bottom") {
+    const height = Math.floor((viewport.height - gap * 3) / 2);
+    return { x: gap, y: layout === "top" ? gap : gap * 2 + height, width: viewport.width - gap * 2, height, restoreFrame: undefined };
+  }
+  if (layout === "left" || layout === "right") {
+    const width = Math.floor((viewport.width - gap * 3) / 2);
+    return { x: layout === "left" ? gap : gap * 2 + width, y: gap, width, height: viewport.height - gap * 2, restoreFrame: undefined };
   }
   const width = Math.floor((viewport.width - gap * 3) / 2);
   const height = Math.floor((viewport.height - gap * 3) / 2);
@@ -843,9 +860,19 @@ function exportPopup(popup: PopupRecord): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${popup.title.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "textforge-view"}.${payload.extension}`;
+  anchor.download = exportFileName(popup);
   anchor.click();
   URL.revokeObjectURL(url);
+}
+
+function exportFileName(popup: PopupRecord): string {
+  if (!popup.result) {
+    return "textforge-view.html";
+  }
+  const payload = exportPayload(popup.result);
+  const sourceName = popup.documentName ? popup.documentName.replace(/\.[^.]+$/, "") : popup.title;
+  const title = `${sourceName}-${popup.result.title || popup.title}`;
+  return `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "textforge-view"}.${payload.extension}`;
 }
 
 function exportPayload(result: NonNullable<PopupRecord["result"]>): { content: string; extension: string; type: string } {

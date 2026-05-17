@@ -1,4 +1,4 @@
-import type { Diagnostic, GraphModel, TreeNode } from "../domain/types";
+import type { Diagnostic, GraphEdge, GraphModel, TextDocument, TreeNode } from "../domain/types";
 import { sourceRange } from "./source";
 
 interface StackItem {
@@ -6,22 +6,46 @@ interface StackItem {
   node: TreeNode;
 }
 
-export function parseIndentedTree(text: string, languageId = "text.indented-tree"): { nodes: TreeNode[]; diagnostics: Diagnostic[] } {
-  const diagnostics: Diagnostic[] = [];
+interface PreparedLine {
+  raw: string;
+  offset: number;
+  documentText: string;
+  languageId: string;
+  documentId?: string;
+  fileName?: string;
+}
+
+export interface IttStyleRule {
+  selector: string;
+  declarations: Record<string, string>;
+  target: "node" | "cross-link" | "hierarchy-edge";
+}
+
+export interface ParseIndentedTreeOptions {
+  currentDocumentId?: string;
+  currentFileName?: string;
+  includeDocuments?: TextDocument[];
+}
+
+export function parseIndentedTree(
+  text: string,
+  languageId = "text.indented-tree",
+  options: ParseIndentedTreeOptions = {}
+): { nodes: TreeNode[]; diagnostics: Diagnostic[]; styleRules: IttStyleRule[] } {
+  const prepared = prepareIttInput(text, languageId, options, rootIncludeKeys(options));
+  const diagnostics: Diagnostic[] = [...prepared.diagnostics];
   const roots: TreeNode[] = [];
   const stack: StackItem[] = [];
   const idMap = new Map<string, TreeNode>();
   let previousNode: TreeNode | null = null;
   let previousDetailIndent: number | null = null;
-  let offset = 0;
   let counter = 0;
   let inFrontMatter = false;
 
-  for (const line of text.split(/\r?\n/)) {
-    const rawLine = line;
+  for (const line of prepared.lines) {
+    const rawLine = line.raw;
     const trimmed = rawLine.trim();
-    const lineStart = offset;
-    offset += rawLine.length + 1;
+    const lineStart = line.offset;
 
     if (trimmed === "---" && !roots.length) {
       inFrontMatter = !inFrontMatter;
@@ -31,41 +55,21 @@ export function parseIndentedTree(text: string, languageId = "text.indented-tree
       continue;
     }
     if (rawLine.includes("\t")) {
-      diagnostics.push({
-        source: "itt-parser",
-        severity: "warning",
-        languageId,
-        message: "Tabs in indentation are ambiguous; use spaces."
-      });
+      diagnostics.push(lineDiagnostic(line, "warning", "Tabs in indentation are ambiguous; use spaces."));
     }
 
     const indent = rawLine.match(/^\s*/)?.[0].replaceAll("\t", "  ").length || 0;
     const content = rawLine.trimStart();
     if (content.startsWith("|")) {
       if (!previousNode) {
-        diagnostics.push({
-          source: "itt-parser",
-          severity: "warning",
-          languageId,
-          message: "Detail block has no preceding node."
-        });
+        diagnostics.push(lineDiagnostic(line, "warning", "Detail block has no preceding node."));
         continue;
       }
       if (indent < findIndentForNode(stack, previousNode)) {
-        diagnostics.push({
-          source: "itt-parser",
-          severity: "warning",
-          languageId,
-          message: "Detail block indentation is less than its node indentation."
-        });
+        diagnostics.push(lineDiagnostic(line, "warning", "Detail block indentation is less than its node indentation."));
       }
       if (previousDetailIndent !== null && indent !== previousDetailIndent) {
-        diagnostics.push({
-          source: "itt-parser",
-          severity: "warning",
-          languageId,
-          message: "Detail block indentation changed inside the same block."
-        });
+        diagnostics.push(lineDiagnostic(line, "warning", "Detail block indentation changed inside the same block."));
       }
       previousDetailIndent = indent;
       previousNode.details = [previousNode.details, content.slice(1).trimStart()].filter(Boolean).join("\n");
@@ -77,12 +81,7 @@ export function parseIndentedTree(text: string, languageId = "text.indented-tree
       stack.pop();
     }
     if (indent > 0 && stack.length === 0 && roots.length === 0) {
-      diagnostics.push({
-        source: "itt-parser",
-        severity: "warning",
-        languageId,
-        message: "First node is indented without a parent."
-      });
+      diagnostics.push(lineDiagnostic(line, "warning", "First node is indented without a parent."));
     }
 
     const parsed = parseNodeContent(content);
@@ -95,24 +94,18 @@ export function parseIndentedTree(text: string, languageId = "text.indented-tree
       attributes: parsed.attributes,
       links: parsed.links,
       children: [],
-      sourceRange: sourceRange(text, lineStart, lineStart + rawLine.length)
+      sourceRange: sourceRange(line.documentText, lineStart, lineStart + rawLine.length)
     };
     if (!parsed.label) {
       diagnostics.push({
-        source: "itt-parser",
-        severity: "warning",
-        languageId,
-        message: "Node label is empty.",
+        ...lineDiagnostic(line, "warning", "Node label is empty."),
         range: node.sourceRange
       });
     }
     if (node.declaredId) {
       if (idMap.has(node.declaredId)) {
         diagnostics.push({
-          source: "itt-parser",
-          severity: "error",
-          languageId,
-          message: `Duplicate node id "${node.declaredId}".`,
+          ...lineDiagnostic(line, "error", `Duplicate node id "${node.declaredId}".`),
           range: node.sourceRange
         });
       }
@@ -126,6 +119,15 @@ export function parseIndentedTree(text: string, languageId = "text.indented-tree
     }
     stack.push({ indent, node });
     previousNode = node;
+  }
+
+  applyTreeStyles(roots, prepared.styleRules);
+  if (roots[0]) {
+    Object.defineProperty(roots[0], "__ittStyleRules", {
+      value: prepared.styleRules,
+      enumerable: false,
+      configurable: true
+    });
   }
 
   for (const node of flattenTree(roots)) {
@@ -142,62 +144,462 @@ export function parseIndentedTree(text: string, languageId = "text.indented-tree
     }
   }
 
-  return { nodes: roots, diagnostics };
+  return { nodes: roots, diagnostics, styleRules: prepared.styleRules };
 }
 
 export function indentedTreeToGraph(nodes: TreeNode[]): GraphModel {
   const graphNodes = new Map<string, GraphModel["nodes"][number]>();
   const edges: GraphModel["edges"] = [];
+  const styleRules = collectTreeStyleRules(nodes);
 
   function visit(node: TreeNode, parent: TreeNode | undefined, depth: number, rank: number): void {
     const attributes = node.attributes || {};
+    const style = effectiveStyle(node);
     graphNodes.set(node.id, {
       id: node.id,
       label: node.label,
       type: node.type || "node",
-      color: styleColor(attributes, ["color", "background", "background-color", "backgroundColor", "bg", "fill"]),
-      size: styleNumber(attributes, ["size", "node-size", "nodeSize"]),
-      x: styleNumber(attributes, ["x"]),
-      y: styleNumber(attributes, ["y"]),
+      classes: node.tags || [],
+      color: styleColor(style, NODE_FILL_KEYS) || styleColor(attributes, ["color"]),
+      size: styleNumber(style, NODE_SIZE_KEYS),
+      x: styleNumber(style, ["x"]),
+      y: styleNumber(style, ["y"]),
+      style,
+      details: node.details,
+      sourceRange: node.sourceRange,
       data: {
         depth,
         rank,
         tags: node.tags || [],
         attributes,
-        declaredId: node.declaredId
+        declaredId: node.declaredId,
+        details: node.details,
+        style
       }
     });
     if (parent) {
-      const edgeColor = styleColor(attributes, ["edge-color", "edgeColor", "line-color", "lineColor", "stroke"]);
-      const edgeWidth = styleNumber(attributes, ["edge-width", "edgeWidth", "line-width", "lineWidth"]);
+      const hierarchyStyle = {
+        ...edgeStyleForRules(styleRules, "hierarchy-edge"),
+        ...legacyHierarchyEdgeStyle(attributes)
+      };
       edges.push({
         id: `hierarchy-${parent.id}-${node.id}`,
         source: parent.id,
         target: node.id,
         type: "hierarchy",
         label: "contains",
-        color: edgeColor,
-        width: edgeWidth
+        color: styleColor(hierarchyStyle, EDGE_COLOR_KEYS),
+        width: styleNumber(hierarchyStyle, EDGE_WIDTH_KEYS),
+        style: hierarchyStyle
       });
     }
     for (const link of node.links || []) {
-      const linkColor = link.color || styleColor(attributes, ["link-color", "linkColor", "line-color", "lineColor", "edge-color", "edgeColor"]);
-      const linkWidth = link.width || styleNumber(attributes, ["link-width", "linkWidth", "line-width", "lineWidth", "edge-width", "edgeWidth"]);
+      const linkStyle = {
+        ...edgeStyleForRules(styleRules, "cross-link", link.type),
+        ...(link.style || {}),
+        ...legacyCrossLinkStyle(attributes)
+      };
       edges.push({
         id: `link-${node.id}-${link.target}-${edges.length}`,
         source: node.id,
         target: link.target,
         type: link.type || "related-to",
         label: link.type || "related-to",
-        color: linkColor,
-        width: linkWidth
+        color: link.color || styleColor(linkStyle, EDGE_COLOR_KEYS),
+        width: link.width || styleNumber(linkStyle, EDGE_WIDTH_KEYS),
+        style: linkStyle
       });
     }
     node.children.forEach((child, childIndex) => visit(child, node, depth + 1, childIndex));
   }
 
   nodes.forEach((node, index) => visit(node, undefined, 0, index));
-  return { nodes: Array.from(graphNodes.values()), edges, directed: true };
+  return { nodes: Array.from(graphNodes.values()), edges, directed: true, graph: { attrs: { ittStyleRules: styleRules } } };
+}
+
+function prepareIttInput(
+  text: string,
+  languageId: string,
+  options: ParseIndentedTreeOptions,
+  includeKeys: Set<string>
+): { lines: PreparedLine[]; styleRules: IttStyleRule[]; diagnostics: Diagnostic[] } {
+  const lines: PreparedLine[] = [];
+  const styleRules: IttStyleRule[] = [];
+  const diagnostics: Diagnostic[] = [];
+  const rawLines = text.split(/\r?\n/);
+  const offsets: number[] = [];
+  let offset = 0;
+  rawLines.forEach((line) => {
+    offsets.push(offset);
+    offset += line.length + 1;
+  });
+
+  for (let index = 0; index < rawLines.length; index += 1) {
+    const rawLine = rawLines[index];
+    const trimmed = rawLine.trim();
+    const preparedLine: PreparedLine = {
+      raw: rawLine,
+      offset: offsets[index],
+      documentText: text,
+      languageId,
+      documentId: options.currentDocumentId,
+      fileName: options.currentFileName
+    };
+
+    if (trimmed.startsWith("%style")) {
+      const block = collectStyleBlock(rawLines, index);
+      index = block.endIndex;
+      const parsedRules = parseStyleDirective(block.text);
+      if (parsedRules.length) {
+        styleRules.push(...parsedRules);
+      } else {
+        diagnostics.push(lineDiagnostic(preparedLine, "warning", "Could not parse %style directive."));
+      }
+      if (!block.closed) {
+        diagnostics.push(lineDiagnostic(preparedLine, "warning", "Multiline %style directive is missing a closing brace."));
+      }
+      continue;
+    }
+
+    if (trimmed.startsWith("%include")) {
+      const target = parseIncludeTarget(trimmed);
+      if (!target) {
+        diagnostics.push(lineDiagnostic(preparedLine, "warning", "Could not parse %include directive."));
+        continue;
+      }
+      const document = findIncludedDocument(target, options.includeDocuments || []);
+      if (!document) {
+        diagnostics.push(lineDiagnostic(preparedLine, "warning", `%include target "${target}" is not open in the editor.`));
+        continue;
+      }
+      const aliases = documentIncludeKeys(document);
+      if (aliases.some((alias) => includeKeys.has(alias))) {
+        diagnostics.push(lineDiagnostic(preparedLine, "warning", `%include target "${target}" would create a circular include.`));
+        continue;
+      }
+      const nextKeys = new Set(includeKeys);
+      aliases.forEach((alias) => nextKeys.add(alias));
+      const included = prepareIttInput(
+        document.text,
+        document.languageId,
+        {
+          ...options,
+          currentDocumentId: document.id,
+          currentFileName: document.fileName
+        },
+        nextKeys
+      );
+      lines.push(...included.lines);
+      styleRules.push(...included.styleRules);
+      diagnostics.push(...included.diagnostics);
+      continue;
+    }
+
+    if (trimmed.startsWith("%")) {
+      continue;
+    }
+
+    lines.push(preparedLine);
+  }
+
+  return { lines, styleRules, diagnostics };
+}
+
+function collectStyleBlock(lines: string[], startIndex: number): { text: string; endIndex: number; closed: boolean } {
+  const first = lines[startIndex].trim().replace(/^%style\s*/, "");
+  const parts = [first];
+  let balance = braceBalance(first);
+  let endIndex = startIndex;
+  while (balance > 0 && endIndex + 1 < lines.length) {
+    endIndex += 1;
+    parts.push(lines[endIndex]);
+    balance += braceBalance(lines[endIndex]);
+  }
+  return { text: parts.join("\n"), endIndex, closed: balance <= 0 && first.includes("{") };
+}
+
+function braceBalance(text: string): number {
+  let balance = 0;
+  for (const char of text) {
+    if (char === "{") {
+      balance += 1;
+    } else if (char === "}") {
+      balance -= 1;
+    }
+  }
+  return balance;
+}
+
+function parseStyleDirective(text: string): IttStyleRule[] {
+  const trimmed = text.trim();
+  const close = trimmed.lastIndexOf("}");
+  const open = close > 0 ? trimmed.lastIndexOf("{", close) : -1;
+  if (open <= 0 || close <= open) {
+    return [];
+  }
+  const selectorText = trimmed.slice(0, open).trim();
+  const declarations = parseStyleDeclarations(trimmed.slice(open + 1, close));
+  if (!Object.keys(declarations).length) {
+    return [];
+  }
+  return selectorText
+    .split(",")
+    .map((selector) => selector.trim())
+    .filter(Boolean)
+    .map((selector) => ({ selector, declarations, target: selectorTarget(selector) }));
+}
+
+function parseStyleDeclarations(text: string): Record<string, string> {
+  const declarations: Record<string, string> = {};
+  text.split(";").forEach((part) => {
+    const [key, ...rest] = part.split(":");
+    if (!key || !rest.length) {
+      return;
+    }
+    const name = key.trim();
+    const value = rest.join(":").trim();
+    if (name && value) {
+      declarations[name] = value;
+    }
+  });
+  return declarations;
+}
+
+function selectorTarget(selector: string): IttStyleRule["target"] {
+  const trimmed = selector.trim();
+  if (trimmed === "=>") {
+    return "hierarchy-edge";
+  }
+  if (trimmed === "->" || /^->\[[^\]]+\]$/.test(trimmed)) {
+    return "cross-link";
+  }
+  return "node";
+}
+
+function parseIncludeTarget(line: string): string {
+  const match = /^%include\s+(.+?)\s*$/.exec(line);
+  const target = match?.[1]?.trim() || "";
+  return stripQuotes(target);
+}
+
+function findIncludedDocument(target: string, documents: TextDocument[]): TextDocument | undefined {
+  const normalized = normalizeIncludeKey(target);
+  const targetBase = normalizeIncludeKey(baseName(target));
+  return documents.find((document) => {
+    const keys = documentIncludeKeys(document);
+    return keys.includes(normalized) || keys.includes(targetBase);
+  });
+}
+
+function rootIncludeKeys(options: ParseIndentedTreeOptions): Set<string> {
+  const keys = new Set<string>();
+  [options.currentDocumentId, options.currentFileName, options.currentFileName ? baseName(options.currentFileName) : ""].forEach((value) => {
+    const key = normalizeIncludeKey(value || "");
+    if (key) {
+      keys.add(key);
+    }
+  });
+  return keys;
+}
+
+function documentIncludeKeys(document: TextDocument): string[] {
+  return [document.id, document.fileName, baseName(document.fileName)].map(normalizeIncludeKey).filter(Boolean);
+}
+
+function normalizeIncludeKey(value: string): string {
+  return stripQuotes(value).replace(/\\/g, "/").replace(/^\.\//, "").trim().toLowerCase();
+}
+
+function baseName(value: string): string {
+  return value.split(/[\\/]/).pop() || value;
+}
+
+function stripQuotes(value: string): string {
+  const trimmed = value.trim();
+  if ((trimmed.startsWith('"') && trimmed.endsWith('"')) || (trimmed.startsWith("'") && trimmed.endsWith("'"))) {
+    return trimmed.slice(1, -1);
+  }
+  return trimmed;
+}
+
+function lineDiagnostic(line: PreparedLine, severity: Diagnostic["severity"], message: string): Diagnostic {
+  return {
+    source: "itt-parser",
+    severity,
+    languageId: line.languageId,
+    documentId: line.documentId,
+    message,
+    range: sourceRange(line.documentText, line.offset, line.offset + line.raw.length)
+  };
+}
+
+function applyTreeStyles(nodes: TreeNode[], styleRules: IttStyleRule[], inherited: Record<string, string> = {}): void {
+  nodes.forEach((node) => {
+    const ruleStyle = mergeMatchingNodeStyles(node, styleRules);
+    const inlineStyle = inlineNodeStyle(node.attributes || {});
+    const style = cleanStyle({ ...inherited, ...ruleStyle, ...inlineStyle });
+    if (Object.keys(style).length) {
+      node.style = style;
+    }
+    (node.links || []).forEach((link) => {
+      const linkStyle = cleanStyle({
+        ...edgeStyleForRules(styleRules, "cross-link", link.type),
+        ...(link.style || {}),
+        ...legacyCrossLinkStyle(node.attributes || {})
+      });
+      if (Object.keys(linkStyle).length) {
+        link.style = linkStyle;
+        link.color = link.color || styleColor(linkStyle, EDGE_COLOR_KEYS);
+        link.width = link.width || styleNumber(linkStyle, EDGE_WIDTH_KEYS);
+      }
+    });
+    applyTreeStyles(node.children, styleRules, inheritedStyle(style));
+  });
+}
+
+function mergeMatchingNodeStyles(node: TreeNode, styleRules: IttStyleRule[]): Record<string, string> {
+  const style: Record<string, string> = {};
+  styleRules.forEach((rule) => {
+    if (rule.target === "node" && nodeMatchesSelector(node, rule.selector)) {
+      Object.assign(style, rule.declarations);
+    }
+  });
+  return style;
+}
+
+function nodeMatchesSelector(node: TreeNode, selector: string): boolean {
+  const trimmed = selector.trim();
+  if (trimmed === "*") {
+    return true;
+  }
+  if (trimmed.startsWith("&")) {
+    const id = trimmed.slice(1);
+    return node.id === id || node.declaredId === id;
+  }
+  const typeMatch = /^\[([^\]]+)\]$/.exec(trimmed);
+  if (typeMatch) {
+    return node.type === typeMatch[1].trim();
+  }
+  if (trimmed.startsWith("#")) {
+    return Boolean(node.tags?.includes(trimmed.slice(1)));
+  }
+  const attributeMatch = /^\{([^=}\s]+)\s*=\s*([^}]+)\}$/.exec(trimmed);
+  if (attributeMatch) {
+    const key = attributeMatch[1].trim().toLowerCase();
+    const expected = stripQuotes(attributeMatch[2]).trim().toLowerCase();
+    const actual = Object.entries(node.attributes || {}).find(([name]) => name.trim().toLowerCase() === key)?.[1];
+    return actual?.trim().toLowerCase() === expected;
+  }
+  return false;
+}
+
+function inheritedStyle(style: Record<string, string>): Record<string, string> {
+  const inherited: Record<string, string> = {};
+  Object.entries(style).forEach(([key, value]) => {
+    if (INHERITED_STYLE_KEYS.has(normalizeStyleKey(key))) {
+      inherited[key] = value;
+    }
+  });
+  return inherited;
+}
+
+function cleanStyle(style: Record<string, string>): Record<string, string> {
+  const cleaned: Record<string, string> = {};
+  Object.entries(style).forEach(([key, value]) => {
+    const trimmed = value.trim();
+    if (key.trim() && trimmed) {
+      cleaned[key.trim()] = trimmed;
+    }
+  });
+  return cleaned;
+}
+
+function inlineNodeStyle(attributes: Record<string, string>): Record<string, string> {
+  const style: Record<string, string> = {};
+  Object.entries(attributes).forEach(([key, value]) => {
+    if (NODE_STYLE_ATTRIBUTE_KEYS.has(normalizeStyleKey(key))) {
+      style[key] = value;
+    }
+  });
+  return style;
+}
+
+function legacyHierarchyEdgeStyle(attributes: Record<string, string>): Record<string, string> {
+  return pickStyle(attributes, [
+    "edge-color",
+    "edgeColor",
+    "line-color",
+    "lineColor",
+    "stroke",
+    "edge-width",
+    "edgeWidth",
+    "line-width",
+    "lineWidth",
+    "stroke-width"
+  ]);
+}
+
+function legacyCrossLinkStyle(attributes: Record<string, string>): Record<string, string> {
+  return pickStyle(attributes, [
+    "link-color",
+    "linkColor",
+    "line-color",
+    "lineColor",
+    "edge-color",
+    "edgeColor",
+    "stroke",
+    "link-width",
+    "linkWidth",
+    "line-width",
+    "lineWidth",
+    "edge-width",
+    "edgeWidth",
+    "stroke-width"
+  ]);
+}
+
+function pickStyle(attributes: Record<string, string>, keys: string[]): Record<string, string> {
+  const picked: Record<string, string> = {};
+  const normalized = new Map(Object.entries(attributes).map(([key, value]) => [normalizeStyleKey(key), { key, value }]));
+  keys.forEach((key) => {
+    const match = normalized.get(normalizeStyleKey(key));
+    if (match) {
+      picked[match.key] = match.value;
+    }
+  });
+  return picked;
+}
+
+function collectTreeStyleRules(nodes: TreeNode[]): IttStyleRule[] {
+  const root = nodes[0] as (TreeNode & { __ittStyleRules?: IttStyleRule[] }) | undefined;
+  return root?.__ittStyleRules || [];
+}
+
+function edgeStyleForRules(styleRules: IttStyleRule[], target: IttStyleRule["target"], type?: string): Record<string, string> {
+  const style: Record<string, string> = {};
+  styleRules.forEach((rule) => {
+    if (rule.target !== target) {
+      return;
+    }
+    if (target === "cross-link" && !edgeSelectorMatches(rule.selector, type)) {
+      return;
+    }
+    Object.assign(style, rule.declarations);
+  });
+  return style;
+}
+
+function edgeSelectorMatches(selector: string, type?: string): boolean {
+  const trimmed = selector.trim();
+  if (trimmed === "->") {
+    return true;
+  }
+  const match = /^->\[([^\]]+)\]$/.exec(trimmed);
+  return Boolean(match && type && match[1].trim() === type);
+}
+
+function effectiveStyle(node: TreeNode): Record<string, string> {
+  return { ...(node.style || {}), ...inlineNodeStyle(node.attributes || {}) };
 }
 
 function styleColor(attributes: Record<string, string>, keys: string[]): string | undefined {
@@ -207,19 +609,23 @@ function styleColor(attributes: Record<string, string>, keys: string[]): string 
 
 function styleNumber(attributes: Record<string, string>, keys: string[]): number | undefined {
   const value = firstAttribute(attributes, keys);
-  const parsed = Number(value);
+  const parsed = value ? Number.parseFloat(value) : Number.NaN;
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function firstAttribute(attributes: Record<string, string>, keys: string[]): string | undefined {
-  const normalized = new Map(Object.entries(attributes).map(([key, value]) => [key.toLowerCase(), value.trim()]));
+  const normalized = new Map(Object.entries(attributes).map(([key, value]) => [normalizeStyleKey(key), value.trim()]));
   for (const key of keys) {
-    const value = normalized.get(key.toLowerCase());
+    const value = normalized.get(normalizeStyleKey(key));
     if (value) {
       return value;
     }
   }
   return undefined;
+}
+
+function normalizeStyleKey(key: string): string {
+  return key.replace(/[A-Z]/g, (char) => `-${char.toLowerCase()}`).toLowerCase();
 }
 
 function parseNodeContent(content: string): {
@@ -272,7 +678,7 @@ function parseLinks(content: string): { raw: string; items: NonNullable<TreeNode
   if (!match) {
     return { raw: "", items: [] };
   }
-  const items = match[1].split(/\s*,\s*/).map((part) => {
+  const items: NonNullable<TreeNode["links"]> = match[1].split(/\s*,\s*/).map((part): GraphEdge => {
     const value = part.slice(1);
     const [first, second] = value.split(":");
     return second ? { type: first, target: second } : { target: first };
@@ -298,3 +704,64 @@ function findIndentForNode(stack: StackItem[], node: TreeNode): number {
 export function flattenTree(nodes: TreeNode[]): TreeNode[] {
   return nodes.flatMap((node) => [node, ...flattenTree(node.children)]);
 }
+
+const NODE_FILL_KEYS = ["background-color", "backgroundColor", "background", "bg", "fill"];
+const NODE_COLOR_KEYS = [...NODE_FILL_KEYS, "color"];
+const NODE_SIZE_KEYS = ["size", "node-size", "nodeSize", "width"];
+const EDGE_COLOR_KEYS = ["stroke", "line-color", "lineColor", "edge-color", "edgeColor", "link-color", "linkColor", "color"];
+const EDGE_WIDTH_KEYS = ["stroke-width", "line-width", "lineWidth", "edge-width", "edgeWidth", "link-width", "linkWidth", "width"];
+
+const NODE_STYLE_ATTRIBUTE_KEYS = new Set(
+  [
+    ...NODE_COLOR_KEYS,
+    ...NODE_SIZE_KEYS,
+    "x",
+    "y",
+    "foreground-color",
+    "foregroundColor",
+    "text-color",
+    "textColor",
+    "fg",
+    "font-size",
+    "fontSize",
+    "font-weight",
+    "fontWeight",
+    "font-style",
+    "fontStyle",
+    "weight",
+    "style",
+    "border-color",
+    "borderColor",
+    "border",
+    "border-width",
+    "borderWidth",
+    "stroke",
+    "stroke-width",
+    "shape",
+    "node-shape",
+    "nodeShape",
+    "opacity"
+  ].map(normalizeStyleKey)
+);
+
+const INHERITED_STYLE_KEYS = new Set(
+  [
+    "color",
+    "foreground-color",
+    "foregroundColor",
+    "text-color",
+    "textColor",
+    "fg",
+    "font",
+    "font-family",
+    "fontFamily",
+    "font-size",
+    "fontSize",
+    "font-style",
+    "fontStyle",
+    "font-weight",
+    "fontWeight",
+    "line-height",
+    "lineHeight"
+  ].map(normalizeStyleKey)
+);

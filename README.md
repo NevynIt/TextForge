@@ -21,8 +21,11 @@ V1 document badges use deterministic one-layer [shapez.io viewer](https://viewer
 
 Viewer-specific style support is documented in:
 
+- `docs/itt-tree-style-support.md`
 - `docs/itt-mindmap-style-support.md`
 - `docs/itt-graph-style-support.md`
+
+ITT `%style` directives support the selector forms from the ITT whitepaper (`*`, `&id`, `[type]`, `#tag`, `{key=value}`, `->`, `->[type]`, and `=>`) and may be written on one line or as multiline blocks. ITT `%include` directives are resolved only against files currently open in the editor.
 
 ## Development
 

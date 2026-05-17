@@ -1,4 +1,5 @@
 import type {
+  ContributionContext,
   Contribution,
   Diagnostic,
   EditorContribution,
@@ -17,7 +18,8 @@ import { createId } from "./id";
 export class PipelineRunner {
   constructor(
     private registry: PluginRegistry,
-    private runtime: RuntimeLoader
+    private runtime: RuntimeLoader,
+    private documentsProvider: () => TextDocument[] = () => []
   ) {}
 
   async run(pipelineId: string, document: TextDocument): Promise<PipelineRunResult> {
@@ -34,7 +36,8 @@ export class PipelineRunner {
       kind: "text",
       languageId: document.languageId,
       text: document.text,
-      fileName: document.fileName
+      fileName: document.fileName,
+      documentId: document.id
     };
     const diagnostics: Diagnostic[] = [];
     const trace: PipelineTraceStep[] = [];
@@ -80,7 +83,7 @@ export class PipelineRunner {
 
       try {
         if (contribution.kind === "transformer") {
-          value = await (contribution as TransformerContribution).transform(value, { runtime: this.runtime });
+          value = await (contribution as TransformerContribution).transform(value, this.context());
           const stepDiagnostics = annotateDiagnostics(value.diagnostics || [], document, pipeline.id, pipelineRunId, stepId, contribution.id);
           value = { ...value, diagnostics: stepDiagnostics };
           diagnostics.push(...stepDiagnostics);
@@ -98,7 +101,7 @@ export class PipelineRunner {
         }
 
         if (contribution.kind === "viewer") {
-          const viewerResult = await (contribution as ViewerContribution).render(value, { runtime: this.runtime });
+          const viewerResult = await (contribution as ViewerContribution).render(value, this.context());
           const stepDiagnostics = annotateDiagnostics(viewerResult.diagnostics || [], document, pipeline.id, pipelineRunId, stepId, contribution.id);
           diagnostics.push(...stepDiagnostics);
           trace.push({
@@ -114,7 +117,7 @@ export class PipelineRunner {
         }
 
         if (contribution.kind === "editor") {
-          const editorResult = await (contribution as EditorContribution).create(value, { runtime: this.runtime });
+          const editorResult = await (contribution as EditorContribution).create(value, this.context());
           const stepDiagnostics = annotateDiagnostics(editorResult.diagnostics || [], document, pipeline.id, pipelineRunId, stepId, contribution.id);
           diagnostics.push(...stepDiagnostics);
           trace.push({
@@ -152,6 +155,10 @@ export class PipelineRunner {
     }
 
     return { pipeline, status: "available", trace, value, diagnostics };
+  }
+
+  private context(): ContributionContext {
+    return { runtime: this.runtime, documents: this.documentsProvider() };
   }
 }
 

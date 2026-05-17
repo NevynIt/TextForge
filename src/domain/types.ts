@@ -68,6 +68,7 @@ export interface TreeNode {
   type?: string;
   tags?: string[];
   attributes?: Record<string, string>;
+  style?: Record<string, string>;
   details?: string;
   children: TreeNode[];
   links?: GraphEdge[];
@@ -90,6 +91,8 @@ export interface GraphNode {
   y?: number;
   size?: number;
   color?: string;
+  style?: Record<string, string>;
+  details?: string;
   parent?: string;
   classes?: string[];
   hidden?: boolean;
@@ -107,6 +110,8 @@ export interface GraphEdge {
   weight?: number;
   width?: number;
   color?: string;
+  style?: Record<string, string>;
+  details?: string;
   curve?: "straight" | "bezier" | "taxi";
   classes?: string[];
   hidden?: boolean;
@@ -128,7 +133,7 @@ export interface GraphModel {
 }
 
 export type PipelineValue =
-  | { kind: "text"; languageId: string; text: string; fileName?: string; diagnostics?: Diagnostic[] }
+  | { kind: "text"; languageId: string; text: string; fileName?: string; documentId?: string; diagnostics?: Diagnostic[] }
   | { kind: "model"; modelType: "model.tree"; data: TreeNode[]; diagnostics?: Diagnostic[] }
   | { kind: "model"; modelType: "model.table"; data: TableModel; diagnostics?: Diagnostic[] }
   | { kind: "model"; modelType: "model.graph"; data: GraphModel; diagnostics?: Diagnostic[] }
@@ -189,6 +194,7 @@ export interface RuntimeLoader {
 
 export interface ContributionContext {
   runtime: RuntimeLoader;
+  documents?: TextDocument[];
 }
 
 export interface TransformerContribution {
