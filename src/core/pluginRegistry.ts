@@ -72,6 +72,46 @@ export class PluginRegistry {
     this.states.set(pluginId, { ...state, autoload });
   }
 
+  registerCustomPlugin(plugin: TextForgePlugin): void {
+    assertPlugin(plugin);
+    if (this.manifests.has(plugin.id) || this.states.has(plugin.id)) {
+      throw new Error(`Plugin "${plugin.id}" is already registered.`);
+    }
+    const contributionIds = contributionIdsForPlugin(plugin);
+    for (const contributionId of contributionIds) {
+      if (this.contributionOwners.has(contributionId) || this.getLoadedContribution(contributionId)) {
+        throw new Error(`Contribution "${contributionId}" is already registered.`);
+      }
+    }
+    for (const pipeline of plugin.pipelines || []) {
+      if (this.pipelines.has(pipeline.id)) {
+        throw new Error(`Pipeline "${pipeline.id}" is already registered.`);
+      }
+    }
+    this.manifests.set(plugin.id, {
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      autoLoad: false,
+      languages: plugin.languages || [],
+      pipelines: plugin.pipelines || [],
+      contributionIds,
+      load: async () => plugin
+    });
+    this.states.set(plugin.id, {
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      status: "loaded",
+      autoload: false,
+      contributionIds
+    });
+    for (const contributionId of contributionIds) {
+      this.contributionOwners.set(contributionId, plugin.id);
+    }
+    this.registerPlugin(plugin);
+  }
+
   listLanguages(): LanguageDefinition[] {
     return this.languageRegistry.list();
   }
@@ -226,4 +266,13 @@ function assertPlugin(plugin: TextForgePlugin): void {
     }
     ids.add(contribution.id);
   }
+}
+
+function contributionIdsForPlugin(plugin: TextForgePlugin): string[] {
+  return [
+    ...(plugin.transformers || []),
+    ...(plugin.viewers || []),
+    ...(plugin.editors || []),
+    ...(plugin.linters || [])
+  ].map((contribution) => contribution.id);
 }

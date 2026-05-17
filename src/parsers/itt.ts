@@ -146,43 +146,80 @@ export function parseIndentedTree(text: string, languageId = "text.indented-tree
 }
 
 export function indentedTreeToGraph(nodes: TreeNode[]): GraphModel {
-  const graphNodes = new Map<string, { id: string; label: string; type?: string; data?: Record<string, unknown> }>();
+  const graphNodes = new Map<string, GraphModel["nodes"][number]>();
   const edges: GraphModel["edges"] = [];
 
-  function visit(node: TreeNode, parent?: TreeNode): void {
+  function visit(node: TreeNode, parent: TreeNode | undefined, depth: number, rank: number): void {
+    const attributes = node.attributes || {};
     graphNodes.set(node.id, {
       id: node.id,
       label: node.label,
       type: node.type || "node",
+      color: styleColor(attributes, ["color", "background", "background-color", "backgroundColor", "bg", "fill"]),
+      size: styleNumber(attributes, ["size", "node-size", "nodeSize"]),
+      x: styleNumber(attributes, ["x"]),
+      y: styleNumber(attributes, ["y"]),
       data: {
+        depth,
+        rank,
         tags: node.tags || [],
-        attributes: node.attributes || {},
+        attributes,
         declaredId: node.declaredId
       }
     });
     if (parent) {
+      const edgeColor = styleColor(attributes, ["edge-color", "edgeColor", "line-color", "lineColor", "stroke"]);
+      const edgeWidth = styleNumber(attributes, ["edge-width", "edgeWidth", "line-width", "lineWidth"]);
       edges.push({
         id: `hierarchy-${parent.id}-${node.id}`,
         source: parent.id,
         target: node.id,
         type: "hierarchy",
-        label: "contains"
+        label: "contains",
+        color: edgeColor,
+        width: edgeWidth
       });
     }
     for (const link of node.links || []) {
+      const linkColor = link.color || styleColor(attributes, ["link-color", "linkColor", "line-color", "lineColor", "edge-color", "edgeColor"]);
+      const linkWidth = link.width || styleNumber(attributes, ["link-width", "linkWidth", "line-width", "lineWidth", "edge-width", "edgeWidth"]);
       edges.push({
         id: `link-${node.id}-${link.target}-${edges.length}`,
         source: node.id,
         target: link.target,
         type: link.type || "related-to",
-        label: link.type || "related-to"
+        label: link.type || "related-to",
+        color: linkColor,
+        width: linkWidth
       });
     }
-    node.children.forEach((child) => visit(child, node));
+    node.children.forEach((child, childIndex) => visit(child, node, depth + 1, childIndex));
   }
 
-  nodes.forEach((node) => visit(node));
+  nodes.forEach((node, index) => visit(node, undefined, 0, index));
   return { nodes: Array.from(graphNodes.values()), edges, directed: true };
+}
+
+function styleColor(attributes: Record<string, string>, keys: string[]): string | undefined {
+  const value = firstAttribute(attributes, keys);
+  return value && /^(#[0-9a-f]{3,8}|rgba?\([0-9.,%\s]+\)|hsla?\([0-9.,%\s]+\)|[a-z]+)$/i.test(value) ? value : undefined;
+}
+
+function styleNumber(attributes: Record<string, string>, keys: string[]): number | undefined {
+  const value = firstAttribute(attributes, keys);
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
+function firstAttribute(attributes: Record<string, string>, keys: string[]): string | undefined {
+  const normalized = new Map(Object.entries(attributes).map(([key, value]) => [key.toLowerCase(), value.trim()]));
+  for (const key of keys) {
+    const value = normalized.get(key.toLowerCase());
+    if (value) {
+      return value;
+    }
+  }
+  return undefined;
 }
 
 function parseNodeContent(content: string): {

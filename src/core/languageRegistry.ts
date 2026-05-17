@@ -68,12 +68,6 @@ export class LanguageRegistry {
 export function registerBaseLanguages(registry: LanguageRegistry): void {
   [
     {
-      id: "text",
-      name: "Text",
-      mediaType: "text/plain",
-      description: "Root text document family."
-    },
-    {
       id: "text.plain",
       name: "Plain Text",
       parentId: "text",
@@ -103,6 +97,22 @@ export function registerBaseLanguages(registry: LanguageRegistry): void {
       mediaType: "application/json"
     },
     {
+      id: "text.javascript",
+      name: "JavaScript",
+      parentId: "text",
+      extensions: [".js", ".mjs", ".cjs", ".jsx"],
+      mediaType: "text/javascript",
+      aliases: ["javascript", "js"]
+    },
+    {
+      id: "text.python",
+      name: "Python",
+      parentId: "text",
+      extensions: [".py", ".pyw"],
+      mediaType: "text/x-python",
+      aliases: ["python", "py"]
+    },
+    {
       id: "text.xml",
       name: "XML",
       parentId: "text",
@@ -111,17 +121,10 @@ export function registerBaseLanguages(registry: LanguageRegistry): void {
     },
     {
       id: "text.csv",
-      name: "CSV",
+      name: "Delimited Text",
       parentId: "text",
-      extensions: [".csv"],
+      extensions: [".csv", ".tsv", ".tab"],
       mediaType: "text/csv"
-    },
-    {
-      id: "text.tsv",
-      name: "TSV",
-      parentId: "text",
-      extensions: [".tsv", ".tab"],
-      mediaType: "text/tab-separated-values"
     },
     {
       id: "text.mermaid",

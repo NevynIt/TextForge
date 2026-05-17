@@ -1,7 +1,10 @@
 import jsMind from "jsmind";
 import "jsmind/style/jsmind.css";
+import type { JSX } from "preact";
+import { PanelRightClose, PanelRightOpen } from "lucide-preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { GraphModel, TableModel, TreeNode, ViewerResult, ViewerSettingValue } from "../domain/types";
+import { parseDelimited } from "../parsers/csv";
 import { escapeHtml } from "../parsers/source";
 
 interface ViewerContentProps {
@@ -9,20 +12,54 @@ interface ViewerContentProps {
   query: string;
   zoom: number;
   settings: Record<string, ViewerSettingValue>;
+  searchCommand?: ViewerSearchCommand;
+  toolbarAction?: ViewerToolbarAction;
+  onSearchStateChange?: (state: { count: number; index: number }) => void;
+  onZoomChange?: (zoom: number) => void;
 }
 
-export function ViewerContent({ result, query, zoom, settings }: ViewerContentProps) {
+export interface ViewerSearchCommand {
+  revision: number;
+  direction: "previous" | "next";
+}
+
+export interface ViewerToolbarAction {
+  revision: number;
+  action: string;
+}
+
+export function ViewerContent({ result, query, zoom, settings, searchCommand, toolbarAction, onSearchStateChange, onZoomChange }: ViewerContentProps) {
   const style = { "--viewer-zoom": String(zoom) };
   if (result.kind === "html") {
-    return <HtmlView html={result.html} query={query} zoom={zoom} settings={settings} />;
+    return (
+      <HtmlView
+        html={result.html}
+        query={query}
+        zoom={zoom}
+        settings={settings}
+        searchCommand={searchCommand}
+        toolbarAction={toolbarAction}
+        onSearchStateChange={onSearchStateChange}
+      />
+    );
   }
   if (result.kind === "svg") {
-    return <SvgView svg={result.svg} query={query} zoom={zoom} settings={settings} />;
+    return (
+      <SvgView
+        svg={result.svg}
+        query={query}
+        zoom={zoom}
+        settings={settings}
+        searchCommand={searchCommand}
+        onSearchStateChange={onSearchStateChange}
+        onZoomChange={onZoomChange}
+      />
+    );
   }
   if (result.kind === "tree") {
     return (
       <div class="viewer-content viewer-tree" style={style}>
-        <TreeView nodes={filterTree(result.nodes, query)} query={query} settings={settings} />
+        <TreeView nodes={filterTree(result.nodes, query)} query={query} settings={settings} toolbarAction={toolbarAction} />
       </div>
     );
   }
@@ -35,15 +72,32 @@ export function ViewerContent({ result, query, zoom, settings }: ViewerContentPr
   }
   if (result.kind === "mindmap") {
     return (
-      <div class="viewer-content viewer-mindmap" style={style}>
-        <MindMapView nodes={filterTree(result.nodes, query)} query={query} settings={settings} />
+      <div class="viewer-content viewer-mindmap" style={{ "--viewer-zoom": "1" }}>
+        <MindMapView
+          nodes={result.nodes}
+          query={query}
+          zoom={zoom}
+          settings={settings}
+          searchCommand={searchCommand}
+          toolbarAction={toolbarAction}
+          onSearchStateChange={onSearchStateChange}
+          onZoomChange={onZoomChange}
+        />
       </div>
     );
   }
   if (result.kind === "graph") {
     return (
       <div class="viewer-content viewer-graph" style={style}>
-        <GraphView graph={result.graph} engine={result.engine} query={query} settings={settings} />
+        <GraphView
+          graph={result.graph}
+          engine={result.engine}
+          query={query}
+          settings={settings}
+          searchCommand={searchCommand}
+          toolbarAction={toolbarAction}
+          onSearchStateChange={onSearchStateChange}
+        />
       </div>
     );
   }
@@ -60,14 +114,21 @@ function HtmlView({
   html,
   query,
   zoom,
-  settings
+  settings,
+  searchCommand,
+  toolbarAction,
+  onSearchStateChange
 }: {
   html: string;
   query: string;
   zoom: number;
   settings: Record<string, ViewerSettingValue>;
+  searchCommand?: ViewerSearchCommand;
+  toolbarAction?: ViewerToolbarAction;
+  onSearchStateChange?: (state: { count: number; index: number }) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const [findState, setFindState] = useState<FindState>({ count: 0, activeIndex: -1, markers: [] });
   const theme = safeClassName(stringSetting(settings.readingTheme, "light"));
   const width = safeClassName(stringSetting(settings.contentWidth, "normal"));
 
@@ -76,24 +137,82 @@ function HtmlView({
       return;
     }
     ref.current.innerHTML = html;
-    highlightTextNodes(ref.current, query);
+    enhanceHtmlHeadings(ref.current);
+    const matches = highlightTextNodes(ref.current, query);
+    setFindState({
+      count: matches.length,
+      activeIndex: matches.length ? 0 : -1,
+      markers: findMarkers(matches, ref.current)
+    });
   }, [html, query]);
 
-  return <div ref={ref} class={`viewer-content viewer-html theme-${theme} width-${width}`} style={{ "--viewer-zoom": String(zoom) }} />;
+  useEffect(() => {
+    updateActiveFindMatch(ref.current, findState.activeIndex);
+    onSearchStateChange?.({ count: findState.count, index: findState.activeIndex });
+  }, [findState.activeIndex, findState.count]);
+
+  function moveMatch(direction: 1 | -1): void {
+    setFindState((current) => {
+      if (!current.count) {
+        return current;
+      }
+      return { ...current, activeIndex: (current.activeIndex + direction + current.count) % current.count };
+    });
+  }
+
+  useEffect(() => {
+    if (!searchCommand?.revision) {
+      return;
+    }
+    moveMatch(searchCommand.direction === "previous" ? -1 : 1);
+  }, [searchCommand?.revision]);
+
+  useEffect(() => {
+    if (!toolbarAction?.revision || !ref.current) {
+      return;
+    }
+    if (toolbarAction.action === "html-fold-all") {
+      setAllHtmlHeadings(ref.current, true);
+    } else if (toolbarAction.action === "html-unfold-all") {
+      setAllHtmlHeadings(ref.current, false);
+    }
+  }, [toolbarAction?.revision]);
+
+  return (
+    <section class={`viewer-content viewer-html-shell theme-${theme} width-${width}`} style={{ "--viewer-zoom": String(zoom) }}>
+      <div ref={ref} class="viewer-html" />
+      {findState.markers.length ? (
+        <div class="viewer-find-markers" aria-hidden="true">
+          {findState.markers.map((top, index) => (
+            <span key={`${top}-${index}`} class={index === findState.activeIndex ? "active" : ""} style={{ top: `${top}%` }} />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
 }
 
 function SvgView({
   svg,
   query,
   zoom,
-  settings
+  settings,
+  searchCommand,
+  onSearchStateChange,
+  onZoomChange
 }: {
   svg: string;
   query: string;
   zoom: number;
   settings: Record<string, ViewerSettingValue>;
+  searchCommand?: ViewerSearchCommand;
+  onSearchStateChange?: (state: { count: number; index: number }) => void;
+  onZoomChange?: (zoom: number) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const [svgView, setSvgView] = useState({ panX: 0, panY: 0 });
+  const [findState, setFindState] = useState<FindState>({ count: 0, activeIndex: -1, markers: [] });
   const background = safeClassName(stringSetting(settings.svgBackground, "white"));
   const fitMode = safeClassName(stringSetting(settings.fitMode, "contain"));
 
@@ -102,32 +221,134 @@ function SvgView({
       return;
     }
     ref.current.innerHTML = svg;
-    highlightSvgText(ref.current, query);
+    const matches = highlightSvgText(ref.current, query);
+    setFindState({
+      count: matches.length,
+      activeIndex: matches.length ? 0 : -1,
+      markers: findMarkers(matches, ref.current)
+    });
   }, [svg, query]);
 
+  useEffect(() => {
+    updateActiveSvgMatch(ref.current, findState.activeIndex);
+    onSearchStateChange?.({ count: findState.count, index: findState.activeIndex });
+  }, [findState.activeIndex, findState.count]);
+
+  function moveMatch(direction: 1 | -1): void {
+    setFindState((current) => {
+      if (!current.count) {
+        return current;
+      }
+      return { ...current, activeIndex: (current.activeIndex + direction + current.count) % current.count };
+    });
+  }
+
+  useEffect(() => {
+    if (!searchCommand?.revision) {
+      return;
+    }
+    moveMatch(searchCommand.direction === "previous" ? -1 : 1);
+  }, [searchCommand?.revision]);
+
+  function startPan(event: MouseEvent): void {
+    if (event.button !== 0 || event.target instanceof Element && event.target.closest("button")) {
+      return;
+    }
+    dragRef.current = { x: event.clientX, y: event.clientY, panX: svgView.panX, panY: svgView.panY };
+  }
+
+  function updatePan(event: MouseEvent): void {
+    const drag = dragRef.current;
+    if (!drag) {
+      return;
+    }
+    setSvgView((current) => ({ ...current, panX: drag.panX + event.clientX - drag.x, panY: drag.panY + event.clientY - drag.y }));
+  }
+
+  function stopPan(): void {
+    dragRef.current = null;
+  }
+
   return (
-    <div class={`viewer-content viewer-svg svg-bg-${background} svg-fit-${fitMode}`} style={{ "--viewer-zoom": String(zoom) }}>
-      <div class="svg-frame" ref={ref} />
-    </div>
+    <section class={`viewer-content viewer-svg svg-bg-${background} svg-fit-${fitMode}`} style={{ "--viewer-zoom": "1" }}>
+      <div
+        class="svg-frame"
+        onMouseDown={startPan}
+        onMouseMove={updatePan}
+        onMouseUp={stopPan}
+        onMouseLeave={stopPan}
+        onWheel={(event) => {
+          event.preventDefault();
+          onZoomChange?.(clamp(zoom + (event.deltaY > 0 ? -0.1 : 0.1), 0.2, 5));
+        }}
+      >
+        <div
+          class="svg-stage"
+          ref={ref}
+          style={{ transform: `translate(${svgView.panX}px, ${svgView.panY}px) scale(${zoom})` }}
+        />
+      </div>
+    </section>
   );
 }
 
 function TreeView({
   nodes,
   query,
-  settings
+  settings,
+  toolbarAction
 }: {
   nodes: TreeNode[];
   query: string;
   settings: Record<string, ViewerSettingValue>;
+  toolbarAction?: ViewerToolbarAction;
 }) {
   const density = safeClassName(stringSetting(settings.density, "comfortable"));
+  const inlineDetails = booleanSetting(settings.inlineDetails, false);
+  const [selectedId, setSelectedId] = useState(nodes[0]?.id || "");
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const nodeIndex = useMemo(() => indexTreeNodes(nodes), [nodes]);
+  const selectedNode = nodeIndex.get(selectedId) || nodes[0];
+
+  useEffect(() => {
+    if (selectedId && nodeIndex.has(selectedId)) {
+      return;
+    }
+    setSelectedId(nodes[0]?.id || "");
+  }, [nodeIndex, nodes, selectedId]);
+
+  function selectNode(id: string): void {
+    if (!nodeIndex.has(id)) {
+      return;
+    }
+    setSelectedId(id);
+    window.requestAnimationFrame(() => document.getElementById(treeDomId(id))?.scrollIntoView({ block: "center", inline: "nearest" }));
+  }
+
   return (
-    <ol class={`tree-list tree-${density}`}>
-      {nodes.map((node) => (
-        <TreeItem key={node.id} node={node} depth={0} query={query} settings={settings} />
-      ))}
-    </ol>
+    <div class={`viewer-with-inspector ${inspectorOpen ? "inspector-open" : "inspector-closed"}`}>
+      <div class="viewer-main-panel tree-main-panel">
+        <button type="button" class="inspector-toggle" title={inspectorOpen ? "Hide inspector" : "Show inspector"} onClick={() => setInspectorOpen((value) => !value)}>
+          {inspectorOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+        </button>
+        <ol class={`tree-list tree-${density}`}>
+          {nodes.map((node) => (
+            <TreeItem
+              key={node.id}
+              node={node}
+              depth={0}
+              query={query}
+              settings={settings}
+              inlineDetails={inlineDetails}
+              toolbarAction={toolbarAction}
+              selectedId={selectedNode?.id || ""}
+              onSelect={selectNode}
+            />
+          ))}
+        </ol>
+      </div>
+      {inspectorOpen ? <ViewerInspector title="Selection" emptyText="Select a tree node." item={selectedNode ? treeNodeInspector(selectedNode) : null} /> : null}
+    </div>
   );
 }
 
@@ -135,86 +356,211 @@ function TreeItem({
   node,
   depth,
   query,
-  settings
+  settings,
+  inlineDetails,
+  toolbarAction,
+  selectedId,
+  onSelect
 }: {
   node: TreeNode;
   depth: number;
   query: string;
   settings: Record<string, ViewerSettingValue>;
+  inlineDetails: boolean;
+  toolbarAction?: ViewerToolbarAction;
+  selectedId: string;
+  onSelect: (id: string) => void;
 }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
   const hasChildren = node.children.length > 0;
-  const expandDepth = numberSetting(settings.expandDepth, 3);
-  const depthLimit = numberSetting(settings.depthLimit, 0);
-  const showDetails = booleanSetting(settings.showDetails, true);
+  const expandDepth = 3;
+  const depthLimit = 0;
   const canShowChildren = hasChildren && (depthLimit === 0 || depth < depthLimit);
-  return (
-    <li>
-      <details open={canShowChildren && depth < expandDepth}>
-        <summary>
+  const [open, setOpen] = useState(canShowChildren && depth < expandDepth);
+
+  useEffect(() => {
+    setOpen(canShowChildren && depth < expandDepth);
+  }, [canShowChildren, depth, expandDepth]);
+
+  useEffect(() => {
+    if (!toolbarAction?.revision) {
+      return;
+    }
+    if (toolbarAction.action === "tree-fold-all") {
+      setOpen(false);
+    } else if (toolbarAction.action === "tree-unfold-all") {
+      setOpen(true);
+    }
+  }, [toolbarAction?.revision]);
+
+  if (!canShowChildren) {
+    return (
+      <li>
+        <div
+          id={treeDomId(node.id)}
+          class={`tree-leaf-row ${selectedId === node.id ? "tree-selected" : ""}`}
+          onClick={() => onSelect(node.id)}
+        >
           <span class="node-label">{renderHighlighted(node.label, query)}</span>
-          {node.declaredId ? <span class="badge">&amp;{node.declaredId}</span> : null}
-          {node.type ? <span class="badge">{node.type}</span> : null}
           {(node.tags || []).map((tag) => (
             <span class="badge" key={tag}>#{tag}</span>
           ))}
-          {node.links?.length ? <span class="badge">{node.links.length} links</span> : null}
+          <TreeLinks links={node.links || []} onSelect={onSelect} />
+        </div>
+        {inlineDetails && node.details ? <pre class="node-details">{node.details}</pre> : null}
+        {hasChildren ? <small class="tree-pruned">{node.children.length} hidden children</small> : null}
+      </li>
+    );
+  }
+
+  return (
+    <li>
+      <details ref={detailsRef} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+        <summary
+          id={treeDomId(node.id)}
+          class={selectedId === node.id ? "tree-selected" : ""}
+          onClick={(event) => {
+            onSelect(node.id);
+            if (!event.shiftKey) {
+              return;
+            }
+            event.preventDefault();
+            const nextOpen = !detailsRef.current?.open;
+            setOpen(nextOpen);
+            setDescendantDetailsOpen(detailsRef.current, nextOpen);
+          }}
+        >
+          <span class="node-label">{renderHighlighted(node.label, query)}</span>
+          {(node.tags || []).map((tag) => (
+            <span class="badge" key={tag}>#{tag}</span>
+          ))}
+          <TreeLinks links={node.links || []} onSelect={onSelect} />
         </summary>
-        {showDetails && node.details ? <pre class="node-details">{node.details}</pre> : null}
+        {inlineDetails && node.details ? <pre class="node-details">{node.details}</pre> : null}
         {canShowChildren ? (
           <ol class="tree-list">
             {node.children.map((child) => (
-              <TreeItem key={child.id} node={child} depth={depth + 1} query={query} settings={settings} />
+              <TreeItem
+                key={child.id}
+                node={child}
+                depth={depth + 1}
+                query={query}
+                settings={settings}
+                inlineDetails={inlineDetails}
+                toolbarAction={toolbarAction}
+                selectedId={selectedId}
+                onSelect={onSelect}
+              />
             ))}
           </ol>
         ) : null}
-        {hasChildren && !canShowChildren ? <small class="tree-pruned">{node.children.length} hidden children</small> : null}
       </details>
     </li>
+  );
+}
+
+function TreeLinks({ links, onSelect }: { links: NonNullable<TreeNode["links"]>; onSelect: (id: string) => void }) {
+  if (!links.length) {
+    return null;
+  }
+  return (
+    <>
+      {links.map((link, index) => (
+        <a
+          class="badge tree-link"
+          href={`#${treeDomId(link.target)}`}
+          key={`${link.target}-${link.type || ""}-${index}`}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onSelect(link.target);
+          }}
+        >
+          @{link.type ? `${link.type}:${link.target}` : link.target}
+        </a>
+      ))}
+    </>
   );
 }
 
 function TableView({
   table,
   query,
-  settings
+  settings: _settings
 }: {
   table: TableModel;
   query: string;
   settings: Record<string, ViewerSettingValue>;
 }) {
+  const [separator, setSeparator] = useState(table.delimiter || ",");
+  const [includeHeaders, setIncludeHeaders] = useState(true);
+  const [sortState, setSortState] = useState<{ column: number; direction: "asc" | "desc" } | null>(null);
   const lower = query.trim().toLowerCase();
-  const sortColumn = stringSetting(settings.sortColumn, "").trim();
-  const sortDirection = stringSetting(settings.sortDirection, "asc");
-  const maxRows = numberSetting(settings.maxRows, 1000);
-  const sortIndex = resolveColumnIndex(table.columns, sortColumn);
+  const parsed = useMemo(() => parseDelimited(table.sourceText ?? tableToText(table), separator, "text.csv"), [table, separator]);
+  const sourceRows = includeHeaders ? parsed.rows : [parsed.columns, ...parsed.rows];
+  const columns = includeHeaders ? parsed.columns : generatedColumns(sourceRows);
   const filteredRows = lower
-    ? table.rows.filter((row) => row.some((cell) => cell.toLowerCase().includes(lower)))
-    : table.rows;
+    ? sourceRows.filter((row) => row.some((cell) => cell.toLowerCase().includes(lower)))
+    : sourceRows;
   const sortedRows =
-    sortIndex >= 0
-      ? [...filteredRows].sort((left, right) => compareCell(left[sortIndex] || "", right[sortIndex] || "", sortDirection))
+    sortState
+      ? [...filteredRows].sort((left, right) => compareCell(left[sortState.column] || "", right[sortState.column] || "", sortState.direction))
       : filteredRows;
-  const rows = maxRows > 0 ? sortedRows.slice(0, maxRows) : sortedRows;
+  const rows = sortedRows;
+
+  function toggleSort(column: number): void {
+    setSortState((current) => {
+      if (!current || current.column !== column) {
+        return { column, direction: "asc" };
+      }
+      if (current.direction === "asc") {
+        return { column, direction: "desc" };
+      }
+      return null;
+    });
+  }
+
   return (
     <>
       <div class="table-status">
         <span>
           {rows.length} of {filteredRows.length} rows
         </span>
-        {sortIndex >= 0 ? <span>sorted by {table.columns[sortIndex]}</span> : null}
+        <label>
+          Separator
+          <select value={separator} onChange={(event) => setSeparator(event.currentTarget.value)}>
+            <option value=",">Comma</option>
+            <option value={"\t"}>Tab</option>
+            <option value=";">Semicolon</option>
+            <option value="|">Pipe</option>
+          </select>
+        </label>
       </div>
       <table>
         <thead>
           <tr>
-            {table.columns.map((column) => (
-              <th key={column}>{renderHighlighted(column, query)}</th>
+            {columns.map((column, columnIndex) => (
+              <th key={`${column}-${columnIndex}`}>
+                <button type="button" class="table-sort-button" onClick={() => toggleSort(columnIndex)}>
+                  {renderHighlighted(column, query)}
+                  <span>{sortState?.column === columnIndex ? (sortState.direction === "asc" ? "Asc" : "Desc") : "Sort"}</span>
+                </button>
+              </th>
             ))}
+          </tr>
+          <tr>
+            <th colSpan={Math.max(1, columns.length)}>
+              <label class="table-header-toggle">
+                <input type="checkbox" checked={includeHeaders} onChange={(event) => setIncludeHeaders(event.currentTarget.checked)} />
+                Table includes headers
+              </label>
+            </th>
           </tr>
         </thead>
         <tbody>
           {rows.map((row, rowIndex) => (
             <tr key={rowIndex}>
-              {table.columns.map((_column, columnIndex) => (
+              {columns.map((_column, columnIndex) => (
                 <td key={columnIndex}>{renderHighlighted(row[columnIndex] || "", query)}</td>
               ))}
             </tr>
@@ -228,21 +574,83 @@ function TableView({
 function MindMapView({
   nodes,
   query,
-  settings
+  zoom,
+  settings,
+  searchCommand,
+  toolbarAction,
+  onSearchStateChange,
+  onZoomChange
 }: {
   nodes: TreeNode[];
   query: string;
+  zoom: number;
   settings: Record<string, ViewerSettingValue>;
+  searchCommand?: ViewerSearchCommand;
+  toolbarAction?: ViewerToolbarAction;
+  onSearchStateChange?: (state: { count: number; index: number }) => void;
+  onZoomChange?: (zoom: number) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const instanceRef = useRef<jsMind | null>(null);
   const mind = useMemo(() => treeToJsMind(nodes), [nodes]);
+  const searchMatches = useMemo(() => matchingTreeNodes(nodes, query), [nodes, query]);
+  const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
   const mode = stringSetting(settings.mindmapMode, "full");
   const initialDepth = stringSetting(settings.initialDepth, "depth2");
   const theme = safeClassName(stringSetting(settings.mindmapTheme, "textforge"));
   const textScale = numberSetting(settings.textScale, 1);
 
   useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+    let drag: { id: number; x: number; y: number; left: number; top: number; moved: boolean } | null = null;
+    const start = (event: PointerEvent) => {
+      if (event.button !== 0 || event.target instanceof Element && event.target.closest("button,a,input,select,textarea,jmnode,jmexpander")) {
+        return;
+      }
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: viewport.scrollLeft, top: viewport.scrollTop, moved: false };
+      viewport.setPointerCapture?.(event.pointerId);
+      viewport.classList.add("is-panning");
+    };
+    const move = (event: PointerEvent) => {
+      if (!drag || drag.id !== event.pointerId) {
+        return;
+      }
+      const deltaX = event.clientX - drag.x;
+      const deltaY = event.clientY - drag.y;
+      if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+        drag.moved = true;
+        event.preventDefault();
+      }
+      viewport.scrollLeft = drag.left - deltaX;
+      viewport.scrollTop = drag.top - deltaY;
+    };
+    const stop = (event: PointerEvent) => {
+      if (!drag || drag.id !== event.pointerId) {
+        return;
+      }
+      viewport.releasePointerCapture?.(event.pointerId);
+      viewport.classList.remove("is-panning");
+      drag = null;
+    };
+    viewport.addEventListener("pointerdown", start);
+    viewport.addEventListener("pointermove", move);
+    viewport.addEventListener("pointerup", stop);
+    viewport.addEventListener("pointercancel", stop);
+    return () => {
+      viewport.removeEventListener("pointerdown", start);
+      viewport.removeEventListener("pointermove", move);
+      viewport.removeEventListener("pointerup", stop);
+      viewport.removeEventListener("pointercancel", stop);
+    };
+  }, []);
+
+  useEffect(() => {
     const host = hostRef.current;
+    const viewport = viewportRef.current;
     if (!host) {
       return;
     }
@@ -260,10 +668,10 @@ function MindMapView({
       log_level: "error",
       view: {
         engine: "svg",
-        draggable: true,
-        hide_scrollbars_when_draggable: true,
-        hmargin: 120,
-        vmargin: 80,
+        draggable: false,
+        hide_scrollbars_when_draggable: false,
+        hmargin: 520,
+        vmargin: 360,
         line_width: 2,
         line_color: "#78909c",
         line_style: "curved",
@@ -285,12 +693,27 @@ function MindMapView({
         enable_mousedown_handle: true,
         enable_click_handle: true,
         enable_dblclick_handle: false,
-        enable_mousewheel_handle: true
+        enable_mousewheel_handle: false
       },
       shortcut: { enable: false }
     });
 
+    instanceRef.current = instance;
     instance.show(mind);
+    (instance as unknown as { add_event_listener?: (handler: () => void) => void }).add_event_listener?.(() => {
+      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || ""));
+    });
+    const doubleClick = (event: MouseEvent) => {
+      const id = jsMindNodeId(instance, event.target);
+      if (!id) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      toggleJsMindNode(instance, id, event.shiftKey);
+      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || ""));
+    };
+    host.addEventListener("dblclick", doubleClick, true);
     if (initialDepth === "collapsed") {
       instance.collapse_all?.();
     } else if (initialDepth === "depth2") {
@@ -298,19 +721,96 @@ function MindMapView({
     } else {
       instance.expand_all?.();
     }
-    const firstMatch = findFirstMatchingTreeNode(nodes, query);
-    if (firstMatch) {
-      instance.select_node?.(firstMatch.id);
-      instance.scroll_node_to_center?.(firstMatch.id);
-    } else {
-      instance.scroll_node_to_center?.(mind.data.id);
-    }
-    window.setTimeout(() => instance.resize?.(), 0);
+    setMindMapZoom(instance, zoom);
+    renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
+    centerMindMapNode(viewport, host, mind.data.id);
+    window.setTimeout(() => {
+      instance.resize?.();
+      setMindMapZoom(instance, zoom);
+      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
+    }, 0);
 
     return () => {
+      host.removeEventListener("dblclick", doubleClick, true);
+      instanceRef.current = null;
       host.innerHTML = "";
     };
-  }, [mind, mode, initialDepth, theme, textScale, nodes, query]);
+  }, [mind, mode, initialDepth, theme, textScale, nodes]);
+
+  useEffect(() => {
+    setActiveMatchIndex(searchMatches.length ? 0 : -1);
+  }, [searchMatches]);
+
+  useEffect(() => {
+    onSearchStateChange?.({ count: searchMatches.length, index: activeMatchIndex });
+  }, [searchMatches.length, activeMatchIndex]);
+
+  useEffect(() => {
+    if (!searchCommand?.revision) {
+      return;
+    }
+    setActiveMatchIndex((current) => {
+      if (!searchMatches.length) {
+        return -1;
+      }
+      const direction = searchCommand.direction === "previous" ? -1 : 1;
+      return (current + direction + searchMatches.length) % searchMatches.length;
+    });
+  }, [searchCommand?.revision]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const viewport = viewportRef.current;
+    const instance = instanceRef.current;
+    if (!host || !viewport || !instance) {
+      return;
+    }
+    const activeMatch = searchMatches[activeMatchIndex];
+    renderMindMapDecorations(host, nodes, query, activeMatch?.id || "");
+    if (!activeMatch) {
+      return;
+    }
+    expandJsMindPath(instance, nodes, activeMatch.id);
+    window.requestAnimationFrame(() => {
+      instance.select_node?.(activeMatch.id);
+      renderMindMapDecorations(host, nodes, query, activeMatch.id);
+      centerMindMapNode(viewport, host, activeMatch.id);
+    });
+  }, [query, searchMatches, activeMatchIndex, nodes]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const instance = instanceRef.current;
+    if (!host || !instance) {
+      return;
+    }
+    setMindMapZoom(instance, zoom);
+    window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || ""));
+  }, [zoom]);
+
+  useEffect(() => {
+    if (!toolbarAction?.revision) {
+      return;
+    }
+    const host = hostRef.current;
+    const viewport = viewportRef.current;
+    const instance = instanceRef.current;
+    if (!host || !viewport || !instance) {
+      return;
+    }
+    if (toolbarAction.action === "mindmap-center") {
+      centerMindMapNode(viewport, host, mind.data.id);
+    } else if (toolbarAction.action === "mindmap-fit") {
+      fitMindMap(instance, viewport, host, nodes);
+      onZoomChange?.(mindMapZoom(instance));
+    } else if (toolbarAction.action === "mindmap-fold-all") {
+      instance.collapse_all?.();
+      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
+    } else if (toolbarAction.action === "mindmap-unfold-all") {
+      instance.expand_all?.();
+      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
+    }
+  }, [toolbarAction?.revision]);
 
   return (
     <section class="jsmind-viewer-shell">
@@ -318,39 +818,104 @@ function MindMapView({
         <strong>{mind.meta.name}</strong>
         <span>{countTreeNodes(nodes)} nodes</span>
       </div>
-      <div class="jsmind-viewer-host" ref={hostRef} />
+      <div
+        class="jsmind-viewer-viewport"
+        ref={viewportRef}
+        onWheel={(event) => {
+          event.preventDefault();
+          onZoomChange?.(clamp(zoom + (event.deltaY > 0 ? -0.1 : 0.1), 0.1, 5));
+        }}
+      >
+        <div class="jsmind-viewer-host" ref={hostRef} />
+      </div>
     </section>
   );
 }
+
+const READABLE_GRAPH_NODE_LIMIT = 50;
+const DENSE_GRAPH_NODE_LIMIT = 250;
+const DENSE_GRAPH_EDGE_LIMIT = 800;
+const SVG_NAMESPACE = ["http:", "", "www.w3.org", "2000", "svg"].join("/");
 
 function GraphView({
   graph,
   engine,
   query,
-  settings
+  settings,
+  searchCommand,
+  toolbarAction,
+  onSearchStateChange
 }: {
   graph: GraphModel;
   engine: "cytoscape" | "sigma" | "static";
   query: string;
   settings: Record<string, ViewerSettingValue>;
+  searchCommand?: ViewerSearchCommand;
+  toolbarAction?: ViewerToolbarAction;
+  onSearchStateChange?: (state: { count: number; index: number }) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
+  const cyRef = useRef<CytoscapeLike | null>(null);
   const [error, setError] = useState("");
-  const [selected, setSelected] = useState<{ id: string; label: string; kind: "node" | "edge"; type?: string } | null>(null);
+  const [selected, setSelected] = useState<GraphSelection | null>(null);
+  const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
   const highlighted = useMemo(() => query.trim().toLowerCase(), [query]);
   const layout = stringSetting(settings.layout, engine === "sigma" ? "forceatlas2" : "breadthfirst");
   const nodeSize = numberSetting(settings.nodeSize, 18);
   const edgeWidth = numberSetting(settings.edgeWidth, 1.5);
   const showLabels = booleanSetting(settings.showLabels, true);
   const showEdgeLabels = booleanSetting(settings.showEdgeLabels, false);
-  const colorByType = booleanSetting(settings.colorByType, true);
-  const performanceMode = stringSetting(settings.performanceMode, "balanced");
+  const showArrows = booleanSetting(settings.showArrows, graph.directed !== false);
+  const performanceModeSetting = stringSetting(settings.performanceMode, "auto");
   const filterToMatches = booleanSetting(settings.filterToMatches, false);
   const layoutIterations = numberSetting(settings.layoutIterations, 120);
   const labelMode = stringSetting(settings.labelMode, "auto");
   const sizeMetric = stringSetting(settings.sizeMetric, engine === "sigma" ? "degree" : "fixed");
   const focusNeighbors = booleanSetting(settings.focusNeighbors, false);
   const visibleGraph = useMemo(() => filterGraph(graph, highlighted, filterToMatches), [graph, highlighted, filterToMatches]);
+  const performanceMode = inferGraphPerformanceMode(performanceModeSetting, visibleGraph);
+  const graphMatches = useMemo(() => graphSearchMatches(visibleGraph, highlighted), [visibleGraph, highlighted]);
+  const runtimeHighlighted = engine === "sigma" ? highlighted : "";
+  const runtimeLayout = engine === "sigma" ? layout : "";
+  const runtimeLayoutActionRevision = engine === "sigma" && toolbarAction?.action === "graph-run-layout" ? toolbarAction.revision : 0;
+  const runtimeNodeSize = engine === "sigma" ? nodeSize : 0;
+  const runtimeEdgeWidth = engine === "sigma" ? edgeWidth : 0;
+  const runtimeLayoutIterations = engine === "sigma" ? layoutIterations : 0;
+  const runtimeLabelMode = engine === "sigma" ? labelMode : "";
+  const runtimeSizeMetric = engine === "sigma" ? sizeMetric : "";
+  const runtimeFocusNeighbors = engine === "sigma" ? focusNeighbors : false;
+  const runtimePerformanceMode = engine === "sigma" ? performanceMode : "";
+  const runtimeShowArrows = engine === "sigma" ? showArrows : false;
+  const runtimeShowLabels = engine === "sigma" ? showLabels : false;
+  const runtimeShowEdgeLabels = engine === "sigma" ? showEdgeLabels : false;
+
+  useEffect(() => {
+    setActiveMatchIndex(graphMatches.length ? 0 : -1);
+  }, [graphMatches]);
+
+  useEffect(() => {
+    onSearchStateChange?.({ count: graphMatches.length, index: activeMatchIndex });
+  }, [graphMatches.length, activeMatchIndex]);
+
+  useEffect(() => {
+    if (!searchCommand?.revision) {
+      return;
+    }
+    setActiveMatchIndex((current) => {
+      if (!graphMatches.length) {
+        return -1;
+      }
+      const direction = searchCommand.direction === "previous" ? -1 : 1;
+      return (current + direction + graphMatches.length) % graphMatches.length;
+    });
+  }, [searchCommand?.revision]);
+
+  useEffect(() => {
+    const match = graphMatches[activeMatchIndex];
+    if (match) {
+      setSelected(match);
+    }
+  }, [graphMatches, activeMatchIndex]);
 
   useEffect(() => {
     if (!containerRef.current) {
@@ -375,7 +940,7 @@ function GraphView({
                 label: node.label,
                 kind: node.type || "node",
                 size: node.size || nodeSize,
-                color: node.color || typeColor(colorByType ? node.type || "node" : "node"),
+                color: graphNodeColor(node),
                 matched: highlighted && node.label.toLowerCase().includes(highlighted)
               }
             })),
@@ -390,49 +955,27 @@ function GraphView({
               }
             }))
           ],
-          style: [
-            {
-              selector: "node",
-              style: {
-                label: showLabels && performanceMode !== "dense" ? "data(label)" : "",
-                "background-color": "data(color)",
-                width: "data(size)",
-                height: "data(size)",
-                color: "#202225",
-                "font-size": performanceMode === "readable" ? 13 : 11,
-                "text-valign": "bottom",
-                "text-margin-y": 5
-              }
-            },
-            {
-              selector: "node[matched]",
-              style: { "background-color": "#cf6f2a", "border-width": 3, "border-color": "#1f1f1f" }
-            },
-            {
-              selector: "edge",
-              style: {
-                width: "data(width)",
-                "line-color": "data(color)",
-                "target-arrow-color": "data(color)",
-                "target-arrow-shape": visibleGraph.directed ? "triangle" : "none",
-                "curve-style": "bezier",
-                label: showEdgeLabels && performanceMode === "readable" ? "data(label)" : "",
-                "font-size": 9
-              }
-            }
-          ],
-          layout: { name: layout, directed: visibleGraph.directed !== false, padding: 40, animate: performanceMode === "readable" } as never
+          style: cytoscapeStyle(showLabels, showEdgeLabels, showArrows, performanceMode, visibleGraph.directed !== false) as never,
+          layout: cytoscapeLayoutOptions(layout, visibleGraph, performanceMode, containerRef.current) as never
         });
-        cy.on("select", "node, edge", (event) => {
-          const target = event.target;
-          setSelected({
-            id: target.id(),
-            label: String(target.data("label") || target.id()),
-            kind: target.isNode() ? "node" : "edge",
-            type: String(target.data("kind") || target.data("label") || "")
-          });
+        cyRef.current = cy as unknown as CytoscapeLike;
+        const resizeObserver = new ResizeObserver(() => {
+          cy.resize();
+          cy.fit(undefined, 40);
         });
-        cleanup = () => cy.destroy();
+        resizeObserver.observe(containerRef.current);
+        const updateSelection = () => setSelected(cytoscapeSelection(cy));
+        cy.on("select unselect", "node, edge", updateSelection);
+        cy.on("dbltap", "node, edge", (event) => {
+          event.target.unselect();
+          updateSelection();
+        });
+        window.setTimeout(() => cy.fit(undefined, 40), 0);
+        cleanup = () => {
+          resizeObserver.disconnect();
+          cy.destroy();
+          cyRef.current = null;
+        };
         return;
       }
 
@@ -461,7 +1004,7 @@ function GraphView({
             baseSize: node.size || nodeSize / 2,
             size: node.size || nodeSize / 2,
             label: node.label,
-            color: highlighted && node.label.toLowerCase().includes(highlighted) ? "#cf6f2a" : node.color || typeColor(colorByType ? node.type || "node" : "node"),
+            color: highlighted && node.label.toLowerCase().includes(highlighted) ? "#cf6f2a" : graphNodeColor(node),
             kind: node.type || "node",
             matched: Boolean(highlighted && [node.id, node.label, node.type].filter(Boolean).join(" ").toLowerCase().includes(highlighted))
           });
@@ -473,6 +1016,7 @@ function GraphView({
               label: edge.label || edge.type || "",
               size: edge.width || edgeWidth,
               color: edge.color || "#87939f",
+              type: visibleGraph.directed !== false && showArrows ? "arrow" : "line",
               matched: Boolean(highlighted && [edge.id, edge.label, edge.type].filter(Boolean).join(" ").toLowerCase().includes(highlighted))
             };
             if (visibleGraph.directed === false) {
@@ -491,7 +1035,10 @@ function GraphView({
           });
         });
         runSigmaGraphologyLayout(g, { circularLayout, randomLayout, forceAtlas2, noverlap }, layout, layoutIterations);
-        let selectedNode = "";
+        const selectedNodes = new Set<string>();
+        const selectedEdges = new Set<string>();
+        let draggedNodes: { nodes: string[]; start: { x: number; y: number }; positions: Map<string, { x: number; y: number }>; moved: boolean } | null = null;
+        let suppressNextSigmaClick = false;
         const matchedNodes = new Set<string>();
         if (highlighted) {
           g.forEachNode((node: string, attrs: { matched?: boolean }) => {
@@ -502,58 +1049,149 @@ function GraphView({
         }
         const selectedNeighborhood = () => {
           const nodes = new Set<string>();
-          if (!selectedNode || !g.hasNode(selectedNode)) {
-            return nodes;
-          }
-          nodes.add(selectedNode);
-          g.neighbors(selectedNode).forEach((node: string) => nodes.add(node));
+          selectedNodes.forEach((selectedNode) => {
+            if (!g.hasNode(selectedNode)) {
+              return;
+            }
+            nodes.add(selectedNode);
+            g.neighbors(selectedNode).forEach((node: string) => nodes.add(node));
+          });
           return nodes;
+        };
+        const publishSigmaSelection = () => {
+          setSelected(sigmaSelectionFromSets(g, selectedNodes, selectedEdges));
+          renderer.refresh();
         };
         const renderer = new Sigma(g, containerRef.current, {
           defaultNodeColor: "#3a6ea5",
           defaultEdgeColor: "#87939f",
-          renderEdgeLabels: showEdgeLabels && performanceMode === "readable",
+          defaultEdgeType: visibleGraph.directed !== false && showArrows ? "arrow" : "line",
+          renderEdgeLabels: showEdgeLabels,
+          enableEdgeEvents: true,
+          zIndex: true,
           labelDensity: performanceMode === "readable" ? 1 : 0.4,
           nodeReducer(node: string, data: Record<string, unknown>) {
             const neighborhood = focusNeighbors ? selectedNeighborhood() : null;
+            const selected = selectedNodes.has(node);
             const mutedByFocus = Boolean(neighborhood && neighborhood.size && !neighborhood.has(node));
             const mutedBySearch = Boolean(matchedNodes.size && !matchedNodes.has(node));
             return {
               ...data,
               label: labelMode === "none" || !showLabels || performanceMode === "dense" ? "" : String(data.label || ""),
-              color: mutedByFocus || mutedBySearch ? "#bac2c7" : String(data.color || "#3a6ea5"),
-              size: mutedByFocus || mutedBySearch ? Math.max(2, Number(data.size) * 0.5) : Number(data.size) || nodeSize / 2,
-              forceLabel: labelMode === "all" || node === selectedNode || matchedNodes.has(node),
-              highlighted: node === selectedNode || matchedNodes.has(node)
+              color: selected ? "#111827" : mutedByFocus || mutedBySearch ? "#bac2c7" : String(data.color || "#3a6ea5"),
+              size: selected ? Math.max(5, Number(data.size) * 1.25) : mutedByFocus || mutedBySearch ? Math.max(2, Number(data.size) * 0.5) : Number(data.size) || nodeSize / 2,
+              forceLabel: labelMode === "all" || selected || matchedNodes.has(node),
+              highlighted: selected || matchedNodes.has(node),
+              zIndex: selected ? 10 : 0
             };
           },
           edgeReducer(edge: string, data: Record<string, unknown>) {
             const source = g.source(edge);
             const target = g.target(edge);
             const neighborhood = focusNeighbors ? selectedNeighborhood() : null;
+            const selected = selectedEdges.has(edge);
             const outsideFocus = Boolean(neighborhood && neighborhood.size && (!neighborhood.has(source) || !neighborhood.has(target)));
             const outsideSearch = Boolean(matchedNodes.size && !matchedNodes.has(source) && !matchedNodes.has(target) && !data.matched);
             return {
               ...data,
-              label: showEdgeLabels && performanceMode === "readable" ? String(data.label || "") : "",
-              color: outsideFocus || outsideSearch ? "#d2d7dc" : String(data.color || "#87939f"),
-              size: outsideFocus || outsideSearch ? 0.5 : Number(data.size) || edgeWidth,
-              hidden: outsideFocus
+              label: showEdgeLabels ? String(data.label || "") : "",
+              color: selected ? "#111827" : outsideFocus || outsideSearch ? "#d2d7dc" : String(data.color || "#87939f"),
+              size: selected ? Math.max(3, Number(data.size) * 1.6) : outsideFocus || outsideSearch ? 0.5 : Number(data.size) || edgeWidth,
+              type: visibleGraph.directed !== false && showArrows ? "arrow" : "line",
+              hidden: outsideFocus,
+              forceLabel: showEdgeLabels || selected,
+              zIndex: selected ? 9 : 0
             };
           }
         });
-        renderer.on("clickNode", ({ node }) => {
-          selectedNode = node;
-          setSelected({
-            id: node,
-            label: String(g.getNodeAttribute(node, "label") || node),
-            kind: "node",
-            type: String(g.getNodeAttribute(node, "kind") || "")
+        renderer.on("downNode", ({ node, event }) => {
+          const original = event.original instanceof MouseEvent ? event.original : null;
+          const shift = Boolean(original?.shiftKey);
+          if (!selectedNodes.has(node) && !shift) {
+            selectedNodes.clear();
+            selectedEdges.clear();
+            selectedNodes.add(node);
+            publishSigmaSelection();
+          }
+          const dragSelection = selectedNodes.has(node) ? Array.from(selectedNodes) : [node];
+          const start = renderer.viewportToGraph({ x: event.x, y: event.y });
+          draggedNodes = {
+            nodes: dragSelection,
+            start,
+            positions: new Map(dragSelection.map((selectedNode) => [selectedNode, { x: Number(g.getNodeAttribute(selectedNode, "x")) || 0, y: Number(g.getNodeAttribute(selectedNode, "y")) || 0 }])),
+            moved: false
+          };
+          renderer.setSetting("enableCameraPanning", false);
+          event.preventSigmaDefault();
+        });
+        renderer.getMouseCaptor().on("mousemove", (event) => {
+          if (!draggedNodes) {
+            return;
+          }
+          const next = renderer.viewportToGraph({ x: event.x, y: event.y });
+          const dx = next.x - draggedNodes.start.x;
+          const dy = next.y - draggedNodes.start.y;
+          if (Math.abs(dx) > 0.001 || Math.abs(dy) > 0.001) {
+            draggedNodes.moved = true;
+          }
+          draggedNodes.positions.forEach((position, node) => {
+            g.mergeNodeAttributes(node, { x: position.x + dx, y: position.y + dy });
           });
+          renderer.refresh({ partialGraph: { nodes: draggedNodes.nodes }, skipIndexation: true });
+          event.preventSigmaDefault();
+        });
+        renderer.getMouseCaptor().on("mouseup", () => {
+          if (!draggedNodes) {
+            return;
+          }
+          suppressNextSigmaClick = draggedNodes.moved;
+          draggedNodes = null;
+          renderer.setSetting("enableCameraPanning", true);
           renderer.refresh();
         });
+        renderer.on("clickNode", ({ node, event }) => {
+          const original = event.original instanceof MouseEvent ? event.original : null;
+          const shift = Boolean(original?.shiftKey);
+          if (suppressNextSigmaClick) {
+            suppressNextSigmaClick = false;
+            return;
+          }
+          if (shift) {
+            selectedEdges.clear();
+            if (selectedNodes.has(node)) {
+              selectedNodes.delete(node);
+            } else {
+              selectedNodes.add(node);
+            }
+          } else {
+            selectedNodes.clear();
+            selectedEdges.clear();
+            selectedNodes.add(node);
+          }
+          publishSigmaSelection();
+          event.preventSigmaDefault();
+        });
+        renderer.on("clickEdge", ({ edge, event }) => {
+          const original = event.original instanceof MouseEvent ? event.original : null;
+          const shift = Boolean(original?.shiftKey);
+          if (shift) {
+            selectedNodes.clear();
+            if (selectedEdges.has(edge)) {
+              selectedEdges.delete(edge);
+            } else {
+              selectedEdges.add(edge);
+            }
+          } else {
+            selectedNodes.clear();
+            selectedEdges.clear();
+            selectedEdges.add(edge);
+          }
+          publishSigmaSelection();
+          event.preventSigmaDefault();
+        });
         renderer.on("clickStage", () => {
-          selectedNode = "";
+          selectedNodes.clear();
+          selectedEdges.clear();
           setSelected(null);
           renderer.refresh();
         });
@@ -569,19 +1207,76 @@ function GraphView({
   }, [
     visibleGraph,
     engine,
-    highlighted,
-    layout,
-    nodeSize,
-    edgeWidth,
-    showLabels,
-    showEdgeLabels,
-    colorByType,
-    performanceMode,
-    layoutIterations,
-    labelMode,
-    sizeMetric,
-    focusNeighbors
+    runtimeHighlighted,
+    runtimeLayout,
+    runtimeLayoutActionRevision,
+    runtimeNodeSize,
+    runtimeEdgeWidth,
+    runtimeLayoutIterations,
+    runtimeLabelMode,
+    runtimeSizeMetric,
+    runtimeFocusNeighbors,
+    runtimePerformanceMode,
+    runtimeShowArrows,
+    runtimeShowLabels,
+    runtimeShowEdgeLabels
   ]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) {
+      return;
+    }
+    cy.style(cytoscapeStyle(showLabels, showEdgeLabels, showArrows, performanceMode, visibleGraph.directed !== false)).update();
+  }, [showLabels, showEdgeLabels, showArrows, performanceMode, visibleGraph.directed]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) {
+      return;
+    }
+    const nodes = new Map(visibleGraph.nodes.map((node) => [node.id, node]));
+    const edges = new Map(visibleGraph.edges.map((edge, index) => [edge.id || `edge-${index}`, edge]));
+    cy.nodes().forEach((element) => {
+      const node = nodes.get(element.id());
+      if (!node) {
+        return;
+      }
+      element.data("size", node.size || nodeSize);
+      element.data("color", graphNodeColor(node));
+    });
+    cy.edges().forEach((element) => {
+      const edge = edges.get(element.id());
+      if (!edge) {
+        return;
+      }
+      element.data("width", edge.width || edgeWidth);
+      element.data("color", edge.color || "#87939f");
+    });
+  }, [visibleGraph, nodeSize, edgeWidth]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy) {
+      return;
+    }
+    cy.elements().removeClass("tf-match tf-active");
+    graphMatches.forEach((match) => cy.getElementById(match.id).addClass("tf-match"));
+    const active = graphMatches[activeMatchIndex];
+    if (active) {
+      const element = cy.getElementById(active.id);
+      element.addClass("tf-active");
+      cy.animate({ center: { eles: element }, zoom: Math.max(cy.zoom(), 1.2) }, { duration: 160 });
+    }
+  }, [graphMatches, activeMatchIndex]);
+
+  useEffect(() => {
+    const cy = cyRef.current;
+    if (!cy || toolbarAction?.action !== "graph-run-layout" || !toolbarAction.revision) {
+      return;
+    }
+    runCytoscapeLayout(cy, layout, visibleGraph, performanceMode, containerRef.current);
+  }, [toolbarAction?.revision]);
 
   if (error) {
     return <StaticGraph graph={graph} error={error} />;
@@ -589,22 +1284,25 @@ function GraphView({
   return (
     <div class="graph-view-wrap">
       <div class="graph-canvas" ref={containerRef} />
-      <aside class="graph-inspector">
-        <strong>Inspector</strong>
-        {selected ? (
-          <>
-            <span>{selected.kind}</span>
-            <h3>{selected.label}</h3>
-            <p>{selected.id}</p>
-            {selected.type ? <p>{selected.type}</p> : null}
-          </>
-        ) : (
-          <p>Select a node or edge.</p>
-        )}
-        <small>
-          {visibleGraph.nodes.length} of {graph.nodes.length} nodes - {visibleGraph.edges.length} of {graph.edges.length} edges - {layout}
-        </small>
-      </aside>
+      <ViewerInspector
+        title="Inspector"
+        emptyText="Select a node or edge."
+        item={
+          selected
+            ? {
+                kind: selected.kind,
+                title: selected.label,
+                rows: [
+                  { label: "ID", value: selected.id },
+                  ...(selected.type ? [{ label: "Type", value: selected.type }] : []),
+                  ...selected.rows,
+                  { label: "Visible", value: `${visibleGraph.nodes.length} of ${graph.nodes.length} nodes, ${visibleGraph.edges.length} of ${graph.edges.length} edges` },
+                  { label: "Layout", value: layout }
+                ]
+              }
+            : null
+        }
+      />
     </div>
   );
 }
@@ -622,6 +1320,358 @@ function StaticGraph({ graph, error }: { graph: GraphModel; error: string }) {
         ))}
       </ul>
     </div>
+  );
+}
+
+interface GraphSelection {
+  id: string;
+  label: string;
+  kind: "node" | "edge" | "selection";
+  type?: string;
+  rows: InspectorItem["rows"];
+}
+
+interface CytoscapeElementLike {
+  id(): string;
+  isNode(): boolean;
+  data(key: string): unknown;
+  data(key: string, value: unknown): void;
+  unselect?(): void;
+}
+
+interface CytoscapeCollectionLike {
+  length: number;
+  forEach(callback: (element: CytoscapeElementLike) => void): void;
+}
+
+interface CytoscapeLike {
+  resize(): void;
+  fit(elements?: unknown, padding?: number): void;
+  destroy(): void;
+  zoom(): number;
+  style(style: unknown): { update(): void };
+  elements(): { removeClass(className: string): void };
+  nodes(): { forEach(callback: (element: CytoscapeElementLike) => void): void };
+  edges(): { forEach(callback: (element: CytoscapeElementLike) => void): void };
+  getElementById(id: string): { addClass(className: string): void };
+  animate(properties: unknown, options?: unknown): void;
+  layout(options: unknown): CytoscapeLayoutRunLike;
+}
+
+interface CytoscapeLayoutRunLike {
+  run(): void;
+  on?(event: string, callback: () => void): void;
+}
+
+function cytoscapeStyle(showLabels: boolean, showEdgeLabels: boolean, showArrows: boolean, performanceMode: string, directed: boolean) {
+  return [
+    {
+      selector: "node",
+      style: {
+        label: showLabels && performanceMode !== "dense" ? "data(label)" : "",
+        "background-color": "data(color)",
+        width: "data(size)",
+        height: "data(size)",
+        color: "#202225",
+        "font-size": performanceMode === "readable" ? 13 : 11,
+        "text-valign": "bottom",
+        "text-margin-y": 5
+      }
+    },
+    {
+      selector: "node.tf-match",
+      style: { "background-color": "#cf6f2a", "border-width": 3, "border-color": "#1f1f1f" }
+    },
+    {
+      selector: "node.tf-active",
+      style: { "background-color": "#111827", "border-width": 4, "border-color": "#ffe28a", color: "#111827" }
+    },
+    {
+      selector: "node:selected",
+      style: {
+        "border-width": 5,
+        "border-color": "#ffe28a",
+        "overlay-color": "#111827",
+        "overlay-opacity": 0.14,
+        "z-index": 20
+      }
+    },
+    {
+      selector: "edge",
+      style: {
+        width: "data(width)",
+        "line-color": "data(color)",
+        "target-arrow-color": "data(color)",
+        "target-arrow-shape": directed && showArrows ? "triangle" : "none",
+        "curve-style": "bezier",
+        label: showEdgeLabels && performanceMode === "readable" ? "data(label)" : "",
+        "font-size": 9
+      }
+    },
+    {
+      selector: "edge.tf-match",
+      style: { "line-color": "#cf6f2a", "target-arrow-color": "#cf6f2a", width: 3 }
+    },
+    {
+      selector: "edge.tf-active",
+      style: { "line-color": "#111827", "target-arrow-color": "#111827", width: 5 }
+    },
+    {
+      selector: "edge:selected",
+      style: {
+        "line-color": "#111827",
+        "target-arrow-color": "#111827",
+        width: 5,
+        "overlay-color": "#ffe28a",
+        "overlay-opacity": 0.22
+      }
+    }
+  ];
+}
+
+function inferGraphPerformanceMode(setting: string, graph: GraphModel): string {
+  if (setting !== "auto") {
+    return setting;
+  }
+  if (graph.nodes.length < READABLE_GRAPH_NODE_LIMIT) {
+    return "readable";
+  }
+  if (graph.nodes.length > DENSE_GRAPH_NODE_LIMIT || graph.edges.length > DENSE_GRAPH_EDGE_LIMIT) {
+    return "dense";
+  }
+  return "balanced";
+}
+
+function cytoscapeLayoutOptions(layout: string, graph: GraphModel, performanceMode: string, container: HTMLElement | null): Record<string, unknown> {
+  const padding = performanceMode === "dense" ? 24 : 40;
+  const options: Record<string, unknown> = {
+    name: layout,
+    directed: graph.directed !== false,
+    fit: true,
+    padding,
+    animate: performanceMode === "readable"
+  };
+  if (layout === "cose") {
+    Object.assign(options, {
+      randomize: true,
+      nodeOverlap: 20,
+      idealEdgeLength: performanceMode === "readable" ? 92 : 72,
+      componentSpacing: performanceMode === "readable" ? 90 : 64,
+      boundingBox: {
+        x1: 0,
+        y1: 0,
+        w: Math.max(360, container?.clientWidth || 0),
+        h: Math.max(260, container?.clientHeight || 0)
+      }
+    });
+  }
+  if (layout === "breadthfirst") {
+    Object.assign(options, { spacingFactor: performanceMode === "readable" ? 1.15 : 0.95, avoidOverlap: true });
+  }
+  if (layout === "circle" || layout === "concentric" || layout === "grid" || layout === "random") {
+    Object.assign(options, { spacingFactor: performanceMode === "readable" ? 1.05 : 0.9, avoidOverlap: true });
+  }
+  return options;
+}
+
+function runCytoscapeLayout(cy: CytoscapeLike, layout: string, graph: GraphModel, performanceMode: string, container: HTMLElement | null): void {
+  const options = cytoscapeLayoutOptions(layout, graph, performanceMode, container);
+  const runner = cy.layout(options);
+  let didFit = false;
+  const fit = () => {
+    if (didFit) {
+      return;
+    }
+    didFit = true;
+    cy.fit(undefined, Number(options.padding) || 40);
+  };
+  runner.on?.("layoutstop", fit);
+  runner.run();
+  window.setTimeout(fit, layout === "cose" ? 360 : 80);
+}
+
+function cytoscapeSelection(cy: unknown): GraphSelection | null {
+  const collection = (cy as { $?: (selector: string) => CytoscapeCollectionLike }).$?.(":selected");
+  if (!collection?.length) {
+    return null;
+  }
+  const elements: CytoscapeElementLike[] = [];
+  collection.forEach((element) => elements.push(element));
+  if (elements.length === 1) {
+    const element = elements[0];
+    return {
+      id: element.id(),
+      label: String(element.data("label") || element.id()),
+      kind: element.isNode() ? "node" : "edge",
+      type: String(element.data("kind") || element.data("label") || ""),
+      rows: graphElementRows(element)
+    };
+  }
+  const nodeIds = elements.filter((element) => element.isNode()).map((element) => element.id());
+  const edgeIds = elements.filter((element) => !element.isNode()).map((element) => element.id());
+  return {
+    id: "multi-selection",
+    label: `${elements.length} selected`,
+    kind: "selection",
+    rows: [
+      { label: "Nodes", value: String(nodeIds.length) },
+      { label: "Edges", value: String(edgeIds.length) },
+      { label: "IDs", value: [...nodeIds, ...edgeIds].slice(0, 16).join(", ") || "-" }
+    ]
+  };
+}
+
+function sigmaSelectionFromSets(graph: GraphologyLike, selectedNodes: Set<string>, selectedEdges: Set<string>): GraphSelection | null {
+  const nodeIds = Array.from(selectedNodes).filter((node) => graph.hasNode?.(node) !== false);
+  const edgeIds = Array.from(selectedEdges).filter((edge) => graph.hasEdge?.(edge) !== false);
+  if (nodeIds.length === 1 && edgeIds.length === 0) {
+    const node = nodeIds[0];
+    return {
+      id: node,
+      label: String(graph.getNodeAttribute?.(node, "label") || node),
+      kind: "node",
+      type: String(graph.getNodeAttribute?.(node, "kind") || ""),
+      rows: sigmaNodeRows(graph, node)
+    };
+  }
+  if (edgeIds.length === 1 && nodeIds.length === 0) {
+    const edge = edgeIds[0];
+    return {
+      id: edge,
+      label: String(graph.getEdgeAttribute?.(edge, "label") || edge),
+      kind: "edge",
+      rows: sigmaEdgeRows(graph, edge)
+    };
+  }
+  if (!nodeIds.length && !edgeIds.length) {
+    return null;
+  }
+  return {
+    id: "multi-selection",
+    label: `${nodeIds.length + edgeIds.length} selected`,
+    kind: "selection",
+    rows: [
+      { label: "Nodes", value: String(nodeIds.length) },
+      { label: "Edges", value: String(edgeIds.length) },
+      { label: "IDs", value: [...nodeIds, ...edgeIds].slice(0, 16).join(", ") || "-" }
+    ]
+  };
+}
+
+function sigmaNodeRows(graph: GraphologyLike, node: string): InspectorItem["rows"] {
+  const rows: InspectorItem["rows"] = [
+    { label: "Type", value: String(graph.getNodeAttribute?.(node, "kind") || "node") },
+    { label: "Degree", value: String(graph.degree?.(node) || 0) }
+  ];
+  const depth = graph.getNodeAttribute?.(node, "depth");
+  const rank = graph.getNodeAttribute?.(node, "rank");
+  if (depth !== undefined) {
+    rows.push({ label: "Depth", value: String(depth) });
+  }
+  if (rank !== undefined) {
+    rows.push({ label: "Rank", value: String(rank) });
+  }
+  return rows;
+}
+
+function sigmaEdgeRows(graph: GraphologyLike, edge: string): InspectorItem["rows"] {
+  const [source, target] = graph.extremities?.(edge) || [graph.source?.(edge) || "", graph.target?.(edge) || ""];
+  const rows: InspectorItem["rows"] = [
+    { label: "Source", value: source },
+    { label: "Target", value: target }
+  ];
+  const label = graph.getEdgeAttribute?.(edge, "label");
+  if (label) {
+    rows.push({ label: "Label", value: String(label) });
+  }
+  return rows;
+}
+
+function graphElementRows(element: CytoscapeElementLike): InspectorItem["rows"] {
+  const rows: InspectorItem["rows"] = [];
+  if (!element.isNode()) {
+    rows.push({ label: "Source", value: String(element.data("source") || "") });
+    rows.push({ label: "Target", value: String(element.data("target") || "") });
+  }
+  const label = element.data("label");
+  const size = element.data("size") || element.data("width");
+  if (label) {
+    rows.push({ label: "Label", value: String(label) });
+  }
+  if (size) {
+    rows.push({ label: element.isNode() ? "Size" : "Width", value: String(size) });
+  }
+  return rows;
+}
+
+function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] {
+  if (!query) {
+    return [];
+  }
+  const matches: GraphSelection[] = [];
+  graph.nodes.forEach((node) => {
+    const haystack = [node.id, node.label, node.type, ...(node.classes || [])].filter(Boolean).join(" ").toLowerCase();
+    if (haystack.includes(query)) {
+      matches.push({
+        id: node.id,
+        label: node.label,
+        kind: "node",
+        type: node.type,
+        rows: [
+          { label: "Degree", value: String(graph.edges.filter((edge) => edge.source === node.id || edge.target === node.id).length) }
+        ]
+      });
+    }
+  });
+  graph.edges.forEach((edge, index) => {
+    const id = edge.id || `edge-${index}`;
+    const haystack = [id, edge.label, edge.type, edge.source, edge.target, ...(edge.classes || [])].filter(Boolean).join(" ").toLowerCase();
+    if (haystack.includes(query)) {
+      matches.push({
+        id,
+        label: edge.label || edge.type || id,
+        kind: "edge",
+        type: edge.type,
+        rows: [
+          { label: "Source", value: edge.source },
+          { label: "Target", value: edge.target },
+          ...(edge.weight !== undefined ? [{ label: "Weight", value: String(edge.weight) }] : [])
+        ]
+      });
+    }
+  });
+  return matches;
+}
+
+interface InspectorItem {
+  kind: string;
+  title: string;
+  rows: Array<{ label: string; value: string | JSX.Element }>;
+  details?: string;
+}
+
+function ViewerInspector({ title, item, emptyText }: { title: string; item: InspectorItem | null; emptyText: string }) {
+  return (
+    <aside class="viewer-inspector">
+      <strong>{title}</strong>
+      {item ? (
+        <>
+          <span>{item.kind}</span>
+          <h3>{item.title}</h3>
+          <dl>
+            {item.rows.map((row) => (
+              <div key={row.label}>
+                <dt>{row.label}</dt>
+                <dd>{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+          {item.details ? <pre>{item.details}</pre> : null}
+        </>
+      ) : (
+        <p>{emptyText}</p>
+      )}
+    </aside>
   );
 }
 
@@ -646,12 +1696,77 @@ function typeColor(type: string): string {
   return palette[hash % palette.length];
 }
 
+function graphNodeColor(node: GraphModel["nodes"][number]): string {
+  if (node.color) {
+    return node.color;
+  }
+  const depth = Number(node.data?.depth);
+  if (Number.isFinite(depth)) {
+    return depthColor(depth);
+  }
+  return node.type && node.type !== "node" ? typeColor(node.type) : "#3a6ea5";
+}
+
+function depthColor(depth: number): string {
+  const palette = ["#3a6ea5", "#5aa36f", "#d7a12f", "#8b67c7", "#4bb3b4", "#9a514e"];
+  return palette[Math.max(0, Math.round(depth)) % palette.length];
+}
+
+function indexTreeNodes(nodes: TreeNode[], map = new Map<string, TreeNode>()): Map<string, TreeNode> {
+  nodes.forEach((node) => {
+    map.set(node.id, node);
+    if (node.declaredId) {
+      map.set(node.declaredId, node);
+    }
+    indexTreeNodes(node.children, map);
+  });
+  return map;
+}
+
+function treeDomId(id: string): string {
+  return `tree-node-${id.replace(/[^a-z0-9_-]+/gi, "-")}`;
+}
+
+function treeNodeInspector(node: TreeNode): InspectorItem {
+  const rows: InspectorItem["rows"] = [
+    { label: "ID", value: node.id },
+    { label: "Children", value: String(node.children.length) }
+  ];
+  if (node.declaredId) {
+    rows.push({ label: "Declared ID", value: node.declaredId });
+  }
+  if (node.type) {
+    rows.push({ label: "Type", value: node.type });
+  }
+  if (node.tags?.length) {
+    rows.push({ label: "Tags", value: node.tags.map((tag) => `#${tag}`).join(", ") });
+  }
+  if (node.links?.length) {
+    rows.push({ label: "Links", value: node.links.map((link) => `@${link.type ? `${link.type}:` : ""}${link.target}`).join(", ") });
+  }
+  if (node.sourceRange) {
+    rows.push({ label: "Source", value: `line ${node.sourceRange.line + 1}, column ${node.sourceRange.column + 1}` });
+  }
+  Object.entries(node.attributes || {}).forEach(([key, value]) => rows.push({ label: key, value }));
+  return {
+    kind: "tree node",
+    title: node.label,
+    rows,
+    details: node.details
+  };
+}
+
 interface JsMindNode {
   id: string;
   topic: string;
   expanded?: boolean;
   direction?: "left" | "right";
   children?: JsMindNode[];
+  "background-color"?: string;
+  "foreground-color"?: string;
+  "font-size"?: string;
+  "font-weight"?: string;
+  "font-style"?: string;
 }
 
 interface JsMindData {
@@ -676,6 +1791,7 @@ function treeNodeToJsMind(node: TreeNode, index: number): JsMindNode {
     topic: node.type ? `${node.label} (${node.type})` : node.label,
     expanded: true,
     direction: index % 2 === 0 ? "right" : "left",
+    ...mindMapStyleData(node.attributes),
     children: node.children.map((child, childIndex) => treeNodeToJsMind(child, childIndex))
   };
 }
@@ -698,8 +1814,367 @@ function findFirstMatchingTreeNode(nodes: TreeNode[], query: string): TreeNode |
   return null;
 }
 
+function matchingTreeNodes(nodes: TreeNode[], query: string): TreeNode[] {
+  const lower = query.trim().toLowerCase();
+  if (!lower) {
+    return [];
+  }
+  const matches: TreeNode[] = [];
+  walkTreeNodes(nodes, (node) => {
+    const text = [node.id, node.label, node.type, node.declaredId, ...(node.tags || [])].filter(Boolean).join(" ").toLowerCase();
+    if (text.includes(lower)) {
+      matches.push(node);
+    }
+  });
+  return matches;
+}
+
+function walkTreeNodes(nodes: TreeNode[], callback: (node: TreeNode) => void): void {
+  nodes.forEach((node) => {
+    callback(node);
+    walkTreeNodes(node.children, callback);
+  });
+}
+
 function countTreeNodes(nodes: TreeNode[]): number {
   return nodes.reduce((count, node) => count + 1 + countTreeNodes(node.children), 0);
+}
+
+function renderMindMapDecorations(host: HTMLElement, nodes: TreeNode[], query = "", activeId = ""): void {
+  applyMindMapNodeStyles(host, nodes);
+  applyMindMapSearchState(host, nodes, query, activeId);
+  renderMindMapCrossLinks(host, nodes);
+}
+
+function applyMindMapSearchState(host: HTMLElement, nodes: TreeNode[], query: string, activeId: string): void {
+  const matchedIds = new Set(matchingTreeNodes(nodes, query).map((node) => node.id));
+  host.querySelectorAll<HTMLElement>("jmnode").forEach((element) => {
+    const id = element.getAttribute("nodeid") || "";
+    element.classList.toggle("mindmap-search-match", matchedIds.has(id));
+    element.classList.toggle("mindmap-search-active", Boolean(activeId && id === activeId));
+  });
+}
+
+function applyMindMapNodeStyles(host: HTMLElement, nodes: TreeNode[]): void {
+  const flatNodes = Array.from(indexTreeNodes(nodes).values()).filter((node, index, list) => list.findIndex((candidate) => candidate.id === node.id) === index);
+  flatNodes.forEach((node) => {
+    const element = jsMindElementById(host, node.id);
+    if (!element) {
+      return;
+    }
+    const attrs = node.attributes || {};
+    const borderColor = safeCssColor(firstStyleAttribute(attrs, ["border-color", "borderColor", "border", "stroke"]));
+    const borderWidth = safeCssLength(firstStyleAttribute(attrs, ["border-width", "borderWidth"]));
+    const shape = firstStyleAttribute(attrs, ["shape", "node-shape", "nodeShape"])?.toLowerCase();
+    if (borderColor) {
+      element.style.borderColor = borderColor;
+      element.style.borderStyle = "solid";
+      element.style.borderWidth = borderWidth || "1px";
+    }
+    if (borderWidth && !borderColor) {
+      element.style.borderWidth = borderWidth;
+      element.style.borderStyle = "solid";
+    }
+    if (shape) {
+      element.style.borderRadius = mindMapShapeRadius(shape);
+    }
+  });
+}
+
+function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[]): void {
+  const panel = host.querySelector<HTMLElement>(".jsmind-inner") || host;
+  panel.querySelector(".jsmind-cross-links")?.remove();
+  const nodeIndex = indexTreeNodes(nodes);
+  const links: Array<{ source: TreeNode; target: TreeNode; type?: string; color?: string; width?: number }> = [];
+  const seenSources = new Set<string>();
+  nodeIndex.forEach((node) => {
+    if (seenSources.has(node.id)) {
+      return;
+    }
+    seenSources.add(node.id);
+    (node.links || []).forEach((link) => {
+      const target = nodeIndex.get(link.target);
+      if (target) {
+        links.push({
+          source: node,
+          target,
+          type: link.type,
+          color: link.color || safeCssColor(firstStyleAttribute(node.attributes || {}, ["link-color", "linkColor", "line-color", "lineColor"])),
+          width: link.width || safePositiveNumber(firstStyleAttribute(node.attributes || {}, ["link-width", "linkWidth", "line-width", "lineWidth"]))
+        });
+      }
+    });
+  });
+  if (!links.length) {
+    return;
+  }
+  const svg = document.createElementNS(SVG_NAMESPACE, "svg");
+  svg.classList.add("jsmind-cross-links");
+  svg.setAttribute("width", String(Math.max(panel.scrollWidth, panel.clientWidth)));
+  svg.setAttribute("height", String(Math.max(panel.scrollHeight, panel.clientHeight)));
+  const defs = document.createElementNS(SVG_NAMESPACE, "defs");
+  const marker = document.createElementNS(SVG_NAMESPACE, "marker");
+  marker.setAttribute("id", `${host.id}-cross-link-arrow`);
+  marker.setAttribute("markerWidth", "8");
+  marker.setAttribute("markerHeight", "8");
+  marker.setAttribute("refX", "7");
+  marker.setAttribute("refY", "4");
+  marker.setAttribute("orient", "auto");
+  const markerPath = document.createElementNS(SVG_NAMESPACE, "path");
+  markerPath.setAttribute("d", "M 0 0 L 8 4 L 0 8 z");
+  markerPath.setAttribute("fill", "#cf6f2a");
+  marker.append(markerPath);
+  defs.append(marker);
+  svg.append(defs);
+  const panelRect = panel.getBoundingClientRect();
+  links.forEach((link, index) => {
+    const source = jsMindElementById(host, link.source.id);
+    const target = jsMindElementById(host, link.target.id);
+    if (!source || !target || source.offsetParent === null || target.offsetParent === null) {
+      return;
+    }
+    const sourceRect = source.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const sx = sourceRect.left - panelRect.left + panel.scrollLeft + sourceRect.width / 2;
+    const sy = sourceRect.top - panelRect.top + panel.scrollTop + sourceRect.height / 2;
+    const tx = targetRect.left - panelRect.left + panel.scrollLeft + targetRect.width / 2;
+    const ty = targetRect.top - panelRect.top + panel.scrollTop + targetRect.height / 2;
+    const midX = sx + (tx - sx) * 0.5;
+    const path = document.createElementNS(SVG_NAMESPACE, "path");
+    path.setAttribute("d", `M ${sx} ${sy} C ${midX} ${sy}, ${midX} ${ty}, ${tx} ${ty}`);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", link.color || "#cf6f2a");
+    path.setAttribute("stroke-width", String(link.width || 2));
+    path.setAttribute("marker-end", `url(#${host.id}-cross-link-arrow)`);
+    path.setAttribute("data-link-index", String(index));
+    const title = document.createElementNS(SVG_NAMESPACE, "title");
+    title.textContent = `${link.source.label} -> ${link.target.label}${link.type ? ` (${link.type})` : ""}`;
+    path.append(title);
+    svg.append(path);
+  });
+  panel.prepend(svg);
+}
+
+function mindMapStyleData(attributes: TreeNode["attributes"]): Partial<JsMindNode> {
+  const attrs = attributes || {};
+  const background = safeCssColor(firstStyleAttribute(attrs, ["background-color", "backgroundColor", "background", "bg", "fill", "color"]));
+  const foreground = safeCssColor(firstStyleAttribute(attrs, ["foreground-color", "foregroundColor", "text-color", "textColor", "fg"]));
+  const fontSize = safeCssLength(firstStyleAttribute(attrs, ["font-size", "fontSize"]));
+  const fontWeight = firstStyleAttribute(attrs, ["font-weight", "fontWeight", "weight"]);
+  const fontStyle = firstStyleAttribute(attrs, ["font-style", "fontStyle", "style"]);
+  return {
+    ...(background ? { "background-color": background } : {}),
+    ...(foreground ? { "foreground-color": foreground } : {}),
+    ...(fontSize ? { "font-size": fontSize } : {}),
+    ...(fontWeight && /^(normal|bold|[1-9]00)$/i.test(fontWeight) ? { "font-weight": fontWeight } : {}),
+    ...(fontStyle && /^(normal|italic|oblique)$/i.test(fontStyle) ? { "font-style": fontStyle } : {})
+  };
+}
+
+function firstStyleAttribute(attributes: Record<string, string>, keys: string[]): string | undefined {
+  const normalized = new Map(Object.entries(attributes).map(([key, value]) => [key.toLowerCase(), value.trim()]));
+  for (const key of keys) {
+    const value = normalized.get(key.toLowerCase());
+    if (value) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function safeCssColor(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return /^(#[0-9a-f]{3,8}|rgba?\([0-9.,%\s]+\)|hsla?\([0-9.,%\s]+\)|[a-z]+)$/i.test(trimmed) ? trimmed : undefined;
+}
+
+function safeCssLength(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) {
+    return undefined;
+  }
+  return /^[0-9]+(?:\.[0-9]+)?(?:px|em|rem|%)?$/i.test(trimmed) ? trimmed : undefined;
+}
+
+function safePositiveNumber(value: string | undefined): number | undefined {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function mindMapShapeRadius(shape: string): string {
+  if (shape === "square" || shape === "rectangle") {
+    return "2px";
+  }
+  if (shape === "pill" || shape === "capsule") {
+    return "999px";
+  }
+  if (shape === "round" || shape === "rounded") {
+    return "8px";
+  }
+  return "8px";
+}
+
+function centerMindMapNode(viewport: HTMLElement | null, host: HTMLElement, id: string): void {
+  const element = jsMindElementById(host, id);
+  if (!viewport || !element) {
+    return;
+  }
+  const viewportRect = viewport.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  viewport.scrollBy({
+    left: elementRect.left + elementRect.width / 2 - (viewportRect.left + viewportRect.width / 2),
+    top: elementRect.top + elementRect.height / 2 - (viewportRect.top + viewportRect.height / 2),
+    behavior: "smooth"
+  });
+}
+
+function fitMindMap(instance: jsMind, viewport: HTMLElement, host: HTMLElement, nodes: TreeNode[]): void {
+  const visibleNodes = visibleJsMindNodes(host);
+  if (!visibleNodes.length) {
+    centerMindMapNode(viewport, host, "root");
+    return;
+  }
+  const bounds = elementBounds(visibleNodes);
+  const availableWidth = Math.max(120, viewport.clientWidth - 80);
+  const availableHeight = Math.max(120, viewport.clientHeight - 80);
+  const scale = Math.min(availableWidth / Math.max(1, bounds.width), availableHeight / Math.max(1, bounds.height), 1.6);
+  setMindMapZoom(instance, clamp(mindMapZoom(instance) * scale, 0.1, 2.1));
+  window.requestAnimationFrame(() => {
+    renderMindMapDecorations(host, nodes);
+    centerMindMapBounds(viewport, visibleJsMindNodes(host));
+  });
+}
+
+function centerMindMapBounds(viewport: HTMLElement, elements: HTMLElement[]): void {
+  if (!elements.length) {
+    return;
+  }
+  const viewportRect = viewport.getBoundingClientRect();
+  const bounds = elementBounds(elements);
+  viewport.scrollBy({
+    left: bounds.left + bounds.width / 2 - (viewportRect.left + viewportRect.width / 2),
+    top: bounds.top + bounds.height / 2 - (viewportRect.top + viewportRect.height / 2),
+    behavior: "smooth"
+  });
+}
+
+function elementBounds(elements: HTMLElement[]): DOMRect {
+  const rects = elements.map((element) => element.getBoundingClientRect());
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.right));
+  const bottom = Math.max(...rects.map((rect) => rect.bottom));
+  return new DOMRect(left, top, right - left, bottom - top);
+}
+
+function visibleJsMindNodes(host: HTMLElement): HTMLElement[] {
+  return Array.from(host.querySelectorAll<HTMLElement>("jmnode")).filter((element) => element.offsetParent !== null);
+}
+
+function setMindMapZoom(instance: jsMind, zoom: number): void {
+  const view = instanceView(instance);
+  if (view?.set_zoom) {
+    if (!view.set_zoom(zoom)) {
+      forceMindMapZoom(view, zoom);
+    }
+    return;
+  }
+  view?.setZoom?.(zoom);
+}
+
+function forceMindMapZoom(view: JsMindViewHandle, zoom: number): void {
+  view.zoom_current = zoom;
+  view.actualZoom = zoom;
+  const panel = view.e_panel;
+  if (panel) {
+    Array.from(panel.children).forEach((child) => {
+      if (child instanceof HTMLElement) {
+        child.style.zoom = String(zoom);
+      }
+    });
+  }
+  view._show?.();
+}
+
+function mindMapZoom(instance: jsMind): number {
+  const view = instanceView(instance);
+  const zoom = view?.zoom_current ?? view?.actualZoom;
+  return typeof zoom === "number" && Number.isFinite(zoom) ? zoom : 1;
+}
+
+function jsMindElementById(host: HTMLElement, id: string): HTMLElement | null {
+  return Array.from(host.querySelectorAll<HTMLElement>("jmnode")).find((element) => element.getAttribute("nodeid") === id) || null;
+}
+
+function jsMindNodeId(instance: jsMind, target: EventTarget | null): string {
+  const view = instanceView(instance);
+  if (view?.get_binded_nodeid && target instanceof Element) {
+    return String(view.get_binded_nodeid(target) || "");
+  }
+  return target instanceof Element ? String(target.closest("jmnode,jmexpander")?.getAttribute("nodeid") || "") : "";
+}
+
+function toggleJsMindNode(instance: jsMind, id: string, recursive: boolean): void {
+  const node = instance.get_node?.(id);
+  if (!node || node.isroot || !node.children?.length) {
+    return;
+  }
+  const collapse = Boolean(node.expanded);
+  if (recursive) {
+    walkJsMindNodes(node, (child) => {
+      if (child.id !== id) {
+        collapse ? instance.collapse_node?.(child.id) : instance.expand_node?.(child.id);
+      }
+    });
+  }
+  collapse ? instance.collapse_node?.(id) : instance.expand_node?.(id);
+}
+
+function expandJsMindPath(instance: jsMind, nodes: TreeNode[], id: string): void {
+  const path = treePathToNode(nodes, id);
+  path.slice(0, -1).forEach((node) => instance.expand_node?.(node.id));
+}
+
+function treePathToNode(nodes: TreeNode[], id: string, path: TreeNode[] = []): TreeNode[] {
+  for (const node of nodes) {
+    const nextPath = [...path, node];
+    if (node.id === id) {
+      return nextPath;
+    }
+    const childPath = treePathToNode(node.children, id, nextPath);
+    if (childPath.length) {
+      return childPath;
+    }
+  }
+  return [];
+}
+
+function walkJsMindNodes(node: JsMindRuntimeNode, callback: (node: JsMindRuntimeNode) => void): void {
+  callback(node);
+  (node.children || []).forEach((child) => walkJsMindNodes(child, callback));
+}
+
+function instanceView(instance: jsMind): JsMindViewHandle | undefined {
+  return (instance as unknown as { view?: { get_binded_nodeid?: (target: Element) => string } }).view;
+}
+
+interface JsMindViewHandle {
+  get_binded_nodeid?: (target: Element) => string;
+  set_zoom?: (zoom: number) => boolean;
+  setZoom?: (zoom: number) => boolean;
+  zoom_current?: number;
+  actualZoom?: number;
+  e_panel?: HTMLElement;
+  _show?: () => void;
+}
+
+interface JsMindRuntimeNode {
+  id: string;
+  isroot?: boolean;
+  expanded?: boolean;
+  children?: JsMindRuntimeNode[];
 }
 
 function runSigmaGraphologyLayout(
@@ -833,7 +2308,11 @@ interface GraphologyLike {
   edges?: () => string[];
   source?: (edge: string) => string;
   target?: (edge: string) => string;
+  extremities?: (edge: string) => [string, string];
+  hasNode?: (node: string) => boolean;
   hasEdge?: (edge: string) => boolean;
+  getNodeAttribute?: (node: string, key: string) => unknown;
+  getEdgeAttribute?: (edge: string, key: string) => unknown;
 }
 
 function filterGraph(graph: GraphModel, query: string, filterToMatches: boolean): GraphModel {
@@ -857,17 +2336,6 @@ function filterGraph(graph: GraphModel, query: string, filterToMatches: boolean)
   };
 }
 
-function resolveColumnIndex(columns: string[], sortColumn: string): number {
-  if (!sortColumn) {
-    return -1;
-  }
-  const numeric = Number(sortColumn);
-  if (Number.isInteger(numeric) && numeric >= 1 && numeric <= columns.length) {
-    return numeric - 1;
-  }
-  return columns.findIndex((column) => column.toLowerCase() === sortColumn.toLowerCase());
-}
-
 function compareCell(left: string, right: string, direction: string): number {
   const result = left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" });
   return direction === "desc" ? -result : result;
@@ -888,6 +2356,141 @@ function hashString(value: string): number {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
+}
+
+interface FindState {
+  count: number;
+  activeIndex: number;
+  markers: number[];
+}
+
+function enhanceHtmlHeadings(root: HTMLElement): void {
+  root.querySelectorAll("h1,h2,h3,h4,h5,h6").forEach((heading) => {
+    const section = headingSectionElements(heading);
+    if (!section.length) {
+      return;
+    }
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "html-heading-fold";
+    button.dataset.state = "open";
+    button.setAttribute("aria-label", "Fold heading section");
+    button.title = "Fold heading section";
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const nextCollapsed = !heading.classList.contains("is-collapsed");
+      setHeadingCollapsed(heading, nextCollapsed, false);
+      if (event.shiftKey) {
+        descendantHeadings(heading).forEach((childHeading) => setHeadingCollapsed(childHeading, nextCollapsed, false));
+      }
+      applyHtmlHeadingVisibility(headingRoot(heading));
+    });
+    heading.prepend(button);
+  });
+}
+
+function headingSectionElements(heading: Element): HTMLElement[] {
+  const level = headingLevel(heading);
+  const section: HTMLElement[] = [];
+  let cursor = heading.nextElementSibling;
+  while (cursor) {
+    if (headingLevel(cursor) > 0 && headingLevel(cursor) <= level) {
+      break;
+    }
+    if (cursor instanceof HTMLElement) {
+      section.push(cursor);
+    }
+    cursor = cursor.nextElementSibling;
+  }
+  return section;
+}
+
+function descendantHeadings(heading: Element): Element[] {
+  const level = headingLevel(heading);
+  const headings: Element[] = [];
+  let cursor = heading.nextElementSibling;
+  while (cursor) {
+    const cursorLevel = headingLevel(cursor);
+    if (cursorLevel > 0 && cursorLevel <= level) {
+      break;
+    }
+    if (cursorLevel > level) {
+      headings.push(cursor);
+    }
+    cursor = cursor.nextElementSibling;
+  }
+  return headings;
+}
+
+function setHeadingCollapsed(heading: Element, collapsed: boolean, applyVisibility = true): void {
+  heading.classList.toggle("is-collapsed", collapsed);
+  const button = heading.querySelector<HTMLButtonElement>(":scope > .html-heading-fold");
+  if (button) {
+    button.dataset.state = collapsed ? "collapsed" : "open";
+    button.setAttribute("aria-label", collapsed ? "Unfold heading section" : "Fold heading section");
+    button.title = collapsed ? "Unfold heading section" : "Fold heading section";
+  }
+  if (applyVisibility) {
+    applyHtmlHeadingVisibility(headingRoot(heading));
+  }
+}
+
+function setAllHtmlHeadings(root: HTMLElement, collapsed: boolean): void {
+  root.querySelectorAll("h1,h2,h3,h4,h5,h6").forEach((heading) => setHeadingCollapsed(heading, collapsed, false));
+  applyHtmlHeadingVisibility(root);
+}
+
+function headingRoot(heading: Element): HTMLElement {
+  return (heading.closest(".viewer-html") as HTMLElement | null) || heading.parentElement || document.body;
+}
+
+function applyHtmlHeadingVisibility(root: HTMLElement): void {
+  const collapsedLevels: number[] = [];
+  Array.from(root.children).forEach((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return;
+    }
+    const level = headingLevel(element);
+    if (level > 0) {
+      while (collapsedLevels.length && collapsedLevels[collapsedLevels.length - 1] >= level) {
+        collapsedLevels.pop();
+      }
+      element.hidden = collapsedLevels.length > 0;
+      if (element.classList.contains("is-collapsed")) {
+        collapsedLevels.push(level);
+      }
+      return;
+    }
+    element.hidden = collapsedLevels.length > 0;
+  });
+}
+
+function headingLevel(element: Element): number {
+  const match = /^H([1-6])$/.exec(element.tagName);
+  return match ? Number(match[1]) : 0;
+}
+
+function setDescendantDetailsOpen(details: HTMLDetailsElement | null, open: boolean): void {
+  details?.querySelectorAll("details").forEach((child) => {
+    child.open = open;
+  });
+}
+
+function tableToText(table: TableModel): string {
+  return [table.columns, ...table.rows].map((row) => row.map((cell) => escapeDelimitedCell(cell, table.delimiter || ",")).join(table.delimiter || ",")).join("\n");
+}
+
+function generatedColumns(rows: string[][]): string[] {
+  const count = Math.max(1, ...rows.map((row) => row.length));
+  return Array.from({ length: count }, (_value, index) => `Column ${index + 1}`);
+}
+
+function escapeDelimitedCell(value: string, delimiter: string): string {
+  if (!value.includes(delimiter) && !value.includes("\n") && !value.includes('"')) {
+    return value;
+  }
+  return `"${value.replace(/"/g, '""')}"`;
 }
 
 function renderHighlighted(value: string, query: string) {
@@ -918,14 +2521,23 @@ function renderHighlighted(value: string, query: string) {
   return parts;
 }
 
-function highlightTextNodes(root: HTMLElement, query: string): void {
+function highlightTextNodes(root: HTMLElement, query: string): HTMLElement[] {
   const needle = query.trim();
   if (!needle) {
-    return;
+    return [];
   }
   const lowerNeedle = needle.toLowerCase();
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      const parent = node.parentElement;
+      if (!parent || parent.closest("button,script,style,textarea")) {
+        return NodeFilter.FILTER_REJECT;
+      }
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
   const matches: Text[] = [];
+  const marks: HTMLElement[] = [];
   while (walker.nextNode()) {
     const node = walker.currentNode as Text;
     if (node.nodeValue?.toLowerCase().includes(lowerNeedle)) {
@@ -943,24 +2555,55 @@ function highlightTextNodes(root: HTMLElement, query: string): void {
       mark.className = "viewer-search-hit";
       mark.textContent = value.slice(matchIndex, matchIndex + needle.length);
       fragment.append(mark);
+      marks.push(mark);
       cursor = matchIndex + needle.length;
       matchIndex = value.toLowerCase().indexOf(lowerNeedle, cursor);
     }
     fragment.append(document.createTextNode(value.slice(cursor)));
     node.parentNode?.replaceChild(fragment, node);
   });
+  return marks;
 }
 
-function highlightSvgText(root: HTMLElement, query: string): void {
+function highlightSvgText(root: HTMLElement, query: string): Element[] {
   const needle = query.trim().toLowerCase();
   if (!needle) {
-    return;
+    return [];
   }
+  const matches: Element[] = [];
   root.querySelectorAll("text,tspan").forEach((element) => {
     if ((element.textContent || "").toLowerCase().includes(needle)) {
       element.classList.add("svg-text-match");
+      matches.push(element);
     }
   });
+  return matches;
+}
+
+function findMarkers(matches: Array<Element | HTMLElement>, root: HTMLElement): number[] {
+  const height = Math.max(1, root.scrollHeight || root.getBoundingClientRect().height);
+  return matches.slice(0, 250).map((element) => {
+    const top = element instanceof HTMLElement ? element.offsetTop : element.getBoundingClientRect().top - root.getBoundingClientRect().top;
+    return clamp((top / height) * 100, 0, 99);
+  });
+}
+
+function updateActiveFindMatch(root: HTMLElement | null, activeIndex: number): void {
+  if (!root) {
+    return;
+  }
+  const marks = Array.from(root.querySelectorAll<HTMLElement>(".viewer-search-hit"));
+  marks.forEach((mark, index) => mark.classList.toggle("active", index === activeIndex));
+  marks[activeIndex]?.scrollIntoView({ block: "center", inline: "nearest" });
+}
+
+function updateActiveSvgMatch(root: HTMLElement | null, activeIndex: number): void {
+  if (!root) {
+    return;
+  }
+  const matches = Array.from(root.querySelectorAll<Element>(".svg-text-match"));
+  matches.forEach((match, index) => match.classList.toggle("active", index === activeIndex));
+  matches[activeIndex]?.scrollIntoView({ block: "center", inline: "center" });
 }
 
 function filterTree(nodes: TreeNode[], query: string): TreeNode[] {

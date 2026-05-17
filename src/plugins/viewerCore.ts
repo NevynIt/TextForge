@@ -1,4 +1,5 @@
 import type { TextForgePlugin } from "../domain/types";
+import { escapeHtml } from "../parsers/source";
 
 const htmlControls = [
   {
@@ -55,127 +56,6 @@ const svgControls = [
   }
 ];
 
-const treeControls = [
-  {
-    id: "expandDepth",
-    label: "Expand depth",
-    type: "range" as const,
-    defaultValue: 3,
-    min: 0,
-    max: 8,
-    step: 1,
-    group: "Structure"
-  },
-  {
-    id: "depthLimit",
-    label: "Depth limit",
-    type: "range" as const,
-    defaultValue: 0,
-    min: 0,
-    max: 12,
-    step: 1,
-    group: "Structure"
-  },
-  {
-    id: "showDetails",
-    label: "Show details",
-    type: "boolean" as const,
-    defaultValue: true,
-    group: "Inspection"
-  },
-  {
-    id: "density",
-    label: "Density",
-    type: "select" as const,
-    defaultValue: "comfortable",
-    group: "Presentation",
-    options: [
-      { label: "Comfortable", value: "comfortable" },
-      { label: "Compact", value: "compact" }
-    ]
-  }
-];
-
-const tableControls = [
-  {
-    id: "sortColumn",
-    label: "Sort column",
-    type: "text" as const,
-    defaultValue: "",
-    group: "Table"
-  },
-  {
-    id: "sortDirection",
-    label: "Direction",
-    type: "select" as const,
-    defaultValue: "asc",
-    group: "Table",
-    options: [
-      { label: "Ascending", value: "asc" },
-      { label: "Descending", value: "desc" }
-    ]
-  },
-  {
-    id: "maxRows",
-    label: "Max rows",
-    type: "range" as const,
-    defaultValue: 1000,
-    min: 0,
-    max: 5000,
-    step: 50,
-    group: "Table"
-  }
-];
-
-const mindmapControls = [
-  {
-    id: "mindmapMode",
-    label: "Mode",
-    type: "select" as const,
-    defaultValue: "full",
-    group: "Layout",
-    options: [
-      { label: "Balanced", value: "full" },
-      { label: "Right side", value: "side" }
-    ]
-  },
-  {
-    id: "initialDepth",
-    label: "Initial depth",
-    type: "select" as const,
-    defaultValue: "depth2",
-    group: "Layout",
-    options: [
-      { label: "Collapsed", value: "collapsed" },
-      { label: "Depth 2", value: "depth2" },
-      { label: "All", value: "all" }
-    ]
-  },
-  {
-    id: "mindmapTheme",
-    label: "Theme",
-    type: "select" as const,
-    defaultValue: "textforge",
-    group: "Presentation",
-    options: [
-      { label: "TextForge", value: "textforge" },
-      { label: "Primary", value: "primary" },
-      { label: "Greensea", value: "greensea" },
-      { label: "Warning", value: "warning" }
-    ]
-  },
-  {
-    id: "textScale",
-    label: "Text scale",
-    type: "range" as const,
-    defaultValue: 1,
-    min: 0.7,
-    max: 1.6,
-    step: 0.1,
-    group: "Presentation"
-  }
-];
-
 const graphControls = [
   {
     id: "layout",
@@ -193,53 +73,11 @@ const graphControls = [
     ]
   },
   {
-    id: "nodeSize",
-    label: "Node size",
-    type: "range" as const,
-    defaultValue: 18,
-    min: 6,
-    max: 48,
-    step: 1,
-    group: "Node style"
-  },
-  {
-    id: "layoutIterations",
-    label: "Layout iterations",
-    type: "range" as const,
-    defaultValue: 120,
-    min: 10,
-    max: 500,
-    step: 10,
-    group: "Layout"
-  },
-  {
-    id: "edgeWidth",
-    label: "Edge width",
-    type: "range" as const,
-    defaultValue: 1.5,
-    min: 0.5,
-    max: 8,
-    step: 0.5,
-    group: "Edge style"
-  },
-  {
     id: "showLabels",
     label: "Show labels",
     type: "boolean" as const,
     defaultValue: true,
     group: "Labels"
-  },
-  {
-    id: "labelMode",
-    label: "Label mode",
-    type: "select" as const,
-    defaultValue: "auto",
-    group: "Labels",
-    options: [
-      { label: "Auto", value: "auto" },
-      { label: "All", value: "all" },
-      { label: "None", value: "none" }
-    ]
   },
   {
     id: "showEdgeLabels",
@@ -249,6 +87,13 @@ const graphControls = [
     group: "Labels"
   },
   {
+    id: "showArrows",
+    label: "Show oriented arrows",
+    type: "boolean" as const,
+    defaultValue: true,
+    group: "Edge style"
+  },
+  {
     id: "filterToMatches",
     label: "Filter to search matches",
     type: "boolean" as const,
@@ -256,42 +101,11 @@ const graphControls = [
     group: "Filtering"
   },
   {
-    id: "colorByType",
-    label: "Colour by type",
-    type: "boolean" as const,
-    defaultValue: true,
-    group: "Node style"
-  },
-  {
-    id: "sizeMetric",
-    label: "Size metric",
-    type: "select" as const,
-    defaultValue: "fixed",
-    group: "Node style",
-    options: [
-      { label: "Fixed", value: "fixed" },
-      { label: "Degree", value: "degree" },
-      { label: "PageRank", value: "pagerank" }
-    ]
-  },
-  {
     id: "focusNeighbors",
     label: "Focus selected neighbors",
     type: "boolean" as const,
     defaultValue: false,
     group: "Filtering"
-  },
-  {
-    id: "performanceMode",
-    label: "Performance mode",
-    type: "select" as const,
-    defaultValue: "balanced",
-    group: "Performance",
-    options: [
-      { label: "Readable", value: "readable" },
-      { label: "Balanced", value: "balanced" },
-      { label: "Dense", value: "dense" }
-    ]
   }
 ];
 
@@ -322,6 +136,27 @@ const plugin: TextForgePlugin = {
     },
     {
       kind: "viewer",
+      id: "source-html-viewer",
+      name: "Highlighted Source Viewer",
+      input: "text",
+      capabilities: { zoom: true, search: true },
+      render(value) {
+        if (value.kind !== "text") {
+          throw new Error("Highlighted source viewer requires text input.");
+        }
+        const fileName = value.fileName || value.languageId;
+        return {
+          kind: "html",
+          title: "Highlighted Source",
+          html: `<article class="source-viewer source-language-${safeClassName(value.languageId)}"><header><strong>${escapeHtml(fileName)}</strong><span>${escapeHtml(value.languageId)}</span></header><pre><code>${highlightSource(value.text, value.languageId)}</code></pre></article>`,
+          capabilities: { zoom: true, search: true, export: true, presets: true },
+          controls: htmlControls,
+          diagnostics: value.diagnostics
+        };
+      }
+    },
+    {
+      kind: "viewer",
       id: "tree-viewer",
       name: "Tree Viewer",
       input: "model.tree",
@@ -335,7 +170,6 @@ const plugin: TextForgePlugin = {
           title: "Tree Viewer",
           nodes: value.data,
           capabilities: { zoom: true, search: true, fold: true, inspect: true, export: true, presets: true },
-          controls: treeControls,
           diagnostics: value.diagnostics
         };
       }
@@ -355,7 +189,6 @@ const plugin: TextForgePlugin = {
           title: "Table Viewer",
           table: value.data,
           capabilities: { zoom: true, search: true, filter: true, inspect: true, export: true, presets: true },
-          controls: tableControls,
           diagnostics: value.diagnostics
         };
       }
@@ -395,7 +228,6 @@ const plugin: TextForgePlugin = {
           title: "Mind Map Viewer",
           nodes: value.data,
           capabilities: { zoom: true, pan: true, search: true, fold: true, inspect: true, export: true, presets: true },
-          controls: mindmapControls,
           diagnostics: value.diagnostics
         };
       }
@@ -416,7 +248,7 @@ const plugin: TextForgePlugin = {
           graph: value.data,
           engine: "cytoscape",
           capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true, select: true, export: true, presets: true, tooltips: true },
-          controls: graphControls,
+          controls: graphControls.filter((control) => control.id !== "focusNeighbors"),
           diagnostics: value.diagnostics
         };
       }
@@ -449,9 +281,7 @@ const plugin: TextForgePlugin = {
                     { label: "Random", value: "random" }
                   ]
                 }
-              : control.id === "sizeMetric"
-                ? { ...control, defaultValue: "degree" }
-                : control
+              : control
           ),
           diagnostics: value.diagnostics
         };
@@ -493,3 +323,159 @@ const plugin: TextForgePlugin = {
 };
 
 export default plugin;
+
+interface HighlightRule {
+  className: string;
+  pattern: RegExp;
+}
+
+function highlightSource(text: string, languageId: string): string {
+  if (languageId === "text.xml") {
+    return highlightByRules(text, xmlRules);
+  }
+  if (languageId === "text.json") {
+    return highlightByRules(text, jsonRules);
+  }
+  if (languageId === "text.javascript") {
+    return highlightByRules(text, javascriptRules);
+  }
+  if (languageId === "text.python") {
+    return highlightByRules(text, pythonRules);
+  }
+  if (languageId === "text.indented-tree") {
+    return highlightByRules(text, ittRules);
+  }
+  if (languageId === "text.csv") {
+    return highlightByRules(text, delimitedRules);
+  }
+  if (languageId === "text.markdown") {
+    return highlightMarkdown(text);
+  }
+  if (languageId === "text.mermaid" || languageId === "text.graphviz-dot") {
+    return highlightByRules(text, diagramRules);
+  }
+  return escapeHtml(text);
+}
+
+function highlightByRules(text: string, rules: HighlightRule[]): string {
+  let output = "";
+  let index = 0;
+  while (index < text.length) {
+    const rest = text.slice(index);
+    const match = firstRuleMatch(rest, rules);
+    if (match) {
+      output += `<span class="source-token ${match.className}">${escapeHtml(match.value)}</span>`;
+      index += match.value.length;
+      continue;
+    }
+    output += escapeHtml(text[index]);
+    index += 1;
+  }
+  return output;
+}
+
+function firstRuleMatch(text: string, rules: HighlightRule[]): { className: string; value: string } | null {
+  for (const rule of rules) {
+    const match = rule.pattern.exec(text);
+    if (match?.index === 0 && match[0]) {
+      return { className: rule.className, value: match[0] };
+    }
+  }
+  return null;
+}
+
+function highlightMarkdown(text: string): string {
+  let inFence = false;
+  return text
+    .split(/(\r?\n)/)
+    .map((part) => {
+      if (/^\r?\n$/.test(part)) {
+        return part;
+      }
+      if (/^\s*```/.test(part)) {
+        inFence = !inFence;
+        return `<span class="source-token keyword">${escapeHtml(part)}</span>`;
+      }
+      if (inFence) {
+        return `<span class="source-token string">${escapeHtml(part)}</span>`;
+      }
+      if (/^\s{0,3}#{1,6}\s/.test(part)) {
+        return `<span class="source-token heading">${escapeHtml(part)}</span>`;
+      }
+      if (/^\s{0,3}[-*+]\s/.test(part) || /^\s{0,3}\d+\.\s/.test(part)) {
+        return `<span class="source-token keyword">${escapeHtml(part)}</span>`;
+      }
+      return highlightByRules(part, markdownInlineRules);
+    })
+    .join("");
+}
+
+function safeClassName(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9_-]+/g, "-") || "text";
+}
+
+const stringPattern = /"(?:\\[\s\S]|[^"\\])*"|'(?:\\[\s\S]|[^'\\])*'/;
+
+const javascriptRules: HighlightRule[] = [
+  { className: "comment", pattern: /\/\*[\s\S]*?\*\// },
+  { className: "comment", pattern: /\/\/[^\n\r]*/ },
+  { className: "string", pattern: /`(?:\\[\s\S]|[^`\\])*`/ },
+  { className: "string", pattern: stringPattern },
+  { className: "keyword", pattern: /\b(?:async|await|break|case|catch|class|const|continue|default|do|else|export|extends|finally|for|from|function|get|if|import|in|instanceof|interface|let|new|of|return|set|static|switch|this|throw|try|type|var|while|yield)\b/ },
+  { className: "literal", pattern: /\b(?:false|Infinity|NaN|null|true|undefined)\b/ },
+  { className: "number", pattern: /\b(?:0x[\da-f]+|\d+(?:\.\d+)?(?:e[+-]?\d+)?)\b/i }
+];
+
+const pythonRules: HighlightRule[] = [
+  { className: "comment", pattern: /#[^\n\r]*/ },
+  { className: "string", pattern: /"""[\s\S]*?"""|'''[\s\S]*?'''/ },
+  { className: "string", pattern: stringPattern },
+  { className: "keyword", pattern: /\b(?:and|as|assert|async|await|break|class|continue|def|del|elif|else|except|finally|for|from|global|if|import|in|is|lambda|nonlocal|not|or|pass|raise|return|try|while|with|yield)\b/ },
+  { className: "literal", pattern: /\b(?:False|None|True)\b/ },
+  { className: "number", pattern: /\b\d+(?:\.\d+)?(?:e[+-]?\d+)?\b/i }
+];
+
+const jsonRules: HighlightRule[] = [
+  { className: "attribute", pattern: /"(?:\\[\s\S]|[^"\\])*"(?=\s*:)/ },
+  { className: "string", pattern: /"(?:\\[\s\S]|[^"\\])*"/ },
+  { className: "literal", pattern: /\b(?:false|null|true)\b/ },
+  { className: "number", pattern: /-?\b\d+(?:\.\d+)?(?:e[+-]?\d+)?\b/i }
+];
+
+const xmlRules: HighlightRule[] = [
+  { className: "comment", pattern: /<!--[\s\S]*?-->/ },
+  { className: "keyword", pattern: /<\/?[A-Za-z_][\w:.-]*/ },
+  { className: "attribute", pattern: /\b[A-Za-z_:][\w:.-]*(?=\s*=)/ },
+  { className: "string", pattern: stringPattern },
+  { className: "keyword", pattern: /\/?>/ }
+];
+
+const ittRules: HighlightRule[] = [
+  { className: "comment", pattern: /[|%][^\n\r]*/ },
+  { className: "atom", pattern: /&[A-Za-z][A-Za-z0-9_-]*/ },
+  { className: "keyword", pattern: /\[[^\]\n\r]+\]/ },
+  { className: "link", pattern: /@[A-Za-z][A-Za-z0-9_-]*(?::[A-Za-z][A-Za-z0-9_-]*)?/ },
+  { className: "tag", pattern: /#[A-Za-z][A-Za-z0-9_-]*/ },
+  { className: "attribute", pattern: /[A-Za-z_][A-Za-z0-9_.-]*(?=\s*:)/ },
+  { className: "string", pattern: stringPattern },
+  { className: "number", pattern: /\b\d+(?:\.\d+)?(?:px|em|rem|%)?\b/ }
+];
+
+const delimitedRules: HighlightRule[] = [
+  { className: "string", pattern: /"(?:""|[^"])*"/ },
+  { className: "keyword", pattern: /,|\t|;|\|/ }
+];
+
+const diagramRules: HighlightRule[] = [
+  { className: "comment", pattern: /\/\/[^\n\r]*/ },
+  { className: "keyword", pattern: /\b(?:classDiagram|digraph|erDiagram|flowchart|graph|sequenceDiagram|stateDiagram|subgraph)\b/ },
+  { className: "literal", pattern: /-->|---|->|--|\{|\}|\[|\]/ },
+  { className: "string", pattern: stringPattern }
+];
+
+const markdownInlineRules: HighlightRule[] = [
+  { className: "link", pattern: /\[[^\]]+\]\([^)]+\)/ },
+  { className: "string", pattern: /`[^`\n\r]+`/ },
+  { className: "keyword", pattern: /\*\*[^*\n\r]+\*\*|__[^_\n\r]+__/ },
+  { className: "literal", pattern: /\*[^*\n\r]+\*|_[^_\n\r]+_/ }
+];

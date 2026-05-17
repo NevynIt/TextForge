@@ -6,6 +6,9 @@ declare module "jsmind" {
     expand_all?(): void;
     collapse_all?(): void;
     expand_to_depth?(depth: number): void;
+    expand_node?(id: string): void;
+    collapse_node?(id: string): void;
+    get_node?(id: string): any;
     select_node?(id: string): void;
     scroll_node_to_center?(id: string): void;
   }

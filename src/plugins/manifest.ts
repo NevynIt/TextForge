@@ -7,6 +7,7 @@ export const pluginManifest: PluginManifestEntry[] = [
     version: "0.1.0",
     contributionIds: [
       "html-viewer",
+      "source-html-viewer",
       "tree-viewer",
       "table-viewer",
       "svg-viewer",
@@ -15,6 +16,15 @@ export const pluginManifest: PluginManifestEntry[] = [
       "sigma-graph-viewer",
       "tree-visual-editor-skeleton",
       "graph-visual-editor-skeleton"
+    ],
+    pipelines: [
+      {
+        id: "view-source-html",
+        name: "Source -> Highlighted HTML",
+        input: "text",
+        steps: ["source-html-viewer"],
+        category: "View"
+      }
     ],
     load: () => import("./viewerCore")
   },
@@ -84,13 +94,13 @@ export const pluginManifest: PluginManifestEntry[] = [
   },
   {
     id: "csv-core",
-    name: "CSV/TSV Core",
+    name: "Delimited Text Core",
     version: "0.1.0",
     pipelines: [
       {
         id: "view-csv-table",
-        name: "CSV/TSV -> Table Viewer",
-        input: ["text.csv", "text.tsv"],
+        name: "Delimited Text -> Table Viewer",
+        input: "text.csv",
         steps: ["delimited-to-table", "table-viewer"],
         category: "View"
       }

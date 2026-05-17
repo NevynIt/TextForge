@@ -2,10 +2,13 @@ import { useEffect, useRef } from "preact/hooks";
 import { basicSetup } from "codemirror";
 import { markdown } from "@codemirror/lang-markdown";
 import { json } from "@codemirror/lang-json";
+import { javascript } from "@codemirror/lang-javascript";
+import { python } from "@codemirror/lang-python";
 import { xml } from "@codemirror/lang-xml";
-import { StreamLanguage, type StreamParser } from "@codemirror/language";
+import { HighlightStyle, StreamLanguage, syntaxHighlighting, type StreamParser } from "@codemirror/language";
 import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
+import { tags } from "@lezer/highlight";
 
 interface CodeEditorProps {
   value: string;
@@ -39,6 +42,7 @@ export function CodeEditor({ value, languageId, onChange }: CodeEditorProps) {
             onChangeRef.current(update.state.doc.toString());
           }
         }),
+        syntaxHighlighting(textForgeHighlightStyle),
         editorTheme
       ]
     });
@@ -86,13 +90,19 @@ function languageExtension(languageId: string) {
   if (languageId === "text.json") {
     return json();
   }
+  if (languageId === "text.javascript") {
+    return javascript({ jsx: true, typescript: false });
+  }
+  if (languageId === "text.python") {
+    return python();
+  }
   if (languageId === "text.xml") {
     return xml();
   }
   if (languageId === "text.indented-tree") {
     return StreamLanguage.define(ittParser);
   }
-  if (languageId === "text.csv" || languageId === "text.tsv") {
+  if (languageId === "text.csv") {
     return StreamLanguage.define(delimitedParser);
   }
   if (languageId === "text.mermaid" || languageId === "text.graphviz-dot") {
@@ -101,19 +111,71 @@ function languageExtension(languageId: string) {
   return [];
 }
 
-const ittParser: StreamParser<unknown> = {
-  token(stream) {
+interface IttParserState {
+  inAttributes: boolean;
+  expectingValue: boolean;
+}
+
+const ittParser: StreamParser<IttParserState> = {
+  startState() {
+    return { inAttributes: false, expectingValue: false };
+  },
+  token(stream, state) {
     if (stream.sol()) {
-      stream.eatSpace();
-      if (stream.match(/&[A-Za-z][A-Za-z0-9_-]*/)) {
-        return "atom";
-      }
-      if (stream.match(/\[[^\]]+\]/)) {
-        return "keyword";
+      if (stream.eatSpace()) {
+        return null;
       }
       if (stream.match(/[|%].*/)) {
         return "comment";
       }
+    }
+    if (state.inAttributes) {
+      if (stream.eatSpace()) {
+        return null;
+      }
+      if (stream.match("}")) {
+        state.inAttributes = false;
+        state.expectingValue = false;
+        return "bracket";
+      }
+      if (stream.match(",")) {
+        state.expectingValue = false;
+        return "separator";
+      }
+      if (stream.match(":")) {
+        state.expectingValue = true;
+        return "operator";
+      }
+      if (!state.expectingValue && stream.match(/[A-Za-z_][A-Za-z0-9_.-]*(?=\s*:)/)) {
+        return "attributeName";
+      }
+      if (stream.match(/#[0-9A-Fa-f]{3,8}\b/)) {
+        state.expectingValue = false;
+        return "string";
+      }
+      if (stream.match(/"(?:\\"|[^"])*"|'(?:\\'|[^'])*'/)) {
+        state.expectingValue = false;
+        return "string";
+      }
+      if (stream.match(/[+-]?\d+(?:\.\d+)?(?:px|em|rem|%)?\b/)) {
+        state.expectingValue = false;
+        return "number";
+      }
+      if (stream.match(/[^,}]+/)) {
+        state.expectingValue = false;
+        return "string";
+      }
+    }
+    if (stream.match("{")) {
+      state.inAttributes = true;
+      state.expectingValue = false;
+      return "bracket";
+    }
+    if (stream.match(/&[A-Za-z][A-Za-z0-9_-]*/)) {
+      return "atom";
+    }
+    if (stream.match(/\[[^\]]+\]/)) {
+      return "keyword";
     }
     if (stream.match(/#[A-Za-z][A-Za-z0-9_-]*/)) {
       return "tag";
@@ -125,6 +187,19 @@ const ittParser: StreamParser<unknown> = {
     return null;
   }
 };
+
+const textForgeHighlightStyle = HighlightStyle.define([
+  { tag: tags.atom, color: "#7b4d00", fontWeight: "600" },
+  { tag: tags.keyword, color: "#7a3f73", fontWeight: "650" },
+  { tag: tags.attributeName, color: "#2f6b56", fontWeight: "600" },
+  { tag: tags.string, color: "#8a4f17" },
+  { tag: tags.number, color: "#4e6688" },
+  { tag: tags.link, color: "#245f94", textDecoration: "underline" },
+  { tag: tags.tagName, color: "#6f7c2f" },
+  { tag: tags.comment, color: "#777d82", fontStyle: "italic" },
+  { tag: tags.bracket, color: "#5f6468" },
+  { tag: tags.operator, color: "#596064" }
+]);
 
 const delimitedParser: StreamParser<unknown> = {
   token(stream) {

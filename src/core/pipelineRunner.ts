@@ -43,7 +43,7 @@ export class PipelineRunner {
       const inputType = describeValue(value);
       const availability = this.registry.getContributionAvailability(stepId);
       if (availability !== "available") {
-        trace.push({ stepId, status: availability, inputType, message: `Contribution "${stepId}" is not available.` });
+        trace.push({ ...traceDocument(document), stepId, status: availability, inputType, message: `Contribution "${stepId}" is not available.` });
         return { pipeline, status: availability, trace, value, diagnostics };
       }
 
@@ -52,6 +52,7 @@ export class PipelineRunner {
         contribution = await this.registry.resolveContribution(stepId);
       } catch (error) {
         trace.push({
+          ...traceDocument(document),
           stepId,
           status: "runtime-failed",
           inputType,
@@ -61,12 +62,13 @@ export class PipelineRunner {
       }
 
       if (!contribution) {
-        trace.push({ stepId, status: "missing-contribution", inputType });
+        trace.push({ ...traceDocument(document), stepId, status: "missing-contribution", inputType });
         return { pipeline, status: "missing-contribution", trace, value, diagnostics };
       }
 
       if (!this.registry.valueMatches(contributionInput(contribution), inputType)) {
         trace.push({
+          ...traceDocument(document),
           stepId,
           contributionKind: contribution.kind,
           status: "failed",
@@ -83,6 +85,7 @@ export class PipelineRunner {
           value = { ...value, diagnostics: stepDiagnostics };
           diagnostics.push(...stepDiagnostics);
           trace.push({
+            ...traceDocument(document),
             stepId,
             contributionKind: "transformer",
             status: "available",
@@ -99,6 +102,7 @@ export class PipelineRunner {
           const stepDiagnostics = annotateDiagnostics(viewerResult.diagnostics || [], document, pipeline.id, pipelineRunId, stepId, contribution.id);
           diagnostics.push(...stepDiagnostics);
           trace.push({
+            ...traceDocument(document),
             stepId,
             contributionKind: "viewer",
             status: "available",
@@ -114,6 +118,7 @@ export class PipelineRunner {
           const stepDiagnostics = annotateDiagnostics(editorResult.diagnostics || [], document, pipeline.id, pipelineRunId, stepId, contribution.id);
           diagnostics.push(...stepDiagnostics);
           trace.push({
+            ...traceDocument(document),
             stepId,
             contributionKind: "editor",
             status: "available",
@@ -125,6 +130,7 @@ export class PipelineRunner {
         }
 
         trace.push({
+          ...traceDocument(document),
           stepId,
           contributionKind: contribution.kind,
           status: "failed",
@@ -134,6 +140,7 @@ export class PipelineRunner {
         return { pipeline, status: "failed", trace, value, diagnostics };
       } catch (error) {
         trace.push({
+          ...traceDocument(document),
           stepId,
           contributionKind: contribution.kind,
           status: "runtime-failed",
@@ -146,6 +153,19 @@ export class PipelineRunner {
 
     return { pipeline, status: "available", trace, value, diagnostics };
   }
+}
+
+function traceDocument(document: TextDocument): Pick<
+  PipelineTraceStep,
+  "documentId" | "documentName" | "documentLanguageId" | "documentVersion" | "documentIdentity"
+> {
+  return {
+    documentId: document.id,
+    documentName: document.fileName,
+    documentLanguageId: document.languageId,
+    documentVersion: document.version,
+    documentIdentity: document.identity
+  };
 }
 
 function annotateDiagnostics(

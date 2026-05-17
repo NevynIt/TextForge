@@ -1,42 +1,81 @@
 import type { JSX } from "preact";
-import { Activity, Download, ExternalLink, RefreshCw, RotateCcw, Search, Settings, X, ZoomIn, ZoomOut } from "lucide-preact";
+import { useRef } from "preact/hooks";
+import {
+  Activity,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Download,
+  ExternalLink,
+  FilePlus2,
+  Filter,
+  FoldVertical,
+  Focus,
+  Check,
+  CheckCheck,
+  LocateFixed,
+  Maximize2,
+  Minimize2,
+  Network,
+  Palette,
+  RefreshCw,
+  RotateCcw,
+  Search,
+  Settings,
+  Tag,
+  Tags,
+  UnfoldVertical,
+  Upload,
+  X,
+  ZoomIn,
+  ZoomOut
+} from "lucide-preact";
 import type { PipelineTraceStep, PluginState, PopupRecord, TextDocument, ViewerControlDefinition, ViewerSettingValue } from "../domain/types";
+import { DocumentBadge, documentBadgeSvgMarkup } from "./DocumentBadge";
 import { ViewerContent, viewerSnapshotHtml } from "./viewers";
 
 interface PopupHostProps {
   popups: PopupRecord[];
   documents: TextDocument[];
   pluginStates: PluginState[];
-  onLoadPlugin: (id: string) => void;
-  onSetPluginAutoload: (id: string, autoload: boolean) => void;
+  onUploadPlugin: (files: FileList | null) => void;
   onClose: (id: string) => void;
   onRefresh: (id: string) => void;
   onUpdate: (id: string, patch: Partial<PopupRecord>) => void;
+  onOpenTraceStep: (popupId: string, step: PipelineTraceStep) => void;
 }
 
-export function PopupHost({ popups, documents, pluginStates, onLoadPlugin, onSetPluginAutoload, onClose, onRefresh, onUpdate }: PopupHostProps) {
+export function PopupHost({
+  popups,
+  documents,
+  pluginStates,
+  onUploadPlugin,
+  onClose,
+  onRefresh,
+  onUpdate,
+  onOpenTraceStep
+}: PopupHostProps) {
   return (
     <div class="popup-layer">
       {popups.map((popup, index) => {
         const document = popup.documentId ? documents.find((candidate) => candidate.id === popup.documentId) : undefined;
         const stale = Boolean(document && popup.sourceVersion !== undefined && document.version > popup.sourceVersion);
         const frame = popupFrame(popup, index);
+        const remainingControls = popup.result ? remainingControlsForResult(popup.result) : [];
         return (
           <section class="popup-window" style={popupStyle(frame, index)} key={popup.id}>
             <header class="popup-header" onPointerDown={(event) => startPopupDrag(event, popup, frame, onUpdate)}>
               <div>
                 <strong>
                   {popup.documentIdentity ? (
-                    <span class="document-badge" style={{ "--doc-color": popup.documentIdentity.color }}>
-                      {popup.documentIdentity.badgeLabel}
-                    </span>
+                    <DocumentBadge identity={popup.documentIdentity} />
                   ) : null}
                   {popup.title}
                 </strong>
                 {popup.documentName ? (
                   <span>
-                    Viewing: {popup.documentName} · {shortId(popup.documentId)} · v{popup.sourceVersion} ·{" "}
-                    {popup.documentLanguageId} · {stale ? "stale" : "current"}
+                    Viewing: {popup.documentName} - {shortId(popup.documentId)} - v{popup.sourceVersion} -{" "}
+                    {popup.documentLanguageId} - {stale ? "stale" : "current"}
                   </span>
                 ) : null}
               </div>
@@ -62,7 +101,15 @@ export function PopupHost({ popups, documents, pluginStates, onLoadPlugin, onSet
                     </button>
                   </>
                 ) : null}
-                <WindowLayoutMenu popupId={popup.id} onUpdate={onUpdate} />
+                <button
+                  type="button"
+                  title={popup.restoreFrame ? "Restore" : "Maximize"}
+                  aria-label={popup.restoreFrame ? "Restore" : "Maximize"}
+                  onClick={() => onUpdate(popup.id, maximizeRestorePatch(popup, frame))}
+                >
+                  {popup.restoreFrame ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+                </button>
+                <WindowQuadrantMenu popupId={popup.id} onUpdate={onUpdate} />
                 <button type="button" title="Close" onClick={() => onClose(popup.id)}>
                   <X size={16} />
                 </button>
@@ -70,22 +117,104 @@ export function PopupHost({ popups, documents, pluginStates, onLoadPlugin, onSet
             </header>
             {popup.kind === "viewer" ? (
               <div class="viewer-toolbar">
-                <button type="button" title="Zoom out" onClick={() => onUpdate(popup.id, { zoom: Math.max(0.5, popup.zoom - 0.1) })}>
+                <button type="button" title="Zoom out" onClick={() => onUpdate(popup.id, { zoom: Math.max(0.2, popup.zoom - 0.1) })}>
                   <ZoomOut size={16} />
                 </button>
                 <button type="button" title="Reset zoom" onClick={() => onUpdate(popup.id, { zoom: 1 })}>
                   {Math.round(popup.zoom * 100)}%
                 </button>
-                <button type="button" title="Zoom in" onClick={() => onUpdate(popup.id, { zoom: Math.min(2, popup.zoom + 0.1) })}>
+                <button type="button" title="Zoom in" onClick={() => onUpdate(popup.id, { zoom: Math.min(5, popup.zoom + 0.1) })}>
                   <ZoomIn size={16} />
                 </button>
                 {popup.result?.capabilities?.search ? (
-                  <label class="search-field">
-                    <Search size={15} />
-                    <input value={popup.query} placeholder="Search viewer" onInput={(event) => onUpdate(popup.id, { query: event.currentTarget.value })} />
-                  </label>
+                  <>
+                    <label class="search-field">
+                      <Search size={15} />
+                      <input
+                        value={popup.query}
+                        placeholder="Search viewer"
+                        onInput={(event) => onUpdate(popup.id, { query: event.currentTarget.value, searchCount: 0, searchIndex: -1 })}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      title="Previous match"
+                      disabled={!popup.query.trim() || !popup.searchCount}
+                      onClick={() => onUpdate(popup.id, searchNavigationPatch(popup, "previous"))}
+                    >
+                      <ChevronUp size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      title="Next match"
+                      disabled={!popup.query.trim() || !popup.searchCount}
+                      onClick={() => onUpdate(popup.id, searchNavigationPatch(popup, "next"))}
+                    >
+                      <ChevronDown size={15} />
+                    </button>
+                    <span class="viewer-search-count">
+                      {popup.query.trim() ? `${popup.searchCount ? (popup.searchIndex || 0) + 1 : 0} / ${popup.searchCount || 0}` : ""}
+                    </span>
+                  </>
+                ) : null}
+                {popup.result?.kind === "html" ? (
+                  <>
+                    <button type="button" title="Fold all headings" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "html-fold-all"))}>
+                      <FoldVertical size={15} />
+                    </button>
+                    <button type="button" title="Unfold all headings" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "html-unfold-all"))}>
+                      <UnfoldVertical size={15} />
+                    </button>
+                  </>
+                ) : null}
+                {popup.result?.kind === "tree" ? (
+                  <>
+                    <button type="button" title="Fold all tree nodes" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "tree-fold-all"))}>
+                      <FoldVertical size={15} />
+                    </button>
+                    <button type="button" title="Unfold all tree nodes" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "tree-unfold-all"))}>
+                      <UnfoldVertical size={15} />
+                    </button>
+                    <button
+                      type="button"
+                      class={Boolean(popup.settings.inlineDetails) ? "active" : ""}
+                      title="Show details in tree"
+                      aria-pressed={Boolean(popup.settings.inlineDetails)}
+                      onClick={() => onUpdate(popup.id, { settings: { ...popup.settings, inlineDetails: !Boolean(popup.settings.inlineDetails) } })}
+                    >
+                      <Settings size={15} />
+                    </button>
+                  </>
+                ) : null}
+                {popup.result?.kind === "graph" && popup.result.engine === "cytoscape" ? (
+                  <button type="button" title="Run layout" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "graph-run-layout"))}>
+                    <Network size={15} />
+                  </button>
+                ) : null}
+                {popup.result?.kind === "mindmap" ? (
+                  <>
+                    <button type="button" title="Fold all branches" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "mindmap-fold-all"))}>
+                      <FoldVertical size={15} />
+                    </button>
+                    <button type="button" title="Unfold all branches" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "mindmap-unfold-all"))}>
+                      <UnfoldVertical size={15} />
+                    </button>
+                    <button type="button" title="Center mind map" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "mindmap-center"))}>
+                      <LocateFixed size={15} />
+                    </button>
+                    <button type="button" title="Fit mind map" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "mindmap-fit"))}>
+                      <Focus size={15} />
+                    </button>
+                  </>
                 ) : null}
                 {popup.result?.controls?.length ? (
+                  <ViewerToolbarControls
+                    result={popup.result}
+                    settings={popup.settings}
+                    onChange={(key, value) => onUpdate(popup.id, { settings: { ...popup.settings, [key]: value } })}
+                  />
+                ) : null}
+                {remainingControls.length ? (
                   <>
                     <button type="button" title="Reset controls" onClick={() => onUpdate(popup.id, { settings: defaultSettingsFromControls(popup.result?.controls || []) })}>
                       <RotateCcw size={15} />
@@ -96,7 +225,7 @@ export function PopupHost({ popups, documents, pluginStates, onLoadPlugin, onSet
                         Controls
                       </summary>
                       <ViewerControls
-                        controls={popup.result.controls}
+                        controls={remainingControls}
                         settings={popup.settings}
                         onChange={(key, value) => onUpdate(popup.id, { settings: { ...popup.settings, [key]: value } })}
                       />
@@ -107,10 +236,39 @@ export function PopupHost({ popups, documents, pluginStates, onLoadPlugin, onSet
               </div>
             ) : null}
             <main class="popup-body">
-              {popup.kind === "viewer" && popup.result ? <ViewerContent result={popup.result} query={popup.query} zoom={popup.zoom} settings={popup.settings} /> : null}
-              {popup.kind === "diagnostics" ? <DiagnosticsList diagnostics={popup.diagnostics || []} /> : null}
-              {popup.kind === "plugin-manager" ? <PluginManagerList states={pluginStates} onLoad={onLoadPlugin} onSetAutoload={onSetPluginAutoload} /> : null}
-              {popup.kind === "pipeline-trace" ? <PipelineTrace trace={popup.trace || []} /> : null}
+              {popup.kind === "viewer" && popup.result ? (
+                <ViewerContent
+                  result={popup.result}
+                  query={popup.query}
+                  zoom={popup.zoom}
+                  settings={popup.settings}
+                  searchCommand={
+                    popup.searchRevision
+                      ? { revision: popup.searchRevision, direction: popup.searchDirection || "next" }
+                      : undefined
+                  }
+                  toolbarAction={
+                    popup.toolbarActionRevision
+                      ? { revision: popup.toolbarActionRevision, action: popup.toolbarAction || "" }
+                      : undefined
+                  }
+                  onZoomChange={(zoom) => onUpdate(popup.id, { zoom })}
+                  onSearchStateChange={(state) => {
+                    if (popup.searchCount !== state.count || popup.searchIndex !== state.index) {
+                      onUpdate(popup.id, { searchCount: state.count, searchIndex: state.index });
+                    }
+                  }}
+                />
+              ) : null}
+              {popup.kind === "diagnostics" ? <DiagnosticsList popup={popup} onUpdate={onUpdate} /> : null}
+              {popup.kind === "plugin-manager" ? <PluginManagerList states={pluginStates} onUploadPlugin={onUploadPlugin} /> : null}
+              {popup.kind === "pipeline-trace" ? (
+                <PipelineTrace
+                  trace={popup.trace || []}
+                  documents={documents}
+                  onOpenStep={(step) => onOpenTraceStep(popup.id, step)}
+                />
+              ) : null}
             </main>
             <div class="popup-resize-handle" title="Resize" onPointerDown={(event) => startPopupResize(event, popup, frame, onUpdate)} />
           </section>
@@ -171,7 +329,8 @@ function startPopupDrag(
     const viewport = viewportSize();
     onUpdate(popup.id, {
       x: Math.round(clamp(frame.x + moveEvent.clientX - startX, 8, Math.max(8, viewport.width - frame.width - 8))),
-      y: Math.round(clamp(frame.y + moveEvent.clientY - startY, 8, Math.max(8, viewport.height - frame.height - 8)))
+      y: Math.round(clamp(frame.y + moveEvent.clientY - startY, 8, Math.max(8, viewport.height - frame.height - 8))),
+      restoreFrame: undefined
     });
   };
   const stop = () => {
@@ -201,7 +360,8 @@ function startPopupResize(
     const viewport = viewportSize();
     onUpdate(popup.id, {
       width: Math.round(clamp(frame.width + moveEvent.clientX - startX, MIN_POPUP_WIDTH, Math.max(MIN_POPUP_WIDTH, viewport.width - frame.x - 8))),
-      height: Math.round(clamp(frame.height + moveEvent.clientY - startY, MIN_POPUP_HEIGHT, Math.max(MIN_POPUP_HEIGHT, viewport.height - frame.y - 8)))
+      height: Math.round(clamp(frame.height + moveEvent.clientY - startY, MIN_POPUP_HEIGHT, Math.max(MIN_POPUP_HEIGHT, viewport.height - frame.y - 8))),
+      restoreFrame: undefined
     });
   };
   const stop = () => {
@@ -235,26 +395,52 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(Math.max(value, min), max);
 }
 
-function WindowLayoutMenu({ popupId, onUpdate }: { popupId: string; onUpdate: PopupHostProps["onUpdate"] }) {
+function maximizeRestorePatch(popup: PopupRecord, frame: PopupFrame): Partial<PopupRecord> {
+  if (popup.restoreFrame) {
+    return { ...popup.restoreFrame, restoreFrame: undefined };
+  }
+  return { ...layoutPatch("max"), restoreFrame: frame };
+}
+
+function searchNavigationPatch(popup: PopupRecord, direction: "previous" | "next"): Partial<PopupRecord> {
+  return {
+    searchDirection: direction,
+    searchRevision: (popup.searchRevision || 0) + 1
+  };
+}
+
+function toolbarActionPatch(popup: PopupRecord, action: string): Partial<PopupRecord> {
+  return {
+    toolbarAction: action,
+    toolbarActionRevision: (popup.toolbarActionRevision || 0) + 1
+  };
+}
+
+function WindowQuadrantMenu({ popupId, onUpdate }: { popupId: string; onUpdate: PopupHostProps["onUpdate"] }) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  function apply(layout: "top-left" | "top-right" | "bottom-left" | "bottom-right"): void {
+    onUpdate(popupId, layoutPatch(layout));
+    if (detailsRef.current) {
+      detailsRef.current.open = false;
+    }
+  }
+
   return (
-    <details class="window-layout-menu">
-      <summary title="Window layout" aria-label="Window layout">
+    <details ref={detailsRef} class="window-layout-menu">
+      <summary title="Quadrants" aria-label="Quadrants">
         <span class="quadrant-glyph quadrant-glyph-menu" />
       </summary>
       <div class="window-layout-panel" aria-label="Window layout controls">
-        <button type="button" title="Maximize" aria-label="Maximize" onClick={() => onUpdate(popupId, layoutPatch("max"))}>
-          <span class="quadrant-glyph quadrant-glyph-max" />
-        </button>
-        <button type="button" title="Top left" aria-label="Top left" onClick={() => onUpdate(popupId, layoutPatch("top-left"))}>
+        <button type="button" title="Top left" aria-label="Top left" onClick={() => apply("top-left")}>
           <span class="quadrant-glyph quadrant-glyph-top-left" />
         </button>
-        <button type="button" title="Top right" aria-label="Top right" onClick={() => onUpdate(popupId, layoutPatch("top-right"))}>
+        <button type="button" title="Top right" aria-label="Top right" onClick={() => apply("top-right")}>
           <span class="quadrant-glyph quadrant-glyph-top-right" />
         </button>
-        <button type="button" title="Bottom left" aria-label="Bottom left" onClick={() => onUpdate(popupId, layoutPatch("bottom-left"))}>
+        <button type="button" title="Bottom left" aria-label="Bottom left" onClick={() => apply("bottom-left")}>
           <span class="quadrant-glyph quadrant-glyph-bottom-left" />
         </button>
-        <button type="button" title="Bottom right" aria-label="Bottom right" onClick={() => onUpdate(popupId, layoutPatch("bottom-right"))}>
+        <button type="button" title="Bottom right" aria-label="Bottom right" onClick={() => apply("bottom-right")}>
           <span class="quadrant-glyph quadrant-glyph-bottom-right" />
         </button>
       </div>
@@ -272,41 +458,210 @@ function layoutPatch(layout: "max" | "top-left" | "top-right" | "bottom-left" | 
   const height = Math.floor((viewport.height - gap * 3) / 2);
   const left = layout.endsWith("left") ? gap : gap * 2 + width;
   const top = layout.startsWith("top") ? gap : gap * 2 + height;
-  return { x: left, y: top, width, height };
+  return { x: left, y: top, width, height, restoreFrame: undefined };
 }
 
-function DiagnosticsList({ diagnostics }: { diagnostics: NonNullable<PopupRecord["diagnostics"]> }) {
-  if (!diagnostics.length) {
-    return <p class="empty-state">No diagnostics for this document.</p>;
+function ViewerToolbarControls({
+  result,
+  settings,
+  onChange
+}: {
+  result: NonNullable<PopupRecord["result"]>;
+  settings: Record<string, ViewerSettingValue>;
+  onChange: (key: string, value: ViewerSettingValue) => void;
+}) {
+  const controls = toolbarControlsForResult(result);
+  if (!controls.length) {
+    return null;
   }
   return (
-    <ul class="diagnostics-list">
-      {diagnostics.map((diagnostic, index) => (
-        <li class={`severity-${diagnostic.severity}`} key={diagnostic.id || index}>
-          <strong>{diagnostic.severity}</strong>
-          <span>{diagnostic.message}</span>
-          <small>
-            {diagnostic.source}
-            {diagnostic.pipelineStepId ? ` · ${diagnostic.pipelineStepId}` : ""}
-            {diagnostic.documentId ? ` · ${diagnostic.documentId.slice(0, 10)}` : ""}
-          </small>
-        </li>
-      ))}
-    </ul>
+    <div class="viewer-toolbar-controls">
+      {controls.map((control) => {
+        const value = settings[control.id] ?? control.defaultValue;
+        if (control.type === "boolean") {
+          return (
+            <button
+              type="button"
+              key={control.id}
+              class={Boolean(value) ? "active" : ""}
+              title={control.label}
+              aria-label={control.label}
+              aria-pressed={Boolean(value)}
+              onClick={() => onChange(control.id, !Boolean(value))}
+            >
+              {toolbarControlIcon(control.id)}
+            </button>
+          );
+        }
+        if (control.type === "select") {
+          return (
+            <label class="viewer-toolbar-select" key={control.id} title={control.label} aria-label={control.label}>
+              {toolbarControlIcon(control.id)}
+              <select value={String(value ?? "")} onChange={(event) => onChange(control.id, event.currentTarget.value)}>
+                {(control.options || []).map((option) => (
+                  <option key={String(option.value)} value={String(option.value)}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          );
+        }
+        return null;
+      })}
+    </div>
   );
 }
 
-function PluginManagerList({
-  states,
-  onLoad,
-  onSetAutoload
-}: {
-  states: PluginState[];
-  onLoad: (id: string) => void;
-  onSetAutoload: (id: string, autoload: boolean) => void;
-}) {
+function toolbarControlsForResult(result: NonNullable<PopupRecord["result"]>): ViewerControlDefinition[] {
+  const ids = toolbarControlIds(result);
+  return (result.controls || []).filter((control) => ids.includes(control.id));
+}
+
+function remainingControlsForResult(result: NonNullable<PopupRecord["result"]>): ViewerControlDefinition[] {
+  const ids = new Set(toolbarControlIds(result));
+  return (result.controls || []).filter((control) => !ids.has(control.id));
+}
+
+function toolbarControlIds(result: NonNullable<PopupRecord["result"]>): string[] {
+  if (result.kind === "html") {
+    return ["readingTheme", "contentWidth"];
+  }
+  if (result.kind === "svg") {
+    return ["fitMode", "svgBackground"];
+  }
+  if (result.kind === "mindmap") {
+    return [];
+  }
+  if (result.kind === "graph") {
+    return result.engine === "sigma"
+      ? ["layout", "showArrows", "showLabels", "showEdgeLabels", "filterToMatches", "focusNeighbors"]
+      : ["layout", "showArrows", "showLabels", "showEdgeLabels", "filterToMatches"];
+  }
+  return [];
+}
+
+function toolbarControlIcon(id: string): JSX.Element {
+  if (id === "showArrows") {
+    return <ArrowRight size={15} />;
+  }
+  if (id === "showLabels") {
+    return <Tag size={15} />;
+  }
+  if (id === "showEdgeLabels") {
+    return <Tags size={15} />;
+  }
+  if (id === "filterToMatches") {
+    return <Filter size={15} />;
+  }
+  if (id === "focusNeighbors" || id === "layout" || id === "mindmapMode") {
+    return <Network size={15} />;
+  }
+  if (id === "readingTheme" || id === "svgBackground") {
+    return <Palette size={15} />;
+  }
+  return <Settings size={15} />;
+}
+
+function DiagnosticsList({ popup, onUpdate }: { popup: PopupRecord; onUpdate: PopupHostProps["onUpdate"] }) {
+  const diagnostics = popup.diagnostics || [];
+  if (!diagnostics.length) {
+    return <p class="empty-state">No diagnostics for this document.</p>;
+  }
+  const acknowledged = new Set(popup.acknowledgedDiagnosticKeys || []);
+  const visible = diagnostics
+    .map((diagnostic, index) => ({ diagnostic, originalIndex: index }))
+    .filter(({ diagnostic, originalIndex }) => !acknowledged.has(diagnosticKey(diagnostic, originalIndex)));
+  function acknowledge(keys: string[]): void {
+    onUpdate(popup.id, { acknowledgedDiagnosticKeys: Array.from(new Set([...(popup.acknowledgedDiagnosticKeys || []), ...keys])) });
+  }
+  if (!visible.length) {
+    return (
+      <div class="diagnostics-panel">
+        <p class="empty-state">All diagnostics acknowledged.</p>
+      </div>
+    );
+  }
+  return (
+    <div class="diagnostics-panel">
+      <div class="diagnostics-toolbar">
+        <span>{visible.length} active of {diagnostics.length}</span>
+        <button type="button" title="Acknowledge all diagnostics" onClick={() => acknowledge(diagnostics.map((diagnostic, index) => diagnosticKey(diagnostic, index)))}>
+          <CheckCheck size={15} />
+          All
+        </button>
+      </div>
+      <ul class="diagnostics-list">
+        {visible.map(({ diagnostic, originalIndex }) => {
+          const key = diagnosticKey(diagnostic, originalIndex);
+          const sameKindKeys = diagnostics
+            .map((candidate, index) => ({ candidate, index }))
+            .filter(({ candidate }) => diagnosticKindKey(candidate) === diagnosticKindKey(diagnostic))
+            .map(({ candidate, index }) => diagnosticKey(candidate, index));
+          return (
+            <li class={`severity-${diagnostic.severity}`} key={key}>
+              <strong>#{originalIndex + 1}</strong>
+              <span class="diagnostic-location">{diagnosticLocation(diagnostic)}</span>
+              <span class="diagnostic-severity">{diagnostic.severity}</span>
+              <span class="diagnostic-message">{diagnostic.message}</span>
+              <div class="diagnostic-actions">
+                <button type="button" title="Acknowledge this diagnostic" onClick={() => acknowledge([key])}>
+                  <Check size={14} />
+                </button>
+                <button type="button" title="Acknowledge all diagnostics of this kind" onClick={() => acknowledge(sameKindKeys)}>
+                  <CheckCheck size={14} />
+                </button>
+              </div>
+              <small>
+                {diagnostic.source}
+                {diagnostic.pipelineStepId ? ` - ${diagnostic.pipelineStepId}` : ""}
+                {diagnostic.documentId ? ` - ${diagnostic.documentId.slice(0, 10)}` : ""}
+              </small>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function diagnosticKey(diagnostic: NonNullable<PopupRecord["diagnostics"]>[number], index: number): string {
+  return [
+    diagnostic.documentId || "",
+    diagnostic.source,
+    diagnostic.severity,
+    diagnostic.message,
+    diagnostic.line ?? diagnostic.range?.line ?? "",
+    diagnostic.column ?? diagnostic.range?.column ?? "",
+    diagnostic.modelPath || "",
+    index
+  ].join("|");
+}
+
+function diagnosticKindKey(diagnostic: NonNullable<PopupRecord["diagnostics"]>[number]): string {
+  return [diagnostic.source, diagnostic.pipelineStepId || "", diagnostic.message].join("|");
+}
+
+function diagnosticLocation(diagnostic: NonNullable<PopupRecord["diagnostics"]>[number]): string {
+  const line = diagnostic.line ?? diagnostic.range?.line;
+  const column = diagnostic.column ?? diagnostic.range?.column;
+  if (typeof line !== "number") {
+    return "-";
+  }
+  return `${line + 1}:${typeof column === "number" ? column + 1 : 1}`;
+}
+
+function PluginManagerList({ states, onUploadPlugin }: { states: PluginState[]; onUploadPlugin: (files: FileList | null) => void }) {
   return (
     <div class="plugin-list">
+      <div class="plugin-upload">
+        <label class="file-button">
+          <Upload size={16} />
+          Upload plugin
+          <input type="file" accept=".js,.mjs,text/javascript" onChange={(event) => onUploadPlugin(event.currentTarget.files)} />
+        </label>
+        <small>Custom plugins must be self-contained JavaScript files that call registerTextForgePlugin(plugin).</small>
+      </div>
       {states.map((state) => (
         <article key={state.id}>
           <div>
@@ -314,15 +669,6 @@ function PluginManagerList({
             <span>{state.id}</span>
           </div>
           <span class={`plugin-status ${state.status}`}>{state.status}</span>
-          <div class="plugin-actions">
-            <button type="button" disabled={state.status === "loaded"} onClick={() => onLoad(state.id)}>
-              Load now
-            </button>
-            <label>
-              <input type="checkbox" checked={state.autoload} onChange={(event) => onSetAutoload(state.id, event.currentTarget.checked)} />
-              Autoload
-            </label>
-          </div>
           <small>{state.contributionIds.join(", ")}</small>
           {state.error ? <p>{state.error}</p> : null}
         </article>
@@ -331,25 +677,50 @@ function PluginManagerList({
   );
 }
 
-function PipelineTrace({ trace }: { trace: PipelineTraceStep[] }) {
-  if (!trace.length) {
+function PipelineTrace({
+  trace,
+  documents,
+  onOpenStep
+}: {
+  trace: PipelineTraceStep[];
+  documents: TextDocument[];
+  onOpenStep: (step: PipelineTraceStep) => void;
+}) {
+  const openDocumentIds = new Set(documents.map((document) => document.id));
+  const visibleTrace = trace.filter((step) => {
+    const sourceOpen = !step.documentId || openDocumentIds.has(step.documentId);
+    const targetOpen = !step.targetDocumentId || openDocumentIds.has(step.targetDocumentId);
+    return sourceOpen && targetOpen;
+  });
+  if (!visibleTrace.length) {
     return <p class="empty-state">No pipeline trace is available yet.</p>;
   }
   return (
     <ol class="trace-list">
-      {trace.map((step) => (
+      {visibleTrace.map((step) => (
         <li key={step.stepId}>
           <div>
             <Activity size={15} />
+            {step.documentIdentity ? (
+              <DocumentBadge identity={step.documentIdentity} />
+            ) : null}
             <strong>{step.stepId}</strong>
             <span>{step.status}</span>
           </div>
           <small>
+            {step.documentName ? `${step.documentName} - ${shortId(step.documentId)} - v${step.documentVersion} - ` : ""}
             {step.inputType}
             {step.outputType ? ` -> ${step.outputType}` : ""}
+            {step.targetDocumentName ? ` - opened as ${step.targetDocumentName}` : ""}
           </small>
           {step.diagnostics?.length ? <p>{step.diagnostics.length} diagnostic{step.diagnostics.length === 1 ? "" : "s"} from this step.</p> : null}
           {step.message ? <p>{step.message}</p> : null}
+          {step.serializedValue ? (
+            <button type="button" class="trace-open-document" onClick={() => onOpenStep(step)}>
+              <FilePlus2 size={15} />
+              Open step as document
+            </button>
+          ) : null}
           {step.serializedValue ? <pre>{step.serializedValue.slice(0, 1400)}</pre> : null}
         </li>
       ))}
@@ -447,13 +818,13 @@ function detachPopup(popup: PopupRecord): void {
     return;
   }
   win.document.title = popup.title;
-  const badge = popup.documentIdentity
-    ? `<span style="display:inline-flex;align-items:center;justify-content:center;min-width:28px;height:22px;border-radius:999px;background:${popup.documentIdentity.color};color:#fff;font-size:12px;font-weight:750;margin-right:8px;">${popup.documentIdentity.badgeLabel}</span>`
-    : "";
+  const badge = popup.documentIdentity ? documentBadgeSvgMarkup(popup.documentIdentity) : "";
   win.document.body.innerHTML = `
     <style>
       body { margin: 0; font-family: system-ui, sans-serif; background: #fbfbf8; color: #202225; }
       header { padding: 12px 16px; border-bottom: 1px solid #d8d4c8; background: #f0eee7; }
+      .document-badge { display: inline-flex; width: 26px; height: 26px; margin-right: 8px; vertical-align: middle; border: 1px solid #b8c0d0; border-radius: 7px; background: #fff; }
+      .document-badge svg { width: 100%; height: 100%; display: block; }
       main { padding: 16px; overflow: auto; }
       svg { max-width: 100%; height: auto; }
       pre { white-space: pre-wrap; }
@@ -498,12 +869,12 @@ function exportPayload(result: NonNullable<PopupRecord["result"]>): { content: s
   };
 }
 
-function tableToDelimited(columns: string[], rows: string[][], delimiter: "," | "\t"): string {
+function tableToDelimited(columns: string[], rows: string[][], delimiter: string): string {
   const lines = [columns, ...rows].map((row) => row.map((cell) => escapeDelimitedCell(cell, delimiter)).join(delimiter));
   return `${lines.join("\n")}\n`;
 }
 
-function escapeDelimitedCell(value: string, delimiter: "," | "\t"): string {
+function escapeDelimitedCell(value: string, delimiter: string): string {
   if (!value.includes(delimiter) && !value.includes("\n") && !value.includes('"')) {
     return value;
   }

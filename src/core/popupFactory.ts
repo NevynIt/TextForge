@@ -28,6 +28,10 @@ export function createViewerPopup(
     height: 680,
     zoom: 1,
     query: "",
+    searchCount: 0,
+    searchIndex: -1,
+    searchRevision: 0,
+    toolbarActionRevision: 0,
     settings: defaultSettings(result)
   };
 }
@@ -52,6 +56,10 @@ export function createDiagnosticsPopup(document: TextDocument, diagnostics: Diag
     height: 560,
     zoom: 1,
     query: "",
+    searchCount: 0,
+    searchIndex: -1,
+    searchRevision: 0,
+    toolbarActionRevision: 0,
     settings: {}
   };
 }
@@ -70,6 +78,10 @@ export function createToolPopup(kind: "plugin-manager" | "pipeline-trace", title
     height: 560,
     zoom: 1,
     query: "",
+    searchCount: 0,
+    searchIndex: -1,
+    searchRevision: 0,
+    toolbarActionRevision: 0,
     settings: {}
   };
 }

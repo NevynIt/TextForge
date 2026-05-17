@@ -18,6 +18,7 @@ export interface DocumentIdentity {
   color: string;
   badgeLabel: string;
   badgeKind?: string;
+  shapeCode?: string;
 }
 
 export interface LanguageDefinition {
@@ -76,7 +77,8 @@ export interface TreeNode {
 export interface TableModel {
   columns: string[];
   rows: string[][];
-  delimiter: "," | "\t";
+  delimiter: string;
+  sourceText?: string;
   diagnostics?: Diagnostic[];
 }
 
@@ -273,6 +275,13 @@ export interface PipelineTraceStep {
   status: PipelineStatus;
   inputType: string;
   outputType?: string;
+  documentId?: string;
+  documentName?: string;
+  documentLanguageId?: string;
+  documentVersion?: number;
+  documentIdentity?: DocumentIdentity;
+  targetDocumentId?: string;
+  targetDocumentName?: string;
   message?: string;
   diagnostics?: Diagnostic[];
   serializedValue?: string;
@@ -310,8 +319,23 @@ export interface PopupRecord {
   y?: number;
   width?: number;
   height?: number;
+  restoreFrame?: PopupFrameRecord;
   zoom: number;
   query: string;
+  searchCount?: number;
+  searchIndex?: number;
+  searchRevision?: number;
+  searchDirection?: "previous" | "next";
+  toolbarAction?: string;
+  toolbarActionRevision?: number;
   settings: Record<string, ViewerSettingValue>;
   selectedItemId?: string;
+  acknowledgedDiagnosticKeys?: string[];
+}
+
+export interface PopupFrameRecord {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 }

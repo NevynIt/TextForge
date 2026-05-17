@@ -8,14 +8,15 @@ export class WorkspaceManager {
 
   openDocument(input: Partial<TextDocument> & Pick<TextDocument, "text" | "languageId">): TextDocument {
     const now = new Date().toISOString();
+    const id = input.id || createId("doc");
     const document: TextDocument = {
-      id: input.id || createId("doc"),
+      id,
       fileName: input.fileName || "untitled.txt",
       languageId: input.languageId || "text.plain",
       text: input.text || "",
       version: input.version || 1,
       dirty: input.dirty ?? false,
-      identity: input.identity || createDocumentIdentity(input.id || ""),
+      identity: normalizeDocumentIdentity(input.identity, id),
       createdAt: input.createdAt || now,
       updatedAt: input.updatedAt || now
     };
@@ -95,6 +96,42 @@ export class WorkspaceManager {
     return updated;
   }
 
+  updateFileName(id: string, fileName: string): TextDocument | undefined {
+    const document = this.records.get(id);
+    const nextFileName = fileName.trim() || "untitled.txt";
+    if (!document || document.fileName === nextFileName) {
+      return document;
+    }
+    const updated = {
+      ...document,
+      fileName: nextFileName,
+      dirty: true,
+      updatedAt: new Date().toISOString()
+    };
+    this.records.set(id, updated);
+    return updated;
+  }
+
+  reorderDocument(id: string, targetId?: string, position: "before" | "after" | "end" = "before"): void {
+    if (!this.records.has(id)) {
+      return;
+    }
+    const nextOrder = this.order.filter((candidate) => candidate !== id);
+    if (!targetId || position === "end") {
+      nextOrder.push(id);
+      this.order = nextOrder;
+      return;
+    }
+    const targetIndex = nextOrder.indexOf(targetId);
+    if (targetIndex < 0) {
+      nextOrder.push(id);
+      this.order = nextOrder;
+      return;
+    }
+    nextOrder.splice(position === "after" ? targetIndex + 1 : targetIndex, 0, id);
+    this.order = nextOrder;
+  }
+
   markClean(id: string): void {
     const document = this.records.get(id);
     if (document) {
@@ -108,7 +145,7 @@ export class WorkspaceManager {
     for (const document of documents) {
       this.records.set(document.id, {
         ...document,
-        identity: document.identity || createDocumentIdentity(document.id)
+        identity: normalizeDocumentIdentity(document.identity, document.id)
       });
       this.order.push(document.id);
     }
@@ -124,18 +161,9 @@ export class WorkspaceManager {
 
 }
 
-const identityPalette = [
-  "#3a6ea5",
-  "#7b8f3a",
-  "#b26b2e",
-  "#8f5c8a",
-  "#2f8f83",
-  "#9a514e",
-  "#5967b1",
-  "#8a6b2f",
-  "#49775d",
-  "#6d5a9c"
-];
+const shapeCodes = ["C", "R", "W", "S"];
+const shapeColorCodes = ["r", "g", "b", "y", "p", "c", "u", "w"];
+const identityPalette = ["#e35757", "#5aa36f", "#4c78c8", "#d7a12f", "#8b67c7", "#4bb3b4", "#bfc4ca", "#ffffff"];
 
 export function createDocumentIdentity(seed: string): DocumentIdentity {
   const source = seed || createId("identity");
@@ -143,11 +171,36 @@ export function createDocumentIdentity(seed: string): DocumentIdentity {
   for (let index = 0; index < source.length; index += 1) {
     hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
   }
-  const first = String.fromCharCode(65 + (hash % 26));
-  const second = ((Math.floor(hash / 26) % 9) + 1).toString();
+  const shapeCode = createShapeCode(hash);
   return {
     color: identityPalette[hash % identityPalette.length],
-    badgeLabel: `${first}${second}`,
-    badgeKind: "generated"
+    badgeLabel: shapeCode,
+    badgeKind: "shapez-one-layer",
+    shapeCode
   };
+}
+
+function normalizeDocumentIdentity(identity: DocumentIdentity | undefined, seed: string): DocumentIdentity {
+  if (identity?.shapeCode) {
+    return identity;
+  }
+  const generated = createDocumentIdentity(seed);
+  return {
+    ...generated,
+    color: identity?.color || generated.color,
+    badgeKind: "shapez-one-layer"
+  };
+}
+
+function createShapeCode(seed: number): string {
+  let value = seed || 1;
+  const quadrants: string[] = [];
+  for (let index = 0; index < 4; index += 1) {
+    value = Math.imul(value ^ (index + 17), 2654435761) >>> 0;
+    const shape = shapeCodes[value % shapeCodes.length];
+    value = Math.imul(value ^ (index + 29), 1597334677) >>> 0;
+    const color = shapeColorCodes[value % shapeColorCodes.length];
+    quadrants.push(`${shape}${color}`);
+  }
+  return quadrants.join("");
 }

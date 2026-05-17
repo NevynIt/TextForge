@@ -1,6 +1,6 @@
 import type { Diagnostic, TableModel } from "../domain/types";
 
-export function parseDelimited(text: string, delimiter: "," | "\t", languageId: string): TableModel {
+export function parseDelimited(text: string, delimiter: string, languageId: string): TableModel {
   const rows: string[][] = [];
   const diagnostics: Diagnostic[] = [];
   let row: string[] = [];
@@ -71,6 +71,7 @@ export function parseDelimited(text: string, delimiter: "," | "\t", languageId: 
     columns: columns.length ? columns : ["Column 1"],
     rows: rows.slice(1),
     delimiter,
+    sourceText: text,
     diagnostics
   };
 }
