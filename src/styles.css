@@ -1597,9 +1597,10 @@ button:disabled {
   display: grid;
   grid-template-columns: minmax(220px, 0.8fr) minmax(320px, 1.2fr);
   min-height: 0;
+  overflow: hidden;
 }
 
-.resource-grid {
+.resource-list-pane {
   display: grid;
   grid-template-columns: 1fr;
   align-content: start;
@@ -1612,24 +1613,32 @@ button:disabled {
 .resource-group {
   display: grid;
   gap: 8px;
+  align-content: start;
 }
 
-.resource-group > header {
+.resource-group-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 0 2px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d8d4c8;
+  border-radius: 8px;
+  background: #fffefa;
+  color: #202225;
+  text-align: left;
+  cursor: pointer;
 }
 
-.resource-group > header strong {
+.resource-group-toggle strong {
   font-size: 12px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: #4d5559;
 }
 
-.resource-group > header span {
+.resource-group-toggle span {
   min-width: 24px;
   padding: 2px 7px;
   border-radius: 999px;
@@ -1639,16 +1648,26 @@ button:disabled {
   text-align: center;
 }
 
+.resource-group-toggle::before {
+  content: ">";
+  color: #636866;
+  font-size: 12px;
+}
+
+.resource-group-toggle.open::before {
+  content: "v";
+}
+
 .resource-group-list {
   display: grid;
   gap: 8px;
 }
 
-.resource-grid article {
+.resource-list-pane article {
   margin: 0;
 }
 
-.resource-grid article button {
+.resource-list-pane article button {
   display: grid;
   gap: 5px;
   width: 100%;
@@ -1661,13 +1680,13 @@ button:disabled {
   cursor: pointer;
 }
 
-.resource-grid article.active button {
+.resource-list-pane article.active button {
   border-color: #317a73;
   box-shadow: 0 0 0 2px rgba(49, 122, 115, 0.16);
 }
 
-.resource-grid article span,
-.resource-grid article small {
+.resource-list-pane article span,
+.resource-list-pane article small {
   color: #636866;
 }
 
@@ -1676,6 +1695,7 @@ button:disabled {
   grid-template-rows: auto 1fr;
   min-width: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
 .resource-preview header {
@@ -1691,6 +1711,11 @@ button:disabled {
 .resource-preview header span {
   color: #636866;
   font-size: 12px;
+}
+
+.resource-preview-body {
+  overflow: auto;
+  min-height: 0;
 }
 
 .resource-preview pre {

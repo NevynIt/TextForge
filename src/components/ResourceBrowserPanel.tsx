@@ -8,11 +8,16 @@ interface ResourceBrowserPanelProps {
 
 export function ResourceBrowserPanel({ resources, onOpenResource }: ResourceBrowserPanelProps) {
   const [selectedId, setSelectedId] = useState(resources[0]?.id || "");
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const selected = useMemo(
     () => resources.find((resource) => resource.id === selectedId) || resources[0],
     [resources, selectedId]
   );
   const groupedResources = useMemo(() => groupResources(resources), [resources]);
+
+  function toggleGroup(id: string): void {
+    setOpenGroups((current) => ({ ...current, [id]: !current[id] }));
+  }
 
   return (
     <div class="resource-browser-panel">
@@ -26,24 +31,31 @@ export function ResourceBrowserPanel({ resources, onOpenResource }: ResourceBrow
         ) : null}
       </div>
       <div class="resource-browser-layout">
-        <div class="resource-grid">
+        <div class="resource-list-pane">
           {groupedResources.map((group) => (
             <section class="resource-group" key={group.id}>
-              <header>
+              <button
+                type="button"
+                class={`resource-group-toggle ${openGroups[group.id] ? "open" : "collapsed"}`}
+                aria-expanded={openGroups[group.id] ? "true" : "false"}
+                onClick={() => toggleGroup(group.id)}
+              >
                 <strong>{group.title}</strong>
                 <span>{group.resources.length}</span>
-              </header>
-              <div class="resource-group-list">
-                {group.resources.map((resource) => (
-                  <article class={resource.id === selected?.id ? "active" : ""} key={resource.id}>
-                    <button type="button" onClick={() => setSelectedId(resource.id)}>
-                      <strong>{resource.title}</strong>
-                      <span>{resource.path}</span>
-                      <small>{resource.description}</small>
-                    </button>
-                  </article>
-                ))}
-              </div>
+              </button>
+              {openGroups[group.id] ? (
+                <div class="resource-group-list">
+                  {group.resources.map((resource) => (
+                    <article class={resource.id === selected?.id ? "active" : ""} key={resource.id}>
+                      <button type="button" onClick={() => setSelectedId(resource.id)}>
+                        <strong>{resource.title}</strong>
+                        <span>{resource.path}</span>
+                        <small>{resource.description}</small>
+                      </button>
+                    </article>
+                  ))}
+                </div>
+              ) : null}
             </section>
           ))}
         </div>
@@ -54,7 +66,9 @@ export function ResourceBrowserPanel({ resources, onOpenResource }: ResourceBrow
                 <strong>{selected.title}</strong>
                 <span>{selected.languageId}</span>
               </header>
-              <pre>{selected.text}</pre>
+              <div class="resource-preview-body">
+                <pre>{selected.text}</pre>
+              </div>
             </>
           ) : (
             <p class="empty-state">No bundled resources.</p>
@@ -86,7 +100,7 @@ function groupResources(resources: TextForgeResource[]): ResourceGroup[] {
 }
 
 function resourceGroupId(resource: TextForgeResource): string {
-  if (resource.path.startsWith("docs/")) {
+  if (resource.path.startsWith("docs/") || resource.path === "README.md") {
     return "docs";
   }
   if (resource.path.startsWith("examples/itt/") || resource.languageId === "text.indented-tree") {

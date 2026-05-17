@@ -1,4 +1,5 @@
 import manualTestPlan from "./docs/manual-test-plan.md?raw";
+import userManual from "./docs/user-manual.md?raw";
 import futureFeatures from "./docs/future-features.md?raw";
 import indentedTreeTextFormat from "./docs/indented_tree_text_format.md?raw";
 import ittGraphStyleSupport from "./docs/itt-graph-style-support.md?raw";
@@ -6,6 +7,7 @@ import ittMindmapStyleSupport from "./docs/itt-mindmap-style-support.md?raw";
 import ittTreeStyleSupport from "./docs/itt-tree-style-support.md?raw";
 import luaScriptingTutorial from "./docs/lua-scripting-tutorial.md?raw";
 import pluginDevelopment from "./docs/plugin-development.md?raw";
+import textForgeExecutiveSummary from "./docs/textforge_executive_summary.md?raw";
 import graphvizCorpusIndex from "./examples/graphviz-dot-00-corpus-index.md?raw";
 import graphvizCoreDirectedLayout from "./examples/graphviz-dot-01-core-directed-layout.md?raw";
 import graphvizClustersLayouts from "./examples/graphviz-dot-02-clusters-subgraphs-layouts.md?raw";
@@ -19,6 +21,7 @@ import sharedPartySupplies from "./examples/shared-party-supplies.itt?raw";
 import fullIttExample from "./examples/itt/full-feature-example.itt?raw";
 import markdownHeadingsLua from "./examples/lua/markdown-headings-to-itt.lua?raw";
 import diagramsAndMath from "./examples/markdown/diagrams-and-math.md?raw";
+import readmeDocument from "../../README.md?raw";
 
 export interface TextForgeResource {
   id: string;
@@ -42,6 +45,7 @@ function resource(
 
 export const textForgeResources: TextForgeResource[] = [
   resource("docs/manual-test-plan", "Manual Test Plan", "docs/manual-test-plan.md", "text.markdown", manualTestPlan, "Release and smoke-test procedure."),
+  resource("docs/user-manual", "User Manual", "docs/user-manual.md", "text.markdown", userManual, "Guided introduction from basic editing through graph exploration and Lua automation."),
   resource("docs/future-features", "Future Features", "docs/future-features.md", "text.markdown", futureFeatures, "Deferred design notes and rationale."),
   resource("docs/indented-tree-text-format", "Indented Tree Text Format", "docs/indented_tree_text_format.md", "text.markdown", indentedTreeTextFormat, "Format reference for the indented tree syntax and extensions."),
   resource("docs/itt-graph-style-support", "ITT Graph Style Support", "docs/itt-graph-style-support.md", "text.markdown", ittGraphStyleSupport, "How ITT style directives flow into the graph viewers."),
@@ -49,6 +53,8 @@ export const textForgeResources: TextForgeResource[] = [
   resource("docs/itt-tree-style-support", "ITT Tree Style Support", "docs/itt-tree-style-support.md", "text.markdown", ittTreeStyleSupport, "How ITT styles render in the tree outline viewer."),
   resource("docs/lua-scripting-tutorial", "Lua Scripting Tutorial", "docs/lua-scripting-tutorial.md", "text.markdown", luaScriptingTutorial, "Lua action format, host API, and bundled modules."),
   resource("docs/plugin-development", "TextForge Lua Extension Development", "docs/plugin-development.md", "text.markdown", pluginDevelopment, "Guide to building packaged Lua extensions and internal plugins."),
+  resource("docs/executive-summary", "TextForge Executive Summary", "docs/textforge_executive_summary.md", "text.markdown", textForgeExecutiveSummary, "Product positioning, architecture, and operating principles."),
+  resource("docs/readme", "Project README", "README.md", "text.markdown", readmeDocument, "Repository overview, feature summary, and development commands."),
   resource("examples/graphviz-dot-00-corpus-index", "Graphviz DOT Corpus Index", "examples/graphviz-dot-00-corpus-index.md", "text.markdown", graphvizCorpusIndex, "Overview of the split Graphviz DOT example corpus."),
   resource("examples/graphviz-dot-01-core-directed-layout", "Graphviz DOT Core Directed Layout", "examples/graphviz-dot-01-core-directed-layout.md", "text.markdown", graphvizCoreDirectedLayout, "Directed Graphviz layout basics and compact topology samples."),
   resource("examples/graphviz-dot-02-clusters-subgraphs-layouts", "Graphviz DOT Clusters, Subgraphs, And Layout Constraints", "examples/graphviz-dot-02-clusters-subgraphs-layouts.md", "text.markdown", graphvizClustersLayouts, "Clustered Graphviz layouts, subgraphs, and rank constraints."),

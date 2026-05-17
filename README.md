@@ -1,46 +1,92 @@
 # TextForge
 
-TextForge is a local-first, text-first workbench for editing, visualizing, and transforming structured text.
+TextForge is a local-first, text-first workbench for editing, visualizing, and transforming structured text. It is built for document-centric workflows where plain text stays primary and trees, graphs, rendered pages, SVG artifacts, and transformed outputs remain derived, inspectable views.
 
-## Version 1
+The current implementation ships most of the Lua pivot described in the whitepaper: trusted internal TypeScript plugins still own parsing, rendering, and viewers, while user extensibility runs through a restricted Lua runtime with bundled libraries, pipeline bridges, and a local xterm.js console.
 
-The first implementation is a static Preact + CodeMirror workbench with:
+## Highlights
 
-- multi-document tabs;
-- broad text languages for plain text, Markdown, ITT, JSON, XML, CSV, Mermaid, Graphviz DOT, JavaScript, and Python;
-- trusted internal TypeScript/JavaScript plugins for packaged parsers, viewers, renderers, and pipelines;
-- safe Lua scripting for user-authored transformations;
-- lazy local runtime loading;
-- pipeline actions that connect contributions by ID;
-- popup-hosted viewers, diagnostics, Lua console, resource browser, plugin manager, and pipeline traces;
-- IndexedDB persistence with localStorage fallback;
-- no app-code network APIs and an extension CSP with `connect-src 'none'`.
+- multi-document CodeMirror workspace with tab reordering, inline rename, download, and deterministic Shapez-style document badges;
+- broad language support for plain text, Markdown, ITT, Lua, JSON, XML, CSV, Mermaid, Graphviz DOT, JavaScript, and Python;
+- local-only execution with no app-code network APIs and a browser-extension CSP that keeps `connect-src 'none'`;
+- popup-hosted viewers, diagnostics, pipeline traces, Lua console, Lua script manager, plugin manager, and bundled resource browser;
+- IndexedDB persistence with localStorage fallback for local workspace state.
 
-The packaged V1 viewers include rendered HTML, read-only syntax-highlighted source HTML, SVG, table, tree, jsMind mind-map, Cytoscape graph, and Sigma/Graphology graph popups.
+## What You Can Do
 
-## Core Ideas
+### Explore Text Through Multiple Views
 
-- Text remains the source of truth.
-- Visualizations and generated artifacts are derived, inspectable, and reproducible.
-- Everything runs locally in the browser/client with no back-end and no network activity.
-- User extensibility is Lua, running in a restricted sandbox with bundled libraries and host APIs.
-- Application extensibility is trusted internal TypeScript/JavaScript plugins that are packaged with TextForge.
-- Markdown, ITT, Mermaid, Graphviz DOT, delimited text, JSON, XML, Lua, JavaScript, Python, and graph/tree views share one local workbench.
-- Lua Console provides quick commands and manual pipeline execution without attaching to any real shell.
+TextForge includes packaged viewers for:
 
-V1 document badges use deterministic one-layer [shapez.io viewer](https://viewer.shapez.io/) shape codes instead of colour/letter counters. Shape strings follow the shapez viewer format: four quadrants, starting in the upper-right and moving clockwise; each quadrant is a shape letter plus a colour letter, with no layer separator for these single-layer badges.
+- rendered Markdown HTML with syntax highlighting, Mermaid, Graphviz, and KaTeX;
+- SVG with infinite-canvas style panning, cursor-relative zooming, and fit controls;
+- tree and mind map projections for ITT and other hierarchical data;
+- Cytoscape graph views for rich graph interaction and relayout;
+- Sigma/Graphology graph views with filtering and neighborhood focus controls;
+- read-only syntax-highlighted source and table views.
 
-Viewer-specific style support is documented in:
+Several viewers participate in source-aware navigation. You can keep the editor and a popup aligned, enable Follow source on viewer windows, and move back from visuals to code or text through mapped source ranges. Tree nodes can jump back to source with Ctrl-click, and tree cross-link badges can either select the linked node or jump to the exact source range.
+
+### Work Incrementally With Structured Text
+
+Markdown, ITT, Mermaid, Graphviz, delimited text, JSON, and XML all live in the same workbench. A typical workflow is:
+
+1. edit the source text;
+2. run a built-in action or viewer pipeline;
+3. inspect the result in a popup;
+4. search, filter, or navigate the visual view;
+5. open the output or an intermediate trace step back into the editor.
+
+This keeps text as the source of truth while still making large structures easier to read and explore.
+
+### Automate Transformations With Lua
+
+User extensibility is Lua, not uploaded JavaScript.
+
+The current Lua feature set includes:
+
+- restricted Fengari runtime with no browser globals, DOM, network, filesystem, or unrestricted JS interop;
+- bundled modules such as `tf`, `tf.tree`, `tf.graph`, `tf.table`, `tf.markdown`, `tf.pipeline`, and `tf.actions`;
+- built-in bridges for parsing ITT and Markdown, emitting text/ITT/JSON/CSV, and calling named pipeline steps;
+- automatic discovery of named Lua actions from open `.lua` documents;
+- action registration into the same action/pipeline surface as built-in transforms;
+- execution in a worker-backed sandbox with diagnostics routed back to the editor or selected source block.
+
+The Lua Console is an in-app command surface backed by xterm.js. It can run quick snippets, run the active Lua document, run only the selected Lua text, list registered actions, invoke built-in pipeline bridges, and open the previous result as a new document.
+
+### Inspect Graphs Instead Of Guessing
+
+Graph workflows are a strong part of the current app:
+
+- ITT can be projected into tree, mind map, Cytoscape, and Sigma views;
+- Sigma toolbars expose useful exploration controls such as filtering to search matches and focusing on neighbors;
+- graph and viewer search helps narrow large structures before reading them in full;
+- pipeline trace popups let you inspect intermediate graph, tree, text, HTML, or SVG values step by step.
+
+## ITT And Markdown Support
+
+ITT `%style` directives support the selector forms from the whitepaper: `*`, `&id`, `[type]`, `#tag`, `{key=value}`, `->`, `->[type]`, and `=>`. Styles can be written on one line or as multiline blocks. `%include` is resolved against documents currently open in the editor.
+
+Markdown rendering overlaps intentionally with the strongest local-preview ideas from tools such as Markdown Viewer, but TextForge pushes them into a broader structured-text workbench. Markdown documents can contain diagrams, math, and code, then feed into the same popup, export, and source-aware workflow used by the other viewers.
+
+Viewer-specific style references are bundled in the app:
 
 - `docs/itt-tree-style-support.md`
 - `docs/itt-mindmap-style-support.md`
 - `docs/itt-graph-style-support.md`
 
-ITT `%style` directives support the selector forms from the ITT whitepaper (`*`, `&id`, `[type]`, `#tag`, `{key=value}`, `->`, `->[type]`, and `=>`) and may be written on one line or as multiline blocks. ITT `%include` directives are resolved only against files currently open in the editor.
+## Bundled Resources
 
-## Markdown Viewer Reference
+The Resource Browser ships with documentation and examples inside the app, including:
 
-The Markdown HTML viewer intentionally overlaps with ideas from [ThisIs-Developer/Markdown-Viewer](https://github.com/ThisIs-Developer/Markdown-Viewer), especially live Markdown rendering, local diagram rendering, math support, export tools, and embedded diagram controls. TextForge adapts those ideas into a broader text workbench with ITT, graph, tree, and Lua transformation workflows.
+- the README;
+- the executive summary;
+- the user manual;
+- the Lua scripting tutorial;
+- plugin and format documentation;
+- Graphviz, Mermaid, Markdown, Lua, and ITT examples.
+
+Resources are grouped in the browser, can be previewed directly, copied, or opened as editable working copies.
 
 ## Development
 
@@ -52,4 +98,4 @@ npm run check
 
 `npm run build` creates a file-openable static build in `dist/`. Open `dist/index.html` directly with `file://` to run without a server. The browser extension manifest is copied to `dist/manifest.json`.
 
-`npm run build:module` keeps the regular Vite module/chunk build available for debugging, but the default production build is the local-file build.
+`npm run build:module` keeps the regular Vite module/chunk build available for debugging, while the default production build remains the local-file build.

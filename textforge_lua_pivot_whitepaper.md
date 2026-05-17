@@ -1168,6 +1168,7 @@ src/components/
 - Add Markdown embedded diagram toolbar and SVG popout integration.
 - Add viewer interaction improvements.
 - Keep deferred items tracked in `future-features.md`.
+- Replace document badge generation/rendering with exact one-layer Shapez-compatible badges, and add uniqueness repair for batch uploads and restored workspaces.
 
 ---
 
@@ -1291,6 +1292,107 @@ Clear timer on unmount.
 - Menu still closes when pointer/focus leaves for about 300–400 ms.
 
 ---
+
+
+## 12.2a Document badges as exact one-layer Shapez shapes
+
+TextForge document badges should be implemented as exact **one-layer Shapez shape codes**, not as approximate generic SVG icons. The current badge renderer is already inspired by Shapez, but it uses its own colors, simplified geometry, a `32×32` coordinate system, and fallback logic that makes badges visually too similar. Shapez’s actual viewer defines the supported sub-shapes as rectangle, circle, star, and windmill, with short codes `R`, `C`, `S`, and `W`; it defines colors as `r`, `g`, `b`, `y`, `p`, `c`, `w`, and `u`; and it parses each layer as four quadrant pairs, where each pair is either a shape/color pair such as `Cr` or an empty quadrant `--`.  TextForge should use this same one-layer syntax directly:
+
+```text
+CrRgSbWu
+```
+
+The exact one-layer badge grammar should be:
+
+```ts
+type ShapezOneLayerCode = string; // /^(([CRSW][rgbypcwu])|--){4}$/
+```
+
+The quadrant order must follow Shapez: **top-right, bottom-right, bottom-left, top-left**. This is important because the current TextForge renderer visually maps quadrants, but should explicitly align to the Shapez viewer’s `arrayQuadrantIndexToOffset` order: `{x:1,y:-1}`, `{x:1,y:1}`, `{x:-1,y:1}`, `{x:-1,y:-1}`.  For document badges, TextForge should support exactly one layer, so no `:` layer separator is needed. Multi-layer Shapez syntax may be accepted later for other features, but document badges should remain one-layer icons for legibility at tab size.
+
+The badge palette should also match Shapez exactly. Replace the current TextForge colors with the Shapez viewer colors:
+
+```ts
+const shapezColors = {
+  r: "#ff666a",
+  g: "#78ff66",
+  b: "#66a7ff",
+  y: "#fcf52a",
+  p: "#dd66ff",
+  c: "#87fff5",
+  w: "#ffffff",
+  u: "#aaaaaa"
+};
+```
+
+The current TextForge palette uses darker, less Shapez-like colors such as `#e35757`, `#5aa36f`, and `#4c78c8`, which makes the badges look more like generic app icons than Shapez shapes.  The Shapez viewer also draws a subtle circular background shadow before drawing quadrants, using `rgba(40, 50, 65, 0.1)`.  TextForge badges should include the same pale circular backing so that white and empty quadrants remain visible.
+
+The SVG renderer should reproduce the Shapez viewer’s first-layer geometry. Use a `viewBox="-14 -14 28 28"` and draw a background circle with radius about `11.5`. Then draw each quadrant at centers `(5,-5)`, `(5,5)`, `(-5,5)`, and `(-5,-5)`, rotated by `quadrantIndex * 90` degrees. For one-layer badges, Shapez uses `quadrantSize = 10` and `layerScale = 0.9`, giving `dims = 9`. The equivalent local SVG paths are:
+
+```ts
+const paths = {
+  R: "M -5 -4 H 4 V 5 H -5 Z",
+  C: "M -5 5 L -5 -4 A 9 9 0 0 1 4 5 Z",
+  S: "M -5 -0.4 L 4 -4 L 0.4 5 L -5 5 Z",
+  W: "M -5 -0.4 L 4 -4 L 4 5 L -5 5 Z"
+};
+```
+
+Each quadrant should be rendered with `fill` from the exact Shapez color palette, `stroke="#555"`, and a proportional stroke width. Empty quadrant token `--` should render nothing. This should replace the current `shapePath` implementation in `src/components/DocumentBadge.tsx`, whose circle, rectangle, windmill, and star paths are only approximate and use different local geometry. 
+
+The identity generation must also be fixed. At the moment, `WorkspaceManager` generates a badge from a document seed using `createDocumentIdentity(seed)` and `createShapeCode(hash)`, but there is no workspace-level guarantee that newly opened documents receive unique badge codes.  This is especially visible when multiple files are uploaded together: `openFiles()` loops through the selected files and calls `openDocument()` once per file, but the application does not explicitly reserve badge identities during the batch.  Badge assignment should therefore become a workspace-level service:
+
+```ts
+function createUniqueDocumentIdentity(seed: string, existing: Set<string>): DocumentIdentity {
+  for (let salt = 0; salt < 512; salt += 1) {
+    const code = createShapezOneLayerCode(`${seed}:${salt}`);
+    if (!existing.has(code) && code !== "--------") {
+      existing.add(code);
+      return {
+        color: dominantShapezColor(code),
+        badgeLabel: code,
+        badgeKind: "shapez-one-layer",
+        shapeCode: code
+      };
+    }
+  }
+
+  throw new Error("Unable to allocate unique document badge.");
+}
+```
+
+`WorkspaceManager.openDocument()` should build `existing` from all currently open documents before normalizing the new identity. `restore()` should preserve existing valid unique identities, but should regenerate missing, invalid, or duplicate identities deterministically. The seed should include at least the document id, file name, language id, and a stable open sequence value. This keeps badges stable across normal editing, but prevents collisions during batch upload.
+
+The badge generator should produce codes from the full Shapez one-layer space, including empty quadrants where useful, but should reject all-empty layers. Shapez itself rejects `--------` as an empty layer.  To keep badges visually distinctive at small sizes, the first generation pass should prefer codes with at least two non-empty quadrants and at least two distinct colors. If uniqueness is exhausted under those readability constraints, the generator may relax them, but it should never fall back to the same default such as `CwCwCwCw`. The current `normalizeShapeCode()` fallback to `CwCwCwCw` should be removed or limited only to explicit error rendering. 
+
+Implementation should be split into a small reusable module rather than kept inside the component:
+
+```text
+src/core/shapezBadges.ts
+  parseShapezOneLayerCode(code)
+  normalizeShapezOneLayerCode(code)
+  createShapezOneLayerCode(seed)
+  createUniqueDocumentIdentity(seed, existing)
+  shapezOneLayerToSvgBody(code)
+```
+
+`DocumentBadge.tsx` should become a thin rendering wrapper around `shapezOneLayerToSvgBody()`. `WorkspaceManager.ts` should become responsible for identity allocation and uniqueness. `DocumentIdentity.badgeKind` should remain `"shapez-one-layer"` so future badge systems can coexist without changing the document model.
+
+### Acceptance criteria:
+
+```text
+1. Every document tab renders a valid one-layer Shapez code.
+2. The badge syntax matches /^(([CRSW][rgbypcwu])|--){4}$/.
+3. The badge renderer uses the exact Shapez quadrant order: TR, BR, BL, TL.
+4. The badge palette matches the Shapez viewer colors.
+5. White and uncolored quadrants remain visible because of the Shapez-style circular backing.
+6. Uploading multiple files in one operation always assigns distinct badge codes.
+7. Restoring a workspace preserves valid unique badge codes.
+8. Restoring a workspace repairs duplicate, missing, or invalid badge codes.
+9. Unit tests cover parser validation, SVG generation, uniqueness, restore repair, and batch upload identity allocation.
+```
+
+This change should make badges immediately more recognizable, more varied, and visually consistent with the Shapez convention that inspired them. It also gives TextForge a compact, human-readable identity syntax that can be displayed, copied, persisted, and debugged directly.
 
 ## 12.3 ITT multiline directives should be generalized
 
@@ -1837,6 +1939,7 @@ It focuses on Markdown, indented trees, graphs, diagrams, and local data transfo
 - Trusted internal plugins for lazy-loaded viewers, parsers, and renderers
 - User scripts run in a restricted Lua sandbox, not as JavaScript plugins
 - Lua Console for quick commands and manual pipeline execution
+- Each open document receives a compact Shapez-style visual identity badge, making it easier to distinguish files across editor tabs and viewer popups.
 
 ## Markdown viewer reference
 
@@ -1883,6 +1986,9 @@ Purpose:
 - Save/download file
 - Rename document
 - Switch language
+
+## Badge tests
+- Open 10 files at once. Confirm every document tab has a visibly distinct Shapez-style badge. Close and reload the app. Confirm the same badges are preserved.
 
 ## Markdown tests
 - Headings render
@@ -2089,6 +2195,15 @@ Also add a browser-level manual test using DevTools network panel:
 
 Maintain the manual test procedure described in section 12.11. This is required in addition to automated tests.
 
+## 13.7 Badge identity tests
+
+- Validate one-layer Shapez syntax.
+- Validate Shapez color palette and quadrant order.
+- Verify multiple simultaneous file uploads receive distinct badges.
+- Verify workspace restore preserves valid unique badges.
+- Verify workspace restore repairs invalid or duplicate badges.
+- Snapshot-test rendered SVG for representative codes.
+
 ---
 
 # 14. Prioritized implementation backlog
@@ -2119,9 +2234,11 @@ Maintain the manual test procedure described in section 12.11. This is required 
 
 1. Fix Markdown HTML fold/unfold.
 2. Add delayed close to window layout hover menu.
-3. Generalize ITT multiline `%` directive parsing.
-4. Add ITT CodeMirror folding and editor fold/unfold all.
-5. Improve SVG viewer pan/zoom.
+3. Replace document badges with exact one-layer Shapez badges.
+4. Guarantee unique document badges during batch file upload and workspace restore.
+5. Generalize ITT multiline `%` directive parsing.
+6. Add ITT CodeMirror folding and editor fold/unfold all.
+7. Improve SVG viewer pan/zoom.
 
 ## Priority 4 — Documentation and bundled examples
 
