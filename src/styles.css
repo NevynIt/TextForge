@@ -333,28 +333,28 @@ button:disabled {
 
 .window-layout-panel {
   position: absolute;
-  top: 36px;
+  top: 40px;
   right: 0;
   z-index: 8;
   display: none;
-  grid-template-columns: repeat(4, 30px);
-  gap: 6px;
-  padding: 8px;
+  grid-template-columns: repeat(4, 46px);
+  gap: 8px;
+  padding: 10px;
   border: 1px solid #5d6a72;
   border-radius: 8px;
   background: #28343c;
   box-shadow: 0 10px 24px rgba(32, 34, 37, 0.24);
 }
 
-.window-layout-menu:hover .window-layout-panel,
-.window-layout-menu:focus-within .window-layout-panel {
+.window-layout-menu.open .window-layout-panel {
   display: grid;
 }
 
 .quadrant-glyph {
   display: block;
-  width: 16px;
-  height: 16px;
+  box-sizing: border-box;
+  width: 18px;
+  height: 18px;
   border: 1px solid currentColor;
   color: #fffefa;
   background:
@@ -436,7 +436,21 @@ button:disabled {
 
 .window-layout-menu > button,
 .window-layout-panel button {
+  display: grid;
+  place-items: center;
   cursor: pointer;
+}
+
+.window-layout-panel button {
+  width: 46px;
+  height: 46px;
+  padding: 0;
+  border-radius: 8px;
+}
+
+.window-layout-panel .quadrant-glyph {
+  width: 28px;
+  height: 28px;
 }
 
 .popup-resize-handle {
@@ -1006,7 +1020,6 @@ button:disabled {
   min-height: 0;
   height: 100%;
   border: 1px solid #d4d1c7;
-  background: #ffffff;
   overflow: hidden;
   position: relative;
   cursor: grab;
@@ -1020,19 +1033,25 @@ button:disabled {
 }
 
 .jsmind-viewer-host {
-  min-width: max(4200px, 300%);
-  min-height: max(3000px, 300%);
-  height: max(3000px, 300%);
-  width: max(4200px, 300%);
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   position: relative;
-  transform-origin: 0 0;
-  will-change: transform;
+}
+
+.jsmind-viewer-host .jsmind-inner {
+  overflow: scroll;
+  scrollbar-width: none;
   background:
     linear-gradient(#eef1ee 1px, transparent 1px),
     linear-gradient(90deg, #eef1ee 1px, transparent 1px),
     #ffffff;
   background-size: 48px 48px;
+}
+
+.jsmind-viewer-host .jsmind-inner::-webkit-scrollbar {
+  width: 0;
+  height: 0;
 }
 
 .jsmind-viewer-host jmnode {
@@ -1087,6 +1106,54 @@ button:disabled {
   stroke-linecap: round;
   stroke-linejoin: round;
   opacity: 0.88;
+}
+
+.jsmind-cross-link-label {
+  fill: #3a4349;
+  font: 11px/1.2 system-ui, sans-serif;
+  paint-order: stroke;
+  stroke: rgba(255, 255, 255, 0.86);
+  stroke-width: 3px;
+  text-anchor: middle;
+}
+
+.viewer-bg-white .viewer-main-panel,
+.viewer-bg-white .graph-canvas,
+.viewer-bg-white .jsmind-viewer-viewport,
+.viewer-bg-white .jsmind-viewer-host .jsmind-inner {
+  background: #ffffff;
+}
+
+.viewer-bg-paper .viewer-main-panel,
+.viewer-bg-paper .graph-canvas,
+.viewer-bg-paper .jsmind-viewer-viewport,
+.viewer-bg-paper .jsmind-viewer-host .jsmind-inner {
+  background: #fffefa;
+}
+
+.viewer-bg-soft .viewer-main-panel,
+.viewer-bg-soft .graph-canvas,
+.viewer-bg-soft .jsmind-viewer-viewport,
+.viewer-bg-soft .jsmind-viewer-host .jsmind-inner {
+  background: #eef3f7;
+}
+
+.viewer-bg-dark .viewer-main-panel,
+.viewer-bg-dark .graph-canvas,
+.viewer-bg-dark .jsmind-viewer-viewport,
+.viewer-bg-dark .jsmind-viewer-host .jsmind-inner {
+  background: #20272d;
+}
+
+.viewer-bg-grid .viewer-main-panel,
+.viewer-bg-grid .graph-canvas,
+.viewer-bg-grid .jsmind-viewer-host .jsmind-inner,
+.viewer-bg-grid .jsmind-viewer-viewport {
+  background:
+    linear-gradient(#eef1ee 1px, transparent 1px),
+    linear-gradient(90deg, #eef1ee 1px, transparent 1px),
+    #ffffff;
+  background-size: 48px 48px;
 }
 
 .viewer-with-inspector,

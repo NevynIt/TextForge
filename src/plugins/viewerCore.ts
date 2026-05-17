@@ -1,6 +1,37 @@
 import type { TextForgePlugin } from "../domain/types";
 import { escapeHtml } from "../parsers/source";
 
+const viewBackgroundControl = {
+  id: "viewerBackground",
+  label: "Viewer background",
+  type: "select" as const,
+  defaultValue: "paper",
+  group: "Presentation",
+  options: [
+    { label: "Paper", value: "paper" },
+    { label: "White", value: "white" },
+    { label: "Soft blue", value: "soft" },
+    { label: "Dark", value: "dark" },
+    { label: "Grid", value: "grid" }
+  ]
+};
+
+const showArrowsControl = {
+  id: "showArrows",
+  label: "Show oriented arrows",
+  type: "boolean" as const,
+  defaultValue: true,
+  group: "Edge style"
+};
+
+const showEdgeLabelsControl = {
+  id: "showEdgeLabels",
+  label: "Show edge labels",
+  type: "boolean" as const,
+  defaultValue: false,
+  group: "Labels"
+};
+
 const htmlControls = [
   {
     id: "readingTheme",
@@ -57,6 +88,7 @@ const svgControls = [
 ];
 
 const graphControls = [
+  viewBackgroundControl,
   {
     id: "layout",
     label: "Layout",
@@ -79,20 +111,8 @@ const graphControls = [
     defaultValue: true,
     group: "Labels"
   },
-  {
-    id: "showEdgeLabels",
-    label: "Show edge labels",
-    type: "boolean" as const,
-    defaultValue: false,
-    group: "Labels"
-  },
-  {
-    id: "showArrows",
-    label: "Show oriented arrows",
-    type: "boolean" as const,
-    defaultValue: true,
-    group: "Edge style"
-  },
+  showEdgeLabelsControl,
+  showArrowsControl,
   {
     id: "filterToMatches",
     label: "Filter to search matches",
@@ -170,6 +190,7 @@ const plugin: TextForgePlugin = {
           title: "Tree Viewer",
           nodes: value.data,
           capabilities: { zoom: true, search: true, fold: true, inspect: true, export: true, presets: true },
+          controls: [viewBackgroundControl],
           diagnostics: value.diagnostics
         };
       }
@@ -228,6 +249,7 @@ const plugin: TextForgePlugin = {
           title: "Mind Map Viewer",
           nodes: value.data,
           capabilities: { zoom: true, pan: true, search: true, fold: true, inspect: true, export: true, presets: true },
+          controls: [{ ...viewBackgroundControl, defaultValue: "grid" }, showArrowsControl, showEdgeLabelsControl],
           diagnostics: value.diagnostics
         };
       }

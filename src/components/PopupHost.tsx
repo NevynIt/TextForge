@@ -1,4 +1,5 @@
 import type { JSX } from "preact";
+import { useState } from "preact/hooks";
 import {
   Activity,
   ArrowRight,
@@ -418,12 +419,24 @@ function toolbarActionPatch(popup: PopupRecord, action: string): Partial<PopupRe
 type WindowLayoutTarget = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "top" | "bottom" | "left" | "right";
 
 function WindowQuadrantMenu({ popupId, onUpdate }: { popupId: string; onUpdate: PopupHostProps["onUpdate"] }) {
+  const [open, setOpen] = useState(false);
   function apply(layout: WindowLayoutTarget): void {
     onUpdate(popupId, layoutPatch(layout));
+    setOpen(false);
   }
 
   return (
-    <div class="window-layout-menu">
+    <div
+      class={`window-layout-menu ${open ? "open" : ""}`}
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+      onFocusIn={() => setOpen(true)}
+      onFocusOut={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+          setOpen(false);
+        }
+      }}
+    >
       <button type="button" title="Window layout" aria-label="Window layout">
         <span class="quadrant-glyph quadrant-glyph-menu" />
       </button>
@@ -547,13 +560,16 @@ function toolbarControlIds(result: NonNullable<PopupRecord["result"]>): string[]
   if (result.kind === "svg") {
     return ["fitMode", "svgBackground"];
   }
+  if (result.kind === "tree") {
+    return ["viewerBackground"];
+  }
   if (result.kind === "mindmap") {
-    return [];
+    return ["viewerBackground", "showArrows", "showEdgeLabels"];
   }
   if (result.kind === "graph") {
     return result.engine === "sigma"
-      ? ["layout", "showArrows", "showLabels", "showEdgeLabels", "filterToMatches", "focusNeighbors"]
-      : ["layout", "showArrows", "showLabels", "showEdgeLabels", "filterToMatches"];
+      ? ["viewerBackground", "layout", "showArrows", "showLabels", "showEdgeLabels", "filterToMatches", "focusNeighbors"]
+      : ["viewerBackground", "layout", "showArrows", "showLabels", "showEdgeLabels", "filterToMatches"];
   }
   return [];
 }
@@ -574,7 +590,7 @@ function toolbarControlIcon(id: string): JSX.Element {
   if (id === "focusNeighbors" || id === "layout" || id === "mindmapMode") {
     return <Network size={15} />;
   }
-  if (id === "readingTheme" || id === "svgBackground") {
+  if (id === "readingTheme" || id === "svgBackground" || id === "viewerBackground") {
     return <Palette size={15} />;
   }
   return <Settings size={15} />;

@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:unit": "vitest run src/**/*.test.ts",
     "test:smoke": "vitest run src/**/*.smoke.test.tsx --environment jsdom",
+    "test:security": "vitest run src/security.verify.test.js",
     "verify:file": "node scripts/verify-file-build.mjs",
     "verify:security": "node scripts/verify-security.mjs",
     "check": "npm run test && npm run build && npm run verify:file && npm run verify:security"

@@ -305,6 +305,7 @@ function TreeView({
 }) {
   const density = safeClassName(stringSetting(settings.density, "comfortable"));
   const inlineDetails = booleanSetting(settings.inlineDetails, false);
+  const background = safeClassName(stringSetting(settings.viewerBackground, "paper"));
   const [selectedId, setSelectedId] = useState(nodes[0]?.id || "");
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const nodeIndex = useMemo(() => indexTreeNodes(nodes), [nodes]);
@@ -326,7 +327,7 @@ function TreeView({
   }
 
   return (
-    <div class={`viewer-with-inspector ${inspectorOpen ? "inspector-open" : "inspector-closed"}`}>
+    <div class={`viewer-with-inspector viewer-bg-${background} ${inspectorOpen ? "inspector-open" : "inspector-closed"}`}>
       <div class="viewer-main-panel tree-main-panel">
         <button type="button" class="inspector-toggle" title={inspectorOpen ? "Hide inspector" : "Show inspector"} onClick={() => setInspectorOpen((value) => !value)}>
           {inspectorOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
@@ -603,24 +604,25 @@ function MindMapView({
   const initialDepth = stringSetting(settings.initialDepth, "depth2");
   const theme = safeClassName(stringSetting(settings.mindmapTheme, "textforge"));
   const textScale = numberSetting(settings.textScale, 1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
-  const panRef = useRef(pan);
-
-  useEffect(() => {
-    panRef.current = pan;
-  }, [pan]);
+  const background = safeClassName(stringSetting(settings.viewerBackground, "grid"));
+  const showCrossLinkArrows = booleanSetting(settings.showArrows, true);
+  const showCrossLinkLabels = booleanSetting(settings.showEdgeLabels, false);
 
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) {
       return;
     }
-    let drag: { id: number; x: number; y: number; panX: number; panY: number; moved: boolean } | null = null;
+    let drag: { id: number; x: number; y: number; left: number; top: number; moved: boolean } | null = null;
     const start = (event: PointerEvent) => {
       if (event.button !== 0 || event.target instanceof Element && event.target.closest("button,a,input,select,textarea,jmnode,jmexpander")) {
         return;
       }
-      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, panX: panRef.current.x, panY: panRef.current.y, moved: false };
+      const panel = mindMapPanel(hostRef.current);
+      if (!panel) {
+        return;
+      }
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: panel.scrollLeft, top: panel.scrollTop, moved: false };
       viewport.setPointerCapture?.(event.pointerId);
       viewport.classList.add("is-panning");
     };
@@ -634,7 +636,11 @@ function MindMapView({
         drag.moved = true;
         event.preventDefault();
       }
-      setPan({ x: drag.panX + deltaX, y: drag.panY + deltaY });
+      const panel = mindMapPanel(hostRef.current);
+      if (panel) {
+        panel.scrollLeft = drag.left - deltaX;
+        panel.scrollTop = drag.top - deltaY;
+      }
     };
     const stop = (event: PointerEvent) => {
       if (!drag || drag.id !== event.pointerId) {
@@ -678,8 +684,8 @@ function MindMapView({
         engine: "svg",
         draggable: false,
         hide_scrollbars_when_draggable: false,
-        hmargin: 520,
-        vmargin: 360,
+        hmargin: 8000,
+        vmargin: 6000,
         line_width: 2,
         line_color: "#78909c",
         line_style: "curved",
@@ -709,7 +715,7 @@ function MindMapView({
     instanceRef.current = instance;
     instance.show(mind);
     (instance as unknown as { add_event_listener?: (handler: () => void) => void }).add_event_listener?.(() => {
-      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || ""));
+      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels }));
     });
     const doubleClick = (event: MouseEvent) => {
       const id = jsMindNodeId(instance, event.target);
@@ -719,7 +725,7 @@ function MindMapView({
       event.preventDefault();
       event.stopPropagation();
       toggleJsMindNode(instance, id, event.shiftKey);
-      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || ""));
+      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels }));
     };
     host.addEventListener("dblclick", doubleClick, true);
     if (initialDepth === "collapsed") {
@@ -729,12 +735,14 @@ function MindMapView({
     } else {
       instance.expand_all?.();
     }
-    renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
-    centerMindMapNode(viewport, host, mind.data.id, zoom, setPan);
+    setNativeMindMapZoom(instance, zoom);
+    renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
+    centerMindMapNode(viewport, host, mind.data.id);
     window.setTimeout(() => {
       instance.resize?.();
-      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
-      centerMindMapNode(viewport, host, mind.data.id, zoom, setPan);
+      setNativeMindMapZoom(instance, zoom);
+      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
+      centerMindMapNode(viewport, host, mind.data.id);
     }, 0);
 
     return () => {
@@ -742,7 +750,7 @@ function MindMapView({
       instanceRef.current = null;
       host.innerHTML = "";
     };
-  }, [mind, mode, initialDepth, theme, textScale, nodes]);
+  }, [mind, mode, initialDepth, theme, textScale, nodes, showCrossLinkArrows, showCrossLinkLabels]);
 
   useEffect(() => {
     setActiveMatchIndex(searchMatches.length ? 0 : -1);
@@ -773,17 +781,17 @@ function MindMapView({
       return;
     }
     const activeMatch = searchMatches[activeMatchIndex];
-    renderMindMapDecorations(host, nodes, query, activeMatch?.id || "");
+    renderMindMapDecorations(host, nodes, query, activeMatch?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
     if (!activeMatch) {
       return;
     }
     expandJsMindPath(instance, nodes, activeMatch.id);
     window.requestAnimationFrame(() => {
       instance.select_node?.(activeMatch.id);
-      renderMindMapDecorations(host, nodes, query, activeMatch.id);
-      centerMindMapNode(viewport, host, activeMatch.id, zoom, setPan);
+      renderMindMapDecorations(host, nodes, query, activeMatch.id, { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
+      centerMindMapNode(viewport, host, activeMatch.id);
     });
-  }, [query, searchMatches, activeMatchIndex, nodes, zoom]);
+  }, [query, searchMatches, activeMatchIndex, nodes, showCrossLinkArrows, showCrossLinkLabels]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -791,8 +799,9 @@ function MindMapView({
     if (!host || !instance) {
       return;
     }
-    window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || ""));
-  }, [zoom]);
+    setNativeMindMapZoom(instance, zoom);
+    window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels }));
+  }, [zoom, showCrossLinkArrows, showCrossLinkLabels]);
 
   useEffect(() => {
     if (!toolbarAction?.revision) {
@@ -805,20 +814,20 @@ function MindMapView({
       return;
     }
     if (toolbarAction.action === "mindmap-center") {
-      centerMindMapNode(viewport, host, mind.data.id, zoom, setPan);
+      centerMindMapNode(viewport, host, mind.data.id);
     } else if (toolbarAction.action === "mindmap-fit") {
-      fitMindMap(viewport, host, onZoomChange, setPan);
+      fitMindMap(instance, viewport, host, onZoomChange);
     } else if (toolbarAction.action === "mindmap-fold-all") {
       instance.collapse_all?.();
-      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
+      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
     } else if (toolbarAction.action === "mindmap-unfold-all") {
       instance.expand_all?.();
-      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "");
+      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
     }
   }, [toolbarAction?.revision]);
 
   return (
-    <section class="jsmind-viewer-shell">
+    <section class={`jsmind-viewer-shell viewer-bg-${background}`}>
       <div class="jsmind-viewer-meta">
         <strong>{mind.meta.name}</strong>
         <span>{countTreeNodes(nodes)} nodes</span>
@@ -829,17 +838,14 @@ function MindMapView({
         onWheel={(event) => {
           event.preventDefault();
           const nextZoom = clamp(zoom + (event.deltaY > 0 ? -0.1 : 0.1), 0.1, 5);
-          const rect = event.currentTarget.getBoundingClientRect();
-          const pointerX = event.clientX - rect.left;
-          const pointerY = event.clientY - rect.top;
-          setPan((current) => ({
-            x: pointerX - ((pointerX - current.x) / zoom) * nextZoom,
-            y: pointerY - ((pointerY - current.y) / zoom) * nextZoom
-          }));
+          const instance = instanceRef.current;
+          if (instance) {
+            setNativeMindMapZoom(instance, nextZoom, { x: event.clientX, y: event.clientY });
+          }
           onZoomChange?.(nextZoom);
         }}
       >
-        <div class="jsmind-viewer-host" ref={hostRef} style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }} />
+        <div class="jsmind-viewer-host" ref={hostRef} />
       </div>
     </section>
   );
@@ -879,6 +885,7 @@ function GraphView({
   const showLabels = booleanSetting(settings.showLabels, true);
   const showEdgeLabels = booleanSetting(settings.showEdgeLabels, false);
   const showArrows = booleanSetting(settings.showArrows, graph.directed !== false);
+  const background = safeClassName(stringSetting(settings.viewerBackground, "white"));
   const performanceModeSetting = stringSetting(settings.performanceMode, "auto");
   const filterToMatches = booleanSetting(settings.filterToMatches, false);
   const layoutIterations = numberSetting(settings.layoutIterations, 120);
@@ -1339,7 +1346,7 @@ function GraphView({
     return <StaticGraph graph={graph} error={error} />;
   }
   return (
-    <div class="graph-view-wrap">
+    <div class={`graph-view-wrap viewer-bg-${background}`}>
       <div class="graph-canvas" ref={containerRef} />
       <ViewerInspector
         title="Inspector"
@@ -2039,10 +2046,21 @@ function countTreeNodes(nodes: TreeNode[]): number {
   return nodes.reduce((count, node) => count + 1 + countTreeNodes(node.children), 0);
 }
 
-function renderMindMapDecorations(host: HTMLElement, nodes: TreeNode[], query = "", activeId = ""): void {
+interface MindMapDecorationOptions {
+  showArrows: boolean;
+  showLabels: boolean;
+}
+
+function renderMindMapDecorations(
+  host: HTMLElement,
+  nodes: TreeNode[],
+  query = "",
+  activeId = "",
+  options: MindMapDecorationOptions = { showArrows: true, showLabels: false }
+): void {
   applyMindMapNodeStyles(host, nodes);
   applyMindMapSearchState(host, nodes, query, activeId);
-  renderMindMapCrossLinks(host, nodes);
+  renderMindMapCrossLinks(host, nodes, options);
 }
 
 function applyMindMapSearchState(host: HTMLElement, nodes: TreeNode[], query: string, activeId: string): void {
@@ -2080,9 +2098,9 @@ function applyMindMapNodeStyles(host: HTMLElement, nodes: TreeNode[]): void {
   });
 }
 
-function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[]): void {
-  const panel = host.querySelector<HTMLElement>(".jsmind-inner") || host;
-  panel.querySelector(".jsmind-cross-links")?.remove();
+function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[], options: MindMapDecorationOptions): void {
+  const layer = host.querySelector<HTMLElement>("jmnodes") || host.querySelector<HTMLElement>(".jsmind-inner") || host;
+  layer.querySelector(".jsmind-cross-links")?.remove();
   const nodeIndex = indexTreeNodes(nodes);
   const links: Array<{ source: TreeNode; target: TreeNode; type?: string; color?: string; width?: number }> = [];
   const seenSources = new Set<string>();
@@ -2109,21 +2127,9 @@ function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[]): void {
   }
   const svg = document.createElementNS(SVG_NAMESPACE, "svg");
   svg.classList.add("jsmind-cross-links");
-  svg.setAttribute("width", String(Math.max(panel.scrollWidth, panel.clientWidth)));
-  svg.setAttribute("height", String(Math.max(panel.scrollHeight, panel.clientHeight)));
+  svg.setAttribute("width", String(Math.max(layer.scrollWidth, layer.clientWidth)));
+  svg.setAttribute("height", String(Math.max(layer.scrollHeight, layer.clientHeight)));
   const defs = document.createElementNS(SVG_NAMESPACE, "defs");
-  const marker = document.createElementNS(SVG_NAMESPACE, "marker");
-  marker.setAttribute("id", `${host.id}-cross-link-arrow`);
-  marker.setAttribute("markerWidth", "8");
-  marker.setAttribute("markerHeight", "8");
-  marker.setAttribute("refX", "7");
-  marker.setAttribute("refY", "4");
-  marker.setAttribute("orient", "auto");
-  const markerPath = document.createElementNS(SVG_NAMESPACE, "path");
-  markerPath.setAttribute("d", "M 0 0 L 8 4 L 0 8 z");
-  markerPath.setAttribute("fill", "#cf6f2a");
-  marker.append(markerPath);
-  defs.append(marker);
   svg.append(defs);
   links.forEach((link, index) => {
     const source = jsMindElementById(host, link.source.id);
@@ -2141,14 +2147,37 @@ function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[]): void {
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", link.color || "#cf6f2a");
     path.setAttribute("stroke-width", String(link.width || 2));
-    path.setAttribute("marker-end", `url(#${host.id}-cross-link-arrow)`);
+    if (options.showArrows) {
+      const markerId = `${host.id}-cross-link-arrow-${index}`;
+      const marker = document.createElementNS(SVG_NAMESPACE, "marker");
+      marker.setAttribute("id", markerId);
+      marker.setAttribute("markerWidth", "8");
+      marker.setAttribute("markerHeight", "8");
+      marker.setAttribute("refX", "7");
+      marker.setAttribute("refY", "4");
+      marker.setAttribute("orient", "auto");
+      const markerPath = document.createElementNS(SVG_NAMESPACE, "path");
+      markerPath.setAttribute("d", "M 0 0 L 8 4 L 0 8 z");
+      markerPath.setAttribute("fill", link.color || "#cf6f2a");
+      marker.append(markerPath);
+      defs.append(marker);
+      path.setAttribute("marker-end", `url(#${markerId})`);
+    }
     path.setAttribute("data-link-index", String(index));
     const title = document.createElementNS(SVG_NAMESPACE, "title");
     title.textContent = `${link.source.label} -> ${link.target.label}${link.type ? ` (${link.type})` : ""}`;
     path.append(title);
     svg.append(path);
+    if (options.showLabels && link.type) {
+      const text = document.createElementNS(SVG_NAMESPACE, "text");
+      text.classList.add("jsmind-cross-link-label");
+      text.setAttribute("x", String(midX));
+      text.setAttribute("y", String((sy + ty) / 2 - 6));
+      text.textContent = link.type;
+      svg.append(text);
+    }
   });
-  panel.prepend(svg);
+  layer.prepend(svg);
 }
 
 function mindMapStyleData(attributes: TreeNode["attributes"]): Partial<JsMindNode> {
@@ -2212,71 +2241,105 @@ function mindMapShapeRadius(shape: string): string {
   return "8px";
 }
 
-function centerMindMapNode(
-  viewport: HTMLElement | null,
-  host: HTMLElement,
-  id: string,
-  zoom: number,
-  setPan: (pan: { x: number; y: number }) => void
-): void {
+function centerMindMapNode(viewport: HTMLElement | null, host: HTMLElement, id: string): void {
+  const panel = mindMapPanel(host);
   const element = jsMindElementById(host, id);
-  if (!viewport || !element) {
+  if (!viewport || !panel || !element) {
     return;
   }
-  setPan({
-    x: viewport.clientWidth / 2 - (element.offsetLeft + element.offsetWidth / 2) * zoom,
-    y: viewport.clientHeight / 2 - (element.offsetTop + element.offsetHeight / 2) * zoom
+  const panelRect = panel.getBoundingClientRect();
+  const elementRect = element.getBoundingClientRect();
+  panel.scrollBy({
+    left: elementRect.left + elementRect.width / 2 - (panelRect.left + panelRect.width / 2),
+    top: elementRect.top + elementRect.height / 2 - (panelRect.top + panelRect.height / 2),
+    behavior: "smooth"
   });
 }
 
 function fitMindMap(
+  instance: jsMind,
   viewport: HTMLElement,
   host: HTMLElement,
-  onZoomChange: ((zoom: number) => void) | undefined,
-  setPan: (pan: { x: number; y: number }) => void
+  onZoomChange: ((zoom: number) => void) | undefined
 ): void {
   const visibleNodes = visibleJsMindNodes(host);
   if (!visibleNodes.length) {
-    centerMindMapNode(viewport, host, "root", 1, setPan);
+    centerMindMapNode(viewport, host, "root");
     return;
   }
-  const bounds = elementOffsetBounds(visibleNodes);
+  const bounds = elementBounds(visibleNodes);
   const availableWidth = Math.max(120, viewport.clientWidth - 80);
   const availableHeight = Math.max(120, viewport.clientHeight - 80);
-  const nextZoom = clamp(Math.min(availableWidth / Math.max(1, bounds.width), availableHeight / Math.max(1, bounds.height), 1.6), 0.1, 2.1);
+  const currentZoom = mindMapZoom(instance);
+  const nextZoom = clamp(
+    currentZoom * Math.min(availableWidth / Math.max(1, bounds.width), availableHeight / Math.max(1, bounds.height), 1.6),
+    0.1,
+    2.1
+  );
+  setNativeMindMapZoom(instance, nextZoom);
   onZoomChange?.(nextZoom);
-  centerMindMapBounds(viewport, bounds, nextZoom, setPan);
+  window.requestAnimationFrame(() => centerMindMapBounds(host, visibleJsMindNodes(host)));
 }
 
-function centerMindMapBounds(
-  viewport: HTMLElement,
-  bounds: ElementOffsetBounds,
-  zoom: number,
-  setPan: (pan: { x: number; y: number }) => void
-): void {
-  setPan({
-    x: viewport.clientWidth / 2 - (bounds.left + bounds.width / 2) * zoom,
-    y: viewport.clientHeight / 2 - (bounds.top + bounds.height / 2) * zoom
+function centerMindMapBounds(host: HTMLElement, elements: HTMLElement[]): void {
+  const panel = mindMapPanel(host);
+  if (!panel || !elements.length) {
+    return;
+  }
+  const panelRect = panel.getBoundingClientRect();
+  const bounds = elementBounds(elements);
+  panel.scrollBy({
+    left: bounds.left + bounds.width / 2 - (panelRect.left + panelRect.width / 2),
+    top: bounds.top + bounds.height / 2 - (panelRect.top + panelRect.height / 2),
+    behavior: "smooth"
   });
 }
 
-interface ElementOffsetBounds {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
+function elementBounds(elements: HTMLElement[]): DOMRect {
+  const rects = elements.map((element) => element.getBoundingClientRect());
+  const left = Math.min(...rects.map((rect) => rect.left));
+  const top = Math.min(...rects.map((rect) => rect.top));
+  const right = Math.max(...rects.map((rect) => rect.right));
+  const bottom = Math.max(...rects.map((rect) => rect.bottom));
+  return new DOMRect(left, top, right - left, bottom - top);
 }
 
-function elementOffsetBounds(elements: HTMLElement[]): ElementOffsetBounds {
-  const left = Math.min(...elements.map((element) => element.offsetLeft));
-  const top = Math.min(...elements.map((element) => element.offsetTop));
-  const right = Math.max(...elements.map((element) => element.offsetLeft + element.offsetWidth));
-  const bottom = Math.max(...elements.map((element) => element.offsetTop + element.offsetHeight));
-  return { left, top, width: right - left, height: bottom - top };
+function mindMapPanel(host: HTMLElement | null): HTMLElement | null {
+  return host?.querySelector<HTMLElement>(".jsmind-inner") || null;
 }
 
 function visibleJsMindNodes(host: HTMLElement): HTMLElement[] {
   return Array.from(host.querySelectorAll<HTMLElement>("jmnode")).filter((element) => element.offsetParent !== null);
+}
+
+function setNativeMindMapZoom(instance: jsMind, zoom: number, anchor?: { x: number; y: number }): boolean {
+  const view = instanceView(instance);
+  const nextZoom = clamp(zoom, 0.1, 5);
+  if (!view?.set_zoom) {
+    return false;
+  }
+  if (view.set_zoom(nextZoom, anchor)) {
+    return true;
+  }
+  ensureMindMapZoomSpace(view, nextZoom);
+  return view.set_zoom(nextZoom, anchor);
+}
+
+function ensureMindMapZoomSpace(view: JsMindViewHandle, zoom: number): void {
+  const panel = view.e_panel;
+  if (!panel || !view.size) {
+    return;
+  }
+  const rect = panel.getBoundingClientRect();
+  const minWidth = Math.ceil(rect.width / Math.max(0.1, zoom)) + 1600;
+  const minHeight = Math.ceil(rect.height / Math.max(0.1, zoom)) + 1200;
+  view.size.w = Math.max(view.size.w, minWidth);
+  view.size.h = Math.max(view.size.h, minHeight);
+}
+
+function mindMapZoom(instance: jsMind): number {
+  const zoom = instanceView(instance)?.zoom_current;
+  return typeof zoom === "number" && Number.isFinite(zoom) ? zoom : 1;
 }
 
 function jsMindElementById(host: HTMLElement, id: string): HTMLElement | null {
@@ -2332,11 +2395,15 @@ function walkJsMindNodes(node: JsMindRuntimeNode, callback: (node: JsMindRuntime
 }
 
 function instanceView(instance: jsMind): JsMindViewHandle | undefined {
-  return (instance as unknown as { view?: { get_binded_nodeid?: (target: Element) => string } }).view;
+  return (instance as unknown as { view?: JsMindViewHandle }).view;
 }
 
 interface JsMindViewHandle {
   get_binded_nodeid?: (target: Element) => string;
+  set_zoom?: (zoom: number, anchor?: { x: number; y: number }) => boolean;
+  zoom_current?: number;
+  e_panel?: HTMLElement;
+  size?: { w: number; h: number };
 }
 
 interface JsMindRuntimeNode {
