@@ -8,6 +8,8 @@ import {
   ListChecks,
   PanelTopOpen,
   Puzzle,
+  ScrollText,
+  Terminal,
   Workflow,
   X
 } from "lucide-preact";
@@ -19,11 +21,14 @@ import { PluginRegistry } from "../core/pluginRegistry";
 import { RuntimeLoader } from "../core/runtimeLoader";
 import { TextForgeStorage } from "../core/storage";
 import { WorkspaceManager } from "../core/workspaceManager";
-import type { PipelineTraceStep, PopupRecord, TextDocument, TextForgePlugin } from "../domain/types";
+import type { PipelineTraceStep, PipelineValue, PopupRecord, TextDocument } from "../domain/types";
 import { pluginManifest } from "../plugins/manifest";
 import { CodeEditor } from "../components/CodeEditor";
 import { DocumentBadge } from "../components/DocumentBadge";
 import { PopupHost } from "../components/PopupHost";
+import { LuaTransformService } from "../lua/luaTransformService";
+import { buildLuaActionsPlugin, type RegisteredLuaAction } from "../lua/luaScriptRegistry";
+import type { LuaRunResult } from "../lua/types";
 
 interface AppServices {
   languages: LanguageRegistry;
@@ -33,6 +38,7 @@ interface AppServices {
   pipelines: PipelineRunner;
   diagnostics: DiagnosticsService;
   storage: TextForgeStorage;
+  lua: LuaTransformService;
 }
 
 export function App() {
@@ -42,6 +48,7 @@ export function App() {
     const runtime = new RuntimeLoader();
     const plugins = new PluginRegistry(languages);
     const workspace = new WorkspaceManager();
+    const lua = new LuaTransformService();
     plugins.registerManifest(pluginManifest);
     return {
       languages,
@@ -50,7 +57,8 @@ export function App() {
       workspace,
       pipelines: new PipelineRunner(plugins, runtime, () => workspace.listDocuments()),
       diagnostics: new DiagnosticsService(plugins, runtime, () => workspace.listDocuments()),
-      storage: new TextForgeStorage()
+      storage: new TextForgeStorage(),
+      lua
     };
   }, []);
 
@@ -63,6 +71,7 @@ export function App() {
   const [draggedTabId, setDraggedTabId] = useState("");
   const [renamingDocumentId, setRenamingDocumentId] = useState("");
   const [renameDraft, setRenameDraft] = useState("");
+  const [luaActions, setLuaActions] = useState<RegisteredLuaAction[]>([]);
   const popupsRef = useRef(popups);
   popupsRef.current = popups;
 
@@ -105,6 +114,24 @@ export function App() {
       cancelled = true;
     };
   }, [services]);
+
+  useEffect(() => {
+    if (!ready) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      void buildLuaActionsPlugin(services.workspace.listDocuments(), services.lua).then(({ plugin, actions }) => {
+        services.plugins.replaceGeneratedPlugin(plugin);
+        setLuaActions(actions);
+        setPluginRevision((value) => value + 1);
+      });
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [
+    ready,
+    services,
+    workspace.documents.map((document) => `${document.id}:${document.version}:${document.fileName}:${document.languageId}`).join("|")
+  ]);
 
   useEffect(() => {
     const staleFollowPopups = popups.filter((popup) => {
@@ -368,21 +395,6 @@ export function App() {
     upsertPopup(createToolPopup("plugin-manager", "Plugin Manager"), (popup) => popup.kind === "plugin-manager");
   }
 
-  async function uploadCustomPlugin(files: FileList | null): Promise<void> {
-    const file = files?.[0];
-    if (!file) {
-      return;
-    }
-    try {
-      const plugin = await importCustomPlugin(file);
-      services.plugins.registerCustomPlugin(plugin);
-      setPluginRevision((value) => value + 1);
-      setStatus(`Loaded custom plugin ${plugin.name}.`);
-    } catch (error) {
-      setStatus(error instanceof Error ? error.message : String(error));
-    }
-  }
-
   function openPipelineTrace(): void {
     upsertPopup(
       activeDocument
@@ -397,6 +409,58 @@ export function App() {
         : createToolPopup("pipeline-trace", "Pipeline Trace", lastTrace),
       (popup) => popup.kind === "pipeline-trace"
     );
+  }
+
+  function openLuaConsole(): void {
+    upsertPopup(createToolPopup("lua-console", "Lua Console"), (popup) => popup.kind === "lua-console");
+  }
+
+  function openLuaScripts(): void {
+    upsertPopup(createToolPopup("lua-scripts", "Lua Scripts"), (popup) => popup.kind === "lua-scripts");
+  }
+
+  function newLuaScript(): void {
+    services.workspace.openDocument({
+      fileName: "transform.lua",
+      languageId: "text.lua",
+      text: luaActionBoilerplate
+    });
+    commitWorkspace("New Lua script opened.");
+  }
+
+  async function runLuaConsoleCommand(source: string): Promise<LuaRunResult> {
+    const input = activeDocument ? documentInput(activeDocument) : { kind: "text" as const, languageId: "text.plain", text: "" };
+    const result = await services.lua.run({
+      mode: "command",
+      source,
+      fileName: "console.lua",
+      input,
+      documents: services.workspace.listDocuments(),
+      actions: luaActions
+    });
+    setStatus(result.ok ? "Lua command complete." : result.error || "Lua command failed.");
+    return result;
+  }
+
+  async function runActiveLuaDocument(): Promise<LuaRunResult> {
+    if (!activeDocument || activeDocument.languageId !== "text.lua") {
+      return { ok: false, output: "", error: "Active document is not a Lua document." };
+    }
+    const result = await services.lua.run({
+      mode: "script",
+      source: activeDocument.text,
+      fileName: activeDocument.fileName,
+      input: documentInput(activeDocument),
+      documents: services.workspace.listDocuments(),
+      actions: luaActions
+    });
+    setStatus(result.ok ? `Ran ${activeDocument.fileName}.` : result.error || "Lua script failed.");
+    return result;
+  }
+
+  function openLuaResult(value: PipelineValue): void {
+    const document = services.workspace.openDocument(pipelineValueToDocument(value));
+    commitWorkspace(`Opened Lua result as ${document.fileName}.`);
   }
 
   return (
@@ -431,6 +495,14 @@ export function App() {
           <button type="button" onClick={openPipelineTrace} disabled={!lastTrace.length}>
             <ListChecks size={16} />
             Trace
+          </button>
+          <button type="button" onClick={openLuaConsole}>
+            <Terminal size={16} />
+            Lua
+          </button>
+          <button type="button" onClick={openLuaScripts}>
+            <ScrollText size={16} />
+            Scripts
           </button>
         </div>
       </header>
@@ -581,8 +653,13 @@ export function App() {
       <PopupHost
         popups={popups}
         documents={workspace.documents}
+        activeDocument={activeDocument}
         pluginStates={pluginStates}
-        onUploadPlugin={(files) => void uploadCustomPlugin(files)}
+        luaActions={luaActions}
+        onRunLuaCommand={runLuaConsoleCommand}
+        onRunActiveLuaDocument={runActiveLuaDocument}
+        onOpenLuaResult={openLuaResult}
+        onNewLuaScript={newLuaScript}
         onClose={(id) => setPopups((items) => items.filter((popup) => popup.id !== id))}
         onRefresh={(id) => void refreshPopup(id)}
         onUpdate={updatePopup}
@@ -590,6 +667,37 @@ export function App() {
       />
     </div>
   );
+}
+
+function documentInput(document: TextDocument): PipelineValue {
+  return {
+    kind: "text",
+    languageId: document.languageId,
+    text: document.text,
+    fileName: document.fileName,
+    documentId: document.id
+  };
+}
+
+function pipelineValueToDocument(value: PipelineValue): Partial<TextDocument> & Pick<TextDocument, "text" | "languageId"> {
+  if (value.kind === "text") {
+    return {
+      fileName: value.fileName || `lua-result.${extensionForLanguage(value.languageId)}`,
+      languageId: value.languageId,
+      text: value.text
+    };
+  }
+  if (value.kind === "model") {
+    return {
+      fileName: `lua-result.json`,
+      languageId: "text.json",
+      text: JSON.stringify(value.data, null, 2)
+    };
+  }
+  if (value.kind === "html") {
+    return { fileName: "lua-result.html", languageId: "text.xml", text: value.html };
+  }
+  return { fileName: "lua-result.svg", languageId: "text.xml", text: value.svg };
 }
 
 function languageForTraceStep(step: PipelineTraceStep): string {
@@ -647,67 +755,6 @@ function looksLikeJson(value: string): boolean {
   return trimmed.startsWith("{") || trimmed.startsWith("[");
 }
 
-async function importCustomPlugin(file: File): Promise<TextForgePlugin> {
-  const source = await file.text();
-  const eventName = `textforge-plugin-${Math.random().toString(36).slice(2)}`;
-  const wrappedSource = `(() => {
-const registerTextForgePlugin = (plugin) => {
-  document.dispatchEvent(new CustomEvent("${eventName}", { detail: plugin }));
-};
-${source}
-})();`;
-
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(new Blob([wrappedSource], { type: "text/javascript" }));
-    const script = document.createElement("script");
-    let settled = false;
-    const cleanup = () => {
-      document.removeEventListener(eventName, onPlugin);
-      script.remove();
-      URL.revokeObjectURL(url);
-    };
-    const fail = (message: string) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      cleanup();
-      reject(new Error(message));
-    };
-    const timer = window.setTimeout(() => fail("Custom plugin did not call registerTextForgePlugin(plugin)."), 1000);
-    function onPlugin(event: Event): void {
-      if (settled) {
-        return;
-      }
-      const plugin = (event as CustomEvent).detail;
-      if (!isTextForgePlugin(plugin)) {
-        window.clearTimeout(timer);
-        fail("Custom plugin must register a plugin object with id, name, and version.");
-        return;
-      }
-      settled = true;
-      window.clearTimeout(timer);
-      cleanup();
-      resolve(plugin);
-    }
-    document.addEventListener(eventName, onPlugin);
-    script.onerror = () => {
-      window.clearTimeout(timer);
-      fail("Custom plugin script failed to load.");
-    };
-    script.src = url;
-    document.head.append(script);
-  });
-}
-
-function isTextForgePlugin(value: unknown): value is TextForgePlugin {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  const candidate = value as Partial<TextForgePlugin>;
-  return typeof candidate.id === "string" && typeof candidate.name === "string" && typeof candidate.version === "string";
-}
-
 function readFile(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -716,3 +763,22 @@ function readFile(file: File): Promise<string> {
     reader.readAsText(file);
   });
 }
+
+const luaActionBoilerplate = `local tree = require("tf.tree")
+
+return {
+  id = "uppercase-itt-labels",
+  name = "Uppercase ITT labels",
+  category = "Lua Transform",
+  input = "text.indented-tree",
+  output = "text.indented-tree",
+  description = "Uppercases every ITT node label and emits ITT.",
+  run = function(input)
+    local nodes = input:parse_itt()
+    tree.walk(nodes, function(node)
+      node.label = string.upper(node.label)
+    end)
+    return input:emit_itt(nodes)
+  end
+}
+`;

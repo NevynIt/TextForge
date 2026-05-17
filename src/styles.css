@@ -1426,6 +1426,100 @@ button:disabled {
   color: #8a2d2d;
 }
 
+.lua-console-panel,
+.lua-script-panel {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 100%;
+  background: #f8f6ef;
+}
+
+.lua-console-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-bottom: 1px solid #d8d4c8;
+  background: #f0eee7;
+}
+
+.lua-console-toolbar button {
+  border: 1px solid #b9b4a7;
+  border-radius: 6px;
+  background: #fffefa;
+  color: #202225;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.lua-console-toolbar button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.lua-console-toolbar span {
+  margin-left: auto;
+  color: #636866;
+  font-size: 12px;
+}
+
+.lua-terminal {
+  min-height: 0;
+  padding: 8px;
+  background: #151c21;
+}
+
+.lua-terminal .xterm {
+  height: 100%;
+}
+
+.lua-script-panel {
+  grid-template-rows: auto auto 1fr;
+  overflow: auto;
+}
+
+.lua-script-panel section {
+  padding: 12px;
+  border-bottom: 1px solid #e2ded1;
+}
+
+.lua-script-panel h3 {
+  margin: 0 0 8px;
+  font-size: 14px;
+}
+
+.lua-action-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lua-action-list li {
+  display: grid;
+  gap: 3px;
+  padding: 10px;
+  border: 1px solid #d8d4c8;
+  border-radius: 8px;
+  background: #fffefa;
+}
+
+.lua-action-list span,
+.lua-action-list small {
+  color: #636866;
+}
+
+.lua-script-panel pre {
+  max-height: 320px;
+  overflow: auto;
+  margin: 0;
+  padding: 12px;
+  border-radius: 8px;
+  background: #20272b;
+  color: #f6f3e8;
+}
+
 .trace-list li div {
   display: flex;
   align-items: center;

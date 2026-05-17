@@ -64,7 +64,11 @@ export function createDiagnosticsPopup(document: TextDocument, diagnostics: Diag
   };
 }
 
-export function createToolPopup(kind: "plugin-manager" | "pipeline-trace", title: string, trace?: PipelineTraceStep[]): PopupRecord {
+export function createToolPopup(
+  kind: "plugin-manager" | "pipeline-trace" | "lua-console" | "lua-scripts" | "resource-browser",
+  title: string,
+  trace?: PipelineTraceStep[]
+): PopupRecord {
   const now = new Date().toISOString();
   return {
     id: createId("popup"),

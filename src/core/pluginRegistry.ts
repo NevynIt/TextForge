@@ -112,6 +112,34 @@ export class PluginRegistry {
     this.registerPlugin(plugin);
   }
 
+  replaceGeneratedPlugin(plugin: TextForgePlugin): void {
+    assertPlugin(plugin);
+    this.unregisterPlugin(plugin.id);
+    const contributionIds = contributionIdsForPlugin(plugin);
+    this.manifests.set(plugin.id, {
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      autoLoad: false,
+      languages: plugin.languages || [],
+      pipelines: plugin.pipelines || [],
+      contributionIds,
+      load: async () => plugin
+    });
+    this.states.set(plugin.id, {
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      status: "loaded",
+      autoload: false,
+      contributionIds
+    });
+    for (const contributionId of contributionIds) {
+      this.contributionOwners.set(contributionId, plugin.id);
+    }
+    this.registerPlugin(plugin);
+  }
+
   listLanguages(): LanguageDefinition[] {
     return this.languageRegistry.list();
   }
@@ -235,6 +263,21 @@ export class PluginRegistry {
       }
     }
     return undefined;
+  }
+
+  private unregisterPlugin(pluginId: string): void {
+    const manifest = this.manifests.get(pluginId);
+    for (const contributionId of manifest?.contributionIds || []) {
+      this.contributionOwners.delete(contributionId);
+      for (const map of Object.values(this.contributions)) {
+        map.delete(contributionId);
+      }
+    }
+    for (const pipeline of manifest?.pipelines || []) {
+      this.pipelines.delete(pipeline.id);
+    }
+    this.manifests.delete(pluginId);
+    this.states.delete(pluginId);
   }
 
   private buildLoadedPlugin(pluginId: string): TextForgePlugin {

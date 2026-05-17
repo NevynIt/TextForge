@@ -25,20 +25,27 @@ import {
   Tag,
   Tags,
   UnfoldVertical,
-  Upload,
   X,
   ZoomIn,
   ZoomOut
 } from "lucide-preact";
-import type { PipelineTraceStep, PluginState, PopupRecord, TextDocument, ViewerControlDefinition, ViewerSettingValue } from "../domain/types";
+import type { PipelineTraceStep, PipelineValue, PluginState, PopupRecord, TextDocument, ViewerControlDefinition, ViewerSettingValue } from "../domain/types";
+import type { RegisteredLuaAction } from "../lua/luaScriptRegistry";
+import type { LuaRunResult } from "../lua/types";
 import { DocumentBadge, documentBadgeSvgMarkup } from "./DocumentBadge";
+import { LuaConsolePanel, LuaScriptManagerPanel } from "./LuaConsolePanel";
 import { ViewerContent, viewerSnapshotHtml } from "./viewers";
 
 interface PopupHostProps {
   popups: PopupRecord[];
   documents: TextDocument[];
+  activeDocument?: TextDocument;
   pluginStates: PluginState[];
-  onUploadPlugin: (files: FileList | null) => void;
+  luaActions: RegisteredLuaAction[];
+  onRunLuaCommand: (source: string) => Promise<LuaRunResult>;
+  onRunActiveLuaDocument: () => Promise<LuaRunResult>;
+  onOpenLuaResult: (value: PipelineValue) => void;
+  onNewLuaScript: () => void;
   onClose: (id: string) => void;
   onRefresh: (id: string) => void;
   onUpdate: (id: string, patch: Partial<PopupRecord>) => void;
@@ -48,8 +55,13 @@ interface PopupHostProps {
 export function PopupHost({
   popups,
   documents,
+  activeDocument,
   pluginStates,
-  onUploadPlugin,
+  luaActions,
+  onRunLuaCommand,
+  onRunActiveLuaDocument,
+  onOpenLuaResult,
+  onNewLuaScript,
   onClose,
   onRefresh,
   onUpdate,
@@ -261,13 +273,25 @@ export function PopupHost({
                 />
               ) : null}
               {popup.kind === "diagnostics" ? <DiagnosticsList popup={popup} onUpdate={onUpdate} /> : null}
-              {popup.kind === "plugin-manager" ? <PluginManagerList states={pluginStates} onUploadPlugin={onUploadPlugin} /> : null}
+              {popup.kind === "plugin-manager" ? <PluginManagerList states={pluginStates} /> : null}
               {popup.kind === "pipeline-trace" ? (
                 <PipelineTrace
                   trace={popup.trace || []}
                   documents={documents}
                   onOpenStep={(step) => onOpenTraceStep(popup.id, step)}
                 />
+              ) : null}
+              {popup.kind === "lua-console" ? (
+                <LuaConsolePanel
+                  activeDocument={activeDocument}
+                  actions={luaActions}
+                  onRunCommand={onRunLuaCommand}
+                  onRunActiveDocument={onRunActiveLuaDocument}
+                  onOpenResult={onOpenLuaResult}
+                />
+              ) : null}
+              {popup.kind === "lua-scripts" ? (
+                <LuaScriptManagerPanel documents={documents} actions={luaActions} onNewScript={onNewLuaScript} />
               ) : null}
             </main>
             <div class="popup-resize-handle" title="Resize" onPointerDown={(event) => startPopupResize(event, popup, frame, onUpdate)} />
@@ -684,16 +708,11 @@ function diagnosticLocation(diagnostic: NonNullable<PopupRecord["diagnostics"]>[
   return `${line + 1}:${typeof column === "number" ? column + 1 : 1}`;
 }
 
-function PluginManagerList({ states, onUploadPlugin }: { states: PluginState[]; onUploadPlugin: (files: FileList | null) => void }) {
+function PluginManagerList({ states }: { states: PluginState[] }) {
   return (
     <div class="plugin-list">
       <div class="plugin-upload">
-        <label class="file-button">
-          <Upload size={16} />
-          Upload plugin
-          <input type="file" accept=".js,.mjs,text/javascript" onChange={(event) => onUploadPlugin(event.currentTarget.files)} />
-        </label>
-        <small>Custom plugins must be self-contained JavaScript files that call registerTextForgePlugin(plugin).</small>
+        <small>User extensibility is Lua-only in this build. Trusted JavaScript plugins are packaged with TextForge and lazy-loaded internally.</small>
       </div>
       {states.map((state) => (
         <article key={state.id}>
