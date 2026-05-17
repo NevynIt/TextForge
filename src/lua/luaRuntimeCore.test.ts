@@ -72,6 +72,44 @@ describe("Lua runtime core", () => {
 
     expect(result.ok).toBe(false);
     expect(result.error).toContain("invalid graph model");
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "lua-runtime",
+      severity: "error",
+      languageId: "text.lua"
+    });
+  });
+
+  it("maps Lua syntax errors into source diagnostics", () => {
+    const result = executeLuaInProcess({
+      mode: "script",
+      source: "local value =\nreturn value",
+      fileName: "broken.lua"
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      source: "lua-runtime",
+      severity: "error",
+      line: 1,
+      column: 0
+    });
+    expect(result.diagnostics?.[0]?.message).toContain("Lua error:");
+  });
+
+  it("offsets selected Lua diagnostics back to the source document", () => {
+    const result = executeLuaInProcess({
+      mode: "script",
+      source: "print('before')\nlocal value =",
+      fileName: "selected.lua",
+      sourceOffset: { from: 42, line: 7, column: 4 }
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.diagnostics?.[0]).toMatchObject({
+      line: 8,
+      column: 0
+    });
+    expect(result.diagnostics?.[0]?.from).toBeGreaterThan(42);
   });
 
   it("lets Lua call whitelisted built-in transformation steps", () => {

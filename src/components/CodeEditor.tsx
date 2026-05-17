@@ -17,7 +17,7 @@ interface CodeEditorProps {
   languageId: string;
   onChange: (text: string) => void;
   revealRange?: (SourceRange & { revision?: number }) | null;
-  onSelectionChange?: (range: SourceRange) => void;
+  onSelectionChange?: (range: SourceRange, selectedText: string) => void;
 }
 
 export function CodeEditor({ value, languageId, onChange, revealRange, onSelectionChange }: CodeEditorProps) {
@@ -61,7 +61,7 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onSelecti
               to,
               line: line.number - 1,
               column: from - line.from
-            });
+            }, update.state.sliceDoc(from, to));
           }
         }),
         syntaxHighlighting(textForgeHighlightStyle),

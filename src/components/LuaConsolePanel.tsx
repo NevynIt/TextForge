@@ -10,6 +10,8 @@ interface LuaConsolePanelProps {
   actions: RegisteredLuaAction[];
   onRunCommand: (source: string) => Promise<LuaRunResult>;
   onRunActiveDocument: () => Promise<LuaRunResult>;
+  onRunSelection: () => Promise<LuaRunResult>;
+  selectedText?: string;
   onOpenResult: (value: PipelineValue) => void;
 }
 
@@ -18,6 +20,8 @@ export function LuaConsolePanel({
   actions,
   onRunCommand,
   onRunActiveDocument,
+  onRunSelection,
+  selectedText,
   onOpenResult
 }: LuaConsolePanelProps) {
   const hostRef = useRef<HTMLDivElement>(null);
@@ -171,6 +175,9 @@ export function LuaConsolePanel({
     if (parsed.kind === "actions") {
       return { ok: true, output: describeActions(actions), value: undefined };
     }
+    if (parsed.kind === "selection") {
+      return onRunSelection();
+    }
     if (parsed.kind === "open-last") {
       if (!lastResult) {
         return { ok: false, output: "", error: "No previous result to open." };
@@ -197,6 +204,9 @@ export function LuaConsolePanel({
 
   async function executeOpenCommand(command: string): Promise<LuaRunResult> {
     const parsed = parseConsoleCommand(command);
+    if (parsed.kind === "selection") {
+      return onRunSelection();
+    }
     if (parsed.kind === "pipeline") {
       return onRunCommand(`return run(${luaString(parsed.id)})`);
     }
@@ -211,6 +221,9 @@ export function LuaConsolePanel({
       <div class="lua-console-toolbar">
         <button type="button" disabled={running || activeDocument?.languageId !== "text.lua"} onClick={() => void runAndWrite(activeDocument?.fileName || "active Lua document", onRunActiveDocument)}>
           Run active
+        </button>
+        <button type="button" disabled={running || activeDocument?.languageId !== "text.lua" || !selectedText?.trim()} onClick={() => void runAndWrite("selected Lua", onRunSelection)}>
+          Run selection
         </button>
         <button type="button" disabled={!lastResult} onClick={() => lastResult && onOpenResult(lastResult)}>
           Open result
@@ -241,6 +254,7 @@ function writeIntro(terminal: XTermTerminal | null): void {
 type ParsedConsoleCommand =
   | { kind: "help" }
   | { kind: "actions" }
+  | { kind: "selection" }
   | { kind: "open-last" }
   | { kind: "pipeline"; id: string }
   | { kind: "action"; id: string }
@@ -255,6 +269,9 @@ function parseConsoleCommand(command: string): ParsedConsoleCommand {
   }
   if (lower === "actions") {
     return { kind: "actions" };
+  }
+  if (lower === "selection" || lower === "run selection") {
+    return { kind: "selection" };
   }
   if (lower === "open last") {
     return { kind: "open-last" };
@@ -282,6 +299,7 @@ function consoleHelpText(actions: RegisteredLuaAction[]): string {
     "Lua console shortcuts:",
     "  help                 show this message",
     "  actions              list registered Lua actions",
+    "  run selection        run selected Lua from the active editor",
     "  run <pipeline-id>    run a whitelisted built-in bridge, e.g. run itt-to-graph",
     "  action <action-id>   run a registered Lua action",
     "  open <command>       run a shortcut or Lua expression and open the result as a document",

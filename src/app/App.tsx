@@ -22,7 +22,7 @@ import { PluginRegistry } from "../core/pluginRegistry";
 import { RuntimeLoader } from "../core/runtimeLoader";
 import { TextForgeStorage } from "../core/storage";
 import { WorkspaceManager } from "../core/workspaceManager";
-import type { PipelineTraceStep, PipelineValue, PopupRecord, SourceRange, TextDocument, VisualSelection } from "../domain/types";
+import type { Diagnostic, PipelineTraceStep, PipelineValue, PopupRecord, SourceRange, TextDocument, VisualSelection } from "../domain/types";
 import { pluginManifest } from "../plugins/manifest";
 import { CodeEditor } from "../components/CodeEditor";
 import { DocumentBadge } from "../components/DocumentBadge";
@@ -75,6 +75,7 @@ export function App() {
   const [renameDraft, setRenameDraft] = useState("");
   const [luaActions, setLuaActions] = useState<RegisteredLuaAction[]>([]);
   const [visualSelection, setVisualSelection] = useState<VisualSelection | undefined>();
+  const [editorSelection, setEditorSelection] = useState<{ documentId: string; documentVersion: number; range: SourceRange; text: string } | undefined>();
   const popupsRef = useRef(popups);
   popupsRef.current = popups;
 
@@ -275,10 +276,16 @@ export function App() {
     commitWorkspace(`Language changed to ${languageId}.`);
   }
 
-  function updateEditorSelection(range: SourceRange): void {
+  function updateEditorSelection(range: SourceRange, selectedText: string): void {
     if (!activeDocument) {
       return;
     }
+    setEditorSelection({
+      documentId: activeDocument.id,
+      documentVersion: activeDocument.version,
+      range,
+      text: selectedText
+    });
     setVisualSelection((current) => ({
       documentId: activeDocument.id,
       documentVersion: activeDocument.version,
@@ -478,6 +485,7 @@ export function App() {
       documents: services.workspace.listDocuments(),
       actions: luaActions
     });
+    publishLuaDiagnostics(result, activeDocument);
     setStatus(result.ok ? "Lua command complete." : result.error || "Lua command failed.");
     return result;
   }
@@ -494,8 +502,54 @@ export function App() {
       documents: services.workspace.listDocuments(),
       actions: luaActions
     });
+    publishLuaDiagnostics(result, activeDocument);
     setStatus(result.ok ? `Ran ${activeDocument.fileName}.` : result.error || "Lua script failed.");
     return result;
+  }
+
+  async function runSelectedLuaText(): Promise<LuaRunResult> {
+    if (!activeDocument || activeDocument.languageId !== "text.lua") {
+      return { ok: false, output: "", error: "Active document is not a Lua document." };
+    }
+    if (
+      !editorSelection ||
+      editorSelection.documentId !== activeDocument.id ||
+      editorSelection.documentVersion !== activeDocument.version ||
+      !editorSelection.text.trim()
+    ) {
+      return { ok: false, output: "", error: "No Lua selection to run." };
+    }
+    const result = await services.lua.run({
+      mode: "script",
+      source: editorSelection.text,
+      fileName: `${activeDocument.fileName} selection`,
+      sourceOffset: {
+        from: editorSelection.range.from,
+        line: editorSelection.range.line,
+        column: editorSelection.range.column
+      },
+      input: documentInput(activeDocument),
+      documents: services.workspace.listDocuments(),
+      actions: luaActions
+    });
+    publishLuaDiagnostics(result, activeDocument);
+    setStatus(result.ok ? `Ran selection from ${activeDocument.fileName}.` : result.error || "Lua selection failed.");
+    return result;
+  }
+
+  function publishLuaDiagnostics(result: LuaRunResult, document?: TextDocument): void {
+    if (!result.diagnostics?.length || !document) {
+      return;
+    }
+    const diagnostics = result.diagnostics.map((diagnostic, index): Diagnostic => ({
+      ...diagnostic,
+      id: diagnostic.id || `lua-runtime-${index}`,
+      languageId: diagnostic.languageId || "text.lua",
+      documentId: diagnostic.documentId || document.id,
+      documentVersion: diagnostic.documentVersion || document.version,
+      target: { ...(diagnostic.target || {}), documentId: diagnostic.documentId || document.id }
+    }));
+    upsertPopup(createDiagnosticsPopup(document, diagnostics), (popup) => popup.kind === "diagnostics" && popup.documentId === document.id);
   }
 
   function openLuaResult(value: PipelineValue): void {
@@ -749,6 +803,14 @@ export function App() {
         resources={textForgeResources}
         onRunLuaCommand={runLuaConsoleCommand}
         onRunActiveLuaDocument={runActiveLuaDocument}
+        onRunSelectedLuaText={runSelectedLuaText}
+        selectedLuaText={
+          activeDocument?.languageId === "text.lua" &&
+          editorSelection?.documentId === activeDocument.id &&
+          editorSelection.documentVersion === activeDocument.version
+            ? editorSelection.text
+            : ""
+        }
         onOpenLuaResult={openLuaResult}
         onNewLuaScript={newLuaScript}
         onOpenResource={openResource}

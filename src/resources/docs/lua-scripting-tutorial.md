@@ -55,13 +55,16 @@ The Lua Console accepts normal Lua snippets and a few convenience commands:
 ```text
 help
 actions
+run selection
 run itt-to-graph
 action uppercase-itt-labels
+open run selection
 open run itt-to-graph
 open last
 ```
 
 `open <command>` runs the command and opens the returned text/model as a new editor document.
+`run selection` executes the currently selected Lua text from the active editor and maps runtime diagnostics back to the selected source lines.
 
 ## Bundled Modules
 

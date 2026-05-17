@@ -1,4 +1,4 @@
-import type { PipelineValue, TextDocument } from "../domain/types";
+import type { Diagnostic, PipelineValue, SourceRange, TextDocument } from "../domain/types";
 
 export interface LuaLimits {
   maxInstructions: number;
@@ -42,6 +42,7 @@ export interface LuaRunRequest {
   mode: "command" | "script" | "action" | "inspect";
   source: string;
   fileName?: string;
+  sourceOffset?: Pick<SourceRange, "from" | "line" | "column">;
   actionId?: string;
   input?: PipelineValue;
   documents?: TextDocument[];
@@ -55,6 +56,6 @@ export interface LuaRunResult {
   output: string;
   value?: PipelineValue;
   actions?: LuaActionDescriptor[];
-  diagnostics?: Array<{ severity: "error" | "warning" | "information"; message: string; source: string }>;
+  diagnostics?: Diagnostic[];
   error?: string;
 }

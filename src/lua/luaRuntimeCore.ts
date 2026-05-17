@@ -1,5 +1,5 @@
 import { lauxlib, lua, lualib, to_luastring } from "fengari";
-import type { GraphModel, PipelineValue, TextDocument, TreeNode } from "../domain/types";
+import type { Diagnostic, GraphModel, PipelineValue, TextDocument, TreeNode } from "../domain/types";
 import { indentedTreeToGraph, parseIndentedTree } from "../parsers/itt";
 import { extractMarkdownHeadingTree } from "../parsers/markdown";
 import { bundledLuaModules } from "./luaModules";
@@ -75,10 +75,12 @@ export function executeLuaInProcess(request: LuaRunRequest): LuaRunResult {
       value: value === undefined ? undefined : normalizePipelineValue(value, context)
     };
   } catch (error) {
+    const message = luaErrorMessage(error);
     return {
       ok: false,
       output: context.output.join("\n"),
-      error: luaErrorMessage(error)
+      error: message,
+      diagnostics: [luaRuntimeDiagnostic(message, request)]
     };
   }
 }
@@ -823,4 +825,58 @@ function sanitizeId(value: string): string {
 
 function luaErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
+}
+
+function luaRuntimeDiagnostic(message: string, request: LuaRunRequest): Diagnostic {
+  const location = luaErrorLocation(message, request.source, request.sourceOffset);
+  const input = request.input?.kind === "text" ? request.input : undefined;
+  const targetLuaDocument = input?.languageId === "text.lua" ? input : undefined;
+  return {
+    id: `lua-runtime-${location.line ?? "error"}-${location.column ?? 0}`,
+    source: "lua-runtime",
+    severity: "error",
+    languageId: "text.lua",
+    documentId: targetLuaDocument?.documentId,
+    message: `Lua error: ${message}`,
+    target: { fileName: request.fileName || "console.lua" },
+    ...location
+  };
+}
+
+function luaErrorLocation(
+  message: string,
+  source: string,
+  sourceOffset: Pick<NonNullable<LuaRunRequest["sourceOffset"]>, "from" | "line" | "column"> = { from: 0, line: 0, column: 0 }
+): Pick<Diagnostic, "from" | "to" | "line" | "column" | "range"> {
+  const match = /:(\d+):/.exec(message);
+  if (!match) {
+    return {};
+  }
+  const localLine = Math.max(0, Number(match[1]) - 1);
+  const column = localLine === 0 ? sourceOffset.column : 0;
+  const from = sourceOffset.from + offsetAtLine(source, localLine, column);
+  const range = {
+    from,
+    to: from,
+    line: sourceOffset.line + localLine,
+    column
+  };
+  return { ...range, range };
+}
+
+function offsetAtLine(source: string, line: number, column: number): number {
+  if (line <= 0) {
+    return column;
+  }
+  let position = 0;
+  let currentLine = 0;
+  while (currentLine < line && position < source.length) {
+    const next = source.indexOf("\n", position);
+    if (next < 0) {
+      return source.length;
+    }
+    position = next + 1;
+    currentLine += 1;
+  }
+  return Math.min(source.length, position + column);
 }

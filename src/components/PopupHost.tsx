@@ -47,6 +47,8 @@ interface PopupHostProps {
   resources: TextForgeResource[];
   onRunLuaCommand: (source: string) => Promise<LuaRunResult>;
   onRunActiveLuaDocument: () => Promise<LuaRunResult>;
+  onRunSelectedLuaText: () => Promise<LuaRunResult>;
+  selectedLuaText?: string;
   onOpenLuaResult: (value: PipelineValue) => void;
   onNewLuaScript: () => void;
   onOpenResource: (resource: TextForgeResource) => void;
@@ -68,6 +70,8 @@ export function PopupHost({
   resources,
   onRunLuaCommand,
   onRunActiveLuaDocument,
+  onRunSelectedLuaText,
+  selectedLuaText,
   onOpenLuaResult,
   onNewLuaScript,
   onOpenResource,
@@ -307,6 +311,8 @@ export function PopupHost({
                   actions={luaActions}
                   onRunCommand={onRunLuaCommand}
                   onRunActiveDocument={onRunActiveLuaDocument}
+                  onRunSelection={onRunSelectedLuaText}
+                  selectedText={selectedLuaText}
                   onOpenResult={onOpenLuaResult}
                 />
               ) : null}
