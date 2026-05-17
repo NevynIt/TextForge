@@ -636,6 +636,9 @@ function extensionForLanguage(languageId: string): string {
   if (languageId === "text.python") {
     return "py";
   }
+  if (languageId === "text.lua") {
+    return "lua";
+  }
   return "txt";
 }
 

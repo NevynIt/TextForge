@@ -113,6 +113,14 @@ export function registerBaseLanguages(registry: LanguageRegistry): void {
       aliases: ["python", "py"]
     },
     {
+      id: "text.lua",
+      name: "Lua",
+      parentId: "text",
+      extensions: [".lua"],
+      mediaType: "text/x-lua",
+      aliases: ["lua"]
+    },
+    {
       id: "text.xml",
       name: "XML",
       parentId: "text",

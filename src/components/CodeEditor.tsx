@@ -6,6 +6,7 @@ import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { xml } from "@codemirror/lang-xml";
 import { HighlightStyle, StreamLanguage, syntaxHighlighting, type StreamParser } from "@codemirror/language";
+import { lua as luaLegacy } from "@codemirror/legacy-modes/mode/lua";
 import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
@@ -95,6 +96,9 @@ function languageExtension(languageId: string) {
   }
   if (languageId === "text.python") {
     return python();
+  }
+  if (languageId === "text.lua") {
+    return StreamLanguage.define(luaLegacy);
   }
   if (languageId === "text.xml") {
     return xml();
