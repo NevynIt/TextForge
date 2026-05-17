@@ -4,6 +4,9 @@ import preact from "@preact/preset-vite";
 export default defineConfig({
   base: "./",
   plugins: [preact()],
+  define: {
+    "process.env.FENGARICONF": "undefined"
+  },
   build: {
     target: "es2022",
     sourcemap: true,

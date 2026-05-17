@@ -1,6 +1,11 @@
 import type { TextForgePlugin } from "../domain/types";
 import { extractMarkdownHeadingTree } from "../parsers/markdown";
 import { escapeHtml } from "../parsers/source";
+import MarkdownIt from "markdown-it";
+import katex from "katex";
+import hljs from "highlight.js";
+import mermaid from "mermaid";
+import * as viz from "@viz-js/viz";
 import "katex/dist/katex.min.css";
 import "highlight.js/styles/github.css";
 
@@ -34,14 +39,6 @@ const plugin: TextForgePlugin = {
         if (value.kind !== "text") {
           throw new Error("Markdown transformer requires text input.");
         }
-        const [mod, katexMod, hljsMod] = await Promise.all([
-          context.runtime.load("markdown-it", () => import("markdown-it")),
-          context.runtime.load("katex", () => import("katex")),
-          context.runtime.load("highlight.js", () => import("highlight.js"))
-        ]);
-        const MarkdownIt = mod.default;
-        const katex = katexMod.default;
-        const hljs = hljsMod.default;
         const artifacts: MarkdownArtifact[] = [];
         const inlineMath: InlineMathArtifact[] = [];
         const prepared = await extractMarkdownArtifacts(value.text, artifacts, inlineMath, context, katex);
@@ -166,17 +163,15 @@ async function renderDiagramArtifact(
 }
 
 async function renderMermaid(source: string, id: string, context: Parameters<NonNullable<TextForgePlugin["transformers"]>[number]["transform"]>[1]): Promise<string> {
-  const mod = await context.runtime.load("mermaid", () => import("mermaid"));
-  const mermaid = mod.default;
+  await context.runtime.load("mermaid", () => Promise.resolve(mermaid));
   mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
   const rendered = await mermaid.render(`textforge-md-${id}`, source);
   return rendered.svg;
 }
 
 async function renderGraphviz(source: string, context: Parameters<NonNullable<TextForgePlugin["transformers"]>[number]["transform"]>[1]): Promise<string> {
-  const mod = await context.runtime.load("@viz-js/viz", () => import("@viz-js/viz"));
-  const viz = await mod.instance();
-  return viz.renderSVGElement(source).outerHTML;
+  const runtime = await context.runtime.load("@viz-js/viz", () => viz.instance());
+  return runtime.renderSVGElement(source).outerHTML;
 }
 
 function renderMathBlock(

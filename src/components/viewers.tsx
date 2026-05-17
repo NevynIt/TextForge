@@ -614,6 +614,7 @@ function MindMapView({
   const hostRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<jsMind | null>(null);
+  const crossLinkLabelOffsetsRef = useRef(new Map<string, Point>());
   const mind = useMemo(() => treeToJsMind(nodes), [nodes]);
   const searchMatches = useMemo(() => matchingTreeNodes(nodes, query), [nodes, query]);
   const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
@@ -732,7 +733,7 @@ function MindMapView({
     instanceRef.current = instance;
     instance.show(mind);
     (instance as unknown as { add_event_listener?: (handler: () => void) => void }).add_event_listener?.(() => {
-      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels }));
+      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current }));
     });
     const doubleClick = (event: MouseEvent) => {
       const id = jsMindNodeId(instance, event.target);
@@ -742,7 +743,7 @@ function MindMapView({
       event.preventDefault();
       event.stopPropagation();
       toggleJsMindNode(instance, id, event.shiftKey);
-      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels }));
+      window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current }));
     };
     host.addEventListener("dblclick", doubleClick, true);
     if (initialDepth === "collapsed") {
@@ -753,12 +754,12 @@ function MindMapView({
       instance.expand_all?.();
     }
     setNativeMindMapZoom(instance, zoom);
-    renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
+    renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
     centerMindMapNode(viewport, host, mind.data.id);
     window.setTimeout(() => {
       instance.resize?.();
       setNativeMindMapZoom(instance, zoom);
-      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
+      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
       centerMindMapNode(viewport, host, mind.data.id);
     }, 0);
 
@@ -798,14 +799,14 @@ function MindMapView({
       return;
     }
     const activeMatch = searchMatches[activeMatchIndex];
-    renderMindMapDecorations(host, nodes, query, activeMatch?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
+    renderMindMapDecorations(host, nodes, query, activeMatch?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
     if (!activeMatch) {
       return;
     }
     expandJsMindPath(instance, nodes, activeMatch.id);
     window.requestAnimationFrame(() => {
       instance.select_node?.(activeMatch.id);
-      renderMindMapDecorations(host, nodes, query, activeMatch.id, { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
+      renderMindMapDecorations(host, nodes, query, activeMatch.id, { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
       centerMindMapNode(viewport, host, activeMatch.id);
     });
   }, [query, searchMatches, activeMatchIndex, nodes, showCrossLinkArrows, showCrossLinkLabels]);
@@ -817,7 +818,7 @@ function MindMapView({
       return;
     }
     setNativeMindMapZoom(instance, zoom);
-    window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels }));
+    window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current }));
   }, [zoom, showCrossLinkArrows, showCrossLinkLabels]);
 
   useEffect(() => {
@@ -836,10 +837,10 @@ function MindMapView({
       fitMindMap(instance, viewport, host, onZoomChange);
     } else if (toolbarAction.action === "mindmap-fold-all") {
       instance.collapse_all?.();
-      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
+      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
     } else if (toolbarAction.action === "mindmap-unfold-all") {
       instance.expand_all?.();
-      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels });
+      renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
     }
   }, [toolbarAction?.revision]);
 
@@ -2063,9 +2064,22 @@ function countTreeNodes(nodes: TreeNode[]): number {
   return nodes.reduce((count, node) => count + 1 + countTreeNodes(node.children), 0);
 }
 
+interface Point {
+  x: number;
+  y: number;
+}
+
+interface Box {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
+}
+
 interface MindMapDecorationOptions {
   showArrows: boolean;
   showLabels: boolean;
+  labelOffsets?: Map<string, Point>;
 }
 
 function renderMindMapDecorations(
@@ -2119,7 +2133,7 @@ function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[], options: 
   const layer = host.querySelector<HTMLElement>("jmnodes") || host.querySelector<HTMLElement>(".jsmind-inner") || host;
   layer.querySelector(".jsmind-cross-links")?.remove();
   const nodeIndex = indexTreeNodes(nodes);
-  const links: Array<{ source: TreeNode; target: TreeNode; type?: string; color?: string; width?: number }> = [];
+  const links: Array<{ id: string; source: TreeNode; target: TreeNode; type?: string; color?: string; width?: number }> = [];
   const seenSources = new Set<string>();
   nodeIndex.forEach((node) => {
     if (seenSources.has(node.id)) {
@@ -2130,6 +2144,7 @@ function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[], options: 
       const target = nodeIndex.get(link.target);
       if (target) {
         links.push({
+          id: `${node.id}->${link.type || ""}->${target.id}`,
           source: node,
           target,
           type: link.type,
@@ -2154,13 +2169,16 @@ function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[], options: 
     if (!source || !target || source.offsetParent === null || target.offsetParent === null) {
       return;
     }
-    const sx = source.offsetLeft + source.offsetWidth / 2;
-    const sy = source.offsetTop + source.offsetHeight / 2;
-    const tx = target.offsetLeft + target.offsetWidth / 2;
-    const ty = target.offsetTop + target.offsetHeight / 2;
-    const midX = sx + (tx - sx) * 0.5;
+    const sourceBox = elementBox(source);
+    const targetBox = elementBox(target);
+    const sourceCenter = boxCenter(sourceBox);
+    const targetCenter = boxCenter(targetBox);
+    const start = lineBoxIntersection(sourceCenter, targetCenter, sourceBox);
+    const end = lineBoxIntersection(targetCenter, sourceCenter, targetBox);
+    const midX = start.x + (end.x - start.x) * 0.5;
+    const midY = start.y + (end.y - start.y) * 0.5;
     const path = document.createElementNS(SVG_NAMESPACE, "path");
-    path.setAttribute("d", `M ${sx} ${sy} C ${midX} ${sy}, ${midX} ${ty}, ${tx} ${ty}`);
+    path.setAttribute("d", `M ${start.x} ${start.y} C ${midX} ${start.y}, ${midX} ${end.y}, ${end.x} ${end.y}`);
     path.setAttribute("fill", "none");
     path.setAttribute("stroke", link.color || "#cf6f2a");
     path.setAttribute("stroke-width", String(link.width || 2));
@@ -2186,15 +2204,96 @@ function renderMindMapCrossLinks(host: HTMLElement, nodes: TreeNode[], options: 
     path.append(title);
     svg.append(path);
     if (options.showLabels && link.type) {
-      const text = document.createElementNS(SVG_NAMESPACE, "text");
+      const offset = options.labelOffsets?.get(link.id) || { x: 0, y: 0 };
+      const text = document.createElementNS(SVG_NAMESPACE, "text") as SVGTextElement;
       text.classList.add("jsmind-cross-link-label");
-      text.setAttribute("x", String(midX));
-      text.setAttribute("y", String((sy + ty) / 2 - 6));
+      text.setAttribute("x", String(midX + offset.x));
+      text.setAttribute("y", String(midY - 6 + offset.y));
+      text.setAttribute("data-edge-id", link.id);
       text.textContent = link.type;
+      attachMindMapLabelDrag(text, link.id, { x: midX, y: midY - 6 }, options.labelOffsets);
       svg.append(text);
     }
   });
   layer.prepend(svg);
+}
+
+function elementBox(element: HTMLElement): Box {
+  return {
+    left: element.offsetLeft,
+    top: element.offsetTop,
+    width: element.offsetWidth,
+    height: element.offsetHeight
+  };
+}
+
+function boxCenter(box: Box): Point {
+  return {
+    x: box.left + box.width / 2,
+    y: box.top + box.height / 2
+  };
+}
+
+function lineBoxIntersection(from: Point, to: Point, box: Box): Point {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  if (!dx && !dy) {
+    return from;
+  }
+  const halfWidth = box.width / 2;
+  const halfHeight = box.height / 2;
+  const scale = Math.min(
+    dx === 0 ? Number.POSITIVE_INFINITY : Math.abs(halfWidth / dx),
+    dy === 0 ? Number.POSITIVE_INFINITY : Math.abs(halfHeight / dy)
+  );
+  return {
+    x: from.x + dx * scale,
+    y: from.y + dy * scale
+  };
+}
+
+function attachMindMapLabelDrag(
+  label: SVGTextElement,
+  edgeId: string,
+  base: Point,
+  offsets?: Map<string, Point>
+): void {
+  if (!offsets) {
+    return;
+  }
+  let drag: { id: number; x: number; y: number; start: Point } | null = null;
+  label.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    drag = {
+      id: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      start: offsets.get(edgeId) || { x: 0, y: 0 }
+    };
+    label.setPointerCapture?.(event.pointerId);
+  });
+  label.addEventListener("pointermove", (event) => {
+    if (!drag || drag.id !== event.pointerId) {
+      return;
+    }
+    const next = {
+      x: drag.start.x + event.clientX - drag.x,
+      y: drag.start.y + event.clientY - drag.y
+    };
+    offsets.set(edgeId, next);
+    label.setAttribute("x", String(base.x + next.x));
+    label.setAttribute("y", String(base.y + next.y));
+  });
+  const stop = (event: PointerEvent) => {
+    if (!drag || drag.id !== event.pointerId) {
+      return;
+    }
+    label.releasePointerCapture?.(event.pointerId);
+    drag = null;
+  };
+  label.addEventListener("pointerup", stop);
+  label.addEventListener("pointercancel", stop);
 }
 
 function mindMapStyleData(attributes: TreeNode["attributes"]): Partial<JsMindNode> {

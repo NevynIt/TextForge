@@ -4,6 +4,9 @@ import preact from "@preact/preset-vite";
 export default defineConfig({
   publicDir: "public",
   plugins: [preact()],
+  define: {
+    "process.env.FENGARICONF": "undefined"
+  },
   build: {
     outDir: "dist",
     emptyOutDir: true,

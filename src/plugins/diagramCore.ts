@@ -1,5 +1,7 @@
 import type { TextForgePlugin } from "../domain/types";
 import { dotToGraph } from "../parsers/dot";
+import mermaid from "mermaid";
+import * as viz from "@viz-js/viz";
 
 const plugin: TextForgePlugin = {
   id: "diagram-core",
@@ -16,8 +18,7 @@ const plugin: TextForgePlugin = {
         if (value.kind !== "text") {
           throw new Error("Mermaid transformer requires text input.");
         }
-        const mod = await context.runtime.load("mermaid", () => import("mermaid"));
-        const mermaid = mod.default;
+        await context.runtime.load("mermaid", () => Promise.resolve(mermaid));
         mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
         const id = `textforge-mermaid-${Math.random().toString(36).slice(2)}`;
         const rendered = await mermaid.render(id, value.text);
@@ -34,9 +35,8 @@ const plugin: TextForgePlugin = {
         if (value.kind !== "text") {
           throw new Error("Graphviz transformer requires text input.");
         }
-        const mod = await context.runtime.load("@viz-js/viz", () => import("@viz-js/viz"));
-        const viz = await mod.instance();
-        const element = viz.renderSVGElement(value.text);
+        const runtime = await context.runtime.load("@viz-js/viz", () => viz.instance());
+        const element = runtime.renderSVGElement(value.text);
         return { kind: "svg", svg: element.outerHTML, diagnostics: value.diagnostics };
       }
     },

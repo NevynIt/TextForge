@@ -60,6 +60,7 @@ export function LuaConsolePanel({
         terminal.loadAddon(search);
         terminal.open(hostRef.current);
         fit.fit();
+        terminal.focus();
         writeIntro(terminal);
         terminalRef.current = terminal;
         fitRef.current = fit;
@@ -148,6 +149,10 @@ export function LuaConsolePanel({
       }
       if (result.ok && result.value) {
         setLastResult(result.value);
+        const preview = describeTextPreview(result.value);
+        if (preview) {
+          terminal.write(`${preview}\r\n`);
+        }
         terminal.write(`${describePipelineValue(result.value)}\r\n`);
       } else if (!result.ok) {
         terminal.write(`error: ${result.error || "Lua execution failed."}\r\n`);
@@ -197,6 +202,15 @@ function describePipelineValue(value: PipelineValue): string {
     return `returned ${value.modelType}`;
   }
   return `returned ${value.kind}`;
+}
+
+function describeTextPreview(value: PipelineValue): string {
+  if (value.kind !== "text" || !value.text) {
+    return "";
+  }
+  const maxLength = 800;
+  const suffix = value.text.length > maxLength ? "\n..." : "";
+  return value.text.slice(0, maxLength).replace(/\r?\n/g, "\r\n") + suffix;
 }
 
 interface LuaScriptManagerPanelProps {
