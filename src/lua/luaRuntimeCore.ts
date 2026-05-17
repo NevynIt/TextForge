@@ -62,6 +62,7 @@ export function executeLuaInProcess(request: LuaRunRequest): LuaRunResult {
     installHostFunctions(L, context);
     installInput(L, context);
     installGlobalTf(L);
+    installConsoleGlobals(L);
 
     if (request.mode === "inspect") {
       return inspectLuaActions(L, context);
@@ -291,6 +292,65 @@ function installGlobalTf(L: unknown): void {
   lua.lua_setglobal(L, to_luastring("tf"));
 }
 
+function installConsoleGlobals(L: unknown): void {
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    const id = lua.lua_tojsstring(state, 1);
+    const hasInput = lua.lua_gettop(state) >= 2 && !lua.lua_isnil(state, 2);
+    lua.lua_getglobal(state, to_luastring("__tf_pipeline_run"));
+    lua.lua_pushstring(state, to_luastring(id));
+    if (hasInput) {
+      lua.lua_pushvalue(state, 2);
+      callLuaFunction(state, 2, 1);
+    } else {
+      callLuaFunction(state, 1, 1);
+    }
+    return 1;
+  });
+  lua.lua_setglobal(L, to_luastring("run"));
+
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    const id = lua.lua_tojsstring(state, 1);
+    const hasInput = lua.lua_gettop(state) >= 2 && !lua.lua_isnil(state, 2);
+    lua.lua_getglobal(state, to_luastring("__tf_actions_run"));
+    lua.lua_pushstring(state, to_luastring(id));
+    if (hasInput) {
+      lua.lua_pushvalue(state, 2);
+      callLuaFunction(state, 2, 1);
+    } else {
+      callLuaFunction(state, 1, 1);
+    }
+    return 1;
+  });
+  lua.lua_setglobal(L, to_luastring("run_action"));
+
+  lua.lua_getglobal(L, to_luastring("run_action"));
+  lua.lua_setglobal(L, to_luastring("action"));
+
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    lua.lua_pushvalue(state, 1);
+    return 1;
+  });
+  lua.lua_setglobal(L, to_luastring("open"));
+
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    lua.lua_getglobal(state, to_luastring("input"));
+    lua.lua_getfield(state, -1, to_luastring("parse_itt"));
+    lua.lua_pushvalue(state, -2);
+    callLuaFunction(state, 1, 1);
+    return 1;
+  });
+  lua.lua_setglobal(L, to_luastring("parse_itt"));
+
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    lua.lua_getglobal(state, to_luastring("input"));
+    lua.lua_getfield(state, -1, to_luastring("parse_markdown"));
+    lua.lua_pushvalue(state, -2);
+    callLuaFunction(state, 1, 1);
+    return 1;
+  });
+  lua.lua_setglobal(L, to_luastring("parse_markdown"));
+}
+
 function inspectLuaActions(L: unknown, context: LuaExecutionContext): LuaRunResult {
   const fileName = context.request.fileName || "lua-script.lua";
   const value = runLuaChunk(L, context, context.request.source, fileName);
@@ -374,6 +434,15 @@ function runLuaChunk(L: unknown, context: LuaExecutionContext, source: string, f
 }
 
 function loadCommandOrChunk(L: unknown, source: string, fileName: string, expressionFallback: boolean): void {
+  if (expressionFallback) {
+    const expressionSource = `return ${source}`;
+    const expressionBytes = to_luastring(expressionSource);
+    const expressionStatus = lauxlib.luaL_loadbuffer(L, expressionBytes, expressionBytes.length, to_luastring(`@${fileName}`));
+    if (expressionStatus === lua.LUA_OK) {
+      return;
+    }
+    lua.lua_pop(L, 1);
+  }
   const first = lauxlib.luaL_loadbuffer(L, to_luastring(source), to_luastring(source).length, to_luastring(`@${fileName}`));
   if (first === lua.LUA_OK) {
     return;
@@ -383,12 +452,7 @@ function loadCommandOrChunk(L: unknown, source: string, fileName: string, expres
   if (!expressionFallback) {
     throw new Error(firstError);
   }
-  const expressionSource = `return ${source}`;
-  const bytes = to_luastring(expressionSource);
-  const second = lauxlib.luaL_loadbuffer(L, bytes, bytes.length, to_luastring(`@${fileName}`));
-  if (second !== lua.LUA_OK) {
-    throw new Error(firstError);
-  }
+  throw new Error(firstError);
 }
 
 function loadChunk(L: unknown, source: string, fileName: string): void {

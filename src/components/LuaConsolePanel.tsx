@@ -101,7 +101,7 @@ export function LuaConsolePanel({
         return;
       }
       historyRef.current = [...historyRef.current, command].slice(-100);
-      await runAndWrite(command, () => onRunCommand(command));
+      await runAndWrite(command, () => executeConsoleCommand(command));
       return;
     }
     if (data === "\u007f") {
@@ -163,6 +163,49 @@ export function LuaConsolePanel({
     }
   }
 
+  async function executeConsoleCommand(command: string): Promise<LuaRunResult> {
+    const parsed = parseConsoleCommand(command);
+    if (parsed.kind === "help") {
+      return { ok: true, output: consoleHelpText(actions), value: undefined };
+    }
+    if (parsed.kind === "actions") {
+      return { ok: true, output: describeActions(actions), value: undefined };
+    }
+    if (parsed.kind === "open-last") {
+      if (!lastResult) {
+        return { ok: false, output: "", error: "No previous result to open." };
+      }
+      onOpenResult(lastResult);
+      return { ok: true, output: "opened previous result as document", value: undefined };
+    }
+    if (parsed.kind === "pipeline") {
+      return onRunCommand(`return run(${luaString(parsed.id)})`);
+    }
+    if (parsed.kind === "action") {
+      return onRunCommand(`return run_action(${luaString(parsed.id)})`);
+    }
+    if (parsed.kind === "open") {
+      const result = await executeOpenCommand(parsed.command);
+      if (result.ok && result.value) {
+        onOpenResult(result.value);
+        return { ...result, output: [result.output, "opened result as document"].filter(Boolean).join("\n") };
+      }
+      return result;
+    }
+    return onRunCommand(command);
+  }
+
+  async function executeOpenCommand(command: string): Promise<LuaRunResult> {
+    const parsed = parseConsoleCommand(command);
+    if (parsed.kind === "pipeline") {
+      return onRunCommand(`return run(${luaString(parsed.id)})`);
+    }
+    if (parsed.kind === "action") {
+      return onRunCommand(`return run_action(${luaString(parsed.id)})`);
+    }
+    return onRunCommand(command);
+  }
+
   return (
     <div class="lua-console-panel">
       <div class="lua-console-toolbar">
@@ -191,7 +234,74 @@ export function LuaConsolePanel({
 function writeIntro(terminal: XTermTerminal | null): void {
   terminal?.write("TextForge Lua Console\r\n");
   terminal?.write("Commands run locally in the same sandbox used by Lua actions.\r\n");
+  terminal?.write("Type help for shortcuts.\r\n");
   terminal?.write("> ");
+}
+
+type ParsedConsoleCommand =
+  | { kind: "help" }
+  | { kind: "actions" }
+  | { kind: "open-last" }
+  | { kind: "pipeline"; id: string }
+  | { kind: "action"; id: string }
+  | { kind: "open"; command: string }
+  | { kind: "lua" };
+
+function parseConsoleCommand(command: string): ParsedConsoleCommand {
+  const trimmed = command.trim();
+  const lower = trimmed.toLowerCase();
+  if (lower === "help" || lower === "?") {
+    return { kind: "help" };
+  }
+  if (lower === "actions") {
+    return { kind: "actions" };
+  }
+  if (lower === "open last") {
+    return { kind: "open-last" };
+  }
+  if (lower.startsWith("open ")) {
+    return { kind: "open", command: trimmed.slice(5).trim() };
+  }
+  if (lower.startsWith("run ")) {
+    return { kind: "pipeline", id: trimmed.slice(4).trim() };
+  }
+  if (lower.startsWith("pipeline ")) {
+    return { kind: "pipeline", id: trimmed.slice(9).trim() };
+  }
+  if (lower.startsWith("action ")) {
+    return { kind: "action", id: trimmed.slice(7).trim() };
+  }
+  if (lower.startsWith("run-action ")) {
+    return { kind: "action", id: trimmed.slice(11).trim() };
+  }
+  return { kind: "lua" };
+}
+
+function consoleHelpText(actions: RegisteredLuaAction[]): string {
+  return [
+    "Lua console shortcuts:",
+    "  help                 show this message",
+    "  actions              list registered Lua actions",
+    "  run <pipeline-id>    run a whitelisted built-in bridge, e.g. run itt-to-graph",
+    "  action <action-id>   run a registered Lua action",
+    "  open <command>       run a shortcut or Lua expression and open the result as a document",
+    "  open last            open the previous result as a document",
+    "Lua helpers available in code: run(id), run_action(id), action(id), parse_itt(), parse_markdown().",
+    actions.length ? `${actions.length} Lua action${actions.length === 1 ? "" : "s"} registered.` : "No Lua actions registered."
+  ].join("\r\n");
+}
+
+function describeActions(actions: RegisteredLuaAction[]): string {
+  if (!actions.length) {
+    return "No Lua actions registered. Open a .lua document returning an action object.";
+  }
+  return actions
+    .map((action) => `${action.id} - ${action.name} (${formatContract(action.input)} -> ${action.output})`)
+    .join("\r\n");
+}
+
+function luaString(value: string): string {
+  return JSON.stringify(value);
 }
 
 function describePipelineValue(value: PipelineValue): string {

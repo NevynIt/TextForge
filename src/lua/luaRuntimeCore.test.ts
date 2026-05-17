@@ -78,7 +78,7 @@ describe("Lua runtime core", () => {
     const result = executeLuaInProcess({
       mode: "script",
       source: `
-        local graph = tf.pipeline.run("itt-to-graph", input)
+        local graph = run("itt-to-graph")
         return input:emit_json(graph)
       `,
       input: {
@@ -91,5 +91,37 @@ describe("Lua runtime core", () => {
     expect(result.ok).toBe(true);
     expect(result.value?.kind).toBe("text");
     expect(result.value && "text" in result.value ? result.value.text : "").toContain('"modelType": "model.graph"');
+  });
+
+  it("lets Lua console helpers call registered Lua actions", () => {
+    const result = executeLuaInProcess({
+      mode: "command",
+      source: `run_action("uppercase")`,
+      input: { kind: "text", languageId: "text.plain", text: "hello" },
+      actions: [
+        {
+          id: "uppercase",
+          name: "Uppercase",
+          category: "Lua Transform",
+          input: "text.plain",
+          output: "text.plain",
+          source: `
+            return {
+              id = "uppercase",
+              name = "Uppercase",
+              input = "text.plain",
+              output = "text.plain",
+              run = function(input)
+                return input:emit_text("text.plain", string.upper(input.text))
+              end
+            }
+          `,
+          fileName: "uppercase.lua"
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.value).toMatchObject({ kind: "text", languageId: "text.plain", text: "HELLO" });
   });
 });
