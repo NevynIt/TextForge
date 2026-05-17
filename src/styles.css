@@ -1609,6 +1609,41 @@ button:disabled {
   border-right: 1px solid #d8d4c8;
 }
 
+.resource-group {
+  display: grid;
+  gap: 8px;
+}
+
+.resource-group > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px;
+}
+
+.resource-group > header strong {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #4d5559;
+}
+
+.resource-group > header span {
+  min-width: 24px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: #e9e6da;
+  color: #5d6468;
+  font-size: 11px;
+  text-align: center;
+}
+
+.resource-group-list {
+  display: grid;
+  gap: 8px;
+}
+
 .resource-grid article {
   margin: 0;
 }

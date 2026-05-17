@@ -12,6 +12,7 @@ export function ResourceBrowserPanel({ resources, onOpenResource }: ResourceBrow
     () => resources.find((resource) => resource.id === selectedId) || resources[0],
     [resources, selectedId]
   );
+  const groupedResources = useMemo(() => groupResources(resources), [resources]);
 
   return (
     <div class="resource-browser-panel">
@@ -26,14 +27,24 @@ export function ResourceBrowserPanel({ resources, onOpenResource }: ResourceBrow
       </div>
       <div class="resource-browser-layout">
         <div class="resource-grid">
-          {resources.map((resource) => (
-            <article class={resource.id === selected?.id ? "active" : ""} key={resource.id}>
-              <button type="button" onClick={() => setSelectedId(resource.id)}>
-                <strong>{resource.title}</strong>
-                <span>{resource.path}</span>
-                <small>{resource.description}</small>
-              </button>
-            </article>
+          {groupedResources.map((group) => (
+            <section class="resource-group" key={group.id}>
+              <header>
+                <strong>{group.title}</strong>
+                <span>{group.resources.length}</span>
+              </header>
+              <div class="resource-group-list">
+                {group.resources.map((resource) => (
+                  <article class={resource.id === selected?.id ? "active" : ""} key={resource.id}>
+                    <button type="button" onClick={() => setSelectedId(resource.id)}>
+                      <strong>{resource.title}</strong>
+                      <span>{resource.path}</span>
+                      <small>{resource.description}</small>
+                    </button>
+                  </article>
+                ))}
+              </div>
+            </section>
           ))}
         </div>
         <section class="resource-preview">
@@ -52,6 +63,73 @@ export function ResourceBrowserPanel({ resources, onOpenResource }: ResourceBrow
       </div>
     </div>
   );
+}
+
+interface ResourceGroup {
+  id: string;
+  title: string;
+  resources: TextForgeResource[];
+}
+
+function groupResources(resources: TextForgeResource[]): ResourceGroup[] {
+  const groups = new Map<string, ResourceGroup>();
+  resources.forEach((resource) => {
+    const id = resourceGroupId(resource);
+    const existing = groups.get(id);
+    if (existing) {
+      existing.resources.push(resource);
+      return;
+    }
+    groups.set(id, { id, title: resourceGroupTitle(id), resources: [resource] });
+  });
+  return Array.from(groups.values());
+}
+
+function resourceGroupId(resource: TextForgeResource): string {
+  if (resource.path.startsWith("docs/")) {
+    return "docs";
+  }
+  if (resource.path.startsWith("examples/itt/") || resource.languageId === "text.indented-tree") {
+    return "examples-itt";
+  }
+  if (resource.path.startsWith("examples/lua/") || resource.languageId === "text.lua") {
+    return "examples-lua";
+  }
+  if (resource.path.startsWith("examples/markdown/")) {
+    return "examples-markdown";
+  }
+  if (resource.path.includes("graphviz-dot-")) {
+    return "examples-graphviz";
+  }
+  if (resource.path.includes("mermaid_")) {
+    return "examples-mermaid";
+  }
+  return resource.path.startsWith("examples/") ? "examples-other" : "other";
+}
+
+function resourceGroupTitle(id: string): string {
+  if (id === "docs") {
+    return "Documentation";
+  }
+  if (id === "examples-itt") {
+    return "ITT Examples";
+  }
+  if (id === "examples-lua") {
+    return "Lua Examples";
+  }
+  if (id === "examples-markdown") {
+    return "Markdown Examples";
+  }
+  if (id === "examples-graphviz") {
+    return "Graphviz DOT Corpus";
+  }
+  if (id === "examples-mermaid") {
+    return "Mermaid Examples";
+  }
+  if (id === "examples-other") {
+    return "Other Examples";
+  }
+  return "Other Resources";
 }
 
 async function copyResourceText(resource: TextForgeResource): Promise<void> {
