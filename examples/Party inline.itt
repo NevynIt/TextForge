@@ -1,0 +1,108 @@
+---
+title: Family birthday party plan
+version: 2
+defaultLinkType: related-to
+author: Example
+purpose: Demonstrate ITT hierarchy, ids, typed links, tags, attributes, details, styles, includes, and views with TextForge V1-renderable attributes.
+---
+
+%include shared-party-supplies.itt
+
+%style * { font-size: 12px; }
+%style [event] { shape: pill; fill: #28343c; stroke: #1f2933; }
+%style [area] { shape: rounded; fill: #eaf3ff; stroke: #3a6ea5; }
+%style [task] { shape: rectangle; fill: #f5fbff; stroke: #6c9bd2; }
+%style [risk] { shape: round; fill: #ffe8e8; stroke: #cc3333; }
+%style #important { font-weight: bold; }
+%style {status=done} { fill: #eeeeee; }
+%style &cake { stroke: #b76e00; }
+%style ->[depends-on] { stroke: #777777; }
+%style -> { stroke: #888888; }
+%style => { stroke: #999999; }
+
+%view full-party {
+  include: *
+  include: ->, =>
+}
+
+%view shopping {
+  include: #shopping
+  include: ->[depends-on]
+  exclude: {status=done}
+}
+
+%view risks {
+  include: [risk]
+  include: ->[mitigated-by], ->[related-to]
+  exclude: {status=closed}
+}
+
+%view timeline {
+  include: #timeline
+  include: ->[depends-on]
+  exclude: #draft
+}
+
+&party [event] Grandma's 80th birthday party #important #family {date: 2026-06-20, status: planned, location: garden, bg: #28343c, fg: white, shape: pill, size: 24, x: 0, y: 0} @depends-on:weather_plan, @guest_list
+| A friendly garden party for family, neighbours, and a few old friends.
+| The main goal is a relaxed afternoon, not a formal event.
+| This root node uses front matter, an id, a type, tags, attributes, a typed cross-link, an untyped cross-link, and this detail block.
+
+  &guest_list [area] Guests and invitations #people {owner: Anna, status: active, background-color: #eaf3ff, foreground-color: #102a43, font-size: 16, font-weight: bold, font-style: normal, border-color: #3a6ea5, border-width: 2, shape: rounded, node-size: 18, x: -360, y: -220, edge-color: #3a6ea5, edge-width: 3}
+    &save_the_date [task] Send save-the-date message #communication {status: done, color: #eeeeee, text-color: #555555, weight: normal, style: italic, border: #aaaaaa, borderWidth: 1, shape: rectangle, x: -520, y: -310}
+    | This item is done, but it remains in the file so that the shopping and timeline views can demonstrate exclusion rules.
+    &family_guests [task] Confirm close family #important {due: 2026-05-25, status: active, background: #f5fbff, textColor: #0b1f33, fontSize: 13, fontWeight: 700, fontStyle: normal, stroke: #2f6faf, border-width: 2, nodeShape: rectangle, x: -520, y: -250, link-color: #2f6faf, link-width: 2} @depends-on:save_the_date
+    &neighbours [task] Invite neighbours {due: 2026-05-28, status: draft, fill: #fff8e1, foregroundColor: #4a3500, font-size: 12, font-weight: normal, font-style: italic, borderColor: #d6a800, borderWidth: 1, shape: square, x: -520, y: -190} @depends-on:save_the_date
+    &old_friends [task] Call old friends who do not use email #phone {due: 2026-05-30, status: active, bg: #f5fbff, fg: #102a43, font-size: 12, weight: 600, style: normal, border-color: #6c9bd2, border-width: 1, x: -520, y: -130}
+    &rsvp_deadline [milestone] RSVP deadline #important #timeline {date: 2026-06-05, backgroundColor: #fff3cd, foreground-color: #4d3300, fontSize: 14, fontWeight: bold, fontStyle: normal, border: #d79b00, borderWidth: 2, shape: capsule, size: 16, x: -520, y: -70, linkColor: #d79b00, linkWidth: 3} @depends-on:save_the_date
+
+  &food [area] Food and drinks #shopping {owner: Ben, status: active, backgroundColor: #fff3e0, foregroundColor: #3a1f00, fontSize: 16, fontWeight: bold, fontStyle: normal, borderColor: #cf6f2a, borderWidth: 2, node-shape: capsule, nodeSize: 19, x: -120, y: -230, edgeColor: #cf6f2a, edgeWidth: 3}
+    &cake [item] Birthday cake with candles #important #shopping {serves: 30, status: ordered, fill: #ffe8a3, text-color: #3a2500, font-size: 14, font-weight: bold, font-style: normal, stroke: #b76e00, border-width: 3, shape: pill, size: 17, x: -240, y: -330, linkColor: #b76e00, linkWidth: 3} @depends-on:guest_list
+    | Order a light cake, not too sweet.
+    | Ask the bakery to write "Happy 80th Birthday" on top.
+    &sandwiches [item] Sandwich platters #shopping {serves: 25, status: draft, background-color: #fff8e8, foreground-color: #3a2500, fontSize: 12, weight: normal, style: normal, border-color: #cf6f2a, borderWidth: 1, node-shape: rectangle, x: -240, y: -270, line-color: #cf6f2a, line-width: 2} @depends-on:rsvp_deadline
+    &fruit [item] Fruit bowl #shopping #healthy {serves: 20, status: planned, background: #e8f8e8, textColor: #123a12, font-size: 12, fontWeight: 600, fontStyle: normal, border: #3f9f4a, border-width: 1, shape: round, x: -240, y: -210}
+    &tea_coffee [item] Tea and coffee station #shopping {status: planned, bg: #f4e8d8, fg: #3a2a18, font-size: 12, font-weight: normal, font-style: normal, border-color: #9a6a3a, borderWidth: 1, shape: rounded, x: -240, y: -150}
+    &water [item] Water and soft drinks #shopping {status: planned, color: #e6f7ff, text-color: #06364a, fontSize: 12, font-weight: normal, font-style: normal, borderColor: #3a9fcf, border-width: 1, shape: capsule, x: -240, y: -90}
+
+  &place [area] Place and setup #garden {owner: Clara, status: active, background: #eaf7ea, text-color: #143a14, font-size: 16, weight: 700, style: normal, border: #4b9f4b, borderWidth: 2, nodeShape: rectangle, size: 19, x: 170, y: -210, line-color: #4b9f4b, line-width: 3}
+    &tables [task] Borrow folding tables #shopping {quantity: 4, status: planned, backgroundColor: #f5fff5, foregroundColor: #143a14, fontSize: 12, fontWeight: normal, fontStyle: normal, borderColor: #4b9f4b, borderWidth: 1, shape: rectangle, x: 60, y: -300}
+    &chairs [task] Arrange enough chairs #important {quantity: 30, status: active, fill: #f5fff5, fg: #143a14, font-size: 12, font-weight: bold, font-style: normal, stroke: #4b9f4b, border-width: 2, shape: square, x: 60, y: -240, line-color: #4b9f4b, line-width: 2} @depends-on:guest_list
+    &shade [task] Put up shade tent #garden {status: planned, bg: #eef6ff, textColor: #102a43, fontSize: 12, weight: 600, style: normal, border: #3a6ea5, borderWidth: 1, shape: capsule, x: 60, y: -180, lineColor: #3a6ea5, lineWidth: 2} @depends-on:weather_plan
+    &music_corner [task] Prepare quiet music corner #atmosphere {status: optional, background-color: #f1e8ff, foreground-color: #2f184a, font-size: 12, fontWeight: normal, fontStyle: italic, border-color: #8e6ccf, border-width: 1, shape: rounded, x: 60, y: -120}
+    &photo_table [task] Set up old family photo table #memory {status: planned, background: #fff0f5, foregroundColor: #4a1830, fontSize: 12, font-weight: bold, font-style: normal, borderColor: #cf6f9f, borderWidth: 1, nodeShape: rounded, x: 60, y: -60}
+      &photo_scan [task] Scan five old photos #memory {status: active, fill: #fff5fa, text-color: #4a1830, font-size: 11, weight: normal, style: normal, border: #cf6f9f, border-width: 1, x: -20, y: 0}
+      &photo_frames [item] Bring small photo frames #shopping {quantity: 5, status: planned, color: #fff5fa, fg: #4a1830, fontSize: 11, fontWeight: normal, fontStyle: normal, border-color: #cf6f9f, borderWidth: 1, x: 140, y: 0}
+
+  &weather_plan [risk] Rain or strong sun may make the garden uncomfortable #risk #important {severity: medium, status: open, background-color: #ffe8e8, foregroundColor: #4a1111, font-size: 15, font-weight: bold, font-style: normal, stroke: #cc3333, border-width: 2, shape: round, node-size: 20, x: 440, y: -140, lineColor: #cc3333, lineWidth: 3, edge-color: #cc3333, edge-width: 3} @mitigated-by:shade, @mitigated-by:indoor_backup
+  | If the forecast is bad two days before the party, move the food table indoors.
+  | Keep only the greeting area outside if the garden becomes uncomfortable.
+
+  &indoor_backup [decision] Use living room as backup space #contingency {status: approved, backgroundColor: #e8f1ff, textColor: #102a43, fontSize: 14, fontWeight: bold, fontStyle: normal, borderColor: #3b73d9, borderWidth: 2, shape: capsule, size: 17, x: 440, y: -20, edgeColor: #3b73d9, edgeWidth: 2} @related-to:weather_plan
+    &clear_living_room [task] Move extra furniture to garage {due: 2026-06-19, status: planned, bg: #f5fbff, fg: #102a43, font-size: 12, font-weight: normal, font-style: normal, border: #6c9bd2, border-width: 1, shape: rectangle, x: 320, y: 50}
+    &protect_floor [task] Put mats near the garden door {status: planned, background: #f5fbff, foreground-color: #102a43, fontSize: 12, weight: normal, style: normal, border-color: #6c9bd2, borderWidth: 1, shape: rectangle, x: 560, y: 50}
+
+  &activities [area] Simple activities #fun {owner: Dana, status: planned, fill: #f1e8ff, textColor: #2f184a, fontSize: 16, fontWeight: bold, fontStyle: normal, stroke: #8e6ccf, border-width: 2, shape: rounded, size: 18, x: -40, y: 170, edge-color: #8e6ccf, edge-width: 3}
+    &toast [task] Short family toast #important {time: 15:00, status: planned, background-color: #f8f0ff, foreground-color: #2f184a, font-size: 12, font-weight: bold, font-style: normal, borderColor: #8e6ccf, borderWidth: 1, shape: pill, x: -180, y: 250, edgeColor: #8e6ccf, edgeWidth: 2} @depends-on:cake
+    &memory_cards [task] Ask guests to write memory cards #memory {status: planned, backgroundColor: #f8f0ff, foregroundColor: #2f184a, fontSize: 12, fontWeight: normal, fontStyle: normal, border: #8e6ccf, border-width: 1, node-shape: rectangle, x: -40, y: 250}
+    &group_photo [task] Take group photo before people leave #memory {time: 16:30, status: planned, bg: #f8f0ff, fg: #2f184a, font-size: 12, weight: 600, style: normal, border-color: #8e6ccf, borderWidth: 1, shape: capsule, x: 120, y: 250}
+
+  &day_plan [schedule] Party day flow #timeline {status: draft, color: #e8f7ff, text-color: #06364a, font-size: 16, font-weight: bold, font-style: normal, borderColor: #3a9fcf, borderWidth: 2, nodeShape: rounded, size: 18, x: 300, y: 190, line-color: #3a9fcf, line-width: 3}
+    &setup_time [milestone] Setup starts #timeline {time: 10:00, background: #f2fbff, foreground-color: #06364a, fontSize: 12, fontWeight: normal, fontStyle: normal, border: #3a9fcf, border-width: 1, shape: rectangle, x: 180, y: 280}
+    &arrival_time [milestone] Guests arrive #timeline {time: 14:00, fill: #f2fbff, textColor: #06364a, font-size: 12, weight: 600, style: normal, border-color: #3a9fcf, borderWidth: 1, shape: rectangle, x: 300, y: 280, link-color: #3a9fcf, link-width: 2} @depends-on:setup_time
+    &cake_time [milestone] Cake and toast #timeline {time: 15:00, bg: #fff3cd, fg: #4d3300, fontSize: 13, fontWeight: bold, fontStyle: normal, stroke: #d79b00, border-width: 2, shape: capsule, x: 420, y: 280, link-color: #d79b00, link-width: 3} @depends-on:cake, @depends-on:toast
+    &cleanup_time [milestone] Light cleanup #timeline {time: 18:00, background-color: #f2fbff, foregroundColor: #06364a, font-size: 12, font-weight: normal, font-style: italic, borderColor: #3a9fcf, borderWidth: 1, shape: rectangle, x: 540, y: 280}
+
+  &open_questions [area] Open questions #draft {status: draft, color: #f2f2f2, foreground-color: #333333, fontSize: 15, fontWeight: normal, fontStyle: italic, border: #999999, border-width: 1, shape: square, nodeSize: 16, x: 610, y: 110, edgeColor: #999999, edgeWidth: 2}
+    &question_parking [note] Where should guests park? #transport #draft {status: draft, background: #ffffff, text-color: #333333, font-size: 12, weight: normal, style: italic, border-color: #999999, borderWidth: 1, shape: square, x: 520, y: 180}
+    &question_gifts [note] Should we say no gifts? #etiquette #draft {status: draft, fill: #ffffff, fg: #333333, fontSize: 12, fontWeight: normal, fontStyle: italic, stroke: #999999, border-width: 1, shape: square, x: 700, y: 180}
+
+  &style_coverage [note] Viewer style coverage sampler #technical #draft {status: reference, background-color: #ffffff, foreground-color: #111111, font-size: 12, font-weight: normal, font-style: normal, border-color: #444444, border-width: 1, shape: rounded, size: 14, x: 0, y: 410}
+  | This branch intentionally exercises the V1-supported attribute spellings.
+  | It is useful as a parser and renderer smoke test, even though the party plan above already uses the same attributes in context.
+    &shape_round [sample] Round sample {background-color: #ffe8e8, foreground-color: #111111, shape: round, size: 12, x: -300, y: 480}
+    &shape_rounded [sample] Rounded sample {backgroundColor: #eaf3ff, foregroundColor: #111111, shape: rounded, node-size: 12, x: -180, y: 480}
+    &shape_square [sample] Square sample {background: #fff3cd, text-color: #111111, shape: square, nodeSize: 12, x: -60, y: 480}
+    &shape_rectangle [sample] Rectangle sample {bg: #e8f8e8, textColor: #111111, node-shape: rectangle, size: 12, x: 80, y: 480}
+    &shape_pill [sample] Pill sample {fill: #f1e8ff, fg: #111111, nodeShape: pill, node-size: 12, x: 220, y: 480}
+    &shape_capsule [sample] Capsule sample {color: #f2f2f2, foreground-color: #111111, shape: capsule, nodeSize: 12, x: 360, y: 480}

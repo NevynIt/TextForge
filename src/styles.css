@@ -438,6 +438,7 @@ button:disabled {
 .window-layout-panel button {
   display: grid;
   place-items: center;
+  padding: 0;
   cursor: pointer;
 }
 
