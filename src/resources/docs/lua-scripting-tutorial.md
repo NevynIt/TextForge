@@ -47,6 +47,10 @@ return {
 - Console helper: `action("action-id")`
 - Console helper: `parse_itt()`
 - Console helper: `parse_markdown()`
+- Console helper: `parse_csv(delimiter?)`
+- Input helper: `input:emit_csv(table, delimiter?)`
+
+CSV parsing returns a table model payload with `columns`, `rows`, `delimiter`, and parser diagnostics. `input:emit_csv(...)` accepts either that payload or a `model.table` value and returns editable `text.csv`.
 
 ## Lua Console Shortcuts
 

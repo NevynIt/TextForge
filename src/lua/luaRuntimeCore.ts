@@ -1,7 +1,9 @@
 import { lauxlib, lua, lualib, to_luastring } from "fengari";
 import type { Diagnostic, GraphModel, PipelineValue, TextDocument, TreeNode } from "../domain/types";
+import { parseDelimited } from "../parsers/csv";
 import { indentedTreeToGraph, parseIndentedTree } from "../parsers/itt";
 import { extractMarkdownHeadingTree } from "../parsers/markdown";
+import { describeLuaPipelineValue, formatLuaContract, luaValueMatchesContract } from "./luaContracts";
 import { bundledLuaModules } from "./luaModules";
 import type { LuaActionDescriptor, LuaAvailableAction, LuaLimits, LuaRunRequest, LuaRunResult } from "./types";
 import { defaultLuaLimits } from "./types";
@@ -262,6 +264,17 @@ function pushInputTable(L: unknown, context: LuaExecutionContext): void {
   lua.lua_setfield(L, -2, to_luastring("parse_markdown"));
 
   lua.lua_pushjsfunction(L, (state: unknown) => {
+    const input = currentInput(context);
+    if (input.kind !== "text") {
+      return lauxlib.luaL_error(state, to_luastring("input:parse_csv() requires text input."));
+    }
+    const delimiter = lua.lua_gettop(state) >= 2 && !lua.lua_isnil(state, 2) ? lua.lua_tojsstring(state, 2) : inferDelimiter(input.text);
+    pushJsValue(state, parseDelimited(input.text, delimiter || ",", input.languageId));
+    return 1;
+  });
+  lua.lua_setfield(L, -2, to_luastring("parse_csv"));
+
+  lua.lua_pushjsfunction(L, (state: unknown) => {
     const nodes = luaToJsValue(state, 2) as TreeNode[];
     pushJsValue(state, { kind: "text", languageId: "text.indented-tree", text: emitIndentedTree(nodes) });
     return 1;
@@ -282,6 +295,14 @@ function pushInputTable(L: unknown, context: LuaExecutionContext): void {
     return 1;
   });
   lua.lua_setfield(L, -2, to_luastring("emit_json"));
+
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    const table = luaToJsValue(state, 2);
+    const delimiter = lua.lua_gettop(state) >= 3 && !lua.lua_isnil(state, 3) ? lua.lua_tojsstring(state, 3) : undefined;
+    pushJsValue(state, { kind: "text", languageId: "text.csv", text: emitDelimited(table, delimiter) });
+    return 1;
+  });
+  lua.lua_setfield(L, -2, to_luastring("emit_csv"));
 }
 
 function installGlobalTf(L: unknown): void {
@@ -351,6 +372,21 @@ function installConsoleGlobals(L: unknown): void {
     return 1;
   });
   lua.lua_setglobal(L, to_luastring("parse_markdown"));
+
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    const hasDelimiter = lua.lua_gettop(state) >= 1 && !lua.lua_isnil(state, 1);
+    lua.lua_getglobal(state, to_luastring("input"));
+    lua.lua_getfield(state, -1, to_luastring("parse_csv"));
+    lua.lua_pushvalue(state, -2);
+    if (hasDelimiter) {
+      lua.lua_pushvalue(state, 1);
+      callLuaFunction(state, 2, 1);
+    } else {
+      callLuaFunction(state, 1, 1);
+    }
+    return 1;
+  });
+  lua.lua_setglobal(L, to_luastring("parse_csv"));
 }
 
 function inspectLuaActions(L: unknown, context: LuaExecutionContext): LuaRunResult {
@@ -501,6 +537,18 @@ function runBuiltInPipelineStep(id: string, input: PipelineValue, context: LuaEx
     }
     return { kind: "model", modelType: "model.tree", data: extractMarkdownHeadingTree(input.text), diagnostics: input.diagnostics };
   }
+  if (id === "delimited-to-table") {
+    if (input.kind !== "text") {
+      throw new Error("delimited-to-table requires text input.");
+    }
+    const table = parseDelimited(input.text, inferDelimiter(input.text), input.languageId);
+    return {
+      kind: "model",
+      modelType: "model.table",
+      data: table,
+      diagnostics: [...(input.diagnostics || []), ...(table.diagnostics || [])]
+    };
+  }
   throw new Error(`Lua pipeline bridge cannot run unknown built-in step "${id}".`);
 }
 
@@ -513,6 +561,10 @@ function runNestedLuaAction(id: string, input: PipelineValue, context: LuaExecut
   if (!action) {
     throw new Error(`Lua action "${id}" was not found.`);
   }
+  const inputType = describeLuaPipelineValue(input);
+  if (!luaValueMatchesContract(action.input, inputType)) {
+    throw new Error(`Lua action "${id}" expects ${formatLuaContract(action.input)}, received ${inputType}.`);
+  }
   const nested = executeLuaInProcess({
     ...context.request,
     mode: "action",
@@ -524,6 +576,10 @@ function runNestedLuaAction(id: string, input: PipelineValue, context: LuaExecut
   });
   if (!nested.ok || !nested.value) {
     throw new Error(nested.error || `Lua action "${id}" did not return a value.`);
+  }
+  const outputType = describeLuaPipelineValue(nested.value);
+  if (!luaValueMatchesContract(action.output, outputType)) {
+    throw new Error(`Lua action "${id}" declares ${action.output}, returned ${outputType}.`);
   }
   return nested.value;
 }
@@ -803,6 +859,40 @@ function emitIndentedTree(nodes: TreeNode[]): string {
   };
   nodes.forEach((node) => visit(node, 0));
   return `${lines.join("\n")}\n`;
+}
+
+function emitDelimited(value: unknown, delimiter?: string): string {
+  const table = tableDataFromLuaValue(value);
+  const separator = delimiter || table.delimiter || ",";
+  const lines = [table.columns, ...table.rows].map((row) => row.map((field) => escapeDelimitedField(String(field ?? ""), separator)).join(separator));
+  return `${lines.join("\n")}\n`;
+}
+
+function tableDataFromLuaValue(value: unknown): { columns: string[]; rows: string[][]; delimiter?: string } {
+  const candidate = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const data = candidate.kind === "model" && candidate.modelType === "model.table" && candidate.data && typeof candidate.data === "object"
+    ? (candidate.data as Record<string, unknown>)
+    : candidate;
+  return {
+    columns: Array.isArray(data.columns) ? data.columns.map(String) : [],
+    rows: Array.isArray(data.rows) ? data.rows.map((row) => (Array.isArray(row) ? row.map(String) : [String(row)])) : [],
+    delimiter: typeof data.delimiter === "string" ? data.delimiter : undefined
+  };
+}
+
+function escapeDelimitedField(value: string, delimiter: string): string {
+  if (value.includes('"') || value.includes("\n") || value.includes("\r") || value.includes(delimiter)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function inferDelimiter(text: string): string {
+  const firstLine = text.split(/\r?\n/, 1)[0] || "";
+  const candidates = [",", "\t", ";", "|"];
+  return candidates
+    .map((delimiter) => ({ delimiter, count: firstLine.split(delimiter).length - 1 }))
+    .sort((left, right) => right.count - left.count)[0]?.delimiter || ",";
 }
 
 function buildUserModuleRegistry(request: LuaRunRequest): Record<string, string> {

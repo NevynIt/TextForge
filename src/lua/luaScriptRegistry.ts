@@ -1,4 +1,5 @@
 import type { PipelineValue, TextDocument, TextForgePlugin } from "../domain/types";
+import { describeLuaPipelineValue, luaValueMatchesContract } from "./luaContracts";
 import type { LuaActionDescriptor, LuaAvailableAction } from "./types";
 import { LuaTransformService } from "./luaTransformService";
 
@@ -72,6 +73,10 @@ function createLuaActionsPlugin(actions: RegisteredLuaAction[], documents: TextD
         });
         if (!result.ok || !result.value) {
           throw new Error(result.error || `Lua action "${action.name}" did not return a value.`);
+        }
+        const outputType = describeLuaPipelineValue(result.value);
+        if (!luaValueMatchesContract(action.output, outputType)) {
+          throw new Error(`Lua action "${action.name}" declares ${action.output}, returned ${outputType}.`);
         }
         return result.value;
       }

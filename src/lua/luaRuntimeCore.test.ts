@@ -131,6 +131,44 @@ describe("Lua runtime core", () => {
     expect(result.value && "text" in result.value ? result.value.text : "").toContain('"modelType": "model.graph"');
   });
 
+  it("exposes CSV parse and emit helpers to Lua", () => {
+    const result = executeLuaInProcess({
+      mode: "script",
+      source: `
+        local table = input:parse_csv(";")
+        table.rows[#table.rows + 1] = { "Grace", "5" }
+        return input:emit_csv(table, ";")
+      `,
+      input: {
+        kind: "text",
+        languageId: "text.csv",
+        text: "name;score\nAda;3\n"
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.value).toMatchObject({
+      kind: "text",
+      languageId: "text.csv",
+      text: "name;score\nAda;3\nGrace;5\n"
+    });
+  });
+
+  it("lets Lua call the built-in delimited table bridge", () => {
+    const result = executeLuaInProcess({
+      mode: "command",
+      source: `run("delimited-to-table")`,
+      input: {
+        kind: "text",
+        languageId: "text.csv",
+        text: "name,score\nAda,3\n"
+      }
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.value).toMatchObject({ kind: "model", modelType: "model.table" });
+  });
+
   it("lets Lua console helpers call registered Lua actions", () => {
     const result = executeLuaInProcess({
       mode: "command",
@@ -161,5 +199,72 @@ describe("Lua runtime core", () => {
 
     expect(result.ok).toBe(true);
     expect(result.value).toMatchObject({ kind: "text", languageId: "text.plain", text: "HELLO" });
+  });
+
+  it("enforces Lua action input contracts for nested calls", () => {
+    const result = executeLuaInProcess({
+      mode: "command",
+      source: `run_action("graph-only")`,
+      input: { kind: "text", languageId: "text.plain", text: "hello" },
+      actions: [
+        {
+          id: "graph-only",
+          name: "Graph Only",
+          category: "Lua Transform",
+          input: "model.graph",
+          output: "text.plain",
+          source: `return { id = "graph-only", run = function(input) return input:emit_text("text.plain", "ok") end }`,
+          fileName: "graph-only.lua"
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("expects model.graph, received text.plain");
+  });
+
+  it("enforces Lua action output contracts for nested calls", () => {
+    const result = executeLuaInProcess({
+      mode: "command",
+      source: `run_action("bad-output")`,
+      input: { kind: "text", languageId: "text.plain", text: "hello" },
+      actions: [
+        {
+          id: "bad-output",
+          name: "Bad Output",
+          category: "Lua Transform",
+          input: "text.plain",
+          output: "text.json",
+          source: `return { id = "bad-output", run = function(input) return input:emit_text("text.plain", "ok") end }`,
+          fileName: "bad-output.lua"
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("declares text.json, returned text.plain");
+  });
+
+  it("limits recursive Lua action composition", () => {
+    const result = executeLuaInProcess({
+      mode: "command",
+      source: `run_action("self")`,
+      input: { kind: "text", languageId: "text.plain", text: "hello" },
+      limits: { maxRecursionDepth: 2 },
+      actions: [
+        {
+          id: "self",
+          name: "Self",
+          category: "Lua Transform",
+          input: "text.plain",
+          output: "text.plain",
+          source: `return { id = "self", run = function(input) return action("self", input) end }`,
+          fileName: "self.lua"
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain("recursion limit exceeded");
   });
 });
