@@ -25,5 +25,7 @@ describe("Indented Tree parser", () => {
     expect(graph.nodes.map((node) => node.id)).toEqual(["a", "b"]);
     expect(graph.edges.some((edge) => edge.type === "hierarchy")).toBe(true);
     expect(graph.edges.some((edge) => edge.type === "related-to" && edge.target === "a")).toBe(true);
+    expect(graph.nodes.find((node) => node.id === "b")?.sourceRange?.line).toBe(2);
+    expect(graph.edges.find((edge) => edge.type === "related-to")?.sourceRange?.line).toBe(2);
   });
 });

@@ -29,7 +29,7 @@ import {
   ZoomIn,
   ZoomOut
 } from "lucide-preact";
-import type { PipelineTraceStep, PipelineValue, PluginState, PopupRecord, TextDocument, ViewerControlDefinition, ViewerSettingValue } from "../domain/types";
+import type { PipelineTraceStep, PipelineValue, PluginState, PopupRecord, SourceRange, TextDocument, ViewerControlDefinition, ViewerSettingValue, VisualSelection } from "../domain/types";
 import type { RegisteredLuaAction } from "../lua/luaScriptRegistry";
 import type { LuaRunResult } from "../lua/types";
 import type { TextForgeResource } from "../resources/resourceCatalog";
@@ -51,6 +51,8 @@ interface PopupHostProps {
   onNewLuaScript: () => void;
   onOpenResource: (resource: TextForgeResource) => void;
   onOpenSvgArtifact: (originPopupId: string, svg: string, title: string) => void;
+  sourceSelection?: VisualSelection;
+  onSelectSourceRange: (documentId: string, range: SourceRange) => void;
   onClose: (id: string) => void;
   onRefresh: (id: string) => void;
   onUpdate: (id: string, patch: Partial<PopupRecord>) => void;
@@ -70,6 +72,8 @@ export function PopupHost({
   onNewLuaScript,
   onOpenResource,
   onOpenSvgArtifact,
+  sourceSelection,
+  onSelectSourceRange,
   onClose,
   onRefresh,
   onUpdate,
@@ -279,6 +283,8 @@ export function PopupHost({
                   }
                   onZoomChange={(zoom) => onUpdate(popup.id, { zoom })}
                   onOpenSvgArtifact={(svg, title) => onOpenSvgArtifact(popup.id, svg, title)}
+                  sourceSelection={viewerSourceSelection(sourceSelection, popup)}
+                  onSelectSourceRange={(range) => popup.documentId && onSelectSourceRange(popup.documentId, range)}
                   onSearchStateChange={(state) => {
                     if (popup.searchCount !== state.count || popup.searchIndex !== state.index) {
                       onUpdate(popup.id, { searchCount: state.count, searchIndex: state.index });
@@ -455,6 +461,13 @@ function toolbarActionPatch(popup: PopupRecord, action: string): Partial<PopupRe
     toolbarAction: action,
     toolbarActionRevision: (popup.toolbarActionRevision || 0) + 1
   };
+}
+
+function viewerSourceSelection(selection: VisualSelection | undefined, popup: PopupRecord): VisualSelection | undefined {
+  if (!selection || selection.documentId !== popup.documentId || selection.documentVersion !== popup.sourceVersion) {
+    return undefined;
+  }
+  return selection;
 }
 
 type WindowLayoutTarget = "top-left" | "top-right" | "bottom-left" | "bottom-right" | "top" | "bottom" | "left" | "right";

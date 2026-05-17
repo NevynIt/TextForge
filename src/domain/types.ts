@@ -61,6 +61,16 @@ export interface SourceRange {
   column: number;
 }
 
+export interface VisualSelection {
+  documentId: string;
+  documentVersion: number;
+  sourceRange: SourceRange;
+  visualKind?: "node" | "edge" | "heading" | "diagram";
+  visualId?: string;
+  viewerPopupId?: string;
+  revision: number;
+}
+
 export interface TreeNode {
   id: string;
   declaredId?: string;

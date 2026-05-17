@@ -22,7 +22,7 @@ import { PluginRegistry } from "../core/pluginRegistry";
 import { RuntimeLoader } from "../core/runtimeLoader";
 import { TextForgeStorage } from "../core/storage";
 import { WorkspaceManager } from "../core/workspaceManager";
-import type { PipelineTraceStep, PipelineValue, PopupRecord, TextDocument } from "../domain/types";
+import type { PipelineTraceStep, PipelineValue, PopupRecord, SourceRange, TextDocument, VisualSelection } from "../domain/types";
 import { pluginManifest } from "../plugins/manifest";
 import { CodeEditor } from "../components/CodeEditor";
 import { DocumentBadge } from "../components/DocumentBadge";
@@ -74,6 +74,7 @@ export function App() {
   const [renamingDocumentId, setRenamingDocumentId] = useState("");
   const [renameDraft, setRenameDraft] = useState("");
   const [luaActions, setLuaActions] = useState<RegisteredLuaAction[]>([]);
+  const [visualSelection, setVisualSelection] = useState<VisualSelection | undefined>();
   const popupsRef = useRef(popups);
   popupsRef.current = popups;
 
@@ -272,6 +273,36 @@ export function App() {
     }
     services.workspace.updateLanguage(activeDocument.id, languageId);
     commitWorkspace(`Language changed to ${languageId}.`);
+  }
+
+  function updateEditorSelection(range: SourceRange): void {
+    if (!activeDocument) {
+      return;
+    }
+    setVisualSelection((current) => ({
+      documentId: activeDocument.id,
+      documentVersion: activeDocument.version,
+      sourceRange: range,
+      revision: (current?.revision || 0) + 1
+    }));
+  }
+
+  function selectSourceRange(documentId: string, range: SourceRange): void {
+    const document = services.workspace.getDocument(documentId);
+    if (!document) {
+      return;
+    }
+    if (workspace.activeDocumentId !== documentId) {
+      services.workspace.switchDocument(documentId);
+      commitWorkspace();
+    }
+    setVisualSelection((current) => ({
+      documentId,
+      documentVersion: document.version,
+      sourceRange: range,
+      revision: (current?.revision || 0) + 1
+    }));
+    setStatus(`Selected source in ${document.fileName}.`);
   }
 
   function downloadActiveDocument(): void {
@@ -690,7 +721,17 @@ export function App() {
       <main class="workspace">
         <section class="editor-pane">
           {activeDocument ? (
-            <CodeEditor value={activeDocument.text} languageId={activeDocument.languageId} onChange={updateText} />
+            <CodeEditor
+              value={activeDocument.text}
+              languageId={activeDocument.languageId}
+              onChange={updateText}
+              onSelectionChange={updateEditorSelection}
+              revealRange={
+                visualSelection?.documentId === activeDocument.id && visualSelection.documentVersion === activeDocument.version
+                  ? { ...visualSelection.sourceRange, revision: visualSelection.revision }
+                  : null
+              }
+            />
           ) : (
             <div class="empty-editor">No document open.</div>
           )}
@@ -712,6 +753,8 @@ export function App() {
         onNewLuaScript={newLuaScript}
         onOpenResource={openResource}
         onOpenSvgArtifact={openSvgArtifact}
+        sourceSelection={visualSelection}
+        onSelectSourceRange={selectSourceRange}
         onClose={(id) => setPopups((items) => items.filter((popup) => popup.id !== id))}
         onRefresh={(id) => void refreshPopup(id)}
         onUpdate={updatePopup}

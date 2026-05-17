@@ -3,7 +3,7 @@ import "jsmind/style/jsmind.css";
 import type { JSX } from "preact";
 import { PanelRightClose, PanelRightOpen } from "lucide-preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { GraphModel, TableModel, TreeNode, ViewerResult, ViewerSettingValue } from "../domain/types";
+import type { GraphEdge, GraphModel, SourceRange, TableModel, TreeNode, ViewerResult, ViewerSettingValue, VisualSelection } from "../domain/types";
 import { parseDelimited } from "../parsers/csv";
 import { escapeHtml } from "../parsers/source";
 
@@ -17,6 +17,8 @@ interface ViewerContentProps {
   onSearchStateChange?: (state: { count: number; index: number }) => void;
   onZoomChange?: (zoom: number) => void;
   onOpenSvgArtifact?: (svg: string, title: string) => void;
+  sourceSelection?: VisualSelection;
+  onSelectSourceRange?: (range: SourceRange) => void;
 }
 
 export interface ViewerSearchCommand {
@@ -38,7 +40,9 @@ export function ViewerContent({
   toolbarAction,
   onSearchStateChange,
   onZoomChange,
-  onOpenSvgArtifact
+  onOpenSvgArtifact,
+  sourceSelection,
+  onSelectSourceRange
 }: ViewerContentProps) {
   const style = { "--viewer-zoom": String(zoom) };
   if (result.kind === "html") {
@@ -72,7 +76,14 @@ export function ViewerContent({
   if (result.kind === "tree") {
     return (
       <div class="viewer-content viewer-tree" style={style}>
-        <TreeView nodes={filterTree(result.nodes, query)} query={query} settings={settings} toolbarAction={toolbarAction} />
+        <TreeView
+          nodes={filterTree(result.nodes, query)}
+          query={query}
+          settings={settings}
+          toolbarAction={toolbarAction}
+          sourceSelection={sourceSelection}
+          onSelectSourceRange={onSelectSourceRange}
+        />
       </div>
     );
   }
@@ -95,6 +106,8 @@ export function ViewerContent({
           toolbarAction={toolbarAction}
           onSearchStateChange={onSearchStateChange}
           onZoomChange={onZoomChange}
+          sourceSelection={sourceSelection}
+          onSelectSourceRange={onSelectSourceRange}
         />
       </div>
     );
@@ -110,6 +123,8 @@ export function ViewerContent({
           searchCommand={searchCommand}
           toolbarAction={toolbarAction}
           onSearchStateChange={onSearchStateChange}
+          sourceSelection={sourceSelection}
+          onSelectSourceRange={onSelectSourceRange}
         />
       </div>
     );
@@ -349,12 +364,16 @@ function TreeView({
   nodes,
   query,
   settings,
-  toolbarAction
+  toolbarAction,
+  sourceSelection,
+  onSelectSourceRange
 }: {
   nodes: TreeNode[];
   query: string;
   settings: Record<string, ViewerSettingValue>;
   toolbarAction?: ViewerToolbarAction;
+  sourceSelection?: VisualSelection;
+  onSelectSourceRange?: (range: SourceRange) => void;
 }) {
   const density = safeClassName(stringSetting(settings.density, "comfortable"));
   const inlineDetails = booleanSetting(settings.inlineDetails, false);
@@ -379,6 +398,21 @@ function TreeView({
     window.requestAnimationFrame(() => document.getElementById(treeDomId(id))?.scrollIntoView({ block: "center", inline: "nearest" }));
   }
 
+  function selectNodeSource(id: string): void {
+    const node = nodeIndex.get(id);
+    if (node?.sourceRange) {
+      onSelectSourceRange?.(node.sourceRange);
+    }
+  }
+
+  useEffect(() => {
+    const node = sourceSelection ? treeNodeForSourceRange(nodes, sourceSelection.sourceRange) : undefined;
+    if (!node) {
+      return;
+    }
+    selectNode(node.id);
+  }, [sourceSelection?.revision, nodes]);
+
   return (
     <div class={`viewer-with-inspector viewer-bg-${background} ${inspectorOpen ? "inspector-open" : "inspector-closed"}`}>
       <div class="viewer-main-panel tree-main-panel">
@@ -397,6 +431,8 @@ function TreeView({
               toolbarAction={toolbarAction}
               selectedId={selectedNode?.id || ""}
               onSelect={selectNode}
+              onSelectSource={selectNodeSource}
+              onSelectSourceRange={onSelectSourceRange}
             />
           ))}
         </ol>
@@ -414,7 +450,9 @@ function TreeItem({
   inlineDetails,
   toolbarAction,
   selectedId,
-  onSelect
+  onSelect,
+  onSelectSource,
+  onSelectSourceRange
 }: {
   node: TreeNode;
   depth: number;
@@ -424,6 +462,8 @@ function TreeItem({
   toolbarAction?: ViewerToolbarAction;
   selectedId: string;
   onSelect: (id: string) => void;
+  onSelectSource: (id: string) => void;
+  onSelectSourceRange?: (range: SourceRange) => void;
 }) {
   const detailsRef = useRef<HTMLDetailsElement>(null);
   const hasChildren = node.children.length > 0;
@@ -455,13 +495,19 @@ function TreeItem({
           id={treeDomId(node.id)}
           class={`tree-leaf-row tree-node-row ${selectedId === node.id ? "tree-selected" : ""}`}
           style={nodeStyle}
-          onClick={() => onSelect(node.id)}
+          onClick={(event) => {
+            onSelect(node.id);
+            if (event.ctrlKey || event.metaKey) {
+              event.preventDefault();
+              onSelectSource(node.id);
+            }
+          }}
         >
           <span class="node-label">{renderHighlighted(node.label, query)}</span>
           {(node.tags || []).map((tag) => (
             <span class="badge" key={tag}>#{tag}</span>
           ))}
-          <TreeLinks links={node.links || []} onSelect={onSelect} />
+          <TreeLinks links={node.links || []} onSelect={onSelect} onSelectSourceRange={onSelectSourceRange} />
         </div>
         {inlineDetails && node.details ? <pre class="node-details">{node.details}</pre> : null}
         {hasChildren ? <small class="tree-pruned">{node.children.length} hidden children</small> : null}
@@ -478,6 +524,11 @@ function TreeItem({
           style={nodeStyle}
           onClick={(event) => {
             onSelect(node.id);
+            if (event.ctrlKey || event.metaKey) {
+              event.preventDefault();
+              onSelectSource(node.id);
+              return;
+            }
             if (!event.shiftKey) {
               return;
             }
@@ -491,7 +542,7 @@ function TreeItem({
           {(node.tags || []).map((tag) => (
             <span class="badge" key={tag}>#{tag}</span>
           ))}
-          <TreeLinks links={node.links || []} onSelect={onSelect} />
+          <TreeLinks links={node.links || []} onSelect={onSelect} onSelectSourceRange={onSelectSourceRange} />
         </summary>
         {inlineDetails && node.details ? <pre class="node-details">{node.details}</pre> : null}
         {canShowChildren ? (
@@ -507,6 +558,8 @@ function TreeItem({
                 toolbarAction={toolbarAction}
                 selectedId={selectedId}
                 onSelect={onSelect}
+                onSelectSource={onSelectSource}
+                onSelectSourceRange={onSelectSourceRange}
               />
             ))}
           </ol>
@@ -516,7 +569,15 @@ function TreeItem({
   );
 }
 
-function TreeLinks({ links, onSelect }: { links: NonNullable<TreeNode["links"]>; onSelect: (id: string) => void }) {
+function TreeLinks({
+  links,
+  onSelect,
+  onSelectSourceRange
+}: {
+  links: NonNullable<TreeNode["links"]>;
+  onSelect: (id: string) => void;
+  onSelectSourceRange?: (range: SourceRange) => void;
+}) {
   if (!links.length) {
     return null;
   }
@@ -530,7 +591,11 @@ function TreeLinks({ links, onSelect }: { links: NonNullable<TreeNode["links"]>;
           onClick={(event) => {
             event.preventDefault();
             event.stopPropagation();
-            onSelect(link.target);
+            if ((event.ctrlKey || event.metaKey) && link.sourceRange) {
+              onSelectSourceRange?.(link.sourceRange);
+            } else {
+              onSelect(link.target);
+            }
           }}
         >
           @{link.type ? `${link.type}:${link.target}` : link.target}
@@ -636,7 +701,9 @@ function MindMapView({
   searchCommand,
   toolbarAction,
   onSearchStateChange,
-  onZoomChange
+  onZoomChange,
+  sourceSelection,
+  onSelectSourceRange
 }: {
   nodes: TreeNode[];
   query: string;
@@ -646,11 +713,14 @@ function MindMapView({
   toolbarAction?: ViewerToolbarAction;
   onSearchStateChange?: (state: { count: number; index: number }) => void;
   onZoomChange?: (zoom: number) => void;
+  sourceSelection?: VisualSelection;
+  onSelectSourceRange?: (range: SourceRange) => void;
 }) {
   const hostRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
   const instanceRef = useRef<jsMind | null>(null);
   const crossLinkLabelOffsetsRef = useRef(new Map<string, Point>());
+  const selectSourceRangeRef = useRef(onSelectSourceRange);
   const mind = useMemo(() => treeToJsMind(nodes), [nodes]);
   const searchMatches = useMemo(() => matchingTreeNodes(nodes, query), [nodes, query]);
   const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
@@ -661,6 +731,7 @@ function MindMapView({
   const background = safeClassName(stringSetting(settings.viewerBackground, "grid"));
   const showCrossLinkArrows = booleanSetting(settings.showArrows, true);
   const showCrossLinkLabels = booleanSetting(settings.showEdgeLabels, false);
+  selectSourceRangeRef.current = onSelectSourceRange;
 
   useEffect(() => {
     const viewport = viewportRef.current;
@@ -781,7 +852,24 @@ function MindMapView({
       toggleJsMindNode(instance, id, event.shiftKey);
       window.requestAnimationFrame(() => renderMindMapDecorations(host, nodes, query, searchMatches[activeMatchIndex]?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current }));
     };
+    const click = (event: MouseEvent) => {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+      const id = jsMindNodeId(instance, event.target);
+      if (!id) {
+        return;
+      }
+      const node = indexTreeNodes(nodes).get(id);
+      if (!node?.sourceRange) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      selectSourceRangeRef.current?.(node.sourceRange);
+    };
     host.addEventListener("dblclick", doubleClick, true);
+    host.addEventListener("click", click, true);
     if (initialDepth === "collapsed") {
       instance.collapse_all?.();
     } else if (initialDepth === "depth2") {
@@ -801,6 +889,7 @@ function MindMapView({
 
     return () => {
       host.removeEventListener("dblclick", doubleClick, true);
+      host.removeEventListener("click", click, true);
       instanceRef.current = null;
       host.innerHTML = "";
     };
@@ -846,6 +935,25 @@ function MindMapView({
       centerMindMapNode(viewport, host, activeMatch.id);
     });
   }, [query, searchMatches, activeMatchIndex, nodes, showCrossLinkArrows, showCrossLinkLabels]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const viewport = viewportRef.current;
+    const instance = instanceRef.current;
+    if (!host || !viewport || !instance || !sourceSelection) {
+      return;
+    }
+    const node = treeNodeForSourceRange(nodes, sourceSelection.sourceRange);
+    if (!node) {
+      return;
+    }
+    expandJsMindPath(instance, nodes, node.id);
+    window.requestAnimationFrame(() => {
+      instance.select_node?.(node.id);
+      renderMindMapDecorations(host, nodes, query, node.id, { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
+      centerMindMapNode(viewport, host, node.id);
+    });
+  }, [sourceSelection?.revision, nodes]);
 
   useEffect(() => {
     const host = hostRef.current;
@@ -917,7 +1025,9 @@ function GraphView({
   settings,
   searchCommand,
   toolbarAction,
-  onSearchStateChange
+  onSearchStateChange,
+  sourceSelection,
+  onSelectSourceRange
 }: {
   graph: GraphModel;
   engine: "cytoscape" | "sigma" | "static";
@@ -926,9 +1036,13 @@ function GraphView({
   searchCommand?: ViewerSearchCommand;
   toolbarAction?: ViewerToolbarAction;
   onSearchStateChange?: (state: { count: number; index: number }) => void;
+  sourceSelection?: VisualSelection;
+  onSelectSourceRange?: (range: SourceRange) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<CytoscapeLike | null>(null);
+  const sigmaRuntimeRef = useRef<SigmaRuntime | null>(null);
+  const selectSourceRangeRef = useRef(onSelectSourceRange);
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<GraphSelection | null>(null);
   const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
@@ -962,6 +1076,7 @@ function GraphView({
   const runtimeShowArrows = engine === "sigma" ? showArrows : false;
   const runtimeShowLabels = engine === "sigma" ? showLabels : false;
   const runtimeShowEdgeLabels = engine === "sigma" ? showEdgeLabels : false;
+  selectSourceRangeRef.current = onSelectSourceRange;
 
   useEffect(() => {
     setActiveMatchIndex(graphMatches.length ? 0 : -1);
@@ -1025,6 +1140,7 @@ function GraphView({
                   shape: visual.shape,
                   opacity: visual.opacity,
                   details: graphNodeDetails(node),
+                  sourceRange: node.sourceRange,
                   matched: highlighted && node.label.toLowerCase().includes(highlighted)
                 }
               };
@@ -1043,6 +1159,7 @@ function GraphView({
                   lineStyle: visual.lineStyle,
                   curveStyle: visual.curveStyle,
                   opacity: visual.opacity,
+                  sourceRange: edge.sourceRange,
                   details: edge.details || stringDataValue(edge.data?.details)
                 }
               };
@@ -1059,6 +1176,16 @@ function GraphView({
         resizeObserver.observe(containerRef.current);
         const updateSelection = () => setSelected(cytoscapeSelection(cy));
         cy.on("select unselect", "node, edge", updateSelection);
+        cy.on("tap", "node, edge", (event) => {
+          const original = event.originalEvent instanceof MouseEvent ? event.originalEvent : null;
+          if (!original?.ctrlKey && !original?.metaKey) {
+            return;
+          }
+          const range = event.target.data("sourceRange") as SourceRange | undefined;
+          if (range) {
+            selectSourceRangeRef.current?.(range);
+          }
+        });
         cy.on("dbltap", "node, edge", (event) => {
           event.target.unselect();
           updateSelection();
@@ -1101,6 +1228,7 @@ function GraphView({
             color: highlighted && node.label.toLowerCase().includes(highlighted) ? "#cf6f2a" : visual.color,
             labelColor: visual.textColor,
             kind: node.type || "node",
+            sourceRange: node.sourceRange,
             depth: node.data?.depth,
             rank: node.data?.rank,
             details: graphNodeDetails(node),
@@ -1118,6 +1246,7 @@ function GraphView({
               color: visual.color,
               type: visibleGraph.directed !== false && showArrows ? "arrow" : "line",
               kind: edge.type || "edge",
+              sourceRange: edge.sourceRange,
               details: edge.details || stringDataValue(edge.data?.details),
               style: edge.style || edge.data?.style,
               matched: Boolean(highlighted && [edge.id, edge.label, edge.type].filter(Boolean).join(" ").toLowerCase().includes(highlighted))
@@ -1256,6 +1385,12 @@ function GraphView({
         renderer.on("clickNode", ({ node, event }) => {
           const original = event.original instanceof MouseEvent ? event.original : null;
           const shift = Boolean(original?.shiftKey);
+          if (original?.ctrlKey || original?.metaKey) {
+            const range = g.getNodeAttribute?.(node, "sourceRange") as SourceRange | undefined;
+            if (range) {
+              selectSourceRangeRef.current?.(range);
+            }
+          }
           if (suppressNextSigmaClick) {
             suppressNextSigmaClick = false;
             return;
@@ -1278,6 +1413,12 @@ function GraphView({
         renderer.on("clickEdge", ({ edge, event }) => {
           const original = event.original instanceof MouseEvent ? event.original : null;
           const shift = Boolean(original?.shiftKey);
+          if (original?.ctrlKey || original?.metaKey) {
+            const range = g.getEdgeAttribute?.(edge, "sourceRange") as SourceRange | undefined;
+            if (range) {
+              selectSourceRangeRef.current?.(range);
+            }
+          }
           if (shift) {
             selectedNodes.clear();
             if (selectedEdges.has(edge)) {
@@ -1299,7 +1440,30 @@ function GraphView({
           setSelected(null);
           renderer.refresh();
         });
-        cleanup = () => renderer.kill();
+        sigmaRuntimeRef.current = {
+          selectBySourceRange(range: SourceRange) {
+            const match = graphSelectionForSourceRange(visibleGraph, range);
+            if (!match) {
+              return;
+            }
+            selectedNodes.clear();
+            selectedEdges.clear();
+            if (match.kind === "node") {
+              selectedNodes.add(match.id);
+            } else if (match.kind === "edge") {
+              selectedEdges.add(match.id);
+            }
+            setSelected(match);
+            publishSigmaSelection();
+          }
+        };
+        if (sourceSelection) {
+          sigmaRuntimeRef.current.selectBySourceRange(sourceSelection.sourceRange);
+        }
+        cleanup = () => {
+          sigmaRuntimeRef.current = null;
+          renderer.kill();
+        };
       }
     }
 
@@ -1389,6 +1553,25 @@ function GraphView({
   }, [graphMatches, activeMatchIndex]);
 
   useEffect(() => {
+    if (!sourceSelection) {
+      return;
+    }
+    const match = graphSelectionForSourceRange(visibleGraph, sourceSelection.sourceRange);
+    if (!match) {
+      return;
+    }
+    setSelected(match);
+    const cy = cyRef.current;
+    if (cy) {
+      cy.elements().removeClass("tf-source");
+      const element = cy.getElementById(match.id);
+      element.addClass("tf-source");
+      cy.animate({ center: { eles: element }, zoom: Math.max(cy.zoom(), 1.2) }, { duration: 160 });
+    }
+    sigmaRuntimeRef.current?.selectBySourceRange(sourceSelection.sourceRange);
+  }, [sourceSelection?.revision, visibleGraph]);
+
+  useEffect(() => {
     const cy = cyRef.current;
     if (!cy || toolbarAction?.action !== "graph-run-layout" || !toolbarAction.revision) {
       return;
@@ -1448,7 +1631,12 @@ interface GraphSelection {
   kind: "node" | "edge" | "selection";
   type?: string;
   details?: string;
+  sourceRange?: SourceRange;
   rows: InspectorItem["rows"];
+}
+
+interface SigmaRuntime {
+  selectBySourceRange(range: SourceRange): void;
 }
 
 interface CytoscapeElementLike {
@@ -1512,6 +1700,10 @@ function cytoscapeStyle(showLabels: boolean, showEdgeLabels: boolean, showArrows
       style: { "background-color": "#111827", "border-width": 4, "border-color": "#ffe28a", color: "#111827" }
     },
     {
+      selector: "node.tf-source",
+      style: { "border-width": 5, "border-color": "#2f80ed", "overlay-color": "#2f80ed", "overlay-opacity": 0.12 }
+    },
+    {
       selector: "node:selected",
       style: {
         "border-width": 5,
@@ -1542,6 +1734,10 @@ function cytoscapeStyle(showLabels: boolean, showEdgeLabels: boolean, showArrows
     {
       selector: "edge.tf-active",
       style: { "line-color": "#111827", "target-arrow-color": "#111827", width: 5 }
+    },
+    {
+      selector: "edge.tf-source",
+      style: { "line-color": "#2f80ed", "target-arrow-color": "#2f80ed", width: 5 }
     },
     {
       selector: "edge:selected",
@@ -1632,6 +1828,7 @@ function cytoscapeSelection(cy: unknown): GraphSelection | null {
       kind: element.isNode() ? "node" : "edge",
       type: String(element.data("kind") || element.data("label") || ""),
       details: stringDataValue(element.data("details")),
+      sourceRange: element.data("sourceRange") as SourceRange | undefined,
       rows: graphElementRows(element)
     };
   }
@@ -1660,6 +1857,7 @@ function sigmaSelectionFromSets(graph: GraphologyLike, selectedNodes: Set<string
       kind: "node",
       type: String(graph.getNodeAttribute?.(node, "kind") || ""),
       details: stringDataValue(graph.getNodeAttribute?.(node, "details")),
+      sourceRange: graph.getNodeAttribute?.(node, "sourceRange") as SourceRange | undefined,
       rows: sigmaNodeRows(graph, node)
     };
   }
@@ -1671,6 +1869,7 @@ function sigmaSelectionFromSets(graph: GraphologyLike, selectedNodes: Set<string
       kind: "edge",
       type: String(graph.getEdgeAttribute?.(edge, "kind") || ""),
       details: stringDataValue(graph.getEdgeAttribute?.(edge, "details")),
+      sourceRange: graph.getEdgeAttribute?.(edge, "sourceRange") as SourceRange | undefined,
       rows: sigmaEdgeRows(graph, edge)
     };
   }
@@ -1749,6 +1948,7 @@ function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] 
         kind: "node",
         type: node.type,
         details: graphNodeDetails(node),
+        sourceRange: node.sourceRange,
         rows: [
           { label: "Degree", value: String(graph.edges.filter((edge) => edge.source === node.id || edge.target === node.id).length) }
         ]
@@ -1765,6 +1965,7 @@ function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] 
         kind: "edge",
         type: edge.type,
         details: edge.details || stringDataValue(edge.data?.details),
+        sourceRange: edge.sourceRange,
         rows: [
           { label: "Source", value: edge.source },
           { label: "Target", value: edge.target },
@@ -1774,6 +1975,67 @@ function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] 
     }
   });
   return matches;
+}
+
+function graphSelectionForSourceRange(graph: GraphModel, range: SourceRange): GraphSelection | null {
+  const node = bestSourceRangeMatch(graph.nodes, range);
+  const edge = bestSourceRangeMatch(graph.edges, range);
+  if (edge && (!node || sourceRangeSpan(edge.sourceRange) <= sourceRangeSpan(node.sourceRange))) {
+    const edgeIndex = graph.edges.indexOf(edge);
+    const id = edge.id || `edge-${edgeIndex}`;
+    return {
+      id,
+      label: edge.label || edge.type || id,
+      kind: "edge",
+      type: edge.type,
+      details: edge.details || stringDataValue(edge.data?.details),
+      sourceRange: edge.sourceRange,
+      rows: [
+        { label: "Source", value: edge.source },
+        { label: "Target", value: edge.target },
+        ...(edge.weight !== undefined ? [{ label: "Weight", value: String(edge.weight) }] : [])
+      ]
+    };
+  }
+  if (node) {
+    return {
+      id: node.id,
+      label: node.label,
+      kind: "node",
+      type: node.type,
+      details: graphNodeDetails(node),
+      sourceRange: node.sourceRange,
+      rows: [
+        { label: "Degree", value: String(graph.edges.filter((candidate) => candidate.source === node.id || candidate.target === node.id).length) }
+      ]
+    };
+  }
+  return null;
+}
+
+function treeNodeForSourceRange(nodes: TreeNode[], range: SourceRange): TreeNode | undefined {
+  return bestSourceRangeMatch(flattenTreeNodes(nodes), range);
+}
+
+function bestSourceRangeMatch<T extends { sourceRange?: SourceRange }>(items: T[], range: SourceRange): T | undefined {
+  return items
+    .filter((item) => item.sourceRange && sourceRangesTouch(item.sourceRange, range))
+    .sort((left, right) => sourceRangeSpan(left.sourceRange) - sourceRangeSpan(right.sourceRange))[0];
+}
+
+function sourceRangesTouch(left: SourceRange | undefined, right: SourceRange): boolean {
+  if (!left) {
+    return false;
+  }
+  const cursor = right.from === right.to;
+  if (cursor) {
+    return right.from >= left.from && right.from <= left.to;
+  }
+  return left.from <= right.to && right.from <= left.to;
+}
+
+function sourceRangeSpan(range: SourceRange | undefined): number {
+  return range ? Math.max(0, range.to - range.from) : Number.POSITIVE_INFINITY;
 }
 
 interface InspectorItem {
@@ -1981,6 +2243,10 @@ function indexTreeNodes(nodes: TreeNode[], map = new Map<string, TreeNode>()): M
     indexTreeNodes(node.children, map);
   });
   return map;
+}
+
+function flattenTreeNodes(nodes: TreeNode[]): TreeNode[] {
+  return nodes.flatMap((node) => [node, ...flattenTreeNodes(node.children || [])]);
 }
 
 function treeDomId(id: string): string {

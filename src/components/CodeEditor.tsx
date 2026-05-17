@@ -10,19 +10,25 @@ import { lua as luaLegacy } from "@codemirror/legacy-modes/mode/lua";
 import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
+import type { SourceRange } from "../domain/types";
 
 interface CodeEditorProps {
   value: string;
   languageId: string;
   onChange: (text: string) => void;
+  revealRange?: (SourceRange & { revision?: number }) | null;
+  onSelectionChange?: (range: SourceRange) => void;
 }
 
-export function CodeEditor({ value, languageId, onChange }: CodeEditorProps) {
+export function CodeEditor({ value, languageId, onChange, revealRange, onSelectionChange }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const languageCompartmentRef = useRef(new Compartment());
   const onChangeRef = useRef(onChange);
+  const onSelectionChangeRef = useRef(onSelectionChange);
+  const lastRevealRevisionRef = useRef<number | undefined>(undefined);
   onChangeRef.current = onChange;
+  onSelectionChangeRef.current = onSelectionChange;
 
   useEffect(() => {
     if (!containerRef.current || viewRef.current) {
@@ -41,6 +47,21 @@ export function CodeEditor({ value, languageId, onChange }: CodeEditorProps) {
             !update.transactions.some((transaction) => transaction.annotation(Transaction.remote))
           ) {
             onChangeRef.current(update.state.doc.toString());
+          }
+          if (
+            update.selectionSet &&
+            !update.transactions.some((transaction) => transaction.annotation(Transaction.remote))
+          ) {
+            const selection = update.state.selection.main;
+            const from = Math.min(selection.from, selection.to);
+            const to = Math.max(selection.from, selection.to);
+            const line = update.state.doc.lineAt(from);
+            onSelectionChangeRef.current?.({
+              from,
+              to,
+              line: line.number - 1,
+              column: from - line.from
+            });
           }
         }),
         syntaxHighlighting(textForgeHighlightStyle),
@@ -81,7 +102,31 @@ export function CodeEditor({ value, languageId, onChange }: CodeEditorProps) {
     });
   }, [languageId]);
 
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !revealRange) {
+      return;
+    }
+    if (revealRange.revision !== undefined && lastRevealRevisionRef.current === revealRange.revision) {
+      return;
+    }
+    const docLength = view.state.doc.length;
+    const from = clampPosition(revealRange.from, docLength);
+    const to = clampPosition(Math.max(revealRange.to, revealRange.from), docLength);
+    lastRevealRevisionRef.current = revealRange.revision;
+    view.dispatch({
+      selection: { anchor: from, head: to },
+      effects: EditorView.scrollIntoView(from, { y: "center" }),
+      annotations: Transaction.remote.of(true)
+    });
+    view.focus();
+  }, [revealRange?.revision, revealRange?.from, revealRange?.to]);
+
   return <div ref={containerRef} class="code-editor" />;
+}
+
+function clampPosition(value: number, docLength: number): number {
+  return Math.max(0, Math.min(docLength, value));
 }
 
 function languageExtension(languageId: string) {

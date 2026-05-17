@@ -96,6 +96,9 @@ export function parseIndentedTree(
       children: [],
       sourceRange: sourceRange(line.documentText, lineStart, lineStart + rawLine.length)
     };
+    node.links?.forEach((link) => {
+      link.sourceRange = link.sourceRange || node.sourceRange;
+    });
     if (!parsed.label) {
       diagnostics.push({
         ...lineDiagnostic(line, "warning", "Node label is empty."),
@@ -188,6 +191,7 @@ export function indentedTreeToGraph(nodes: TreeNode[]): GraphModel {
         target: node.id,
         type: "hierarchy",
         label: "contains",
+        sourceRange: node.sourceRange,
         color: styleColor(hierarchyStyle, EDGE_COLOR_KEYS),
         width: styleNumber(hierarchyStyle, EDGE_WIDTH_KEYS),
         style: hierarchyStyle
@@ -205,6 +209,7 @@ export function indentedTreeToGraph(nodes: TreeNode[]): GraphModel {
         target: link.target,
         type: link.type || "related-to",
         label: link.type || "related-to",
+        sourceRange: link.sourceRange || node.sourceRange,
         color: link.color || styleColor(linkStyle, EDGE_COLOR_KEYS),
         width: link.width || styleNumber(linkStyle, EDGE_WIDTH_KEYS),
         style: linkStyle
