@@ -63,6 +63,7 @@ export function ViewerContent({
         zoom={zoom}
         settings={settings}
         searchCommand={searchCommand}
+        toolbarAction={toolbarAction}
         onSearchStateChange={onSearchStateChange}
         onZoomChange={onZoomChange}
       />
@@ -215,6 +216,7 @@ function SvgView({
   zoom,
   settings,
   searchCommand,
+  toolbarAction,
   onSearchStateChange,
   onZoomChange
 }: {
@@ -223,11 +225,14 @@ function SvgView({
   zoom: number;
   settings: Record<string, ViewerSettingValue>;
   searchCommand?: ViewerSearchCommand;
+  toolbarAction?: ViewerToolbarAction;
   onSearchStateChange?: (state: { count: number; index: number }) => void;
   onZoomChange?: (zoom: number) => void;
 }) {
+  const frameRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const [fitScale, setFitScale] = useState(1);
   const [svgView, setSvgView] = useState({ panX: 0, panY: 0 });
   const [findState, setFindState] = useState<FindState>({ count: 0, activeIndex: -1, markers: [] });
   const background = safeClassName(stringSetting(settings.svgBackground, "white"));
@@ -243,6 +248,14 @@ function SvgView({
       count: matches.length,
       activeIndex: matches.length ? 0 : -1,
       markers: findMarkers(matches, ref.current)
+    });
+    queueMicrotask(() => {
+      const fitted = fittedStandaloneSvgView(ref.current, frameRef.current, fitMode);
+      if (!fitted) {
+        return;
+      }
+      setFitScale(fitted.scale);
+      setSvgView({ panX: fitted.x, panY: fitted.y });
     });
   }, [svg, query]);
 
@@ -267,6 +280,28 @@ function SvgView({
     moveMatch(searchCommand.direction === "previous" ? -1 : 1);
   }, [searchCommand?.revision]);
 
+  useEffect(() => {
+    if (!toolbarAction?.revision || toolbarAction.action !== "svg-fit") {
+      return;
+    }
+    const fitted = fittedStandaloneSvgView(ref.current, frameRef.current, fitMode);
+    if (!fitted) {
+      return;
+    }
+    setFitScale(fitted.scale);
+    setSvgView({ panX: fitted.x, panY: fitted.y });
+    onZoomChange?.(1);
+  }, [toolbarAction?.revision]);
+
+  useEffect(() => {
+    const fitted = fittedStandaloneSvgView(ref.current, frameRef.current, fitMode);
+    if (!fitted) {
+      return;
+    }
+    setFitScale(fitted.scale);
+    setSvgView({ panX: fitted.x, panY: fitted.y });
+  }, [fitMode]);
+
   function startPan(event: MouseEvent): void {
     if (event.button !== 0 || event.target instanceof Element && event.target.closest("button")) {
       return;
@@ -290,6 +325,7 @@ function SvgView({
     <section class={`viewer-content viewer-svg svg-bg-${background} svg-fit-${fitMode}`} style={{ "--viewer-zoom": "1" }}>
       <div
         class="svg-frame"
+        ref={frameRef}
         onMouseDown={startPan}
         onMouseMove={updatePan}
         onMouseUp={stopPan}
@@ -302,7 +338,7 @@ function SvgView({
         <div
           class="svg-stage"
           ref={ref}
-          style={{ transform: `translate(${svgView.panX}px, ${svgView.panY}px) scale(${zoom})` }}
+          style={{ transform: `translate(${svgView.panX}px, ${svgView.panY}px) scale(${fitScale * zoom})` }}
         />
       </div>
     </section>
@@ -2745,20 +2781,42 @@ function enhanceHtmlHeadings(root: HTMLElement): void {
 function enhanceMarkdownArtifacts(root: HTMLElement, onOpenSvgArtifact?: (svg: string, title: string) => void): void {
   root.querySelectorAll<HTMLElement>(".tf-embedded-artifact").forEach((artifact) => {
     const body = artifact.querySelector<HTMLElement>(".tf-artifact-body");
-    if (!body || artifact.dataset.enhanced === "true") {
+    const toolbar = artifact.querySelector<HTMLElement>(".tf-artifact-toolbar");
+    const svg = artifact.querySelector<SVGSVGElement>(".tf-artifact-body > svg");
+    if (!body || !toolbar || !svg || artifact.dataset.enhanced === "true") {
       return;
     }
     artifact.dataset.enhanced = "true";
-    const view = { scale: 1, x: 0, y: 0 };
+    toolbar.style.removeProperty("display");
+    toolbar.classList.add("is-enhanced");
+    svg.style.width = "100%";
+    svg.style.height = "100%";
+    svg.style.display = "block";
+    svg.style.maxWidth = "none";
+    svg.style.maxHeight = "none";
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    const view = { x: 0, y: 0, width: 1, height: 1 };
     const apply = () => {
-      body.style.setProperty("--artifact-scale", String(view.scale));
-      body.style.setProperty("--artifact-x", `${view.x}px`);
-      body.style.setProperty("--artifact-y", `${view.y}px`);
+      svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.width} ${view.height}`);
     };
     apply();
+    let fitFrame = 0;
+    const runFit = () => {
+      fitFrame = 0;
+      sizeEmbeddedArtifactViewport(body);
+      fitEmbeddedArtifact(body, svg, view, apply);
+    };
+    const scheduleFit = () => {
+      if (fitFrame) {
+        cancelAnimationFrame(fitFrame);
+      }
+      fitFrame = requestAnimationFrame(() => {
+        fitFrame = requestAnimationFrame(runFit);
+      });
+    };
     let drag: { x: number; y: number; startX: number; startY: number } | null = null;
     body.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0) {
+      if (event.button !== 0 || isEmbeddedArtifactResizeGesture(body, event)) {
         return;
       }
       drag = { x: event.clientX, y: event.clientY, startX: view.x, startY: view.y };
@@ -2768,8 +2826,9 @@ function enhanceMarkdownArtifacts(root: HTMLElement, onOpenSvgArtifact?: (svg: s
       if (!drag) {
         return;
       }
-      view.x = drag.startX + event.clientX - drag.x;
-      view.y = drag.startY + event.clientY - drag.y;
+      const viewport = elementContentViewport(body);
+      view.x = drag.startX - (event.clientX - drag.x) * (view.width / viewport.width);
+      view.y = drag.startY - (event.clientY - drag.y) * (view.height / viewport.height);
       apply();
     });
     body.addEventListener("pointerup", () => {
@@ -2777,11 +2836,23 @@ function enhanceMarkdownArtifacts(root: HTMLElement, onOpenSvgArtifact?: (svg: s
     });
     body.addEventListener("wheel", (event) => {
       event.preventDefault();
-      view.scale = clamp(view.scale + (event.deltaY > 0 ? -0.1 : 0.1), 0.2, 5);
+      zoomEmbeddedArtifact(body, view, event);
       apply();
     }, { passive: false });
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(() => {
+        if (body.dataset.userResized === "true") {
+          fitEmbeddedArtifact(body, svg, view, apply);
+          return;
+        }
+        scheduleFit();
+      });
+    resizeObserver?.observe(body);
+    resizeObserver?.observe(svg);
+    scheduleFit();
     artifact.querySelectorAll<HTMLButtonElement>("[data-artifact-action]").forEach((button) => {
-      button.addEventListener("click", () => handleArtifactAction(button.dataset.artifactAction || "", artifact, body, view, apply, onOpenSvgArtifact));
+      button.addEventListener("click", () => handleArtifactAction(button.dataset.artifactAction || "", artifact, body, svg, view, apply, onOpenSvgArtifact));
     });
   });
 }
@@ -2790,7 +2861,8 @@ function handleArtifactAction(
   action: string,
   artifact: HTMLElement,
   body: HTMLElement,
-  view: { scale: number; x: number; y: number },
+  svgRoot: SVGSVGElement,
+  view: { x: number; y: number; width: number; height: number },
   apply: () => void,
   onOpenSvgArtifact?: (svg: string, title: string) => void
 ): void {
@@ -2805,12 +2877,203 @@ function handleArtifactAction(
     void downloadSvgPng(svg, `${artifact.dataset.artifactKind || "diagram"}.png`);
   } else if (action === "popout-svg" && svg) {
     onOpenSvgArtifact?.(svg, `${artifact.dataset.artifactKind || "diagram"} SVG`);
-  } else if (action === "reset-view") {
-    view.scale = 1;
+  } else if (action === "fit-view" || action === "reset-view") {
+    fitEmbeddedArtifact(body, svgRoot, view, apply);
+  }
+}
+
+function fitEmbeddedArtifact(
+  body: HTMLElement,
+  svg: SVGSVGElement,
+  view: { x: number; y: number; width: number; height: number },
+  apply: () => void
+): void {
+  const bounds = embeddedSvgContentBounds(svg);
+  if (!bounds.width || !bounds.height) {
     view.x = 0;
     view.y = 0;
+    view.width = 1;
+    view.height = 1;
     apply();
+    return;
   }
+  const fitted = fitEmbeddedBoundsToViewport(bounds, elementContentViewport(body));
+  view.x = fitted.x;
+  view.y = fitted.y;
+  view.width = fitted.width;
+  view.height = fitted.height;
+  apply();
+}
+
+function embeddedSvgBounds(svg: SVGSVGElement): { x: number; y: number; width: number; height: number } {
+  const viewBox = svg.viewBox?.baseVal;
+  if (viewBox && viewBox.width > 0 && viewBox.height > 0) {
+    return { x: viewBox.x, y: viewBox.y, width: viewBox.width, height: viewBox.height };
+  }
+  const width = svg.width?.baseVal;
+  const height = svg.height?.baseVal;
+  if (width?.unitType === SVGLength.SVG_LENGTHTYPE_NUMBER && height?.unitType === SVGLength.SVG_LENGTHTYPE_NUMBER && width.value > 0 && height.value > 0) {
+    return { x: 0, y: 0, width: width.value, height: height.value };
+  }
+  try {
+    const box = svg.getBBox();
+    if (box.width > 0 && box.height > 0) {
+      return { x: box.x, y: box.y, width: box.width, height: box.height };
+    }
+  } catch {
+    // Some SVGs do not expose bounding boxes until laid out.
+  }
+  return { x: 0, y: 0, width: svg.clientWidth || 0, height: svg.clientHeight || 0 };
+}
+
+function embeddedSvgContentBounds(svg: SVGSVGElement): { x: number; y: number; width: number; height: number } {
+  try {
+    const box = svg.getBBox();
+    if (box.width > 0 && box.height > 0) {
+      const padding = Math.max(12, Math.min(box.width, box.height) * 0.06);
+      return {
+        x: box.x - padding,
+        y: box.y - padding,
+        width: box.width + padding * 2,
+        height: box.height + padding * 2
+      };
+    }
+  } catch {
+    // Some SVGs do not expose bounding boxes until laid out.
+  }
+  return embeddedSvgBounds(svg);
+}
+
+function sizeEmbeddedArtifactViewport(body: HTMLElement): void {
+  const svg = body.querySelector<SVGSVGElement>("svg");
+  if (!svg || body.dataset.userResized === "true") {
+    return;
+  }
+  const bounds = embeddedSvgContentBounds(svg);
+  if (!bounds.width || !bounds.height) {
+    return;
+  }
+  const padding = elementPadding(body);
+  const hostWidth = Math.max(320, body.parentElement?.clientWidth || body.clientWidth || 0);
+  const availableWidth = Math.max(1, hostWidth - padding.left - padding.right);
+  const aspect = bounds.height / bounds.width;
+  const fittedHeight = Math.round(availableWidth * aspect + padding.top + padding.bottom);
+  const nextHeight = clamp(fittedHeight, 180, Math.max(720, Math.round(window.innerHeight * 0.82)));
+  body.style.height = `${nextHeight}px`;
+}
+
+function isEmbeddedArtifactResizeGesture(body: HTMLElement, event: PointerEvent): boolean {
+  const rect = body.getBoundingClientRect();
+  const handleSize = 24;
+  if (event.clientX >= rect.right - handleSize && event.clientY >= rect.bottom - handleSize) {
+    body.dataset.userResized = "true";
+    return true;
+  }
+  return false;
+}
+
+function fitEmbeddedBoundsToViewport(
+  bounds: { x: number; y: number; width: number; height: number },
+  viewport: { width: number; height: number }
+): { x: number; y: number; width: number; height: number } {
+  const safeWidth = Math.max(1, viewport.width);
+  const safeHeight = Math.max(1, viewport.height);
+  const viewportAspect = safeWidth / safeHeight;
+  const boundsAspect = bounds.width / bounds.height;
+  if (viewportAspect >= boundsAspect) {
+    const height = bounds.height;
+    const width = height * viewportAspect;
+    return {
+      x: bounds.x - (width - bounds.width) / 2,
+      y: bounds.y,
+      width,
+      height
+    };
+  }
+  const width = bounds.width;
+  const height = width / viewportAspect;
+  return {
+    x: bounds.x,
+    y: bounds.y - (height - bounds.height) / 2,
+    width,
+    height
+  };
+}
+
+function zoomEmbeddedArtifact(
+  body: HTMLElement,
+  view: { x: number; y: number; width: number; height: number },
+  event: WheelEvent
+): void {
+  const viewport = elementContentViewport(body);
+  const rect = body.getBoundingClientRect();
+  const padding = elementPadding(body);
+  const offsetX = clamp(event.clientX - rect.left - padding.left, 0, viewport.width);
+  const offsetY = clamp(event.clientY - rect.top - padding.top, 0, viewport.height);
+  const anchorX = view.x + (offsetX / viewport.width) * view.width;
+  const anchorY = view.y + (offsetY / viewport.height) * view.height;
+  const factor = event.deltaY > 0 ? 1.12 : 1 / 1.12;
+  const nextWidth = clamp(view.width * factor, 24, 100000);
+  const nextHeight = clamp(view.height * factor, 24, 100000);
+  view.x = anchorX - (offsetX / viewport.width) * nextWidth;
+  view.y = anchorY - (offsetY / viewport.height) * nextHeight;
+  view.width = nextWidth;
+  view.height = nextHeight;
+}
+
+function fittedStandaloneSvgView(host: HTMLElement | null, frame: HTMLElement | null, fitMode: string): { scale: number; x: number; y: number } | null {
+  const svg = host?.querySelector<SVGSVGElement>("svg");
+  if (!svg || !frame) {
+    return null;
+  }
+  const bounds = embeddedSvgBounds(svg);
+  if (!bounds.width || !bounds.height) {
+    return null;
+  }
+  return fitSvgBoundsInViewport(bounds, elementContentViewport(frame), fitMode);
+}
+
+function fitSvgBoundsInViewport(
+  bounds: { x: number; y: number; width: number; height: number },
+  viewport: { width: number; height: number },
+  fitMode: string
+): { scale: number; x: number; y: number } {
+  const safeWidth = Math.max(1, viewport.width);
+  const safeHeight = Math.max(1, viewport.height);
+  const widthScale = safeWidth / bounds.width;
+  const heightScale = safeHeight / bounds.height;
+  const scale = clamp(
+    fitMode === "actual"
+      ? 1
+      : fitMode === "full"
+        ? widthScale
+        : Math.min(widthScale, heightScale),
+    0.2,
+    5
+  );
+  return {
+    scale,
+    x: Math.round((safeWidth - bounds.width * scale) / 2 - bounds.x * scale),
+    y: Math.round((safeHeight - bounds.height * scale) / 2 - bounds.y * scale)
+  };
+}
+
+function elementContentViewport(element: HTMLElement): { width: number; height: number } {
+  const padding = elementPadding(element);
+  return {
+    width: Math.max(1, element.clientWidth - padding.left - padding.right),
+    height: Math.max(1, element.clientHeight - padding.top - padding.bottom)
+  };
+}
+
+function elementPadding(element: HTMLElement): { top: number; right: number; bottom: number; left: number } {
+  const styles = window.getComputedStyle(element);
+  return {
+    top: Number.parseFloat(styles.paddingTop) || 0,
+    right: Number.parseFloat(styles.paddingRight) || 0,
+    bottom: Number.parseFloat(styles.paddingBottom) || 0,
+    left: Number.parseFloat(styles.paddingLeft) || 0
+  };
 }
 
 async function writeClipboard(text: string): Promise<void> {

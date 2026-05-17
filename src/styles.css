@@ -737,6 +737,20 @@ button:disabled {
   background: #f0eee7;
 }
 
+.tf-artifact-toolbar.is-enhanced {
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 140ms ease, transform 140ms ease;
+}
+
+.tf-embedded-artifact:hover .tf-artifact-toolbar.is-enhanced,
+.tf-embedded-artifact:focus-within .tf-artifact-toolbar.is-enhanced {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
 .tf-artifact-toolbar span {
   margin-right: auto;
   color: #4f5558;
@@ -755,9 +769,15 @@ button:disabled {
 }
 
 .tf-artifact-body {
-  min-height: 180px;
+  min-width: 280px;
+  min-height: 220px;
+  max-width: 100%;
   overflow: hidden;
   padding: 12px;
+  resize: both;
+  box-sizing: border-box;
+  position: relative;
+  width: 100%;
   cursor: grab;
   background: #fbfbf8;
 }
@@ -767,8 +787,9 @@ button:disabled {
 }
 
 .tf-artifact-body > svg {
-  transform: translate(var(--artifact-x, 0), var(--artifact-y, 0)) scale(var(--artifact-scale, 1));
-  transform-origin: 0 0;
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 
 .tf-math-block {
@@ -887,21 +908,10 @@ button:disabled {
 }
 
 .svg-stage svg {
-  max-width: 100%;
+  display: block;
+  max-width: none;
   height: auto;
   background: transparent;
-}
-
-.svg-fit-actual .svg-frame {
-  place-items: start;
-}
-
-.svg-fit-actual .svg-stage svg {
-  max-width: none;
-}
-
-.svg-fit-full .svg-stage svg {
-  width: 100%;
 }
 
 .svg-bg-white .svg-frame {

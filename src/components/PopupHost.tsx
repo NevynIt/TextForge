@@ -211,6 +211,11 @@ export function PopupHost({
                     <Network size={15} />
                   </button>
                 ) : null}
+                {popup.result?.kind === "svg" ? (
+                  <button type="button" title="Fit SVG" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "svg-fit"))}>
+                    <Focus size={15} />
+                  </button>
+                ) : null}
                 {popup.result?.kind === "mindmap" ? (
                   <>
                     <button type="button" title="Fold all branches" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "mindmap-fold-all"))}>

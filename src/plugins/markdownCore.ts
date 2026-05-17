@@ -24,6 +24,8 @@ interface InlineMathArtifact {
 
 type KatexRenderer = Pick<typeof import("katex"), "renderToString">;
 
+let markdownTokenNamespaceCounter = 0;
+
 const plugin: TextForgePlugin = {
   id: "markdown-core",
   name: "Markdown Core",
@@ -41,7 +43,8 @@ const plugin: TextForgePlugin = {
         }
         const artifacts: MarkdownArtifact[] = [];
         const inlineMath: InlineMathArtifact[] = [];
-        const prepared = await extractMarkdownArtifacts(value.text, artifacts, inlineMath, context, katex);
+        const tokenNamespace = createTokenNamespace();
+        const prepared = await extractMarkdownArtifacts(value.text, artifacts, inlineMath, context, katex, tokenNamespace);
         const markdown = new MarkdownIt({
           html: false,
           linkify: true,
@@ -58,10 +61,10 @@ const plugin: TextForgePlugin = {
             }
           }
         });
-        const rendered = markdown.render(replaceInlineMath(prepared, inlineMath, katex));
+        const rendered = markdown.render(replaceInlineMath(prepared, inlineMath, katex, tokenNamespace));
         return {
           kind: "html",
-          html: `<article class="rendered-markdown">${restoreMarkdownArtifacts(rendered, artifacts, inlineMath)}</article>`,
+          html: `<article class="rendered-markdown">${restoreMarkdownArtifacts(rendered, artifacts, inlineMath, tokenNamespace)}</article>`,
           diagnostics: value.diagnostics
         };
       }
@@ -94,7 +97,8 @@ async function extractMarkdownArtifacts(
   artifacts: MarkdownArtifact[],
   inlineMath: InlineMathArtifact[],
   context: Parameters<NonNullable<TextForgePlugin["transformers"]>[number]["transform"]>[1],
-  katex: KatexRenderer
+  katex: KatexRenderer,
+  tokenNamespace: string
 ): Promise<string> {
   let text = source;
   text = await replaceAsync(text, /```(mermaid|dot|graphviz)\s*\r?\n([\s\S]*?)```/gi, async (_match, lang: string, body: string) => {
@@ -102,7 +106,7 @@ async function extractMarkdownArtifacts(
     const id = `tf-artifact-${artifacts.length + 1}`;
     const html = await renderDiagramArtifact(kind, id, body.trim(), context);
     artifacts.push({ id, kind, source: body.trim(), html });
-    return `\n\n${artifactToken(id)}\n\n`;
+    return `\n\n${artifactToken(id, tokenNamespace)}\n\n`;
   });
   text = text.replace(/\$\$([\s\S]+?)\$\$/g, (_match, body: string) => {
     const id = `tf-math-block-${artifacts.length + 1}`;
@@ -112,16 +116,16 @@ async function extractMarkdownArtifacts(
       source: body.trim(),
       html: renderMathBlock(id, body.trim(), katex)
     });
-    return `\n\n${artifactToken(id)}\n\n`;
+    return `\n\n${artifactToken(id, tokenNamespace)}\n\n`;
   });
   return text.replace(/(^|[^\\$])\$([^\n$]+?)\$/g, (match, prefix: string, body: string) => {
     const id = `tf-inline-math-${inlineMath.length + 1}`;
-    inlineMath.push({ id, source: body.trim(), html: inlineMathToken(id) });
-    return `${prefix}${inlineMathToken(id)}`;
+    inlineMath.push({ id, source: body.trim(), html: inlineMathToken(id, tokenNamespace) });
+    return `${prefix}${inlineMathToken(id, tokenNamespace)}`;
   });
 }
 
-function replaceInlineMath(source: string, inlineMath: InlineMathArtifact[], katex: KatexRenderer): string {
+function replaceInlineMath(source: string, inlineMath: InlineMathArtifact[], katex: KatexRenderer, tokenNamespace: string): string {
   let text = source;
   inlineMath.forEach((item) => {
     let html = "";
@@ -131,16 +135,16 @@ function replaceInlineMath(source: string, inlineMath: InlineMathArtifact[], kat
       html = `<code>${escapeHtml(item.source)}</code>`;
     }
     item.html = html;
-    text = text.replaceAll(inlineMathToken(item.id), item.id);
+    text = text.replaceAll(inlineMathToken(item.id, tokenNamespace), item.id);
   });
   return text;
 }
 
-function restoreMarkdownArtifacts(rendered: string, artifacts: MarkdownArtifact[], inlineMath: InlineMathArtifact[]): string {
+function restoreMarkdownArtifacts(rendered: string, artifacts: MarkdownArtifact[], inlineMath: InlineMathArtifact[], tokenNamespace: string): string {
   let html = rendered;
   artifacts.forEach((artifact) => {
-    html = html.replaceAll(`<p>${artifactToken(artifact.id)}</p>`, artifact.html);
-    html = html.replaceAll(artifactToken(artifact.id), artifact.html);
+    html = html.replaceAll(`<p>${artifactToken(artifact.id, tokenNamespace)}</p>`, artifact.html);
+    html = html.replaceAll(artifactToken(artifact.id, tokenNamespace), artifact.html);
   });
   inlineMath.forEach((item) => {
     html = html.replaceAll(item.id, item.html);
@@ -189,25 +193,25 @@ function renderMathBlock(
 function artifactShell(id: string, kind: string, source: string, body: string): string {
   const encodedSource = encodeURIComponent(source);
   return `<div class="tf-embedded-artifact" data-artifact-kind="${kind}" data-artifact-id="${id}" data-source="${encodedSource}">
-    <div class="tf-artifact-toolbar">
+    <div class="tf-artifact-toolbar" style="display:none">
       <span>${escapeHtml(kind)}</span>
       <button type="button" data-artifact-action="copy-source">Copy source</button>
       <button type="button" data-artifact-action="copy-svg">Copy SVG</button>
       <button type="button" data-artifact-action="download-svg">Download SVG</button>
       <button type="button" data-artifact-action="download-png">Download PNG</button>
       <button type="button" data-artifact-action="popout-svg">Pop out</button>
-      <button type="button" data-artifact-action="reset-view">Reset</button>
+      <button type="button" data-artifact-action="fit-view">Fit</button>
     </div>
     <div class="tf-artifact-body">${body}</div>
   </div>`;
 }
 
-function artifactToken(id: string): string {
-  return `TEXTFORGE_ARTIFACT_${id}`;
+function artifactToken(id: string, tokenNamespace: string): string {
+  return `TEXTFORGE_ARTIFACT__${tokenNamespace}__${id}__`;
 }
 
-function inlineMathToken(id: string): string {
-  return `TEXTFORGE_INLINE_MATH_${id}`;
+function inlineMathToken(id: string, tokenNamespace: string): string {
+  return `TEXTFORGE_INLINE_MATH__${tokenNamespace}__${id}__`;
 }
 
 function cleanSvg(svg: string): string {
@@ -216,13 +220,18 @@ function cleanSvg(svg: string): string {
 
 async function replaceAsync(source: string, pattern: RegExp, replacer: (...args: string[]) => Promise<string>): Promise<string> {
   const matches = Array.from(source.matchAll(pattern));
-  const replacements = await Promise.all(matches.map((match) => replacer(...(match as unknown as string[]))));
   let cursor = 0;
   let output = "";
-  matches.forEach((match, index) => {
+  for (const match of matches) {
+    const replacement = await replacer(...(match as unknown as string[]));
     output += source.slice(cursor, match.index);
-    output += replacements[index];
+    output += replacement;
     cursor = (match.index || 0) + match[0].length;
-  });
+  }
   return output + source.slice(cursor);
+}
+
+function createTokenNamespace(): string {
+  markdownTokenNamespaceCounter += 1;
+  return `ns-${markdownTokenNamespaceCounter.toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
 }
