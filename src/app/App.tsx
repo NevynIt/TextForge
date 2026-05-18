@@ -350,6 +350,12 @@ export function App() {
       setStatus(`${pipeline?.name || pipelineId} opened.`);
       return;
     }
+    const terminalStep = result.trace[result.trace.length - 1];
+    if (result.status === "available" && result.value && terminalStep?.contributionKind === "transformer") {
+      const document = services.workspace.openDocument(pipelineValueToDocument(result.value));
+      commitWorkspace(`${pipeline?.name || pipelineId} opened as ${document.fileName}.`);
+      return;
+    }
     upsertPopup(
       {
         ...createToolPopup("pipeline-trace", "Pipeline Trace", result.trace),

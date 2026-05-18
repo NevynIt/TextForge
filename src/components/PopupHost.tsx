@@ -268,7 +268,7 @@ export function PopupHost({
                 {popup.refreshedAt ? <span>Refreshed {new Date(popup.refreshedAt).toLocaleTimeString()}</span> : null}
               </div>
             ) : null}
-            <main class="popup-body">
+            <main class={`popup-body${popup.kind === "resource-browser" ? " resource-browser-body" : ""}`}>
               {popup.kind === "viewer" && popup.result ? (
                 <ViewerContent
                   result={popup.result}
