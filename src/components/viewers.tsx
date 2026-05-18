@@ -1048,6 +1048,7 @@ function GraphView({
   const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
   const highlighted = useMemo(() => query.trim().toLowerCase(), [query]);
   const layout = stringSetting(settings.layout, engine === "sigma" ? "forceatlas2" : "breadthfirst");
+  const concentricRingSpacing = numberSetting(settings.concentricRingSpacing, 1);
   const nodeSize = numberSetting(settings.nodeSize, 18);
   const edgeWidth = numberSetting(settings.edgeWidth, 1.5);
   const showLabels = booleanSetting(settings.showLabels, true);
@@ -1166,7 +1167,7 @@ function GraphView({
             })
           ],
           style: cytoscapeStyle(showLabels, showEdgeLabels, showArrows, performanceMode, visibleGraph.directed !== false) as never,
-          layout: cytoscapeLayoutOptions(layout, visibleGraph, performanceMode, containerRef.current) as never
+          layout: cytoscapeLayoutOptions(layout, visibleGraph, performanceMode, containerRef.current, concentricRingSpacing) as never
         });
         cyRef.current = cy as unknown as CytoscapeLike;
         const resizeObserver = new ResizeObserver(() => {
@@ -1576,7 +1577,7 @@ function GraphView({
     if (!cy || toolbarAction?.action !== "graph-run-layout" || !toolbarAction.revision) {
       return;
     }
-    runCytoscapeLayout(cy, layout, visibleGraph, performanceMode, containerRef.current);
+    runCytoscapeLayout(cy, layout, visibleGraph, performanceMode, containerRef.current, concentricRingSpacing);
   }, [toolbarAction?.revision]);
 
   if (error) {
@@ -1765,7 +1766,13 @@ function inferGraphPerformanceMode(setting: string, graph: GraphModel): string {
   return "balanced";
 }
 
-function cytoscapeLayoutOptions(layout: string, graph: GraphModel, performanceMode: string, container: HTMLElement | null): Record<string, unknown> {
+function cytoscapeLayoutOptions(
+  layout: string,
+  graph: GraphModel,
+  performanceMode: string,
+  container: HTMLElement | null,
+  concentricRingSpacing = 1
+): Record<string, unknown> {
   const padding = performanceMode === "dense" ? 24 : 40;
   const options: Record<string, unknown> = {
     name: layout,
@@ -1791,14 +1798,25 @@ function cytoscapeLayoutOptions(layout: string, graph: GraphModel, performanceMo
   if (layout === "breadthfirst") {
     Object.assign(options, { spacingFactor: performanceMode === "readable" ? 1.15 : 0.95, avoidOverlap: true });
   }
-  if (layout === "circle" || layout === "concentric" || layout === "grid" || layout === "random") {
+  if (layout === "circle" || layout === "grid" || layout === "random") {
     Object.assign(options, { spacingFactor: performanceMode === "readable" ? 1.05 : 0.9, avoidOverlap: true });
+  }
+  if (layout === "concentric") {
+    const baseSpacingFactor = performanceMode === "readable" ? 1.05 : 0.9;
+    Object.assign(options, { spacingFactor: baseSpacingFactor * clamp(concentricRingSpacing, 0.5, 3), avoidOverlap: true });
   }
   return options;
 }
 
-function runCytoscapeLayout(cy: CytoscapeLike, layout: string, graph: GraphModel, performanceMode: string, container: HTMLElement | null): void {
-  const options = cytoscapeLayoutOptions(layout, graph, performanceMode, container);
+function runCytoscapeLayout(
+  cy: CytoscapeLike,
+  layout: string,
+  graph: GraphModel,
+  performanceMode: string,
+  container: HTMLElement | null,
+  concentricRingSpacing = 1
+): void {
+  const options = cytoscapeLayoutOptions(layout, graph, performanceMode, container, concentricRingSpacing);
   const runner = cy.layout(options);
   let didFit = false;
   const fit = () => {

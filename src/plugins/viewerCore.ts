@@ -32,6 +32,17 @@ const showEdgeLabelsControl = {
   group: "Labels"
 };
 
+const concentricRingSpacingControl = {
+  id: "concentricRingSpacing",
+  label: "Concentric ring spacing",
+  type: "number" as const,
+  defaultValue: 1,
+  group: "Layout",
+  min: 0.5,
+  max: 3,
+  step: 0.1
+};
+
 const htmlControls = [
   {
     id: "readingTheme",
@@ -111,6 +122,7 @@ const graphControls = [
     defaultValue: true,
     group: "Labels"
   },
+  concentricRingSpacingControl,
   showEdgeLabelsControl,
   showArrowsControl,
   {
@@ -291,20 +303,22 @@ const plugin: TextForgePlugin = {
           graph: value.data,
           engine: "sigma",
           capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true, select: true, export: true, presets: true, tooltips: true },
-          controls: graphControls.map((control) =>
-            control.id === "layout"
-              ? {
-                  ...control,
-                  defaultValue: "forceatlas2",
-                  options: [
-                    { label: "ForceAtlas2", value: "forceatlas2" },
-                    { label: "Noverlap", value: "noverlap" },
-                    { label: "Circular", value: "circular" },
-                    { label: "Random", value: "random" }
-                  ]
-                }
-              : control
-          ),
+          controls: graphControls
+            .filter((control) => control.id !== "concentricRingSpacing")
+            .map((control) =>
+              control.id === "layout"
+                ? {
+                    ...control,
+                    defaultValue: "forceatlas2",
+                    options: [
+                      { label: "ForceAtlas2", value: "forceatlas2" },
+                      { label: "Noverlap", value: "noverlap" },
+                      { label: "Circular", value: "circular" },
+                      { label: "Random", value: "random" }
+                    ]
+                  }
+                : control
+            ),
           diagnostics: value.diagnostics
         };
       }
