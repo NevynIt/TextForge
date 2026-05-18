@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "preact/hooks";
 import { basicSetup } from "codemirror";
+import { indentWithTab } from "@codemirror/commands";
 import { markdown } from "@codemirror/lang-markdown";
 import { json } from "@codemirror/lang-json";
 import { javascript } from "@codemirror/lang-javascript";
@@ -8,7 +9,7 @@ import { xml } from "@codemirror/lang-xml";
 import { HighlightStyle, StreamLanguage, syntaxHighlighting, type StreamParser } from "@codemirror/language";
 import { lua as luaLegacy } from "@codemirror/legacy-modes/mode/lua";
 import { Compartment, EditorState, Transaction } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { EditorView, keymap } from "@codemirror/view";
 import { tags } from "@lezer/highlight";
 import type { SourceRange } from "../domain/types";
 
@@ -18,17 +19,21 @@ interface CodeEditorProps {
   onChange: (text: string) => void;
   revealRange?: (SourceRange & { revision?: number }) | null;
   onSelectionChange?: (range: SourceRange, selectedText: string) => void;
+  onSelectSourceRange?: (range: SourceRange) => void;
 }
 
-export function CodeEditor({ value, languageId, onChange, revealRange, onSelectionChange }: CodeEditorProps) {
+export function CodeEditor({ value, languageId, onChange, revealRange, onSelectionChange, onSelectSourceRange }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const languageCompartmentRef = useRef(new Compartment());
   const onChangeRef = useRef(onChange);
   const onSelectionChangeRef = useRef(onSelectionChange);
+  const onSelectSourceRangeRef = useRef(onSelectSourceRange);
   const lastRevealRevisionRef = useRef<number | undefined>(undefined);
+  const pendingSourceSyncRef = useRef(false);
   onChangeRef.current = onChange;
   onSelectionChangeRef.current = onSelectionChange;
+  onSelectSourceRangeRef.current = onSelectSourceRange;
 
   useEffect(() => {
     if (!containerRef.current || viewRef.current) {
@@ -39,8 +44,22 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onSelecti
       doc: value,
       extensions: [
         basicSetup,
+        keymap.of([indentWithTab]),
         languageCompartment.of(languageExtension(languageId)),
         EditorView.lineWrapping,
+        EditorView.domEventHandlers({
+          mousedown: (_event, view) => {
+            pendingSourceSyncRef.current = false;
+            if (_event.button !== 0 || (!_event.ctrlKey && !_event.metaKey)) {
+              return false;
+            }
+            if (!view.contentDOM.contains(_event.target as Node | null)) {
+              return false;
+            }
+            pendingSourceSyncRef.current = true;
+            return false;
+          }
+        }),
         EditorView.updateListener.of((update) => {
           if (
             update.docChanged &&
@@ -62,6 +81,15 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onSelecti
               line: line.number - 1,
               column: from - line.from
             }, update.state.sliceDoc(from, to));
+            if (pendingSourceSyncRef.current) {
+              pendingSourceSyncRef.current = false;
+              onSelectSourceRangeRef.current?.({
+                from,
+                to,
+                line: line.number - 1,
+                column: from - line.from
+              });
+            }
           }
         }),
         syntaxHighlighting(textForgeHighlightStyle),

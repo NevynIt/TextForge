@@ -286,12 +286,6 @@ export function App() {
       range,
       text: selectedText
     });
-    setVisualSelection((current) => ({
-      documentId: activeDocument.id,
-      documentVersion: activeDocument.version,
-      sourceRange: range,
-      revision: (current?.revision || 0) + 1
-    }));
   }
 
   function selectSourceRange(documentId: string, range: SourceRange): void {
@@ -780,6 +774,7 @@ export function App() {
               languageId={activeDocument.languageId}
               onChange={updateText}
               onSelectionChange={updateEditorSelection}
+              onSelectSourceRange={(range) => selectSourceRange(activeDocument.id, range)}
               revealRange={
                 visualSelection?.documentId === activeDocument.id && visualSelection.documentVersion === activeDocument.version
                   ? { ...visualSelection.sourceRange, revision: visualSelection.revision }
