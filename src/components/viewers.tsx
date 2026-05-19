@@ -3473,12 +3473,20 @@ function setHeadingCollapsed(heading: Element, collapsed: boolean, applyVisibili
 }
 
 function setAllHtmlHeadings(root: HTMLElement, collapsed: boolean): void {
-  root.querySelectorAll("h1,h2,h3,h4,h5,h6").forEach((heading) => setHeadingCollapsed(heading, collapsed, false));
-  applyHtmlHeadingVisibility(root);
+  const visibilityRoots = new Set<HTMLElement>();
+  root.querySelectorAll("h1,h2,h3,h4,h5,h6").forEach((heading) => {
+    setHeadingCollapsed(heading, collapsed, false);
+    visibilityRoots.add(headingRoot(heading));
+  });
+  if (!visibilityRoots.size) {
+    applyHtmlHeadingVisibility(root);
+    return;
+  }
+  visibilityRoots.forEach((visibilityRoot) => applyHtmlHeadingVisibility(visibilityRoot));
 }
 
 function headingRoot(heading: Element): HTMLElement {
-  return (heading.closest(".viewer-html") as HTMLElement | null) || heading.parentElement || document.body;
+  return heading.parentElement || (heading.closest(".viewer-html") as HTMLElement | null) || document.body;
 }
 
 function applyHtmlHeadingVisibility(root: HTMLElement): void {

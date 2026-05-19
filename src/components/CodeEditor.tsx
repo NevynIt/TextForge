@@ -18,20 +18,24 @@ interface CodeEditorProps {
   languageId: string;
   onChange: (text: string) => void;
   revealRange?: (SourceRange & { revision?: number }) | null;
+  onRevealHandled?: (revision?: number) => void;
+  onEditorReady?: (view: EditorView) => void;
   onSelectionChange?: (range: SourceRange, selectedText: string) => void;
   onSelectSourceRange?: (range: SourceRange) => void;
 }
 
-export function CodeEditor({ value, languageId, onChange, revealRange, onSelectionChange, onSelectSourceRange }: CodeEditorProps) {
+export function CodeEditor({ value, languageId, onChange, revealRange, onRevealHandled, onEditorReady, onSelectionChange, onSelectSourceRange }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const languageCompartmentRef = useRef(new Compartment());
   const onChangeRef = useRef(onChange);
+  const onRevealHandledRef = useRef(onRevealHandled);
   const onSelectionChangeRef = useRef(onSelectionChange);
   const onSelectSourceRangeRef = useRef(onSelectSourceRange);
   const lastRevealRevisionRef = useRef<number | undefined>(undefined);
   const pendingSourceSyncRef = useRef(false);
   onChangeRef.current = onChange;
+  onRevealHandledRef.current = onRevealHandled;
   onSelectionChangeRef.current = onSelectionChange;
   onSelectSourceRangeRef.current = onSelectSourceRange;
 
@@ -100,6 +104,7 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onSelecti
       state,
       parent: containerRef.current
     });
+    onEditorReady?.(viewRef.current);
     return () => {
       viewRef.current?.destroy();
       viewRef.current = null;
@@ -113,10 +118,15 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onSelecti
     }
     const current = view.state.doc.toString();
     if (current !== value) {
+      const { scrollTop, scrollLeft } = view.scrollDOM;
+      const selection = view.state.selection;
       view.dispatch({
         changes: { from: 0, to: current.length, insert: value },
+        selection,
         annotations: Transaction.remote.of(true)
       });
+      view.scrollDOM.scrollTop = scrollTop;
+      view.scrollDOM.scrollLeft = scrollLeft;
     }
   }, [value]);
 
@@ -148,6 +158,7 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onSelecti
       annotations: Transaction.remote.of(true)
     });
     view.focus();
+    onRevealHandledRef.current?.(revealRange.revision);
   }, [revealRange?.revision, revealRange?.from, revealRange?.to]);
 
   return <div ref={containerRef} class="code-editor" />;

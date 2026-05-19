@@ -75,6 +75,7 @@ export function App() {
   const [renameDraft, setRenameDraft] = useState("");
   const [luaActions, setLuaActions] = useState<RegisteredLuaAction[]>([]);
   const [visualSelection, setVisualSelection] = useState<VisualSelection | undefined>();
+  const [editorReveal, setEditorReveal] = useState<VisualSelection | undefined>();
   const [editorSelection, setEditorSelection] = useState<{ documentId: string; documentVersion: number; range: SourceRange; text: string } | undefined>();
   const popupsRef = useRef(popups);
   popupsRef.current = popups;
@@ -297,13 +298,27 @@ export function App() {
       services.workspace.switchDocument(documentId);
       commitWorkspace();
     }
-    setVisualSelection((current) => ({
+    const nextSelection = {
       documentId,
       documentVersion: document.version,
       sourceRange: range,
-      revision: (current?.revision || 0) + 1
-    }));
+      revision: (visualSelection?.revision || 0) + 1
+    };
+    setVisualSelection(nextSelection);
+    setEditorReveal(nextSelection);
     setStatus(`Selected source in ${document.fileName}.`);
+  }
+
+  function clearHandledEditorReveal(revision?: number): void {
+    setEditorReveal((current) => {
+      if (!current) {
+        return current;
+      }
+      if (revision !== undefined && current.revision !== revision) {
+        return current;
+      }
+      return undefined;
+    });
   }
 
   function downloadActiveDocument(): void {
@@ -779,11 +794,12 @@ export function App() {
               value={activeDocument.text}
               languageId={activeDocument.languageId}
               onChange={updateText}
+              onRevealHandled={clearHandledEditorReveal}
               onSelectionChange={updateEditorSelection}
               onSelectSourceRange={(range) => selectSourceRange(activeDocument.id, range)}
               revealRange={
-                visualSelection?.documentId === activeDocument.id && visualSelection.documentVersion === activeDocument.version
-                  ? { ...visualSelection.sourceRange, revision: visualSelection.revision }
+                editorReveal?.documentId === activeDocument.id && editorReveal.documentVersion === activeDocument.version
+                  ? { ...editorReveal.sourceRange, revision: editorReveal.revision }
                   : null
               }
             />
