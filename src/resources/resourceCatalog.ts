@@ -19,7 +19,7 @@ import mermaidLiveSamplesTestCorpus from "./examples/mermaid_live_samples_test_c
 import partyInlineExample from "./examples/Party inline.itm?raw";
 import partyExample from "./examples/Party.itm?raw";
 import sharedPartySupplies from "./examples/shared-party-supplies.itm?raw";
-import fullIttExample from "./examples/itm/full-feature-example.itm?raw";
+import fullItmExample from "./examples/itm/full-feature-example.itm?raw";
 import markdownHeadingsLua from "./examples/lua/markdown-headings-to-itm.lua?raw";
 import diagramsAndMath from "./examples/markdown/diagrams-and-math.md?raw";
 import readmeDocument from "../../README.md?raw";
@@ -67,7 +67,7 @@ export const textForgeResources: TextForgeResource[] = [
   resource("examples/party-inline", "Family Birthday Party Plan Inline", "examples/Party inline.itm", "text.itm", partyInlineExample, "Inline-linked ITM sample for a family birthday party plan."),
   resource("examples/party", "Family Birthday Party Plan", "examples/Party.itm", "text.itm", partyExample, "ITM sample project for a family birthday party plan."),
   resource("examples/shared-party-supplies", "Shared Party Supplies", "examples/shared-party-supplies.itm", "text.itm", sharedPartySupplies, "Shared ITM include data for reusable party supplies."),
-  resource("examples/itm/full-feature-example", "Full ITM Feature Example", "examples/itm/full-feature-example.itm", "text.itm", fullIttExample, "Styles, links, attributes, and hierarchy."),
+  resource("examples/itm/full-feature-example", "Full ITM Feature Example", "examples/itm/full-feature-example.itm", "text.itm", fullItmExample, "Styles, links, attributes, and hierarchy."),
   resource("examples/lua/markdown-headings-to-itm", "Markdown Headings Lua Action", "examples/lua/markdown-headings-to-itm.lua", "text.lua", markdownHeadingsLua, "Example Lua action that emits ITM using the Markdown bridge."),
   resource("examples/markdown/diagrams-and-math", "Markdown Diagrams And Math", "examples/markdown/diagrams-and-math.md", "text.markdown", diagramsAndMath, "Mermaid, Graphviz, KaTeX, and code highlighting sample.")
 ];

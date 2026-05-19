@@ -12,12 +12,12 @@ Supported node selectors:
 
 Supported cross-link selectors:
 
-- `->`: all cross-links.
-- `->[link-type]`: cross-links with a relationship type.
+- `@relationship_type:*`: cross-links with a relationship type.
+- `@relationship_type:target_id`: a specific typed cross-link.
 
 `=>` hierarchy-edge styles are not rendered by jsMind in V1 because jsMind owns the parent-child branch drawing.
 
-Style directives may be one line or multiline. Later matching rules override earlier rules. CSS-inherited text properties such as `color`, `font-size`, `font-style`, and `font-weight` are inherited by child nodes. Direct node attributes override inherited and selector styles on that node.
+Style directives should use YAML-compatible blocks. Later matching rules override earlier rules. CSS-inherited text properties such as `color`, `font-size`, `font-style`, and `font-weight` are inherited by child nodes. Direct node attributes override inherited and selector styles on that node.
 
 Supported node style attributes:
 
@@ -37,17 +37,25 @@ Supported cross-link style attributes:
 
 Example:
 
-```itt
-%style * { font-size: 13px; }
-%style [topic] {
-  bg: #28343c;
-  fg: white;
-  shape: pill;
+```itm
+%style *
+{
+  font-size: "13px"
 }
-%style ->[depends] { stroke: #cf6f2a; stroke-width: 3; }
-&root [topic] Roadmap {bg: #28343c, fg: white, shape: pill}
-  &api API work {fill: #eaf3ff, border-color: #3a6ea5}
-  &ui UI work {background: #fff3e0, line-color: #cf6f2a, line-width: 3} @depends:api
+%style [topic]
+{
+  bg: "#28343c"
+  fg: white
+  shape: pill
+}
+%style @depends_on:*
+{
+  stroke: "#cf6f2a"
+  stroke-width: 3
+}
+&root [topic] Roadmap {bg: "#28343c", fg: white, shape: pill}
+  &api API work {fill: "#eaf3ff", border-color: "#3a6ea5"}
+  &ui UI work {background: "#fff3e0", line-color: "#cf6f2a", line-width: 3} @depends_on:api
 ```
 
 `%include other-file.itm` is supported for ITM mind-map visualizers, limited to files currently open in the editor. Includes are expanded in place and circular includes are ignored with a diagnostic.

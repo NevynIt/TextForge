@@ -1,9 +1,10 @@
----
-title: Shared party supplies
-version: 1
----
+%metadata
+{
+  title: Shared party supplies
+  version: 1
+}
 
-&shared_supplies [area] Shared party supplies #shopping {status: reusable, bg: #f5fbff, fg: #102a43, shape: rounded, size: 14}
-  &napkins [item] Napkins {quantity: 40, fill: #ffffff, border-color: #6c9bd2, shape: rectangle}
-  &paper_plates [item] Paper plates {quantity: 35, fill: #ffffff, border-color: #6c9bd2, shape: rectangle}
-  &bin_bags [item] Bin bags {quantity: 5, fill: #ffffff, border-color: #6c9bd2, shape: rectangle}
+&shared_supplies [area] Shared party supplies #shopping {status: reusable, bg: "#f5fbff", fg: "#102a43", shape: rounded, size: 14}
+  &napkins [item] Napkins {quantity: 40, fill: "#ffffff", border-color: "#6c9bd2", shape: rectangle}
+  &paper_plates [item] Paper plates {quantity: 35, fill: "#ffffff", border-color: "#6c9bd2", shape: rectangle}
+  &bin_bags [item] Bin bags {quantity: 5, fill: "#ffffff", border-color: "#6c9bd2", shape: rectangle}

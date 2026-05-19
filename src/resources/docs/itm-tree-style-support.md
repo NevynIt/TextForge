@@ -10,16 +10,17 @@ Supported node selectors:
 - `#tag`: nodes with a tag.
 - `{key=value}`: nodes with an attribute value.
 
-Tree view does not draw graph edges, so `->`, `->[link-type]`, and `=>` styles are ignored there. Links are still shown as clickable badges.
+Tree view does not draw graph edges, so `@relationship_type:*`, `@relationship_type:target_id`, and `=>` styles are ignored there. Links are still shown as clickable badges.
 
-Style directives may be one line or multiline:
+Style directives should use YAML-compatible blocks:
 
-```itt
-%style [risk] {
-  background: #ffe8e8;
-  color: #4c1d1d;
-  border-color: #cc3333;
-  font-weight: bold;
+```itm
+%style [risk]
+{
+  background: "#ffe8e8"
+  color: "#4c1d1d"
+  border-color: "#cc3333"
+  font-weight: bold
 }
 ```
 

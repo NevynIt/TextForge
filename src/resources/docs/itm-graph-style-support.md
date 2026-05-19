@@ -9,17 +9,18 @@ Supported style selectors:
 - `[type]`: nodes of a type.
 - `#tag`: nodes with a tag.
 - `{key=value}`: nodes with an attribute value.
-- `->`: all cross-links.
-- `->[link-type]`: cross-links with a relationship type.
+- `@relationship_type:*`: all cross-links with a relationship type.
+- `@relationship_type:target_id`: one cross-link selector for a specific target.
 - `=>`: hierarchy edges.
 
-Style directives may be one line or multiline:
+Style directives should use YAML-compatible blocks:
 
-```itt
-%style [risk] {
-  fill: #ffe8e8;
-  stroke: #cc3333;
-  shape: hexagon;
+```itm
+%style [risk]
+{
+  fill: "#ffe8e8"
+  stroke: "#cc3333"
+  shape: hexagon
 }
 ```
 
@@ -57,15 +58,26 @@ The graph model also records `depth` and sibling `rank` for every ITM node. View
 
 Example:
 
-```itt
-&root [topic] Roadmap {fill: #28343c, size: 18}
-%style [work] { fill: #eaf3ff; stroke: #3a6ea5; }
-%style ->[depends] { stroke: #cf6f2a; stroke-width: 3; }
-%style => { stroke: #9aa6ad; }
-  &api API work {fill: #eaf3ff, edge-color: #3a6ea5}
-  &ui [work] UI work {background: #fff3e0} @depends:api
+```itm
+&root [topic] Roadmap {fill: "#28343c", size: 18}
+%style [work]
+{
+  fill: "#eaf3ff"
+  stroke: "#3a6ea5"
+}
+%style @depends_on:*
+{
+  stroke: "#cf6f2a"
+  stroke-width: 3
+}
+%style =>
+{
+  stroke: "#9aa6ad"
+}
+  &api API work {fill: "#eaf3ff", edge-color: "#3a6ea5"}
+  &ui [work] UI work {background: "#fff3e0"} @depends_on:api
 ```
 
 `%include other-file.itm` is supported for ITM graph visualizers, limited to files currently open in the editor. Includes are expanded in place and circular includes are ignored with a diagnostic.
 
-Not supported in V1: arbitrary CSS selectors beyond the ITM selector subset, icons, Sigma node shapes, and saving moved Sigma/Cytoscape positions back to ITM source.
+Not supported in V1: arbitrary CSS selectors beyond the ITM selector subset, an all-cross-links selector equivalent to legacy `->`, icons, Sigma node shapes, and saving moved Sigma/Cytoscape positions back to ITM source.
