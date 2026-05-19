@@ -119,10 +119,14 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onRevealH
     const current = view.state.doc.toString();
     if (current !== value) {
       const { scrollTop, scrollLeft } = view.scrollDOM;
-      const selection = view.state.selection;
+      const selection = view.state.selection.main;
+      const nextDocLength = value.length;
       view.dispatch({
         changes: { from: 0, to: current.length, insert: value },
-        selection,
+        selection: {
+          anchor: clampPosition(selection.anchor, nextDocLength),
+          head: clampPosition(selection.head, nextDocLength)
+        },
         annotations: Transaction.remote.of(true)
       });
       view.scrollDOM.scrollTop = scrollTop;

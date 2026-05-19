@@ -61,6 +61,33 @@ describe("CodeEditor", () => {
     expect(view.state.selection.main.head).toBe(120);
   });
 
+  it("clamps the selection when external value updates replace the document with shorter text", async () => {
+    const onChange = vi.fn();
+    const startingValue = Array.from({ length: 20 }, (_, index) => `line ${index + 1}`).join("\n");
+    const updatedValue = "short";
+    let editorView!: EditorView;
+
+    const { container, rerender } = render(
+      <CodeEditor value={startingValue} languageId="text.plain" onChange={onChange} onEditorReady={(view) => { editorView = view; }} />
+    );
+
+    await waitFor(() => expect(container.querySelector(".cm-editor")).toBeTruthy());
+    const view = editorView;
+
+    view.dispatch({ selection: { anchor: startingValue.length, head: startingValue.length } });
+    expect(view.state.selection.main.anchor).toBe(startingValue.length);
+
+    rerender(
+      <CodeEditor value={updatedValue} languageId="text.plain" onChange={onChange} onEditorReady={(nextView) => { editorView = nextView; }} />
+    );
+
+    await waitFor(() => {
+      expect(view.state.doc.toString()).toBe(updatedValue);
+      expect(view.state.selection.main.anchor).toBe(updatedValue.length);
+      expect(view.state.selection.main.head).toBe(updatedValue.length);
+    });
+  });
+
   it("treats reveal requests as one-shot when the parent clears them after handling", async () => {
     function Harness() {
       const [mounted, setMounted] = useState(true);

@@ -791,6 +791,7 @@ export function App() {
         <section class="editor-pane">
           {activeDocument ? (
             <CodeEditor
+              key={activeDocument.id}
               value={activeDocument.text}
               languageId={activeDocument.languageId}
               onChange={updateText}

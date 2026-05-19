@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from "@testing-library/preact";
+import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
 import { ViewerContent } from "../components/viewers";
@@ -34,6 +34,34 @@ describe("App smoke", () => {
     expect((container.querySelector(".actionbar select") as HTMLSelectElement | null)?.disabled).toBe(false);
     expect(screen.getByLabelText("Pipeline")).toBeTruthy();
     expect(screen.queryByText("No document open.")).toBeNull();
+  });
+
+  it("switches editor content reliably when clicking document tabs", async () => {
+    const { container } = render(<App />);
+
+    await waitFor(() => expect(screen.getByText("Ready.")).toBeTruthy());
+
+    const newButton = screen.getByRole("button", { name: "New" });
+    fireEvent.click(newButton);
+
+    await waitFor(() => expect(container.querySelectorAll(".document-tabs > button").length).toBe(2));
+
+    const tabs = Array.from(container.querySelectorAll(".document-tabs > button")) as HTMLButtonElement[];
+    fireEvent.click(tabs[0]);
+
+    await waitFor(() => {
+      const editor = container.querySelector(".cm-editor");
+      expect(editor).toBeTruthy();
+      expect(editor?.textContent).toContain("Welcome to TextForge.");
+    });
+
+    fireEvent.click((container.querySelectorAll(".document-tabs > button")[1] as HTMLButtonElement));
+
+    await waitFor(() => {
+      const editor = container.querySelector(".cm-editor");
+      expect(editor).toBeTruthy();
+      expect(editor?.textContent || "").not.toContain("Welcome to TextForge.");
+    });
   });
 
   it("hides wrapped markdown section content when a heading is folded", () => {
