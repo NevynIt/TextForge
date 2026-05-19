@@ -10,6 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { GraphEdge, GraphModel, ItmPipelineValue, SourceRange, TableModel, TreeNode, ViewerResult, ViewerSettingValue, VisualSelection } from "../domain/types";
 import { parseDelimited } from "../parsers/csv";
 import { escapeHtml } from "../parsers/source";
+import { serializeItmPipelineDocument } from "../viewers/itm/itmSerialization";
 import { countEntities, entityTopic, getEntityAttributes, getEntityDescription, getEntityId, getEntityLabel, getEntityStyleRecord, getEntityTags, getEntityType, getOutgoingRelationships, getRelationshipId, getRelationshipLabel, getRelationshipTargetId, getRootEntities, getSourceRange, projectItmGraph, sortEntities, stringifyAttributeValue, type ItmGraphViewEdge, type ItmGraphViewModel, type ItmGraphViewNode } from "../viewers/itm/itmViewModel";
 
 interface ViewerContentProps {
@@ -4788,8 +4789,8 @@ export function viewerSnapshotHtml(result: ViewerResult): string {
   if (result.kind === "bpmn") {
     return `<pre>${escapeHtml(result.xml)}</pre>`;
   }
-  if (result.kind === "itm-tree") {
-    return `<pre>${escapeHtml(JSON.stringify(result.model.resolved.entities, null, 2))}</pre>`;
+  if (result.kind === "itm-tree" || result.kind === "itm-mindmap" || result.kind === "itm-graph") {
+    return `<pre>${escapeHtml(serializeItmPipelineDocument(result.model))}</pre>`;
   }
   if (result.kind === "tree" || result.kind === "mindmap") {
     return `<pre>${escapeHtml(JSON.stringify(result.nodes, null, 2))}</pre>`;

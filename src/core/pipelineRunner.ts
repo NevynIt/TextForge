@@ -11,6 +11,7 @@ import type {
   TransformerContribution,
   ViewerContribution
 } from "../domain/types";
+import { serializeItmPipelineValue } from "../viewers/itm/itmSerialization";
 import { PluginRegistry } from "./pluginRegistry";
 import { RuntimeLoader } from "./runtimeLoader";
 import { createId } from "./id";
@@ -228,20 +229,7 @@ function serializePipelineValue(value: PipelineValue): string {
   }
   if (value.kind === "model") {
     if (value.modelType === "model.itm") {
-      return JSON.stringify(
-        {
-          modelType: value.modelType,
-          source: value.source,
-          metadata: value.document.metadata,
-          entities: value.resolved.entities,
-          relationships: value.resolved.relationships,
-          styles: value.document.styles || [],
-          viewpoints: value.document.viewpoints || [],
-          views: value.document.views || []
-        },
-        null,
-        2
-      );
+      return serializeItmPipelineValue(value);
     }
     return JSON.stringify(value.data, null, 2);
   }

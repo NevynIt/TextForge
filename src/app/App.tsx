@@ -24,6 +24,7 @@ import { TextForgeStorage } from "../core/storage";
 import { WorkspaceManager } from "../core/workspaceManager";
 import type { Diagnostic, PipelineTraceStep, PipelineValue, PopupRecord, SourceRange, TextDocument, VisualSelection } from "../domain/types";
 import { pluginManifest } from "../plugins/manifest";
+import { serializeItmPipelineValue } from "../viewers/itm/itmSerialization";
 import { CodeEditor } from "../components/CodeEditor";
 import { DocumentBadge } from "../components/DocumentBadge";
 import { PopupHost } from "../components/PopupHost";
@@ -867,20 +868,7 @@ function pipelineValueToDocument(value: PipelineValue): Partial<TextDocument> & 
       return {
         fileName: "lua-result.json",
         languageId: "text.json",
-        text: JSON.stringify(
-          {
-            modelType: value.modelType,
-            source: value.source,
-            metadata: value.document.metadata,
-            entities: value.resolved.entities,
-            relationships: value.resolved.relationships,
-            styles: value.document.styles || [],
-            viewpoints: value.document.viewpoints || [],
-            views: value.document.views || []
-          },
-          null,
-          2
-        )
+        text: serializeItmPipelineValue(value)
       };
     }
     return {

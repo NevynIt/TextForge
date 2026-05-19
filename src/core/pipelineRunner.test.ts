@@ -54,4 +54,31 @@ describe("PipelineRunner", () => {
     expect(result.status).toBe("missing-contribution");
     expect(result.trace[0].status).toBe("missing-contribution");
   });
+
+  it("runs an ITM pipeline without circular serialization failures", async () => {
+    const languages = new LanguageRegistry();
+    registerBaseLanguages(languages);
+    const registry = new PluginRegistry(languages);
+    registry.registerManifest(pluginManifest);
+    const runner = new PipelineRunner(registry, new RuntimeLoader());
+    const document: TextDocument = {
+      id: "doc-itm",
+      fileName: "sample.itm",
+      languageId: "text.itm",
+      text: "&root [Component] Root\n  &child [Component] Child @depends_on:root",
+      version: 1,
+      dirty: false,
+      identity: { color: "#3a6ea5", badgeLabel: "I1" },
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    const result = await runner.run("view-itm-tree", document);
+
+    expect(result.status).toBe("available");
+    expect(result.viewerResult?.kind).toBe("itm-tree");
+    expect(result.trace.map((step) => step.stepId)).toEqual(["itm-parse", "itm-tree-viewer"]);
+    expect(result.trace[0].serializedValue).toContain('"document"');
+    expect(result.trace[0].serializedValue).not.toContain('"resolved"');
+  });
 });

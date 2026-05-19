@@ -30,6 +30,7 @@ import {
   ZoomOut
 } from "lucide-preact";
 import type { PipelineTraceStep, PipelineValue, PluginState, PopupRecord, SourceRange, TextDocument, ViewerControlDefinition, ViewerSettingValue, VisualSelection } from "../domain/types";
+import { serializeItmPipelineDocument } from "../viewers/itm/itmSerialization";
 import type { RegisteredLuaAction } from "../lua/luaScriptRegistry";
 import type { LuaRunResult } from "../lua/types";
 import type { TextForgeResource } from "../resources/resourceCatalog";
@@ -969,7 +970,7 @@ function exportPayload(result: NonNullable<PopupRecord["result"]>): { content: s
     return { content: JSON.stringify(result.nodes, null, 2), extension: "json", type: "application/json" };
   }
   if (result.kind === "itm-tree" || result.kind === "itm-mindmap" || result.kind === "itm-graph") {
-    return { content: JSON.stringify({ entities: result.model.resolved.entities, relationships: result.model.resolved.relationships }, null, 2), extension: "json", type: "application/json" };
+    return { content: serializeItmPipelineDocument(result.model), extension: "itm", type: "text/plain" };
   }
   if (result.kind === "graph") {
     return { content: JSON.stringify(result.graph, null, 2), extension: "json", type: "application/json" };
