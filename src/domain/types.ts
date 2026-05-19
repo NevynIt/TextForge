@@ -192,6 +192,7 @@ interface ViewerResultBase {
 export type ViewerResult =
   | (ViewerResultBase & { kind: "html"; html: string })
   | (ViewerResultBase & { kind: "svg"; svg: string })
+  | (ViewerResultBase & { kind: "bpmn"; xml: string })
   | (ViewerResultBase & { kind: "tree"; nodes: TreeNode[] })
   | (ViewerResultBase & { kind: "table"; table: TableModel })
   | (ViewerResultBase & { kind: "graph"; graph: GraphModel; engine: "cytoscape" | "sigma" | "static" })

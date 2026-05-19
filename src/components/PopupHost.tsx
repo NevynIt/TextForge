@@ -224,6 +224,11 @@ export function PopupHost({
                     <Focus size={15} />
                   </button>
                 ) : null}
+                {popup.result?.kind === "bpmn" ? (
+                  <button type="button" title="Fit BPMN diagram" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "bpmn-fit"))}>
+                    <Focus size={15} />
+                  </button>
+                ) : null}
                 {popup.result?.kind === "mindmap" ? (
                   <>
                     <button type="button" title="Fold all branches" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "mindmap-fold-all"))}>
@@ -620,6 +625,9 @@ function toolbarControlIds(result: NonNullable<PopupRecord["result"]>): string[]
   if (result.kind === "svg") {
     return ["fitMode", "svgBackground"];
   }
+  if (result.kind === "bpmn") {
+    return [];
+  }
   if (result.kind === "tree") {
     return ["viewerBackground"];
   }
@@ -949,6 +957,9 @@ function exportFileName(popup: PopupRecord): string {
 function exportPayload(result: NonNullable<PopupRecord["result"]>): { content: string; extension: string; type: string } {
   if (result.kind === "svg") {
     return { content: viewerSnapshotHtml(result), extension: "svg", type: "image/svg+xml" };
+  }
+  if (result.kind === "bpmn") {
+    return { content: result.xml, extension: "bpmn", type: "application/xml" };
   }
   if (result.kind === "table") {
     const extension = result.table.delimiter === "\t" ? "tsv" : "csv";

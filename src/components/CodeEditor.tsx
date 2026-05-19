@@ -184,7 +184,7 @@ function languageExtension(languageId: string) {
   if (languageId === "text.lua") {
     return StreamLanguage.define(luaLegacy);
   }
-  if (languageId === "text.xml") {
+  if (languageId === "text.xml" || languageId === "text.bpmn") {
     return xml();
   }
   if (languageId === "text.indented-tree") {

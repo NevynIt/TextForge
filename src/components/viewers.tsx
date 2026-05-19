@@ -1,5 +1,8 @@
 import jsMind from "jsmind";
 import "jsmind/style/jsmind.css";
+import "bpmn-js/dist/assets/diagram-js.css";
+import "bpmn-js/dist/assets/bpmn-js.css";
+import "bpmn-js/dist/assets/bpmn-font/css/bpmn.css";
 import type { JSX } from "preact";
 import { PanelRightClose, PanelRightOpen } from "lucide-preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
@@ -29,6 +32,18 @@ export interface ViewerSearchCommand {
 export interface ViewerToolbarAction {
   revision: number;
   action: string;
+}
+
+type BpmnViewerModule = typeof import("bpmn-js/lib/NavigatedViewer");
+
+interface BpmnCanvasLike {
+  zoom(level: number | "fit-viewport"): number;
+}
+
+interface BpmnViewerInstance {
+  importXML(xml: string): Promise<{ warnings?: unknown[] }>;
+  get(service: "canvas"): BpmnCanvasLike;
+  destroy(): void;
 }
 
 export function ViewerContent({
@@ -69,6 +84,16 @@ export function ViewerContent({
         searchCommand={searchCommand}
         toolbarAction={toolbarAction}
         onSearchStateChange={onSearchStateChange}
+        onZoomChange={onZoomChange}
+      />
+    );
+  }
+  if (result.kind === "bpmn") {
+    return (
+      <BpmnView
+        xml={result.xml}
+        zoom={zoom}
+        toolbarAction={toolbarAction}
         onZoomChange={onZoomChange}
       />
     );
@@ -135,6 +160,108 @@ export function ViewerContent({
       <p>{result.message}</p>
       <p>Editor surface: {result.editorKind}</p>
     </div>
+  );
+}
+
+function BpmnView({
+  xml,
+  zoom,
+  toolbarAction,
+  onZoomChange
+}: {
+  xml: string;
+  zoom: number;
+  toolbarAction?: ViewerToolbarAction;
+  onZoomChange?: (zoom: number) => void;
+}) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<BpmnViewerInstance | null>(null);
+  const fitScaleRef = useRef(1);
+  const [warningCount, setWarningCount] = useState(0);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  function applyZoom(level: number): void {
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+    viewer.get("canvas").zoom(fitScaleRef.current * level);
+  }
+
+  function fitDiagram(): void {
+    const viewer = viewerRef.current;
+    if (!viewer) {
+      return;
+    }
+    fitScaleRef.current = viewer.get("canvas").zoom("fit-viewport") || 1;
+    onZoomChange?.(1);
+  }
+
+  useEffect(() => {
+    let disposed = false;
+    let localViewer: BpmnViewerInstance | null = null;
+
+    async function mountDiagram(): Promise<void> {
+      if (!hostRef.current) {
+        return;
+      }
+      setErrorMessage("");
+      setWarningCount(0);
+      hostRef.current.replaceChildren();
+
+      try {
+        const module = (await import("bpmn-js/lib/NavigatedViewer")) as BpmnViewerModule;
+        if (disposed || !hostRef.current) {
+          return;
+        }
+        const ViewerCtor = module.default;
+        localViewer = new ViewerCtor({ container: hostRef.current }) as unknown as BpmnViewerInstance;
+        viewerRef.current = localViewer;
+        const importResult = await localViewer.importXML(xml);
+        if (disposed) {
+          return;
+        }
+        setWarningCount(importResult.warnings?.length || 0);
+        fitScaleRef.current = localViewer.get("canvas").zoom("fit-viewport") || 1;
+        applyZoom(zoom);
+      } catch (error) {
+        if (disposed) {
+          return;
+        }
+        setErrorMessage(error instanceof Error ? error.message : String(error));
+      }
+    }
+
+    void mountDiagram();
+
+    return () => {
+      disposed = true;
+      localViewer?.destroy();
+      if (viewerRef.current === localViewer) {
+        viewerRef.current = null;
+      }
+    };
+  }, [xml]);
+
+  useEffect(() => {
+    applyZoom(zoom);
+  }, [zoom]);
+
+  useEffect(() => {
+    if (!toolbarAction?.revision || toolbarAction.action !== "bpmn-fit") {
+      return;
+    }
+    fitDiagram();
+  }, [toolbarAction?.revision]);
+
+  return (
+    <section class="viewer-content viewer-bpmn-shell">
+      {errorMessage ? <p class="viewer-bpmn-message viewer-bpmn-error">{errorMessage}</p> : null}
+      {!errorMessage && warningCount ? <p class="viewer-bpmn-message">Imported with {warningCount} warning{warningCount === 1 ? "" : "s"}.</p> : null}
+      <div class="viewer-bpmn">
+        <div ref={hostRef} class="viewer-bpmn-canvas" />
+      </div>
+    </section>
   );
 }
 
@@ -3673,6 +3800,9 @@ export function viewerSnapshotHtml(result: ViewerResult): string {
   }
   if (result.kind === "svg") {
     return result.svg;
+  }
+  if (result.kind === "bpmn") {
+    return `<pre>${escapeHtml(result.xml)}</pre>`;
   }
   if (result.kind === "tree" || result.kind === "mindmap") {
     return `<pre>${escapeHtml(JSON.stringify(result.nodes, null, 2))}</pre>`;

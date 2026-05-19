@@ -892,6 +892,48 @@ button:disabled {
   padding: 0;
 }
 
+.viewer-bpmn-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 100%;
+  padding: 0;
+  transform: none;
+}
+
+.viewer-bpmn {
+  min-height: 0;
+  height: 100%;
+  padding: 14px;
+  background: #f5f2ea;
+}
+
+.viewer-bpmn-canvas {
+  height: 100%;
+  min-height: 420px;
+  border: 1px solid #d6d0c4;
+  border-radius: 8px;
+  background: #ffffff;
+  overflow: hidden;
+}
+
+.viewer-bpmn .djs-container,
+.viewer-bpmn .djs-container svg {
+  width: 100%;
+  height: 100%;
+}
+
+.viewer-bpmn-message {
+  margin: 0;
+  padding: 10px 14px 0;
+  color: #596064;
+  font-size: 12px;
+}
+
+.viewer-bpmn-error {
+  color: #8c2f27;
+}
+
 .svg-frame {
   border: 0;
   height: 100%;

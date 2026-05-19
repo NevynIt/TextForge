@@ -93,6 +93,32 @@ export const pluginManifest: PluginManifestEntry[] = [
     load: () => import("./xmlCore")
   },
   {
+    id: "bpmn-core",
+    name: "BPMN Core",
+    version: "0.1.0",
+    languages: [
+      {
+        id: "text.bpmn",
+        name: "BPMN 2.0 XML",
+        parentId: "text.xml",
+        extensions: [".bpmn"],
+        mediaType: "application/xml",
+        aliases: ["bpmn"]
+      }
+    ],
+    pipelines: [
+      {
+        id: "view-bpmn-diagram",
+        name: "BPMN 2.0 XML -> BPMN Viewer",
+        input: "text.bpmn",
+        steps: ["bpmn-viewer"],
+        category: "View"
+      }
+    ],
+    contributionIds: ["bpmn-viewer"],
+    load: () => import("./bpmnCore")
+  },
+  {
     id: "csv-core",
     name: "Delimited Text Core",
     version: "0.1.0",
