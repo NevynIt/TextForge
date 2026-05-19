@@ -189,6 +189,50 @@ const plugin: TextForgePlugin = {
     },
     {
       kind: "viewer",
+      id: "itm-inspector-viewer",
+      name: "ITM Inspector",
+      input: "model.itm",
+      capabilities: { search: true, inspect: true },
+      render(value) {
+        if (value.kind !== "model" || value.modelType !== "model.itm") {
+          throw new Error("ITM inspector requires ITM model input.");
+        }
+        const metadataEntries = Object.entries(value.document.metadata?.values || {});
+        const inspectorHtml = [
+          '<article class="itm-inspector">',
+          '<header><strong>ITM Inspector</strong></header>',
+          `<p>Entities: ${value.resolved.entities.length} | Relationships: ${value.resolved.relationships.length} | Styles: ${(value.document.styles || []).length} | Viewpoints: ${(value.document.viewpoints || []).length} | Views: ${(value.document.views || []).length}</p>`,
+          metadataEntries.length
+            ? `<section><h2>Metadata</h2><dl>${metadataEntries
+                .map(([key, item]) => `<div><dt>${escapeHtml(key)}</dt><dd>${escapeHtml(String(item))}</dd></div>`)
+                .join("")}</dl></section>`
+            : "",
+          value.diagnostics?.length
+            ? `<section><h2>Diagnostics</h2><ul>${value.diagnostics
+                .map((diagnostic) => `<li><strong>${escapeHtml(diagnostic.severity)}</strong>: ${escapeHtml(diagnostic.message)}</li>`)
+                .join("")}</ul></section>`
+            : "",
+          '<section><h2>Root entities</h2><ul>',
+          value.resolved.entities
+            .filter((entity) => !entity.parent)
+            .sort((left, right) => (left.rank ?? 0) - (right.rank ?? 0))
+            .map((entity) => `<li>${escapeHtml(entity.label || entity.id || entity.localId || entity.uid)}${entity.typeRef ? ` <span>${escapeHtml(entity.typeRef)}</span>` : ""}</li>`)
+            .join(""),
+          '</ul></section>',
+          '</article>'
+        ].join("");
+        return {
+          kind: "html",
+          title: "ITM Inspector",
+          html: inspectorHtml,
+          capabilities: { search: true, inspect: true, export: true, presets: true },
+          controls: htmlControls,
+          diagnostics: value.diagnostics
+        };
+      }
+    },
+    {
+      kind: "viewer",
       id: "tree-viewer",
       name: "Tree Viewer",
       input: "model.tree",

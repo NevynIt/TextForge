@@ -227,6 +227,22 @@ function serializePipelineValue(value: PipelineValue): string {
     return value.text;
   }
   if (value.kind === "model") {
+    if (value.modelType === "model.itm") {
+      return JSON.stringify(
+        {
+          modelType: value.modelType,
+          source: value.source,
+          metadata: value.document.metadata,
+          entities: value.resolved.entities,
+          relationships: value.resolved.relationships,
+          styles: value.document.styles || [],
+          viewpoints: value.document.viewpoints || [],
+          views: value.document.views || []
+        },
+        null,
+        2
+      );
+    }
     return JSON.stringify(value.data, null, 2);
   }
   if (value.kind === "html") {

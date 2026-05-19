@@ -8,6 +8,7 @@ export const pluginManifest: PluginManifestEntry[] = [
     contributionIds: [
       "html-viewer",
       "source-html-viewer",
+      "itm-inspector-viewer",
       "tree-viewer",
       "table-viewer",
       "svg-viewer",
@@ -18,6 +19,13 @@ export const pluginManifest: PluginManifestEntry[] = [
       "graph-visual-editor-skeleton"
     ],
     pipelines: [
+      {
+        id: "view-itm-inspector",
+        name: "ITM -> ITM Inspector",
+        input: "text.itm",
+        steps: ["itm-parse", "itm-inspector-viewer"],
+        category: "View"
+      },
       {
         id: "view-source-html",
         name: "Source -> Highlighted HTML",
@@ -147,6 +155,13 @@ export const pluginManifest: PluginManifestEntry[] = [
     version: "0.1.0",
     pipelines: [
       {
+        id: "view-itm-inspector",
+        name: "ITM -> Inspector",
+        input: "text.itm",
+        steps: ["itm-parse", "itm-inspector-viewer"],
+        category: "View"
+      },
+      {
         id: "view-itm-tree",
         name: "ITM -> Tree Viewer",
         input: "text.itm",
@@ -189,7 +204,7 @@ export const pluginManifest: PluginManifestEntry[] = [
         category: "Edit"
       }
     ],
-    contributionIds: ["itm-linter", "itm-to-tree", "itm-to-graph"],
+    contributionIds: ["itm-linter", "itm-parse", "itm-to-tree", "itm-to-graph"],
     load: () => import("./itmCore")
   },
   {

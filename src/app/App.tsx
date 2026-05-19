@@ -863,6 +863,26 @@ function pipelineValueToDocument(value: PipelineValue): Partial<TextDocument> & 
     };
   }
   if (value.kind === "model") {
+    if (value.modelType === "model.itm") {
+      return {
+        fileName: "lua-result.json",
+        languageId: "text.json",
+        text: JSON.stringify(
+          {
+            modelType: value.modelType,
+            source: value.source,
+            metadata: value.document.metadata,
+            entities: value.resolved.entities,
+            relationships: value.resolved.relationships,
+            styles: value.document.styles || [],
+            viewpoints: value.document.viewpoints || [],
+            views: value.document.views || []
+          },
+          null,
+          2
+        )
+      };
+    }
     return {
       fileName: `lua-result.json`,
       languageId: "text.json",

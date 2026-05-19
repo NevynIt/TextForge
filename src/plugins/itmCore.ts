@@ -1,5 +1,5 @@
 import type { TextForgePlugin } from "../domain/types";
-import { indentedTreeToGraph, parseIndentedTree } from "../parsers/itm";
+import { indentedTreeToGraph, parseIndentedTree, parseItmValue } from "../parsers/itm";
 
 const plugin: TextForgePlugin = {
   id: "itm-core",
@@ -12,15 +12,36 @@ const plugin: TextForgePlugin = {
       name: "Indented Text Model Parser",
       accepts: "text.itm",
       lint(document, context) {
-        return parseIndentedTree(document.text, document.languageId, {
+        return parseItmValue(document.text, document.languageId, {
           currentDocumentId: document.id,
           currentFileName: document.fileName,
           includeDocuments: context.documents || []
-        }).diagnostics;
+        }).diagnostics || [];
       }
     }
   ],
   transformers: [
+    {
+      kind: "transformer",
+      id: "itm-parse",
+      name: "ITM Parse",
+      input: "text.itm",
+      output: "model.itm",
+      transform(value, context) {
+        if (value.kind !== "text") {
+          throw new Error("ITM parser requires text input.");
+        }
+        const parsed = parseItmValue(value.text, value.languageId, {
+          currentDocumentId: value.documentId,
+          currentFileName: value.fileName,
+          includeDocuments: context.documents || []
+        });
+        return {
+          ...parsed,
+          diagnostics: [...(value.diagnostics || []), ...(parsed.diagnostics || [])]
+        };
+      }
+    },
     {
       kind: "transformer",
       id: "itm-to-tree",

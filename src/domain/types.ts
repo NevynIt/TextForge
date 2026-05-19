@@ -1,3 +1,5 @@
+import type { ItmDiagnostic, ItmDocument, ResolvedItmDocument } from "@textforge/itm";
+
 export type ContributionKind = "transformer" | "viewer" | "editor" | "linter";
 export type PipelineStatus = "available" | "missing-plugin" | "missing-contribution" | "disabled-plugin" | "runtime-failed" | "failed";
 export type Severity = "error" | "warning" | "information" | "observation";
@@ -142,11 +144,27 @@ export interface GraphModel {
   diagnostics?: Diagnostic[];
 }
 
+export interface ItmPipelineValue {
+  kind: "model";
+  modelType: "model.itm";
+  document: ItmDocument;
+  resolved: ResolvedItmDocument;
+  diagnostics?: Diagnostic[];
+  itmDiagnostics?: ItmDiagnostic[];
+  source?: {
+    languageId: string;
+    fileName?: string;
+    documentId?: string;
+    text?: string;
+  };
+}
+
 export type PipelineValue =
   | { kind: "text"; languageId: string; text: string; fileName?: string; documentId?: string; diagnostics?: Diagnostic[] }
   | { kind: "model"; modelType: "model.tree"; data: TreeNode[]; diagnostics?: Diagnostic[] }
   | { kind: "model"; modelType: "model.table"; data: TableModel; diagnostics?: Diagnostic[] }
   | { kind: "model"; modelType: "model.graph"; data: GraphModel; diagnostics?: Diagnostic[] }
+  | ItmPipelineValue
   | { kind: "html"; html: string; diagnostics?: Diagnostic[] }
   | { kind: "svg"; svg: string; diagnostics?: Diagnostic[] };
 

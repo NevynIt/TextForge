@@ -1,5 +1,5 @@
 import { parseDocumentResult, resolveDocument, type ItmAttributeBag, type ItmDiagnostic, type ItmDocument, type ItmEntity, type ItmRelationship, type ItmSourceRange, type ResolvedItmDocument, type ResolvedItmEntity, type ResolvedItmRelationship } from "@textforge/itm";
-import type { Diagnostic, GraphEdge, GraphModel, TextDocument, TreeNode } from "../domain/types";
+import type { Diagnostic, GraphEdge, GraphModel, ItmPipelineValue, TextDocument, TreeNode } from "../domain/types";
 import { sourceRange } from "./source";
 
 export interface IttStyleRule {
@@ -14,19 +14,43 @@ export interface ParseIndentedTreeOptions {
   includeDocuments?: TextDocument[];
 }
 
-export function parseIndentedTree(
+export function parseItmValue(
   text: string,
   languageId = "text.itm",
   options: ParseIndentedTreeOptions = {}
-): { nodes: TreeNode[]; diagnostics: Diagnostic[]; styleRules: IttStyleRule[] } {
+): ItmPipelineValue {
   const parsed = parseDocumentResult(text, {
     uri: options.currentFileName,
     strict: false
   });
   const resolved = resolveDocument(parsed.value);
-  const styleRules = collectStyleRules(parsed.value);
-  const roots = sortEntities(resolved.entities.filter((entity) => !entity.parent)).map((entity) => itmEntityToTreeNode(entity, text));
   const diagnostics = parsed.diagnostics.map((diagnostic) => toTextForgeDiagnostic(diagnostic, text, languageId, options.currentDocumentId));
+
+  return {
+    kind: "model",
+    modelType: "model.itm",
+    document: parsed.value,
+    resolved,
+    diagnostics,
+    itmDiagnostics: parsed.diagnostics,
+    source: {
+      languageId,
+      fileName: options.currentFileName,
+      documentId: options.currentDocumentId,
+      text
+    }
+  };
+}
+
+export function parseIndentedTree(
+  text: string,
+  languageId = "text.itm",
+  options: ParseIndentedTreeOptions = {}
+): { nodes: TreeNode[]; diagnostics: Diagnostic[]; styleRules: IttStyleRule[] } {
+  const parsed = parseItmValue(text, languageId, options);
+  const styleRules = collectStyleRules(parsed.document);
+  const roots = sortEntities(parsed.resolved.entities.filter((entity) => !entity.parent)).map((entity) => itmEntityToTreeNode(entity, text));
+  const diagnostics = parsed.diagnostics || [];
 
   applyTreeStyles(roots, styleRules);
   if (roots[0]) {
@@ -160,7 +184,7 @@ function toTextForgeDiagnostic(
   documentId?: string
 ): Diagnostic {
   return {
-    source: diagnostic.source || "itm.parser",
+    source: diagnostic.source || "@textforge/itm",
     severity: diagnostic.severity,
     languageId,
     documentId,
