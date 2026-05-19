@@ -113,9 +113,16 @@ export const pluginManifest: PluginManifestEntry[] = [
         input: "text.bpmn",
         steps: ["bpmn-viewer"],
         category: "View"
+      },
+      {
+        id: "view-bpmn-svg",
+        name: "BPMN 2.0 XML -> SVG Viewer",
+        input: "text.bpmn",
+        steps: ["bpmn-to-svg", "svg-viewer"],
+        category: "View"
       }
     ],
-    contributionIds: ["bpmn-viewer"],
+    contributionIds: ["bpmn-viewer", "bpmn-to-svg"],
     load: () => import("./bpmnCore")
   },
   {
