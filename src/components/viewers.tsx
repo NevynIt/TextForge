@@ -10,7 +10,7 @@ import { useEffect, useMemo, useRef, useState } from "preact/hooks";
 import type { GraphEdge, GraphModel, ItmPipelineValue, SourceRange, TableModel, TreeNode, ViewerResult, ViewerSettingValue, VisualSelection } from "../domain/types";
 import { parseDelimited } from "../parsers/csv";
 import { escapeHtml } from "../parsers/source";
-import { getEntityAttributes, getEntityDescription, getEntityId, getEntityLabel, getEntityTags, getEntityType, getOutgoingRelationships, getRelationshipLabel, getRelationshipTargetId, getRootEntities, getSourceRange, sortEntities, stringifyAttributeValue } from "../viewers/itm/itmViewModel";
+import { countEntities, entityTopic, getEntityAttributes, getEntityDescription, getEntityId, getEntityLabel, getEntityStyleRecord, getEntityTags, getEntityType, getOutgoingRelationships, getRelationshipId, getRelationshipLabel, getRelationshipTargetId, getRootEntities, getSourceRange, projectItmGraph, sortEntities, stringifyAttributeValue, type ItmGraphViewEdge, type ItmGraphViewModel, type ItmGraphViewNode } from "../viewers/itm/itmViewModel";
 
 interface ViewerContentProps {
   result: ViewerResult;
@@ -150,6 +150,24 @@ export function ViewerContent({
       </div>
     );
   }
+  if (result.kind === "itm-mindmap") {
+    return (
+      <div class="viewer-content viewer-mindmap" style={{ "--viewer-zoom": "1" }}>
+        <ItmMindMapView
+          model={result.model}
+          query={query}
+          zoom={zoom}
+          settings={settings}
+          searchCommand={searchCommand}
+          toolbarAction={toolbarAction}
+          onSearchStateChange={onSearchStateChange}
+          onZoomChange={onZoomChange}
+          sourceSelection={sourceSelection}
+          onSelectSourceRange={onSelectSourceRange}
+        />
+      </div>
+    );
+  }
   if (result.kind === "table") {
     return (
       <div class="viewer-content viewer-table" style={style}>
@@ -180,6 +198,23 @@ export function ViewerContent({
       <div class="viewer-content viewer-graph" style={style}>
         <GraphView
           graph={result.graph}
+          engine={result.engine}
+          query={query}
+          settings={settings}
+          searchCommand={searchCommand}
+          toolbarAction={toolbarAction}
+          onSearchStateChange={onSearchStateChange}
+          sourceSelection={sourceSelection}
+          onSelectSourceRange={onSelectSourceRange}
+        />
+      </div>
+    );
+  }
+  if (result.kind === "itm-graph") {
+    return (
+      <div class="viewer-content viewer-graph" style={style}>
+        <GraphView
+          graph={projectItmGraph(result.model)}
           engine={result.engine}
           query={query}
           settings={settings}
@@ -1386,7 +1421,7 @@ function MindMapView({
     if (!activeMatch) {
       return;
     }
-    expandJsMindPath(instance, nodes, activeMatch.id);
+    expandJsMindPath(instance, nodes, activeMatch.id, (node) => node.id, (node) => node.children);
     window.requestAnimationFrame(() => {
       instance.select_node?.(activeMatch.id);
       renderMindMapDecorations(host, nodes, query, activeMatch.id, { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
@@ -1405,7 +1440,7 @@ function MindMapView({
     if (!node) {
       return;
     }
-    expandJsMindPath(instance, nodes, node.id);
+    expandJsMindPath(instance, nodes, node.id, (item) => item.id, (item) => item.children);
     window.requestAnimationFrame(() => {
       instance.select_node?.(node.id);
       renderMindMapDecorations(host, nodes, query, node.id, { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
@@ -1471,6 +1506,336 @@ function MindMapView({
   );
 }
 
+function ItmMindMapView({
+  model,
+  query,
+  zoom,
+  settings,
+  searchCommand,
+  toolbarAction,
+  onSearchStateChange,
+  onZoomChange,
+  sourceSelection,
+  onSelectSourceRange
+}: {
+  model: ItmPipelineValue;
+  query: string;
+  zoom: number;
+  settings: Record<string, ViewerSettingValue>;
+  searchCommand?: ViewerSearchCommand;
+  toolbarAction?: ViewerToolbarAction;
+  onSearchStateChange?: (state: { count: number; index: number }) => void;
+  onZoomChange?: (zoom: number) => void;
+  sourceSelection?: VisualSelection;
+  onSelectSourceRange?: (range: SourceRange) => void;
+}) {
+  const hostRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const instanceRef = useRef<jsMind | null>(null);
+  const crossLinkLabelOffsetsRef = useRef(new Map<string, Point>());
+  const selectSourceRangeRef = useRef(onSelectSourceRange);
+  const roots = useMemo(() => getRootEntities(model), [model]);
+  const entityIndex = useMemo(() => indexItmEntities(roots), [roots]);
+  const sourceText = model.source?.text;
+  const mind = useMemo(() => itmToJsMind(roots), [roots]);
+  const searchMatches = useMemo(() => matchingItmEntities(roots, query), [roots, query]);
+  const [activeMatchIndex, setActiveMatchIndex] = useState(-1);
+  const mode = stringSetting(settings.mindmapMode, "full");
+  const initialDepth = stringSetting(settings.initialDepth, "depth2");
+  const theme = safeClassName(stringSetting(settings.mindmapTheme, "textforge"));
+  const textScale = numberSetting(settings.textScale, 1);
+  const background = safeClassName(stringSetting(settings.viewerBackground, "grid"));
+  const showCrossLinkArrows = booleanSetting(settings.showArrows, true);
+  const showCrossLinkLabels = booleanSetting(settings.showEdgeLabels, false);
+  selectSourceRangeRef.current = onSelectSourceRange;
+
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) {
+      return;
+    }
+    let drag: { id: number; x: number; y: number; left: number; top: number; moved: boolean } | null = null;
+    const start = (event: PointerEvent) => {
+      if (event.button !== 0 || event.target instanceof Element && event.target.closest("button,a,input,select,textarea,jmnode,jmexpander")) {
+        return;
+      }
+      const panel = mindMapPanel(hostRef.current);
+      if (!panel) {
+        return;
+      }
+      drag = { id: event.pointerId, x: event.clientX, y: event.clientY, left: panel.scrollLeft, top: panel.scrollTop, moved: false };
+      viewport.setPointerCapture?.(event.pointerId);
+      viewport.classList.add("is-panning");
+    };
+    const move = (event: PointerEvent) => {
+      if (!drag || drag.id !== event.pointerId) {
+        return;
+      }
+      const deltaX = event.clientX - drag.x;
+      const deltaY = event.clientY - drag.y;
+      if (Math.abs(deltaX) > 2 || Math.abs(deltaY) > 2) {
+        drag.moved = true;
+        event.preventDefault();
+      }
+      const panel = mindMapPanel(hostRef.current);
+      if (panel) {
+        panel.scrollLeft = drag.left - deltaX;
+        panel.scrollTop = drag.top - deltaY;
+      }
+    };
+    const stop = (event: PointerEvent) => {
+      if (!drag || drag.id !== event.pointerId) {
+        return;
+      }
+      viewport.releasePointerCapture?.(event.pointerId);
+      viewport.classList.remove("is-panning");
+      drag = null;
+    };
+    viewport.addEventListener("pointerdown", start);
+    viewport.addEventListener("pointermove", move);
+    viewport.addEventListener("pointerup", stop);
+    viewport.addEventListener("pointercancel", stop);
+    return () => {
+      viewport.removeEventListener("pointerdown", start);
+      viewport.removeEventListener("pointermove", move);
+      viewport.removeEventListener("pointerup", stop);
+      viewport.removeEventListener("pointercancel", stop);
+    };
+  }, []);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const viewport = viewportRef.current;
+    if (!host) {
+      return;
+    }
+    const hostId = `jsmind-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    host.id = hostId;
+    host.innerHTML = "";
+    host.style.setProperty("--jsmind-node-scale", String(clamp(textScale, 0.7, 1.6)));
+
+    const instance = new jsMind({
+      container: hostId,
+      editable: false,
+      theme,
+      mode: mode === "side" ? "side" : "full",
+      support_html: false,
+      log_level: "error",
+      view: {
+        engine: "svg",
+        draggable: false,
+        hide_scrollbars_when_draggable: false,
+        hmargin: 8000,
+        vmargin: 6000,
+        line_width: 2,
+        line_color: "#78909c",
+        line_style: "curved",
+        node_overflow: "wrap",
+        zoom: {
+          min: 0.1,
+          max: 5,
+          step: 0.15,
+          mask_key: 0
+        }
+      },
+      layout: {
+        hspace: 140,
+        vspace: 56,
+        pspace: 24,
+        cousin_space: 24
+      },
+      default_event_handle: {
+        enable_mousedown_handle: true,
+        enable_click_handle: true,
+        enable_dblclick_handle: false,
+        enable_mousewheel_handle: false
+      },
+      shortcut: { enable: false }
+    });
+
+    instanceRef.current = instance;
+    instance.show(mind);
+    (instance as unknown as { add_event_listener?: (handler: () => void) => void }).add_event_listener?.(() => {
+      window.requestAnimationFrame(() => renderItmMindMapDecorations(host, roots, sourceText, query, searchMatches[activeMatchIndex] ? getEntityId(searchMatches[activeMatchIndex]) : "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current }));
+    });
+    const doubleClick = (event: MouseEvent) => {
+      const id = jsMindNodeId(instance, event.target);
+      if (!id) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      toggleJsMindNode(instance, id, event.shiftKey);
+      window.requestAnimationFrame(() => renderItmMindMapDecorations(host, roots, sourceText, query, searchMatches[activeMatchIndex] ? getEntityId(searchMatches[activeMatchIndex]) : "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current }));
+    };
+    const click = (event: MouseEvent) => {
+      if (!event.ctrlKey && !event.metaKey) {
+        return;
+      }
+      const id = jsMindNodeId(instance, event.target);
+      if (!id) {
+        return;
+      }
+      const entity = entityIndex.get(id);
+      const range = entity ? getSourceRange(entity.sourceRange, sourceText) : undefined;
+      if (!range) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      selectSourceRangeRef.current?.(range);
+    };
+    host.addEventListener("dblclick", doubleClick, true);
+    host.addEventListener("click", click, true);
+    if (initialDepth === "collapsed") {
+      instance.collapse_all?.();
+    } else if (initialDepth === "depth2") {
+      instance.expand_to_depth?.(2);
+    } else {
+      instance.expand_all?.();
+    }
+    setNativeMindMapZoom(instance, zoom);
+    renderItmMindMapDecorations(host, roots, sourceText, query, searchMatches[activeMatchIndex] ? getEntityId(searchMatches[activeMatchIndex]) : "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
+    centerMindMapNode(viewport, host, mind.data.id);
+    window.setTimeout(() => {
+      instance.resize?.();
+      setNativeMindMapZoom(instance, zoom);
+      renderItmMindMapDecorations(host, roots, sourceText, query, searchMatches[activeMatchIndex] ? getEntityId(searchMatches[activeMatchIndex]) : "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
+      centerMindMapNode(viewport, host, mind.data.id);
+    }, 0);
+
+    return () => {
+      host.removeEventListener("dblclick", doubleClick, true);
+      host.removeEventListener("click", click, true);
+      instanceRef.current = null;
+      host.innerHTML = "";
+    };
+  }, [mind, mode, initialDepth, theme, textScale, roots, sourceText, query, showCrossLinkArrows, showCrossLinkLabels]);
+
+  useEffect(() => {
+    setActiveMatchIndex(searchMatches.length ? 0 : -1);
+  }, [searchMatches]);
+
+  useEffect(() => {
+    onSearchStateChange?.({ count: searchMatches.length, index: activeMatchIndex });
+  }, [searchMatches.length, activeMatchIndex]);
+
+  useEffect(() => {
+    if (!searchCommand?.revision) {
+      return;
+    }
+    setActiveMatchIndex((current) => {
+      if (!searchMatches.length) {
+        return -1;
+      }
+      const direction = searchCommand.direction === "previous" ? -1 : 1;
+      return (current + direction + searchMatches.length) % searchMatches.length;
+    });
+  }, [searchCommand?.revision, searchMatches.length]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const viewport = viewportRef.current;
+    const instance = instanceRef.current;
+    if (!host || !viewport || !instance) {
+      return;
+    }
+    const activeMatch = searchMatches[activeMatchIndex];
+    renderItmMindMapDecorations(host, roots, sourceText, query, activeMatch?.id || "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
+    if (!activeMatch) {
+      return;
+    }
+    const activeId = getEntityId(activeMatch);
+    expandJsMindPath(instance, roots, activeId, getEntityId, (entity) => sortEntities(entity.children));
+    window.requestAnimationFrame(() => {
+      instance.select_node?.(activeId);
+      renderItmMindMapDecorations(host, roots, sourceText, query, activeId, { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
+      centerMindMapNode(viewport, host, activeId);
+    });
+  }, [query, searchMatches, activeMatchIndex, roots, sourceText, showCrossLinkArrows, showCrossLinkLabels]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const viewport = viewportRef.current;
+    const instance = instanceRef.current;
+    if (!host || !viewport || !instance || !sourceSelection) {
+      return;
+    }
+    const entity = itmEntityForSourceRange(roots, sourceSelection.sourceRange, sourceText);
+    if (!entity) {
+      return;
+    }
+    const entityId = getEntityId(entity);
+    expandJsMindPath(instance, roots, entityId, getEntityId, (item) => sortEntities(item.children));
+    window.requestAnimationFrame(() => {
+      instance.select_node?.(entityId);
+      renderItmMindMapDecorations(host, roots, sourceText, query, entityId, { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
+      centerMindMapNode(viewport, host, entityId);
+    });
+  }, [sourceSelection?.revision, roots, sourceText, query, showCrossLinkArrows, showCrossLinkLabels]);
+
+  useEffect(() => {
+    const host = hostRef.current;
+    const instance = instanceRef.current;
+    if (!host || !instance) {
+      return;
+    }
+    setNativeMindMapZoom(instance, zoom);
+    window.requestAnimationFrame(() => renderItmMindMapDecorations(host, roots, sourceText, query, searchMatches[activeMatchIndex] ? getEntityId(searchMatches[activeMatchIndex]) : "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current }));
+  }, [zoom, roots, sourceText, query, searchMatches, activeMatchIndex, showCrossLinkArrows, showCrossLinkLabels]);
+
+  useEffect(() => {
+    if (!toolbarAction?.revision) {
+      return;
+    }
+    const host = hostRef.current;
+    const viewport = viewportRef.current;
+    const instance = instanceRef.current;
+    if (!host || !viewport || !instance) {
+      return;
+    }
+    if (toolbarAction.action === "mindmap-center") {
+      centerMindMapNode(viewport, host, mind.data.id);
+    } else if (toolbarAction.action === "mindmap-fit") {
+      fitMindMap(instance, viewport, host, onZoomChange);
+    } else if (toolbarAction.action === "mindmap-fold-all") {
+      instance.collapse_all?.();
+      renderItmMindMapDecorations(host, roots, sourceText, query, searchMatches[activeMatchIndex] ? getEntityId(searchMatches[activeMatchIndex]) : "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
+    } else if (toolbarAction.action === "mindmap-unfold-all") {
+      instance.expand_all?.();
+      renderItmMindMapDecorations(host, roots, sourceText, query, searchMatches[activeMatchIndex] ? getEntityId(searchMatches[activeMatchIndex]) : "", { showArrows: showCrossLinkArrows, showLabels: showCrossLinkLabels, labelOffsets: crossLinkLabelOffsetsRef.current });
+    }
+  }, [toolbarAction?.revision, mind.data.id, roots, sourceText, query, searchMatches, activeMatchIndex, showCrossLinkArrows, showCrossLinkLabels]);
+
+  return (
+    <section class={`jsmind-viewer-shell viewer-bg-${background}`}>
+      <div class="jsmind-viewer-meta">
+        <strong>{mind.meta.name}</strong>
+        <span>{countEntities(roots)} nodes</span>
+      </div>
+      <div
+        class="jsmind-viewer-viewport"
+        ref={viewportRef}
+        onWheel={(event) => {
+          event.preventDefault();
+          const nextZoom = clamp(zoom + (event.deltaY > 0 ? -0.1 : 0.1), 0.1, 5);
+          const instance = instanceRef.current;
+          if (instance) {
+            setNativeMindMapZoom(instance, nextZoom, { x: event.clientX, y: event.clientY });
+          }
+          onZoomChange?.(nextZoom);
+        }}
+      >
+        <div class="jsmind-viewer-host" ref={hostRef} />
+      </div>
+    </section>
+  );
+}
+
+type GraphViewModel = GraphModel | ItmGraphViewModel;
+type GraphViewNode = GraphModel["nodes"][number] | ItmGraphViewNode;
+type GraphViewEdge = GraphModel["edges"][number] | ItmGraphViewEdge;
+
 const READABLE_GRAPH_NODE_LIMIT = 50;
 const DENSE_GRAPH_NODE_LIMIT = 250;
 const DENSE_GRAPH_EDGE_LIMIT = 800;
@@ -1487,7 +1852,7 @@ function GraphView({
   sourceSelection,
   onSelectSourceRange
 }: {
-  graph: GraphModel;
+  graph: GraphViewModel;
   engine: "cytoscape" | "sigma" | "static";
   query: string;
   settings: Record<string, ViewerSettingValue>;
@@ -1678,9 +2043,10 @@ function GraphView({
         const g = new Graphology({ type: "mixed", multi: true, allowSelfLoops: true });
         visibleGraph.nodes.forEach((node) => {
           const visual = graphNodeVisual(node, nodeSize / 2);
+          const position = graphNodePosition(node);
           g.addNode(node.id, {
-            x: Number.isFinite(node.x) ? node.x : 0,
-            y: Number.isFinite(node.y) ? node.y : 0,
+            x: position.x,
+            y: position.y,
             baseSize: visual.size,
             size: visual.size,
             label: node.label,
@@ -2068,7 +2434,7 @@ function GraphView({
   );
 }
 
-function StaticGraph({ graph, error }: { graph: GraphModel; error: string }) {
+function StaticGraph({ graph, error }: { graph: GraphViewModel; error: string }) {
   return (
     <div class="static-graph">
       <p>Interactive graph runtime failed: {error}</p>
@@ -2211,7 +2577,7 @@ function cytoscapeStyle(showLabels: boolean, showEdgeLabels: boolean, showArrows
   ];
 }
 
-function inferGraphPerformanceMode(setting: string, graph: GraphModel): string {
+function inferGraphPerformanceMode(setting: string, graph: GraphViewModel): string {
   if (setting !== "auto") {
     return setting;
   }
@@ -2226,7 +2592,7 @@ function inferGraphPerformanceMode(setting: string, graph: GraphModel): string {
 
 function cytoscapeLayoutOptions(
   layout: string,
-  graph: GraphModel,
+  graph: GraphViewModel,
   performanceMode: string,
   container: HTMLElement | null,
   concentricRingSpacing = 1
@@ -2269,7 +2635,7 @@ function cytoscapeLayoutOptions(
 function runCytoscapeLayout(
   cy: CytoscapeLike,
   layout: string,
-  graph: GraphModel,
+  graph: GraphViewModel,
   performanceMode: string,
   container: HTMLElement | null,
   concentricRingSpacing = 1
@@ -2410,7 +2776,7 @@ function graphElementRows(element: CytoscapeElementLike): InspectorItem["rows"] 
   return rows;
 }
 
-function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] {
+function graphSearchMatches(graph: GraphViewModel, query: string): GraphSelection[] {
   if (!query) {
     return [];
   }
@@ -2433,7 +2799,7 @@ function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] 
   });
   graph.edges.forEach((edge, index) => {
     const id = edge.id || `edge-${index}`;
-    const haystack = [id, edge.label, edge.type, edge.source, edge.target, ...(edge.classes || [])].filter(Boolean).join(" ").toLowerCase();
+    const haystack = [id, edge.label, edge.type, edge.source, edge.target, ...graphEdgeClasses(edge)].filter(Boolean).join(" ").toLowerCase();
     if (haystack.includes(query)) {
       matches.push({
         id,
@@ -2445,7 +2811,7 @@ function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] 
         rows: [
           { label: "Source", value: edge.source },
           { label: "Target", value: edge.target },
-          ...(edge.weight !== undefined ? [{ label: "Weight", value: String(edge.weight) }] : [])
+          ...(graphEdgeWeight(edge) !== undefined ? [{ label: "Weight", value: String(graphEdgeWeight(edge)) }] : [])
         ]
       });
     }
@@ -2453,11 +2819,11 @@ function graphSearchMatches(graph: GraphModel, query: string): GraphSelection[] 
   return matches;
 }
 
-function graphSelectionForSourceRange(graph: GraphModel, range: SourceRange): GraphSelection | null {
+function graphSelectionForSourceRange(graph: GraphViewModel, range: SourceRange): GraphSelection | null {
   const node = bestSourceRangeMatch(graph.nodes, range);
   const edge = bestSourceRangeMatch(graph.edges, range);
   if (edge && (!node || sourceRangeSpan(edge.sourceRange) <= sourceRangeSpan(node.sourceRange))) {
-    const edgeIndex = graph.edges.indexOf(edge);
+    const edgeIndex = graph.edges.findIndex((candidate) => candidate === edge);
     const id = edge.id || `edge-${edgeIndex}`;
     return {
       id,
@@ -2574,9 +2940,34 @@ function typeColor(type: string): string {
   return palette[hash % palette.length];
 }
 
-function graphNodeColor(node: GraphModel["nodes"][number]): string {
-  if (node.color) {
-    return node.color;
+function graphNodePosition(node: GraphViewNode): Point {
+  const rawX = "x" in node ? node.x : undefined;
+  const rawY = "y" in node ? node.y : undefined;
+  const x = typeof rawX === "number" && Number.isFinite(rawX) ? rawX : 0;
+  const y = typeof rawY === "number" && Number.isFinite(rawY) ? rawY : 0;
+  return { x, y };
+}
+
+function graphNodeConfiguredColor(node: GraphViewNode): string | undefined {
+  return "color" in node ? node.color : undefined;
+}
+
+function graphNodeConfiguredSize(node: GraphViewNode): number | undefined {
+  return "size" in node ? node.size : undefined;
+}
+
+function graphEdgeClasses(edge: GraphViewEdge): string[] {
+  return "classes" in edge && Array.isArray(edge.classes) ? edge.classes : [];
+}
+
+function graphEdgeWeight(edge: GraphViewEdge): number | undefined {
+  return "weight" in edge ? edge.weight : undefined;
+}
+
+function graphNodeColor(node: GraphViewNode): string {
+  const color = graphNodeConfiguredColor(node);
+  if (color) {
+    return color;
   }
   const depth = Number(node.data?.depth);
   if (Number.isFinite(depth)) {
@@ -2618,9 +3009,9 @@ function treeNodeVisualStyle(node: TreeNode): JSX.CSSProperties {
   };
 }
 
-function graphNodeVisual(node: GraphModel["nodes"][number], fallbackSize: number) {
+function graphNodeVisual(node: GraphViewNode, fallbackSize: number) {
   const style = graphStyleRecord(node.style || node.data?.style);
-  const color = node.color || safeCssColor(firstStyleAttribute(style, ["background-color", "backgroundColor", "background", "bg", "fill"])) || graphNodeColor(node);
+  const color = graphNodeConfiguredColor(node) || safeCssColor(firstStyleAttribute(style, ["background-color", "backgroundColor", "background", "bg", "fill"])) || graphNodeColor(node);
   const textColor = safeCssColor(firstStyleAttribute(style, ["foreground-color", "foregroundColor", "text-color", "textColor", "fg", "color"])) || "#202225";
   const fontSize = safePositiveNumber(firstStyleAttribute(style, ["font-size", "fontSize"])) || 12;
   const fontWeight = safeCssFontWeight(firstStyleAttribute(style, ["font-weight", "fontWeight", "weight"])) || "500";
@@ -2637,11 +3028,11 @@ function graphNodeVisual(node: GraphModel["nodes"][number], fallbackSize: number
     borderWidth,
     opacity,
     shape,
-    size: node.size || safePositiveNumber(firstStyleAttribute(style, ["size", "node-size", "nodeSize", "width"])) || fallbackSize
+    size: graphNodeConfiguredSize(node) || safePositiveNumber(firstStyleAttribute(style, ["size", "node-size", "nodeSize", "width"])) || fallbackSize
   };
 }
 
-function graphEdgeVisual(edge: GraphModel["edges"][number], fallbackWidth: number) {
+function graphEdgeVisual(edge: GraphViewEdge, fallbackWidth: number) {
   const style = graphStyleRecord(edge.style || edge.data?.style);
   const lineStyle = edgeLineStyle(style);
   return {
@@ -2664,7 +3055,7 @@ function graphStyleRecord(value: unknown): Record<string, string> {
   );
 }
 
-function graphNodeDetails(node: GraphModel["nodes"][number]): string | undefined {
+function graphNodeDetails(node: GraphViewNode): string | undefined {
   return node.details || stringDataValue(node.data?.details);
 }
 
@@ -2846,6 +3237,16 @@ function treeToJsMind(nodes: TreeNode[]): JsMindData {
   };
 }
 
+function itmToJsMind(entities: ResolvedItmEntity[]): JsMindData {
+  const rootChildren = sortEntities(entities).map((entity, index) => itmEntityToJsMind(entity, index));
+  const root = rootChildren.length === 1 ? rootChildren[0] : { id: "root", topic: "Mind Map", expanded: true, children: rootChildren };
+  return {
+    meta: { name: root.topic || "Mind Map", author: "TextForge", version: "1.0" },
+    format: "node_tree",
+    data: root
+  };
+}
+
 function treeNodeToJsMind(node: TreeNode, index: number): JsMindNode {
   return {
     id: node.id,
@@ -2854,6 +3255,17 @@ function treeNodeToJsMind(node: TreeNode, index: number): JsMindNode {
     direction: index % 2 === 0 ? "right" : "left",
     ...mindMapStyleData(effectiveViewerStyle(node)),
     children: node.children.map((child, childIndex) => treeNodeToJsMind(child, childIndex))
+  };
+}
+
+function itmEntityToJsMind(entity: ResolvedItmEntity, index: number): JsMindNode {
+  return {
+    id: getEntityId(entity),
+    topic: entityTopic(entity),
+    expanded: true,
+    direction: index % 2 === 0 ? "right" : "left",
+    ...mindMapStyleData(getEntityStyleRecord(entity)),
+    children: sortEntities(entity.children).map((child, childIndex) => itmEntityToJsMind(child, childIndex))
   };
 }
 
@@ -2890,10 +3302,42 @@ function matchingTreeNodes(nodes: TreeNode[], query: string): TreeNode[] {
   return matches;
 }
 
+function matchingItmEntities(nodes: ResolvedItmEntity[], query: string): ResolvedItmEntity[] {
+  const lower = query.trim().toLowerCase();
+  if (!lower) {
+    return [];
+  }
+  const matches: ResolvedItmEntity[] = [];
+  walkItmEntities(nodes, (entity) => {
+    const text = [
+      getEntityId(entity),
+      getEntityLabel(entity),
+      getEntityType(entity),
+      ...getEntityTags(entity),
+      ...Object.entries(getEntityAttributes(entity)).flatMap(([key, value]) => [key, stringifyAttributeValue(value)]),
+      getEntityDescription(entity)
+    ]
+      .filter(Boolean)
+      .join(" ")
+      .toLowerCase();
+    if (text.includes(lower)) {
+      matches.push(entity);
+    }
+  });
+  return matches;
+}
+
 function walkTreeNodes(nodes: TreeNode[], callback: (node: TreeNode) => void): void {
   nodes.forEach((node) => {
     callback(node);
     walkTreeNodes(node.children, callback);
+  });
+}
+
+function walkItmEntities(nodes: ResolvedItmEntity[], callback: (entity: ResolvedItmEntity) => void): void {
+  nodes.forEach((node) => {
+    callback(node);
+    walkItmEntities(sortEntities(node.children), callback);
   });
 }
 
@@ -2931,8 +3375,30 @@ function renderMindMapDecorations(
   renderMindMapCrossLinks(host, nodes, options);
 }
 
+function renderItmMindMapDecorations(
+  host: HTMLElement,
+  entities: ResolvedItmEntity[],
+  sourceText: string | undefined,
+  query = "",
+  activeId = "",
+  options: MindMapDecorationOptions = { showArrows: true, showLabels: false }
+): void {
+  applyItmMindMapNodeStyles(host, entities);
+  applyItmMindMapSearchState(host, entities, query, activeId);
+  renderItmMindMapCrossLinks(host, entities, sourceText, options);
+}
+
 function applyMindMapSearchState(host: HTMLElement, nodes: TreeNode[], query: string, activeId: string): void {
   const matchedIds = new Set(matchingTreeNodes(nodes, query).map((node) => node.id));
+  applyMindMapSearchIds(host, matchedIds, activeId);
+}
+
+function applyItmMindMapSearchState(host: HTMLElement, entities: ResolvedItmEntity[], query: string, activeId: string): void {
+  const matchedIds = new Set(matchingItmEntities(entities, query).map((entity) => getEntityId(entity)));
+  applyMindMapSearchIds(host, matchedIds, activeId);
+}
+
+function applyMindMapSearchIds(host: HTMLElement, matchedIds: Set<string>, activeId: string): void {
   host.querySelectorAll<HTMLElement>("jmnode").forEach((element) => {
     const id = element.getAttribute("nodeid") || "";
     element.classList.toggle("mindmap-search-match", matchedIds.has(id));
@@ -2948,6 +3414,32 @@ function applyMindMapNodeStyles(host: HTMLElement, nodes: TreeNode[]): void {
       return;
     }
     const attrs = effectiveViewerStyle(node);
+    const borderColor = safeCssColor(firstStyleAttribute(attrs, ["border-color", "borderColor", "border", "stroke"]));
+    const borderWidth = safeCssLength(firstStyleAttribute(attrs, ["border-width", "borderWidth"]));
+    const shape = firstStyleAttribute(attrs, ["shape", "node-shape", "nodeShape"])?.toLowerCase();
+    if (borderColor) {
+      element.style.borderColor = borderColor;
+      element.style.borderStyle = "solid";
+      element.style.borderWidth = borderWidth || "1px";
+    }
+    if (borderWidth && !borderColor) {
+      element.style.borderWidth = borderWidth;
+      element.style.borderStyle = "solid";
+    }
+    if (shape) {
+      element.style.borderRadius = mindMapShapeRadius(shape);
+    }
+  });
+}
+
+function applyItmMindMapNodeStyles(host: HTMLElement, entities: ResolvedItmEntity[]): void {
+  const flatEntities = Array.from(indexItmEntities(entities).values()).filter((entity, index, list) => list.findIndex((candidate) => getEntityId(candidate) === getEntityId(entity)) === index);
+  flatEntities.forEach((entity) => {
+    const element = jsMindElementById(host, getEntityId(entity));
+    if (!element) {
+      return;
+    }
+    const attrs = getEntityStyleRecord(entity);
     const borderColor = safeCssColor(firstStyleAttribute(attrs, ["border-color", "borderColor", "border", "stroke"]));
     const borderWidth = safeCssLength(firstStyleAttribute(attrs, ["border-width", "borderWidth"]));
     const shape = firstStyleAttribute(attrs, ["shape", "node-shape", "nodeShape"])?.toLowerCase();
@@ -3064,6 +3556,100 @@ function elementBox(element: HTMLElement): Box {
   };
 }
 
+function renderItmMindMapCrossLinks(host: HTMLElement, entities: ResolvedItmEntity[], sourceText: string | undefined, options: MindMapDecorationOptions): void {
+  const layer = host.querySelector<HTMLElement>("jmnodes") || host.querySelector<HTMLElement>(".jsmind-inner") || host;
+  layer.querySelector(".jsmind-cross-links")?.remove();
+  const links: Array<{ id: string; sourceId: string; sourceLabel: string; targetId: string; targetLabel: string; type?: string; color?: string; width?: number }> = [];
+  walkItmEntities(entities, (entity) => {
+    getOutgoingRelationships(entity).forEach((relationship) => {
+      if (!relationship.target) {
+        return;
+      }
+      const style = { ...getEntityStyleRecord(entity), ...relationshipStyleRecord(relationship) };
+      links.push({
+        id: getRelationshipId(relationship),
+        sourceId: getEntityId(entity),
+        sourceLabel: getEntityLabel(entity),
+        targetId: getEntityId(relationship.target),
+        targetLabel: getEntityLabel(relationship.target),
+        type: getRelationshipLabel(relationship),
+        color: safeCssColor(firstStyleAttribute(style, ["stroke", "link-color", "linkColor", "line-color", "lineColor", "edge-color", "edgeColor"])),
+        width: safePositiveNumber(firstStyleAttribute(style, ["stroke-width", "link-width", "linkWidth", "line-width", "lineWidth", "edge-width", "edgeWidth"]))
+      });
+    });
+  });
+  if (!links.length) {
+    return;
+  }
+  const svg = document.createElementNS(SVG_NAMESPACE, "svg");
+  svg.classList.add("jsmind-cross-links");
+  svg.setAttribute("width", String(Math.max(layer.scrollWidth, layer.clientWidth)));
+  svg.setAttribute("height", String(Math.max(layer.scrollHeight, layer.clientHeight)));
+  const defs = document.createElementNS(SVG_NAMESPACE, "defs");
+  svg.append(defs);
+  links.forEach((link, index) => {
+    const source = jsMindElementById(host, link.sourceId);
+    const target = jsMindElementById(host, link.targetId);
+    if (!source || !target || source.offsetParent === null || target.offsetParent === null) {
+      return;
+    }
+    const sourceBox = elementBox(source);
+    const targetBox = elementBox(target);
+    const sourceCenter = boxCenter(sourceBox);
+    const targetCenter = boxCenter(targetBox);
+    const start = lineBoxIntersection(sourceCenter, targetCenter, sourceBox);
+    const end = lineBoxIntersection(targetCenter, sourceCenter, targetBox);
+    const midX = start.x + (end.x - start.x) * 0.5;
+    const midY = start.y + (end.y - start.y) * 0.5;
+    const path = document.createElementNS(SVG_NAMESPACE, "path");
+    path.setAttribute("d", `M ${start.x} ${start.y} C ${midX} ${start.y}, ${midX} ${end.y}, ${end.x} ${end.y}`);
+    path.setAttribute("fill", "none");
+    path.setAttribute("stroke", link.color || "#cf6f2a");
+    path.setAttribute("stroke-width", String(link.width || 2));
+    if (options.showArrows) {
+      const markerId = `${host.id}-cross-link-arrow-${index}`;
+      const marker = document.createElementNS(SVG_NAMESPACE, "marker");
+      marker.setAttribute("id", markerId);
+      marker.setAttribute("markerWidth", "8");
+      marker.setAttribute("markerHeight", "8");
+      marker.setAttribute("refX", "7");
+      marker.setAttribute("refY", "4");
+      marker.setAttribute("orient", "auto");
+      const markerPath = document.createElementNS(SVG_NAMESPACE, "path");
+      markerPath.setAttribute("d", "M 0 0 L 8 4 L 0 8 z");
+      markerPath.setAttribute("fill", link.color || "#cf6f2a");
+      marker.append(markerPath);
+      defs.append(marker);
+      path.setAttribute("marker-end", `url(#${markerId})`);
+    }
+    const title = document.createElementNS(SVG_NAMESPACE, "title");
+    title.textContent = `${link.sourceLabel} -> ${link.targetLabel}${link.type ? ` (${link.type})` : ""}`;
+    path.append(title);
+    svg.append(path);
+    if (options.showLabels && link.type) {
+      const offset = options.labelOffsets?.get(link.id) || { x: 0, y: 0 };
+      const text = document.createElementNS(SVG_NAMESPACE, "text") as SVGTextElement;
+      text.textContent = link.type;
+      text.setAttribute("x", String(midX + offset.x));
+      text.setAttribute("y", String(midY + offset.y - 6));
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("fill", link.color || "#7a4d1c");
+      text.setAttribute("font-size", "11");
+      text.setAttribute("font-weight", "600");
+      svg.append(text);
+    }
+  });
+  layer.append(svg);
+}
+
+function relationshipStyleRecord(relationship: ResolvedItmRelationship): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(relationship.attributes?.values || {})
+      .map(([key, value]) => [key, stringifyAttributeValue(value)])
+      .filter(([, value]) => value.length > 0)
+  );
+}
+
 function boxCenter(box: Box): Point {
   return {
     x: box.left + box.width / 2,
@@ -3133,7 +3719,7 @@ function attachMindMapLabelDrag(
   label.addEventListener("pointercancel", stop);
 }
 
-function mindMapStyleData(attributes: TreeNode["attributes"]): Partial<JsMindNode> {
+function mindMapStyleData(attributes: Record<string, string> | undefined): Partial<JsMindNode> {
   const attrs = attributes || {};
   const background = safeCssColor(firstStyleAttribute(attrs, ["background-color", "backgroundColor", "background", "bg", "fill"]));
   const foreground = safeCssColor(firstStyleAttribute(attrs, ["foreground-color", "foregroundColor", "text-color", "textColor", "fg", "color"]));
@@ -3323,18 +3909,18 @@ function toggleJsMindNode(instance: jsMind, id: string, recursive: boolean): voi
   collapse ? instance.collapse_node?.(id) : instance.expand_node?.(id);
 }
 
-function expandJsMindPath(instance: jsMind, nodes: TreeNode[], id: string): void {
-  const path = treePathToNode(nodes, id);
-  path.slice(0, -1).forEach((node) => instance.expand_node?.(node.id));
+function expandJsMindPath<T>(instance: jsMind, nodes: T[], id: string, getId: (node: T) => string, getChildren: (node: T) => T[]): void {
+  const path = treePathToNode(nodes, id, getId, getChildren);
+  path.slice(0, -1).forEach((node) => instance.expand_node?.(getId(node)));
 }
 
-function treePathToNode(nodes: TreeNode[], id: string, path: TreeNode[] = []): TreeNode[] {
+function treePathToNode<T>(nodes: T[], id: string, getId: (node: T) => string, getChildren: (node: T) => T[], path: T[] = []): T[] {
   for (const node of nodes) {
     const nextPath = [...path, node];
-    if (node.id === id) {
+    if (getId(node) === id) {
       return nextPath;
     }
-    const childPath = treePathToNode(node.children, id, nextPath);
+    const childPath = treePathToNode(getChildren(node), id, getId, getChildren, nextPath);
     if (childPath.length) {
       return childPath;
     }
@@ -3504,7 +4090,7 @@ interface GraphologyLike {
   getEdgeAttribute?: (edge: string, key: string) => unknown;
 }
 
-function filterGraph(graph: GraphModel, query: string, filterToMatches: boolean): GraphModel {
+function filterGraph(graph: GraphViewModel, query: string, filterToMatches: boolean): GraphViewModel {
   if (!filterToMatches || !query) {
     return graph;
   }
@@ -4214,5 +4800,8 @@ export function viewerSnapshotHtml(result: ViewerResult): string {
   if (result.kind === "graph") {
     return `<pre>${escapeHtml(JSON.stringify(result.graph, null, 2))}</pre>`;
   }
-  return `<p>${escapeHtml(result.message)}</p>`;
+  if ("message" in result) {
+    return `<p>${escapeHtml(result.message)}</p>`;
+  }
+  return `<pre>${escapeHtml(JSON.stringify(result, null, 2))}</pre>`;
 }

@@ -10,6 +10,9 @@ export const pluginManifest: PluginManifestEntry[] = [
       "source-html-viewer",
       "itm-inspector-viewer",
       "itm-tree-viewer",
+      "itm-mindmap-viewer",
+      "itm-cytoscape-viewer",
+      "itm-sigma-viewer",
       "tree-viewer",
       "table-viewer",
       "svg-viewer",
@@ -173,21 +176,21 @@ export const pluginManifest: PluginManifestEntry[] = [
         id: "view-itm-mindmap",
         name: "ITM -> Mind Map Viewer",
         input: "text.itm",
-        steps: ["itm-to-tree", "mindmap-viewer"],
+        steps: ["itm-parse", "itm-mindmap-viewer"],
         category: "View"
       },
       {
         id: "view-itm-cytoscape",
         name: "ITM -> Cytoscape Graph Viewer",
         input: "text.itm",
-        steps: ["itm-to-graph", "cytoscape-graph-viewer"],
+        steps: ["itm-parse", "itm-cytoscape-viewer"],
         category: "View"
       },
       {
         id: "view-itm-sigma",
         name: "ITM -> Sigma/Graphology Viewer",
         input: "text.itm",
-        steps: ["itm-to-graph", "sigma-graph-viewer"],
+        steps: ["itm-parse", "itm-sigma-viewer"],
         category: "View"
       },
       {

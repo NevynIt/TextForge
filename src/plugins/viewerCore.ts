@@ -253,6 +253,26 @@ const plugin: TextForgePlugin = {
     },
     {
       kind: "viewer",
+      id: "itm-mindmap-viewer",
+      name: "ITM Mind Map Viewer",
+      input: "model.itm",
+      capabilities: { zoom: true, pan: true, search: true, fold: true, inspect: true, select: true },
+      render(value) {
+        if (value.kind !== "model" || value.modelType !== "model.itm") {
+          throw new Error("ITM mindmap viewer requires ITM model input.");
+        }
+        return {
+          kind: "itm-mindmap",
+          title: "ITM Mind Map Viewer",
+          model: value,
+          capabilities: { zoom: true, pan: true, search: true, fold: true, inspect: true, select: true, export: true, presets: true },
+          controls: [{ ...viewBackgroundControl, defaultValue: "grid" }, showArrowsControl, showEdgeLabelsControl],
+          diagnostics: value.diagnostics
+        };
+      }
+    },
+    {
+      kind: "viewer",
       id: "tree-viewer",
       name: "Tree Viewer",
       input: "model.tree",
@@ -326,6 +346,63 @@ const plugin: TextForgePlugin = {
           nodes: value.data,
           capabilities: { zoom: true, pan: true, search: true, fold: true, inspect: true, export: true, presets: true },
           controls: [{ ...viewBackgroundControl, defaultValue: "grid" }, showArrowsControl, showEdgeLabelsControl],
+          diagnostics: value.diagnostics
+        };
+      }
+    },
+    {
+      kind: "viewer",
+      id: "itm-cytoscape-viewer",
+      name: "ITM Cytoscape Graph Viewer",
+      input: "model.itm",
+      capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true },
+      render(value) {
+        if (value.kind !== "model" || value.modelType !== "model.itm") {
+          throw new Error("ITM Cytoscape viewer requires ITM model input.");
+        }
+        return {
+          kind: "itm-graph",
+          title: "ITM Cytoscape Graph Viewer",
+          model: value,
+          engine: "cytoscape",
+          capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true, select: true, export: true, presets: true, tooltips: true },
+          controls: graphControls.filter((control) => control.id !== "focusNeighbors"),
+          diagnostics: value.diagnostics
+        };
+      }
+    },
+    {
+      kind: "viewer",
+      id: "itm-sigma-viewer",
+      name: "ITM Sigma/Graphology Graph Viewer",
+      input: "model.itm",
+      capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true },
+      render(value) {
+        if (value.kind !== "model" || value.modelType !== "model.itm") {
+          throw new Error("ITM Sigma viewer requires ITM model input.");
+        }
+        return {
+          kind: "itm-graph",
+          title: "ITM Sigma/Graphology Viewer",
+          model: value,
+          engine: "sigma",
+          capabilities: { zoom: true, pan: true, search: true, filter: true, inspect: true, select: true, export: true, presets: true, tooltips: true },
+          controls: graphControls
+            .filter((control) => control.id !== "concentricRingSpacing")
+            .map((control) =>
+              control.id === "layout"
+                ? {
+                    ...control,
+                    defaultValue: "forceatlas2",
+                    options: [
+                      { label: "ForceAtlas2", value: "forceatlas2" },
+                      { label: "Noverlap", value: "noverlap" },
+                      { label: "Circular", value: "circular" },
+                      { label: "Random", value: "random" }
+                    ]
+                  }
+                : control
+            ),
           diagnostics: value.diagnostics
         };
       }

@@ -195,7 +195,7 @@ export function PopupHost({
                     </button>
                   </>
                 ) : null}
-                {popup.result?.kind === "tree" ? (
+                {popup.result?.kind === "tree" || popup.result?.kind === "itm-tree" ? (
                   <>
                     <button type="button" title="Fold all tree nodes" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "tree-fold-all"))}>
                       <FoldVertical size={15} />
@@ -214,7 +214,7 @@ export function PopupHost({
                     </button>
                   </>
                 ) : null}
-                {popup.result?.kind === "graph" && popup.result.engine === "cytoscape" ? (
+                {(popup.result?.kind === "graph" || popup.result?.kind === "itm-graph") && popup.result.engine === "cytoscape" ? (
                   <button type="button" title="Run layout" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "graph-run-layout"))}>
                     <Network size={15} />
                   </button>
@@ -229,7 +229,7 @@ export function PopupHost({
                     <Focus size={15} />
                   </button>
                 ) : null}
-                {popup.result?.kind === "mindmap" ? (
+                {popup.result?.kind === "mindmap" || popup.result?.kind === "itm-mindmap" ? (
                   <>
                     <button type="button" title="Fold all branches" onClick={() => onUpdate(popup.id, toolbarActionPatch(popup, "mindmap-fold-all"))}>
                       <FoldVertical size={15} />
@@ -628,13 +628,13 @@ function toolbarControlIds(result: NonNullable<PopupRecord["result"]>): string[]
   if (result.kind === "bpmn") {
     return [];
   }
-  if (result.kind === "tree") {
+  if (result.kind === "tree" || result.kind === "itm-tree") {
     return ["viewerBackground"];
   }
-  if (result.kind === "mindmap") {
+  if (result.kind === "mindmap" || result.kind === "itm-mindmap") {
     return ["viewerBackground", "showArrows", "showEdgeLabels"];
   }
-  if (result.kind === "graph") {
+  if (result.kind === "graph" || result.kind === "itm-graph") {
     return result.engine === "sigma"
       ? ["viewerBackground", "layout", "showArrows", "showLabels", "showEdgeLabels", "filterToMatches", "focusNeighbors"]
       : ["viewerBackground", "layout", "showArrows", "showLabels", "showEdgeLabels", "filterToMatches"];
@@ -967,6 +967,9 @@ function exportPayload(result: NonNullable<PopupRecord["result"]>): { content: s
   }
   if (result.kind === "tree" || result.kind === "mindmap") {
     return { content: JSON.stringify(result.nodes, null, 2), extension: "json", type: "application/json" };
+  }
+  if (result.kind === "itm-tree" || result.kind === "itm-mindmap" || result.kind === "itm-graph") {
+    return { content: JSON.stringify({ entities: result.model.resolved.entities, relationships: result.model.resolved.relationships }, null, 2), extension: "json", type: "application/json" };
   }
   if (result.kind === "graph") {
     return { content: JSON.stringify(result.graph, null, 2), extension: "json", type: "application/json" };

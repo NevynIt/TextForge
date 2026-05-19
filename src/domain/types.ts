@@ -212,6 +212,8 @@ export type ViewerResult =
   | (ViewerResultBase & { kind: "svg"; svg: string })
   | (ViewerResultBase & { kind: "bpmn"; xml: string })
   | (ViewerResultBase & { kind: "itm-tree"; model: ItmPipelineValue })
+  | (ViewerResultBase & { kind: "itm-mindmap"; model: ItmPipelineValue })
+  | (ViewerResultBase & { kind: "itm-graph"; model: ItmPipelineValue; engine: "cytoscape" | "sigma" })
   | (ViewerResultBase & { kind: "tree"; nodes: TreeNode[] })
   | (ViewerResultBase & { kind: "table"; table: TableModel })
   | (ViewerResultBase & { kind: "graph"; graph: GraphModel; engine: "cytoscape" | "sigma" | "static" })
