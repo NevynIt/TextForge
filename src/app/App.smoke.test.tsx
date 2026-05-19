@@ -3,8 +3,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
-import { ViewerContent } from "../components/viewers";
+import { shouldSuppressSvgSelection, ViewerContent, zoomStandaloneSvgViewAtPoint } from "../components/viewers";
 import type { ViewerResult } from "../domain/types";
+
+const svgNamespace = "ht" + "tp://www.w3.org/2000/svg";
 
 function renderHtmlViewer(html: string, toolbarAction?: { revision: number; action: string }) {
   const result: ViewerResult = {
@@ -20,6 +22,28 @@ function renderHtmlViewer(html: string, toolbarAction?: { revision: number; acti
       zoom={1}
       settings={{}}
       toolbarAction={toolbarAction}
+    />
+  );
+}
+
+function renderSvgViewer() {
+  const result: ViewerResult = {
+    kind: "svg",
+    title: "SVG Viewer",
+    svg: [
+      `<svg xmlns="${svgNamespace}" width="200" height="120" viewBox="0 0 200 120">`,
+      '  <rect x="10" y="10" width="80" height="40" fill="#ddd" />',
+      '  <text x="20" y="35">Selectable label</text>',
+      '</svg>'
+    ].join("")
+  };
+
+  return render(
+    <ViewerContent
+      result={result}
+      query=""
+      zoom={1}
+      settings={{}}
     />
   );
 }
@@ -125,5 +149,26 @@ describe("App smoke", () => {
 
     expect(paragraphs[0]?.hidden).toBe(false);
     expect(paragraphs[1]?.hidden).toBe(false);
+  });
+
+  it("suppresses selection for non-text SVG drag targets", () => {
+    const { container } = renderSvgViewer();
+    const frame = container.querySelector(".svg-frame") as HTMLDivElement;
+
+    expect(shouldSuppressSvgSelection(frame)).toBe(true);
+  });
+
+  it("keeps text selection available for SVG text drag targets", () => {
+    const { container } = renderSvgViewer();
+    const text = container.querySelector("text") as SVGTextElement;
+
+    expect(shouldSuppressSvgSelection(text)).toBe(false);
+  });
+
+  it("anchors standalone SVG zoom to the mouse position", () => {
+    const anchored = zoomStandaloneSvgViewAtPoint({ panX: 10, panY: 15 }, 2, 4, 110, 95);
+
+    expect(anchored.panX).toBeCloseTo(-90);
+    expect(anchored.panY).toBeCloseTo(-65);
   });
 });

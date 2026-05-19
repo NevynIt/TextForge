@@ -34,6 +34,28 @@ export interface ViewerToolbarAction {
   action: string;
 }
 
+export function shouldSuppressSvgSelection(target: EventTarget | null): boolean {
+  return !(target instanceof Element && target.closest("text, tspan"));
+}
+
+export function zoomStandaloneSvgViewAtPoint(
+  view: { panX: number; panY: number },
+  currentScale: number,
+  nextScale: number,
+  pointerX: number,
+  pointerY: number
+): { panX: number; panY: number } {
+  if (!Number.isFinite(currentScale) || !Number.isFinite(nextScale) || currentScale <= 0 || nextScale <= 0) {
+    return view;
+  }
+  const contentX = (pointerX - view.panX) / currentScale;
+  const contentY = (pointerY - view.panY) / currentScale;
+  return {
+    panX: pointerX - contentX * nextScale,
+    panY: pointerY - contentY * nextScale
+  };
+}
+
 type BpmnViewerModule = typeof import("bpmn-js/lib/NavigatedViewer");
 
 interface BpmnCanvasLike {
@@ -373,11 +395,12 @@ function SvgView({
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ id: number; x: number; y: number; panX: number; panY: number } | null>(null);
+  const dragRef = useRef<{ id: number; x: number; y: number; panX: number; panY: number; suppressSelection: boolean } | null>(null);
   const [fitScale, setFitScale] = useState(1);
   const [svgView, setSvgView] = useState({ panX: 0, panY: 0 });
   const [findState, setFindState] = useState<FindState>({ count: 0, activeIndex: -1, markers: [] });
   const [isPanning, setIsPanning] = useState(false);
+  const [selectionSuppressed, setSelectionSuppressed] = useState(false);
   const background = safeClassName(stringSetting(settings.svgBackground, "white"));
   const fitMode = safeClassName(stringSetting(settings.fitMode, "contain"));
 
@@ -449,8 +472,13 @@ function SvgView({
     if (event.button !== 0 || event.target instanceof Element && event.target.closest("button")) {
       return;
     }
-    dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, panX: svgView.panX, panY: svgView.panY };
+    const suppressSelection = shouldSuppressSvgSelection(event.target);
+    dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, panX: svgView.panX, panY: svgView.panY, suppressSelection };
     event.currentTarget.setPointerCapture?.(event.pointerId);
+    if (suppressSelection) {
+      event.preventDefault();
+    }
+    setSelectionSuppressed(suppressSelection);
     setIsPanning(true);
   }
 
@@ -459,7 +487,7 @@ function SvgView({
     if (!drag || drag.id !== event.pointerId) {
       return;
     }
-    if (Math.abs(event.clientX - drag.x) > 2 || Math.abs(event.clientY - drag.y) > 2) {
+    if (drag.suppressSelection || Math.abs(event.clientX - drag.x) > 2 || Math.abs(event.clientY - drag.y) > 2) {
       event.preventDefault();
     }
     setSvgView((current) => ({ ...current, panX: drag.panX + event.clientX - drag.x, panY: drag.panY + event.clientY - drag.y }));
@@ -472,18 +500,20 @@ function SvgView({
     }
     event.currentTarget.releasePointerCapture?.(event.pointerId);
     dragRef.current = null;
+    setSelectionSuppressed(false);
     setIsPanning(false);
   }
 
   function cancelPan(): void {
     dragRef.current = null;
+    setSelectionSuppressed(false);
     setIsPanning(false);
   }
 
   return (
     <section class={`viewer-content viewer-svg svg-bg-${background} svg-fit-${fitMode}`} style={{ "--viewer-zoom": "1" }}>
       <div
-        class={`svg-frame${isPanning ? " is-panning" : ""}`}
+        class={`svg-frame${isPanning ? " is-panning" : ""}${selectionSuppressed ? " suppress-selection" : ""}`}
         ref={frameRef}
         onPointerDown={startPan}
         onPointerMove={updatePan}
@@ -492,7 +522,15 @@ function SvgView({
         onLostPointerCapture={cancelPan}
         onWheel={(event) => {
           event.preventDefault();
-          onZoomChange?.(clamp(zoom + (event.deltaY > 0 ? -0.1 : 0.1), 0.2, 5));
+          const nextZoom = clamp(zoom + (event.deltaY > 0 ? -0.1 : 0.1), 0.2, 5);
+          if (nextZoom === zoom) {
+            return;
+          }
+          const rect = event.currentTarget.getBoundingClientRect();
+          const pointerX = event.clientX - rect.left;
+          const pointerY = event.clientY - rect.top;
+          setSvgView((current) => zoomStandaloneSvgViewAtPoint(current, fitScale * zoom, fitScale * nextZoom, pointerX, pointerY));
+          onZoomChange?.(nextZoom);
         }}
       >
         <div

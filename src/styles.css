@@ -955,6 +955,12 @@ button:disabled {
   cursor: grabbing;
 }
 
+.svg-frame.suppress-selection,
+.svg-frame.suppress-selection * {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 .svg-stage {
   transform-origin: 0 0;
   width: max-content;
