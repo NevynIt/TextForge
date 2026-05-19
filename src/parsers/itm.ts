@@ -145,7 +145,7 @@ function collectStyleRules(document: ItmDocument): IttStyleRule[] {
 }
 
 function itmEntityToTreeNode(entity: ResolvedItmEntity, text: string): TreeNode {
-  const source = toSourceRange(entity.sourceRange, text);
+  const source = toTextForgeSourceRange(entity.sourceRange, text);
   const node: TreeNode = {
     id: entityNodeId(entity),
     declaredId: entity.id || entity.localId,
@@ -172,7 +172,7 @@ function explicitLinksForEntity(entity: ResolvedItmEntity, text: string): GraphE
       target: relationshipTargetId(relationship),
       type: normalizeRelationshipType(relationship.typeRef),
       label: normalizeRelationshipType(relationship.typeRef),
-      sourceRange: toSourceRange(relationship.sourceRange, text),
+      sourceRange: toTextForgeSourceRange(relationship.sourceRange, text),
       style: stringifyAttributeBag(relationship.attributes)
     }));
 }
@@ -189,11 +189,11 @@ function toTextForgeDiagnostic(
     languageId,
     documentId,
     message: diagnostic.message,
-    range: toSourceRange(diagnostic.range, text)
+    range: toTextForgeSourceRange(diagnostic.range, text)
   };
 }
 
-function toSourceRange(range: ItmSourceRange | undefined, text: string) {
+export function toTextForgeSourceRange(range: ItmSourceRange | undefined, text: string) {
   if (!range) {
     return undefined;
   }

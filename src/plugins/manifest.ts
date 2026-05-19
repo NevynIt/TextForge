@@ -9,6 +9,7 @@ export const pluginManifest: PluginManifestEntry[] = [
       "html-viewer",
       "source-html-viewer",
       "itm-inspector-viewer",
+      "itm-tree-viewer",
       "tree-viewer",
       "table-viewer",
       "svg-viewer",
@@ -165,7 +166,7 @@ export const pluginManifest: PluginManifestEntry[] = [
         id: "view-itm-tree",
         name: "ITM -> Tree Viewer",
         input: "text.itm",
-        steps: ["itm-to-tree", "tree-viewer"],
+        steps: ["itm-parse", "itm-tree-viewer"],
         category: "View"
       },
       {

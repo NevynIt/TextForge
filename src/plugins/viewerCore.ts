@@ -233,6 +233,26 @@ const plugin: TextForgePlugin = {
     },
     {
       kind: "viewer",
+      id: "itm-tree-viewer",
+      name: "ITM Tree Viewer",
+      input: "model.itm",
+      capabilities: { zoom: true, search: true, fold: true, inspect: true, select: true },
+      render(value) {
+        if (value.kind !== "model" || value.modelType !== "model.itm") {
+          throw new Error("ITM tree viewer requires ITM model input.");
+        }
+        return {
+          kind: "itm-tree",
+          title: "ITM Tree Viewer",
+          model: value,
+          capabilities: { zoom: true, search: true, fold: true, inspect: true, select: true, export: true, presets: true },
+          controls: [viewBackgroundControl],
+          diagnostics: value.diagnostics
+        };
+      }
+    },
+    {
+      kind: "viewer",
       id: "tree-viewer",
       name: "Tree Viewer",
       input: "model.tree",

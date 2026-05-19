@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import { App } from "./App";
 import { shouldSuppressSvgSelection, ViewerContent, zoomStandaloneSvgViewAtPoint } from "../components/viewers";
 import type { ViewerResult } from "../domain/types";
+import { parseItmValue } from "../parsers/itm";
 
 const svgNamespace = "ht" + "tp://www.w3.org/2000/svg";
 
@@ -36,6 +37,40 @@ function renderSvgViewer() {
       '  <text x="20" y="35">Selectable label</text>',
       '</svg>'
     ].join("")
+  };
+
+  return render(
+    <ViewerContent
+      result={result}
+      query=""
+      zoom={1}
+      settings={{}}
+    />
+  );
+}
+
+function renderItmTreeViewer() {
+  const model = parseItmValue(`%metadata
+{
+  title: Example
+}
+
+%viewpoint dependency_view
+{
+  pipeline:
+    - select: "[Component]"
+}
+
+&root [Component] Root
+{
+  owner: platform
+}
+  &child [Component] Child @depends_on:root`);
+
+  const result: ViewerResult = {
+    kind: "itm-tree",
+    title: "ITM Tree Viewer",
+    model
   };
 
   return render(
@@ -170,5 +205,13 @@ describe("App smoke", () => {
 
     expect(anchored.panX).toBeCloseTo(-90);
     expect(anchored.panY).toBeCloseTo(-65);
+  });
+
+  it("renders the ITM tree directly from resolved entities", () => {
+    renderItmTreeViewer();
+
+    expect(screen.getAllByText("Root").length).toBeGreaterThan(0);
+    expect(screen.getByText("Child")).toBeTruthy();
+    expect(screen.queryByText("pipeline:")).toBeNull();
   });
 });

@@ -1,3 +1,4 @@
+import type { ResolvedItmEntity, ResolvedItmRelationship } from "@textforge/itm";
 import jsMind from "jsmind";
 import "jsmind/style/jsmind.css";
 import "bpmn-js/dist/assets/diagram-js.css";
@@ -6,9 +7,10 @@ import "bpmn-js/dist/assets/bpmn-font/css/bpmn.css";
 import type { JSX } from "preact";
 import { PanelRightClose, PanelRightOpen } from "lucide-preact";
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import type { GraphEdge, GraphModel, SourceRange, TableModel, TreeNode, ViewerResult, ViewerSettingValue, VisualSelection } from "../domain/types";
+import type { GraphEdge, GraphModel, ItmPipelineValue, SourceRange, TableModel, TreeNode, ViewerResult, ViewerSettingValue, VisualSelection } from "../domain/types";
 import { parseDelimited } from "../parsers/csv";
 import { escapeHtml } from "../parsers/source";
+import { getEntityAttributes, getEntityDescription, getEntityId, getEntityLabel, getEntityTags, getEntityType, getOutgoingRelationships, getRelationshipLabel, getRelationshipTargetId, getRootEntities, getSourceRange, sortEntities, stringifyAttributeValue } from "../viewers/itm/itmViewModel";
 
 interface ViewerContentProps {
   result: ViewerResult;
@@ -125,6 +127,20 @@ export function ViewerContent({
       <div class="viewer-content viewer-tree" style={style}>
         <TreeView
           nodes={filterTree(result.nodes, query)}
+          query={query}
+          settings={settings}
+          toolbarAction={toolbarAction}
+          sourceSelection={sourceSelection}
+          onSelectSourceRange={onSelectSourceRange}
+        />
+      </div>
+    );
+  }
+  if (result.kind === "itm-tree") {
+    return (
+      <div class="viewer-content viewer-tree" style={style}>
+        <ItmTreeView
+          model={result.model}
           query={query}
           settings={settings}
           toolbarAction={toolbarAction}
@@ -622,6 +638,265 @@ function TreeView({
       </div>
       {inspectorOpen ? <ViewerInspector title="Selection" emptyText="Select a tree node." item={selectedNode ? treeNodeInspector(selectedNode) : null} /> : null}
     </div>
+  );
+}
+
+interface FilteredItmEntity {
+  entity: ResolvedItmEntity;
+  children: FilteredItmEntity[];
+}
+
+function ItmTreeView({
+  model,
+  query,
+  settings,
+  toolbarAction,
+  sourceSelection,
+  onSelectSourceRange
+}: {
+  model: ItmPipelineValue;
+  query: string;
+  settings: Record<string, ViewerSettingValue>;
+  toolbarAction?: ViewerToolbarAction;
+  sourceSelection?: VisualSelection;
+  onSelectSourceRange?: (range: SourceRange) => void;
+}) {
+  const density = safeClassName(stringSetting(settings.density, "comfortable"));
+  const inlineDetails = booleanSetting(settings.inlineDetails, false);
+  const background = safeClassName(stringSetting(settings.viewerBackground, "paper"));
+  const sourceText = model.source?.text;
+  const allRoots = useMemo(() => getRootEntities(model), [model]);
+  const roots = useMemo(() => filterItmTree(allRoots, query), [allRoots, query]);
+  const entityIndex = useMemo(() => indexItmEntities(allRoots), [allRoots]);
+  const [selectedId, setSelectedId] = useState(allRoots[0] ? getEntityId(allRoots[0]) : "");
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const selectedEntity = entityIndex.get(selectedId) || roots[0]?.entity || allRoots[0];
+
+  useEffect(() => {
+    if (selectedId && entityIndex.has(selectedId)) {
+      return;
+    }
+    setSelectedId(allRoots[0] ? getEntityId(allRoots[0]) : "");
+  }, [allRoots, entityIndex, selectedId]);
+
+  function selectEntity(id: string): void {
+    if (!entityIndex.has(id)) {
+      return;
+    }
+    setSelectedId(id);
+    window.requestAnimationFrame(() => document.getElementById(treeDomId(id))?.scrollIntoView({ block: "center", inline: "nearest" }));
+  }
+
+  function selectEntitySource(id: string): void {
+    const entity = entityIndex.get(id);
+    const range = entity ? getSourceRange(entity.sourceRange, sourceText) : undefined;
+    if (range) {
+      onSelectSourceRange?.(range);
+    }
+  }
+
+  useEffect(() => {
+    const entity = sourceSelection ? itmEntityForSourceRange(allRoots, sourceSelection.sourceRange, sourceText) : undefined;
+    if (!entity) {
+      return;
+    }
+    selectEntity(getEntityId(entity));
+  }, [allRoots, sourceSelection?.revision, sourceText]);
+
+  return (
+    <div class={`viewer-with-inspector viewer-bg-${background} ${inspectorOpen ? "inspector-open" : "inspector-closed"}`}>
+      <div class="viewer-main-panel tree-main-panel">
+        <button type="button" class="inspector-toggle" title={inspectorOpen ? "Hide inspector" : "Show inspector"} onClick={() => setInspectorOpen((value) => !value)}>
+          {inspectorOpen ? <PanelRightClose size={16} /> : <PanelRightOpen size={16} />}
+        </button>
+        <ol class={`tree-list tree-${density}`}>
+          {roots.map((node) => (
+            <ItmTreeItem
+              key={getEntityId(node.entity)}
+              node={node}
+              depth={0}
+              query={query}
+              inlineDetails={inlineDetails}
+              toolbarAction={toolbarAction}
+              selectedId={selectedEntity ? getEntityId(selectedEntity) : ""}
+              sourceText={sourceText}
+              onSelect={selectEntity}
+              onSelectSource={selectEntitySource}
+              onSelectSourceRange={onSelectSourceRange}
+            />
+          ))}
+        </ol>
+      </div>
+      {inspectorOpen ? <ViewerInspector title="Selection" emptyText="Select an ITM entity." item={selectedEntity ? itmEntityInspector(selectedEntity, sourceText) : null} /> : null}
+    </div>
+  );
+}
+
+function ItmTreeItem({
+  node,
+  depth,
+  query,
+  inlineDetails,
+  toolbarAction,
+  selectedId,
+  sourceText,
+  onSelect,
+  onSelectSource,
+  onSelectSourceRange
+}: {
+  node: FilteredItmEntity;
+  depth: number;
+  query: string;
+  inlineDetails: boolean;
+  toolbarAction?: ViewerToolbarAction;
+  selectedId: string;
+  sourceText?: string;
+  onSelect: (id: string) => void;
+  onSelectSource: (id: string) => void;
+  onSelectSourceRange?: (range: SourceRange) => void;
+}) {
+  const detailsRef = useRef<HTMLDetailsElement>(null);
+  const entityId = getEntityId(node.entity);
+  const entityLabel = getEntityLabel(node.entity);
+  const entityType = getEntityType(node.entity);
+  const entityTags = getEntityTags(node.entity);
+  const explicitRelationships = getOutgoingRelationships(node.entity);
+  const hasChildren = node.children.length > 0;
+  const expandDepth = 3;
+  const [open, setOpen] = useState(hasChildren && depth < expandDepth);
+
+  useEffect(() => {
+    setOpen(hasChildren && depth < expandDepth);
+  }, [depth, hasChildren]);
+
+  useEffect(() => {
+    if (!toolbarAction?.revision) {
+      return;
+    }
+    if (toolbarAction.action === "tree-fold-all") {
+      setOpen(false);
+    } else if (toolbarAction.action === "tree-unfold-all") {
+      setOpen(true);
+    }
+  }, [toolbarAction?.revision]);
+
+  if (!hasChildren) {
+    return (
+      <li>
+        <div
+          id={treeDomId(entityId)}
+          class={`tree-leaf-row tree-node-row ${selectedId === entityId ? "tree-selected" : ""}`}
+          onClick={(event) => {
+            onSelect(entityId);
+            if (event.ctrlKey || event.metaKey) {
+              event.preventDefault();
+              onSelectSource(entityId);
+            }
+          }}
+        >
+          <span class="node-label">{renderHighlighted(entityLabel, query)}</span>
+          {entityType ? <span class="badge">[{entityType}]</span> : null}
+          {entityTags.map((tag) => (
+            <span class="badge" key={tag}>#{tag}</span>
+          ))}
+          <ItmTreeLinks links={explicitRelationships} sourceText={sourceText} onSelect={onSelect} onSelectSourceRange={onSelectSourceRange} />
+        </div>
+        {inlineDetails && getEntityDescription(node.entity) ? <pre class="node-details">{getEntityDescription(node.entity)}</pre> : null}
+      </li>
+    );
+  }
+
+  return (
+    <li>
+      <details ref={detailsRef} open={open} onToggle={(event) => setOpen(event.currentTarget.open)}>
+        <summary
+          id={treeDomId(entityId)}
+          class={`tree-node-row ${selectedId === entityId ? "tree-selected" : ""}`}
+          onClick={(event) => {
+            onSelect(entityId);
+            if (event.ctrlKey || event.metaKey) {
+              event.preventDefault();
+              onSelectSource(entityId);
+              return;
+            }
+            if (!event.shiftKey) {
+              return;
+            }
+            event.preventDefault();
+            const nextOpen = !detailsRef.current?.open;
+            setOpen(nextOpen);
+            setDescendantDetailsOpen(detailsRef.current, nextOpen);
+          }}
+        >
+          <span class="node-label">{renderHighlighted(entityLabel, query)}</span>
+          {entityType ? <span class="badge">[{entityType}]</span> : null}
+          {entityTags.map((tag) => (
+            <span class="badge" key={tag}>#{tag}</span>
+          ))}
+          <ItmTreeLinks links={explicitRelationships} sourceText={sourceText} onSelect={onSelect} onSelectSourceRange={onSelectSourceRange} />
+        </summary>
+        {inlineDetails && getEntityDescription(node.entity) ? <pre class="node-details">{getEntityDescription(node.entity)}</pre> : null}
+        <ol class="tree-list">
+          {node.children.map((child) => (
+            <ItmTreeItem
+              key={getEntityId(child.entity)}
+              node={child}
+              depth={depth + 1}
+              query={query}
+              inlineDetails={inlineDetails}
+              toolbarAction={toolbarAction}
+              selectedId={selectedId}
+              sourceText={sourceText}
+              onSelect={onSelect}
+              onSelectSource={onSelectSource}
+              onSelectSourceRange={onSelectSourceRange}
+            />
+          ))}
+        </ol>
+      </details>
+    </li>
+  );
+}
+
+function ItmTreeLinks({
+  links,
+  sourceText,
+  onSelect,
+  onSelectSourceRange
+}: {
+  links: ResolvedItmRelationship[];
+  sourceText?: string;
+  onSelect: (id: string) => void;
+  onSelectSourceRange?: (range: SourceRange) => void;
+}) {
+  if (!links.length) {
+    return null;
+  }
+  return (
+    <>
+      {links.map((link) => {
+        const targetId = getRelationshipTargetId(link);
+        const sourceRange = getSourceRange(link.sourceRange, sourceText);
+        return (
+          <a
+            class="badge tree-link"
+            href={`#${treeDomId(targetId)}`}
+            key={link.uid}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              if ((event.ctrlKey || event.metaKey) && sourceRange) {
+                onSelectSourceRange?.(sourceRange);
+              } else {
+                onSelect(targetId);
+              }
+            }}
+          >
+            @{getRelationshipLabel(link)}:{targetId}
+          </a>
+        );
+      })}
+    </>
   );
 }
 
@@ -2218,10 +2493,17 @@ function treeNodeForSourceRange(nodes: TreeNode[], range: SourceRange): TreeNode
   return bestSourceRangeMatch(flattenTreeNodes(nodes), range);
 }
 
-function bestSourceRangeMatch<T extends { sourceRange?: SourceRange }>(items: T[], range: SourceRange): T | undefined {
+function itmEntityForSourceRange(nodes: ResolvedItmEntity[], range: SourceRange, sourceText?: string): ResolvedItmEntity | undefined {
+  return bestSourceRangeMatch(flattenItmEntities(nodes), range, (entity) => getSourceRange(entity.sourceRange, sourceText));
+}
+
+function bestSourceRangeMatch<T>(items: T[], range: SourceRange, getRange: (item: T) => SourceRange | undefined = (item) => (item as { sourceRange?: SourceRange }).sourceRange): T | undefined {
   return items
-    .filter((item) => item.sourceRange && sourceRangesTouch(item.sourceRange, range))
-    .sort((left, right) => sourceRangeSpan(left.sourceRange) - sourceRangeSpan(right.sourceRange))[0];
+    .filter((item) => {
+      const itemRange = getRange(item);
+      return itemRange && sourceRangesTouch(itemRange, range);
+    })
+    .sort((left, right) => sourceRangeSpan(getRange(left)) - sourceRangeSpan(getRange(right)))[0];
 }
 
 function sourceRangesTouch(left: SourceRange | undefined, right: SourceRange): boolean {
@@ -2446,8 +2728,27 @@ function indexTreeNodes(nodes: TreeNode[], map = new Map<string, TreeNode>()): M
   return map;
 }
 
+function indexItmEntities(nodes: ResolvedItmEntity[], map = new Map<string, ResolvedItmEntity>()): Map<string, ResolvedItmEntity> {
+  nodes.forEach((node) => {
+    const entityId = getEntityId(node);
+    map.set(entityId, node);
+    if (node.id) {
+      map.set(node.id, node);
+    }
+    if (node.localId) {
+      map.set(node.localId, node);
+    }
+    indexItmEntities(sortEntities(node.children), map);
+  });
+  return map;
+}
+
 function flattenTreeNodes(nodes: TreeNode[]): TreeNode[] {
   return nodes.flatMap((node) => [node, ...flattenTreeNodes(node.children || [])]);
+}
+
+function flattenItmEntities(nodes: ResolvedItmEntity[]): ResolvedItmEntity[] {
+  return nodes.flatMap((node) => [node, ...flattenItmEntities(sortEntities(node.children))]);
 }
 
 function treeDomId(id: string): string {
@@ -2480,6 +2781,39 @@ function treeNodeInspector(node: TreeNode): InspectorItem {
     title: node.label,
     rows,
     details: node.details
+  };
+}
+
+function itmEntityInspector(entity: ResolvedItmEntity, sourceText?: string): InspectorItem {
+  const rows: InspectorItem["rows"] = [
+    { label: "ID", value: getEntityId(entity) },
+    { label: "Children", value: String(entity.children.length) }
+  ];
+  const type = getEntityType(entity);
+  const tags = getEntityTags(entity);
+  const outgoing = getOutgoingRelationships(entity);
+  const sourceRange = getSourceRange(entity.sourceRange, sourceText);
+  if (entity.id) {
+    rows.push({ label: "Declared ID", value: entity.id });
+  }
+  if (type) {
+    rows.push({ label: "Type", value: type });
+  }
+  if (tags.length) {
+    rows.push({ label: "Tags", value: tags.map((tag) => `#${tag}`).join(", ") });
+  }
+  if (outgoing.length) {
+    rows.push({ label: "Relationships", value: outgoing.map((relationship) => `@${getRelationshipLabel(relationship)}:${getRelationshipTargetId(relationship)}`).join(", ") });
+  }
+  if (sourceRange) {
+    rows.push({ label: "Source", value: `line ${sourceRange.line + 1}, column ${sourceRange.column + 1}` });
+  }
+  Object.entries(getEntityAttributes(entity)).forEach(([key, value]) => rows.push({ label: key, value: stringifyAttributeValue(value) }));
+  return {
+    kind: "itm entity",
+    title: getEntityLabel(entity),
+    rows,
+    details: getEntityDescription(entity)
   };
 }
 
@@ -3832,6 +4166,32 @@ function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
     .filter(Boolean) as TreeNode[];
 }
 
+function filterItmTree(nodes: ResolvedItmEntity[], query: string): FilteredItmEntity[] {
+  const lower = query.trim().toLowerCase();
+  return sortEntities(nodes)
+    .map((entity) => {
+      const children = filterItmTree(entity.children, lower);
+      const text = [
+        getEntityLabel(entity),
+        entity.id,
+        entity.localId,
+        entity.qualifiedId,
+        getEntityType(entity),
+        ...getEntityTags(entity),
+        ...Object.entries(getEntityAttributes(entity)).flatMap(([key, value]) => [key, stringifyAttributeValue(value)]),
+        getEntityDescription(entity)
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      if (!lower || text.includes(lower) || children.length) {
+        return { entity, children };
+      }
+      return null;
+    })
+    .filter(Boolean) as FilteredItmEntity[];
+}
+
 export function viewerSnapshotHtml(result: ViewerResult): string {
   if (result.kind === "html") {
     return result.html;
@@ -3841,6 +4201,9 @@ export function viewerSnapshotHtml(result: ViewerResult): string {
   }
   if (result.kind === "bpmn") {
     return `<pre>${escapeHtml(result.xml)}</pre>`;
+  }
+  if (result.kind === "itm-tree") {
+    return `<pre>${escapeHtml(JSON.stringify(result.model.resolved.entities, null, 2))}</pre>`;
   }
   if (result.kind === "tree" || result.kind === "mindmap") {
     return `<pre>${escapeHtml(JSON.stringify(result.nodes, null, 2))}</pre>`;
