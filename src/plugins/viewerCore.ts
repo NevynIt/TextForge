@@ -378,7 +378,7 @@ function highlightSource(text: string, languageId: string): string {
   if (languageId === "text.python") {
     return highlightByRules(text, pythonRules);
   }
-  if (languageId === "text.indented-tree") {
+  if (languageId === "text.itm" || languageId === "text.indented-tree" || languageId === "text.itt") {
     return highlightByRules(text, ittRules);
   }
   if (languageId === "text.csv") {

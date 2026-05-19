@@ -16,36 +16,36 @@ end
 local tree = require("tf.tree")
 
 return {
-  id = "uppercase-itt-labels",
-  name = "Uppercase ITT labels",
+  id = "uppercase-itm-labels",
+  name = "Uppercase ITM labels",
   category = "Lua Transform",
-  input = "text.indented-tree",
-  output = "text.indented-tree",
+  input = "text.itm",
+  output = "text.itm",
   run = function(input)
-    local nodes = input:parse_itt()
+    local nodes = input:parse_itm()
     tree.walk(nodes, function(node)
       node.label = string.upper(node.label)
     end)
-    return input:emit_itt(nodes)
+    return input:emit_itm(nodes)
   end
 }
 ```
 
 ## Built-In Bridges
 
-- `input:parse_itt()`
+- `input:parse_itm()`
 - `input:parse_markdown()`
 - `input:emit_text(languageId, text)`
 - `input:emit_json(value)`
-- `input:emit_itt(nodes)`
-- `tf.pipeline.run("itt-to-tree", input)`
-- `tf.pipeline.run("itt-to-graph", input)`
+- `input:emit_itm(nodes)`
+- `tf.pipeline.run("itm-to-tree", input)`
+- `tf.pipeline.run("itm-to-graph", input)`
 - `tf.pipeline.run("markdown-heading-tree", input)`
 - `tf.actions.run("action-id", input)`
-- Console helper: `run("itt-to-graph")`
+- Console helper: `run("itm-to-graph")`
 - Console helper: `run_action("action-id")`
 - Console helper: `action("action-id")`
-- Console helper: `parse_itt()`
+- Console helper: `parse_itm()`
 - Console helper: `parse_markdown()`
 - Console helper: `parse_csv(delimiter?)`
 - Input helper: `input:emit_csv(table, delimiter?)`
@@ -60,10 +60,10 @@ The Lua Console accepts normal Lua snippets and a few convenience commands:
 help
 actions
 run selection
-run itt-to-graph
-action uppercase-itt-labels
+run itm-to-graph
+action uppercase-itm-labels
 open run selection
-open run itt-to-graph
+open run itm-to-graph
 open last
 ```
 
@@ -77,7 +77,7 @@ open last
 - `tf.graph`
 - `tf.table`
 - `tf.stringx`
-- `tf.itt`
+- `tf.itm`
 - `tf.markdown`
 - `tf.pipeline`
 - `tf.actions`

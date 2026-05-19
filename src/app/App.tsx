@@ -910,8 +910,8 @@ function extensionForLanguage(languageId: string): string {
   if (languageId === "text.csv") {
     return "csv";
   }
-  if (languageId === "text.itt") {
-    return "itt";
+  if (languageId === "text.itm" || languageId === "text.indented-tree" || languageId === "text.itt") {
+    return "itm";
   }
   if (languageId === "text.javascript") {
     return "js";
@@ -942,18 +942,18 @@ function readFile(file: File): Promise<string> {
 const luaActionBoilerplate = `local tree = require("tf.tree")
 
 return {
-  id = "uppercase-itt-labels",
-  name = "Uppercase ITT labels",
+  id = "uppercase-itm-labels",
+  name = "Uppercase ITM labels",
   category = "Lua Transform",
-  input = "text.indented-tree",
-  output = "text.indented-tree",
-  description = "Uppercases every ITT node label and emits ITT.",
+  input = "text.itm",
+  output = "text.itm",
+  description = "Uppercases every ITM node label and emits ITM.",
   run = function(input)
-    local nodes = input:parse_itt()
+    local nodes = input:parse_itm()
     tree.walk(nodes, function(node)
       node.label = string.upper(node.label)
     end)
-    return input:emit_itt(nodes)
+    return input:emit_itm(nodes)
   end
 }
 `;

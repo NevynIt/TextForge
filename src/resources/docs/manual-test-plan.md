@@ -19,19 +19,19 @@
 - Code blocks are syntax-highlighted.
 - Embedded diagram toolbar copy/download/pop-out/reset controls work.
 
-## ITT Tests
-- Full ITT example parses.
+## ITM Tests
+- Full ITM example parses.
 - Tree, mindmap, Cytoscape, and Sigma viewers open.
 - Multiline `%style` and `%include` work.
 - Unknown multiline directives are ignored.
-- ITT editor highlighting and folding remain usable.
+- ITM editor highlighting and folding remain usable.
 
 ## Lua Tests
 - Lua syntax highlighting works.
 - Lua Console opens and runs a quick command.
 - Active Lua document execution works.
 - Saved Lua action appears in the action dropdown.
-- Lua action can call `tf.pipeline.run("itt-to-graph", input)`.
+- Lua action can call `tf.pipeline.run("itm-to-graph", input)`.
 - Lua cannot require `js`, `socket`, `io`, or run `os.execute`.
 - Infinite loop times out without blocking the UI.
 

@@ -4,8 +4,8 @@ Yes. Quick recap from the latter half of `textforge_lua_pivot_whitepaper.md`:
 
 **Clearly Still Missing**
 - **Exact Shapez badge implementation**: current badges are still approximate, old palette, `32x32` geometry, no reusable `shapezBadges.ts`, no uniqueness repair on restore/batch upload, and no badge identity tests.
-- **Generic ITT multiline directives**: parser still has `%style`-specific multiline handling; `%view { ... }` and unknown multiline `%foo { ... }` are not generally consumed.
-- **ITT CodeMirror folding**: no `foldService`, no editor fold/unfold-all buttons for ITT source, no folding for directive/detail blocks.
+- **Generic ITM multiline directives**: parser use now comes from `@textforge/itm`, but generalized multiline directive behavior and viewer-facing handling still need broader coverage.
+- **ITM CodeMirror folding**: no `foldService`, no editor fold/unfold-all buttons for ITM source, no folding for directive/detail blocks.
 - **Window layout hover delay**: menu still closes immediately on `onMouseLeave`; whitepaper asked for a 300-400 ms delayed close.
 - **Markdown diagram source/view bridge**: source/view selection works for tree/mindmap/graph viewers, but not for Markdown embedded diagrams/code blocks.
 - **Exhaustive Lua security tests**: some are covered, but not the full list from section 13.1: `WebSocket`, `localStorage`, `indexedDB`, `importScripts`, `Function`, `eval`, `require "io"`, and `os.execute(...)`.

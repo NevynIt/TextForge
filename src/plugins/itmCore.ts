@@ -1,16 +1,16 @@
 import type { TextForgePlugin } from "../domain/types";
-import { indentedTreeToGraph, parseIndentedTree } from "../parsers/itt";
+import { indentedTreeToGraph, parseIndentedTree } from "../parsers/itm";
 
 const plugin: TextForgePlugin = {
-  id: "itt-core",
-  name: "Indented Tree Core",
+  id: "itm-core",
+  name: "Indented Text Model Core",
   version: "0.1.0",
   linters: [
     {
       kind: "linter",
-      id: "itt-linter",
-      name: "Indented Tree Parser",
-      accepts: "text.indented-tree",
+      id: "itm-linter",
+      name: "Indented Text Model Parser",
+      accepts: "text.itm",
       lint(document, context) {
         return parseIndentedTree(document.text, document.languageId, {
           currentDocumentId: document.id,
@@ -23,13 +23,13 @@ const plugin: TextForgePlugin = {
   transformers: [
     {
       kind: "transformer",
-      id: "itt-to-tree",
-      name: "ITT to Tree Model",
-      input: "text.indented-tree",
+      id: "itm-to-tree",
+      name: "ITM to Tree Model",
+      input: "text.itm",
       output: "model.tree",
       transform(value, context) {
         if (value.kind !== "text") {
-          throw new Error("ITT tree transformer requires text input.");
+          throw new Error("ITM tree transformer requires text input.");
         }
         const parsed = parseIndentedTree(value.text, value.languageId, {
           currentDocumentId: value.documentId,
@@ -46,13 +46,13 @@ const plugin: TextForgePlugin = {
     },
     {
       kind: "transformer",
-      id: "itt-to-graph",
-      name: "ITT to Graph Model",
-      input: "text.indented-tree",
+      id: "itm-to-graph",
+      name: "ITM to Graph Model",
+      input: "text.itm",
       output: "model.graph",
       transform(value, context) {
         if (value.kind !== "text") {
-          throw new Error("ITT graph transformer requires text input.");
+          throw new Error("ITM graph transformer requires text input.");
         }
         const parsed = parseIndentedTree(value.text, value.languageId, {
           currentDocumentId: value.documentId,

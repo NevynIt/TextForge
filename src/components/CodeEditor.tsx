@@ -191,7 +191,7 @@ function languageExtension(languageId: string) {
   if (languageId === "text.xml" || languageId === "text.bpmn") {
     return xml();
   }
-  if (languageId === "text.indented-tree") {
+  if (languageId === "text.itm" || languageId === "text.indented-tree" || languageId === "text.itt") {
     return StreamLanguage.define(ittParser);
   }
   if (languageId === "text.csv") {

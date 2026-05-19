@@ -50,11 +50,11 @@ TextForge can render Markdown with:
 
 A good first exercise is to open the bundled Markdown examples and render them. Then pop the result into its own viewer window and search inside it.
 
-## 4. Work With ITT Trees
+## 4. Work With ITM Models
 
-Indented Tree Text (ITT) is where TextForge becomes more exploratory.
+Indented Text Model (ITM) is where TextForge becomes more exploratory.
 
-ITT supports:
+ITM supports:
 
 - hierarchy through indentation;
 - ids, tags, attributes, and links;
@@ -111,7 +111,7 @@ A good workflow is to search for a concept, filter the Sigma graph to matches, t
 
 ## 7. Use Mind Maps And Trees For Reading
 
-Mind maps are useful when you want a presentation-friendly overview of the same ITT source.
+Mind maps are useful when you want a presentation-friendly overview of the same ITM source.
 
 TextForge supports:
 
@@ -131,7 +131,7 @@ That matters because a transformation in TextForge is not just a button that cha
 
 Use pipelines when you want to:
 
-- turn ITT into a graph or tree;
+- turn ITM into a graph or tree;
 - render Markdown or diagrams;
 - produce SVG, HTML, or text output;
 - inspect intermediate values in the trace popup;
@@ -147,11 +147,11 @@ TextForge uses Lua for user extensibility because it is easier to sandbox than a
 
 Typical Lua tasks:
 
-- parse the current ITT or Markdown document;
+- parse the current ITM or Markdown document;
 - walk trees and graphs;
 - filter nodes and edges;
 - compose built-in pipeline steps;
-- emit new text, JSON, ITT, or CSV documents;
+- emit new text, JSON, ITM, or CSV documents;
 - register saved named actions from open `.lua` files.
 
 The bundled Lua tutorial is the best next stop after this manual.
@@ -175,9 +175,9 @@ Common shortcuts:
 help
 actions
 run selection
-run itt-to-graph
+run itm-to-graph
 action your-action-id
-open run itt-to-graph
+open run itm-to-graph
 open last
 ```
 
@@ -190,9 +190,9 @@ If you want a smooth ramp instead of exploring everything at once, use this orde
 1. Edit a plain text or Markdown document.
 2. Open the Resource Browser and load a bundled example.
 3. Render Markdown with diagrams or math.
-4. Open an ITT example in the tree viewer.
+4. Open an ITM example in the tree viewer.
 5. Try Ctrl-click and Follow source.
-6. Open the same ITT in Sigma and use search plus filtering.
+6. Open the same ITM in Sigma and use search plus filtering.
 7. Inspect the pipeline trace.
 8. Run a small Lua snippet in the console.
 9. Turn that snippet into a saved Lua action.

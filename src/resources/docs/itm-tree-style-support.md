@@ -1,6 +1,6 @@
-# ITT Tree Style Support
+# ITM Tree Style Support
 
-The ITT tree viewer applies node `%style` directives and direct node style attributes to the rendered outline.
+The ITM tree viewer applies node `%style` directives and direct node style attributes to the rendered outline.
 
 Supported node selectors:
 
@@ -37,4 +37,4 @@ Supported tree node style properties:
 - `shape`, `node-shape`, `nodeShape`: row corner shape using the same names as the mind-map viewer.
 - `opacity`: row opacity.
 
-`%include other-file.itt` is supported for ITT tree visualizers, limited to files currently open in the editor. Includes are expanded in place and circular includes are ignored with a diagnostic.
+`%include other-file.itm` is supported for ITM tree visualizers, limited to files currently open in the editor. Includes are expanded in place and circular includes are ignored with a diagnostic.

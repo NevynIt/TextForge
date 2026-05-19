@@ -7,7 +7,7 @@ The current implementation ships most of the Lua pivot described in the whitepap
 ## Highlights
 
 - multi-document CodeMirror workspace with tab reordering, inline rename, download, and deterministic Shapez-style document badges;
-- broad language support for plain text, Markdown, ITT, Lua, JSON, XML, CSV, Mermaid, Graphviz DOT, JavaScript, and Python;
+- broad language support for plain text, Markdown, ITM, Lua, JSON, XML, CSV, Mermaid, Graphviz DOT, JavaScript, and Python;
 - local-only execution with no app-code network APIs and a browser-extension CSP that keeps `connect-src 'none'`;
 - popup-hosted viewers, diagnostics, pipeline traces, Lua console, Lua script manager, plugin manager, and bundled resource browser;
 - IndexedDB persistence with localStorage fallback for local workspace state.
@@ -20,7 +20,7 @@ TextForge includes packaged viewers for:
 
 - rendered Markdown HTML with syntax highlighting, Mermaid, Graphviz, and KaTeX;
 - SVG with infinite-canvas style panning, cursor-relative zooming, and fit controls;
-- tree and mind map projections for ITT and other hierarchical data;
+- tree and mind map projections for ITM and other hierarchical data;
 - Cytoscape graph views for rich graph interaction and relayout;
 - Sigma/Graphology graph views with filtering and neighborhood focus controls;
 - read-only syntax-highlighted source and table views.
@@ -29,7 +29,7 @@ Several viewers participate in source-aware navigation. You can keep the editor 
 
 ### Work Incrementally With Structured Text
 
-Markdown, ITT, Mermaid, Graphviz, delimited text, JSON, and XML all live in the same workbench. A typical workflow is:
+Markdown, ITM, Mermaid, Graphviz, delimited text, JSON, and XML all live in the same workbench. A typical workflow is:
 
 1. edit the source text;
 2. run a built-in action or viewer pipeline;
@@ -47,7 +47,7 @@ The current Lua feature set includes:
 
 - restricted Fengari runtime with no browser globals, DOM, network, filesystem, or unrestricted JS interop;
 - bundled modules such as `tf`, `tf.tree`, `tf.graph`, `tf.table`, `tf.markdown`, `tf.pipeline`, and `tf.actions`;
-- built-in bridges for parsing ITT and Markdown, emitting text/ITT/JSON/CSV, and calling named pipeline steps;
+- built-in bridges for parsing ITM and Markdown, emitting text/ITM/JSON/CSV, and calling named pipeline steps;
 - automatic discovery of named Lua actions from open `.lua` documents;
 - action registration into the same action/pipeline surface as built-in transforms;
 - execution in a worker-backed sandbox with diagnostics routed back to the editor or selected source block.
@@ -58,22 +58,22 @@ The Lua Console is an in-app command surface backed by xterm.js. It can run quic
 
 Graph workflows are a strong part of the current app:
 
-- ITT can be projected into tree, mind map, Cytoscape, and Sigma views;
+- ITM can be projected into tree, mind map, Cytoscape, and Sigma views;
 - Sigma toolbars expose useful exploration controls such as filtering to search matches and focusing on neighbors;
 - graph and viewer search helps narrow large structures before reading them in full;
 - pipeline trace popups let you inspect intermediate graph, tree, text, HTML, or SVG values step by step.
 
-## ITT And Markdown Support
+## ITM And Markdown Support
 
-ITT `%style` directives support the selector forms from the whitepaper: `*`, `&id`, `[type]`, `#tag`, `{key=value}`, `->`, `->[type]`, and `=>`. Styles can be written on one line or as multiline blocks. `%include` is resolved against documents currently open in the editor.
+ITM `%style` directives support the selector forms from the whitepaper: `*`, `&id`, `[type]`, `#tag`, `{key=value}`, `->`, `->[type]`, and `=>`. Styles can be written on one line or as multiline blocks. `%include` is currently resolved by the parser library, with TextForge using the shared package-backed parse surface.
 
 Markdown rendering overlaps intentionally with the strongest local-preview ideas from tools such as Markdown Viewer, but TextForge pushes them into a broader structured-text workbench. Markdown documents can contain diagrams, math, and code, then feed into the same popup, export, and source-aware workflow used by the other viewers.
 
 Viewer-specific style references are bundled in the app:
 
-- `docs/itt-tree-style-support.md`
-- `docs/itt-mindmap-style-support.md`
-- `docs/itt-graph-style-support.md`
+- `docs/itm-tree-style-support.md`
+- `docs/itm-mindmap-style-support.md`
+- `docs/itm-graph-style-support.md`
 
 ## Bundled Resources
 
@@ -84,7 +84,7 @@ The Resource Browser ships with documentation and examples inside the app, inclu
 - the user manual;
 - the Lua scripting tutorial;
 - plugin and format documentation;
-- Graphviz, Mermaid, Markdown, Lua, and ITT examples.
+- Graphviz, Mermaid, Markdown, Lua, and ITM examples.
 
 Resources are grouped in the browser, can be previewed directly, copied, or opened as editable working copies.
 

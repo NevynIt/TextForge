@@ -123,7 +123,7 @@ stale/current status
 Example popup header:
 
 ```text
-Viewing: architecture.itt · v12 · Tree Viewer · stale
+Viewing: architecture.itm · v12 · Tree Viewer · stale
 [Refresh] [Follow source] [Detach] [Close]
 ```
 

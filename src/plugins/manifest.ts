@@ -142,55 +142,55 @@ export const pluginManifest: PluginManifestEntry[] = [
     load: () => import("./csvCore")
   },
   {
-    id: "itt-core",
-    name: "Indented Tree Core",
+    id: "itm-core",
+    name: "Indented Text Model Core",
     version: "0.1.0",
     pipelines: [
       {
-        id: "view-itt-tree",
-        name: "ITT -> Tree Viewer",
-        input: "text.indented-tree",
-        steps: ["itt-to-tree", "tree-viewer"],
+        id: "view-itm-tree",
+        name: "ITM -> Tree Viewer",
+        input: "text.itm",
+        steps: ["itm-to-tree", "tree-viewer"],
         category: "View"
       },
       {
-        id: "view-itt-mindmap",
-        name: "ITT -> Mind Map Viewer",
-        input: "text.indented-tree",
-        steps: ["itt-to-tree", "mindmap-viewer"],
+        id: "view-itm-mindmap",
+        name: "ITM -> Mind Map Viewer",
+        input: "text.itm",
+        steps: ["itm-to-tree", "mindmap-viewer"],
         category: "View"
       },
       {
-        id: "view-itt-cytoscape",
-        name: "ITT -> Cytoscape Graph Viewer",
-        input: "text.indented-tree",
-        steps: ["itt-to-graph", "cytoscape-graph-viewer"],
+        id: "view-itm-cytoscape",
+        name: "ITM -> Cytoscape Graph Viewer",
+        input: "text.itm",
+        steps: ["itm-to-graph", "cytoscape-graph-viewer"],
         category: "View"
       },
       {
-        id: "view-itt-sigma",
-        name: "ITT -> Sigma/Graphology Viewer",
-        input: "text.indented-tree",
-        steps: ["itt-to-graph", "sigma-graph-viewer"],
+        id: "view-itm-sigma",
+        name: "ITM -> Sigma/Graphology Viewer",
+        input: "text.itm",
+        steps: ["itm-to-graph", "sigma-graph-viewer"],
         category: "View"
       },
       {
-        id: "edit-itt-tree-skeleton",
-        name: "ITT Visual Tree Editor Skeleton",
-        input: "text.indented-tree",
-        steps: ["itt-to-tree", "tree-visual-editor-skeleton"],
+        id: "edit-itm-tree-skeleton",
+        name: "ITM Visual Tree Editor Skeleton",
+        input: "text.itm",
+        steps: ["itm-to-tree", "tree-visual-editor-skeleton"],
         category: "Edit"
       },
       {
-        id: "edit-itt-graph-skeleton",
-        name: "ITT Graph Editor Skeleton",
-        input: "text.indented-tree",
-        steps: ["itt-to-graph", "graph-visual-editor-skeleton"],
+        id: "edit-itm-graph-skeleton",
+        name: "ITM Graph Editor Skeleton",
+        input: "text.itm",
+        steps: ["itm-to-graph", "graph-visual-editor-skeleton"],
         category: "Edit"
       }
     ],
-    contributionIds: ["itt-linter", "itt-to-tree", "itt-to-graph"],
-    load: () => import("./ittCore")
+    contributionIds: ["itm-linter", "itm-to-tree", "itm-to-graph"],
+    load: () => import("./itmCore")
   },
   {
     id: "diagram-core",

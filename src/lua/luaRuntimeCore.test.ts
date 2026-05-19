@@ -7,7 +7,7 @@ describe("Lua runtime core", () => {
       mode: "script",
       source: `
         local tree = require("tf.tree")
-        local nodes = input:parse_itt()
+        local nodes = input:parse_itm()
         local count = 0
         tree.walk(nodes, function()
           count = count + 1
@@ -17,7 +17,7 @@ describe("Lua runtime core", () => {
       `,
       input: {
         kind: "text",
-        languageId: "text.indented-tree",
+        languageId: "text.itm",
         text: "&root Root\n  Child\n"
       }
     });
@@ -116,12 +116,12 @@ describe("Lua runtime core", () => {
     const result = executeLuaInProcess({
       mode: "script",
       source: `
-        local graph = run("itt-to-graph")
+        local graph = run("itm-to-graph")
         return input:emit_json(graph)
       `,
       input: {
         kind: "text",
-        languageId: "text.indented-tree",
+        languageId: "text.itm",
         text: "&a A\n  &b B @a\n"
       }
     });

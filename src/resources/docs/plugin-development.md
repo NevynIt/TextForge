@@ -18,17 +18,17 @@ end
 local tree = require("tf.tree")
 
 return {
-  id = "uppercase-itt-labels",
-  name = "Uppercase ITT labels",
+  id = "uppercase-itm-labels",
+  name = "Uppercase ITM labels",
   category = "Lua Transform",
-  input = "text.indented-tree",
-  output = "text.indented-tree",
+  input = "text.itm",
+  output = "text.itm",
   run = function(input)
-    local nodes = input:parse_itt()
+    local nodes = input:parse_itm()
     tree.walk(nodes, function(node)
       node.label = string.upper(node.label)
     end)
-    return input:emit_itt(nodes)
+    return input:emit_itm(nodes)
   end
 }
 ```
@@ -38,13 +38,13 @@ return {
 - `input.text`
 - `input.languageId`
 - `input.fileName`
-- `input:parse_itt()`
+- `input:parse_itm()`
 - `input:parse_markdown()`
 - `input:emit_text(languageId, text)`
 - `input:emit_json(value)`
-- `input:emit_itt(nodes)`
-- `tf.pipeline.run("itt-to-tree", input)`
-- `tf.pipeline.run("itt-to-graph", input)`
+- `input:emit_itm(nodes)`
+- `tf.pipeline.run("itm-to-tree", input)`
+- `tf.pipeline.run("itm-to-graph", input)`
 - `tf.pipeline.run("markdown-heading-tree", input)`
 - `tf.actions.run("action-id", input)`
 
@@ -55,7 +55,7 @@ return {
 - `tf.graph`
 - `tf.table`
 - `tf.stringx`
-- `tf.itt`
+- `tf.itm`
 - `tf.markdown`
 - `tf.pipeline`
 - `tf.actions`

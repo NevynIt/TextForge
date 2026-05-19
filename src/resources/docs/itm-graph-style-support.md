@@ -1,6 +1,6 @@
-# ITT Graph Style Support
+# ITM Graph Style Support
 
-The ITT to graph pipeline carries node attributes and `%style` directives into the Cytoscape and Sigma viewers. Direct node attributes still work, but selector rules are now the preferred way to style repeated types of nodes and edges.
+The ITM to graph pipeline carries node attributes and `%style` directives into the Cytoscape and Sigma viewers. Direct node attributes still work, but selector rules are now the preferred way to style repeated types of nodes and edges.
 
 Supported style selectors:
 
@@ -53,7 +53,7 @@ Supported cross-link edge style properties and attributes:
 - `curve`, `curve-style`, `curveStyle`: Cytoscape edge curve style.
 - `opacity`: edge opacity in Cytoscape.
 
-The graph model also records `depth` and sibling `rank` for every ITT node. Viewers use explicit node colours first; if none are present, ITT-derived graphs fall back to depth-based colours.
+The graph model also records `depth` and sibling `rank` for every ITM node. Viewers use explicit node colours first; if none are present, ITM-derived graphs fall back to depth-based colours.
 
 Example:
 
@@ -66,6 +66,6 @@ Example:
   &ui [work] UI work {background: #fff3e0} @depends:api
 ```
 
-`%include other-file.itt` is supported for ITT graph visualizers, limited to files currently open in the editor. Includes are expanded in place and circular includes are ignored with a diagnostic.
+`%include other-file.itm` is supported for ITM graph visualizers, limited to files currently open in the editor. Includes are expanded in place and circular includes are ignored with a diagnostic.
 
-Not supported in V1: arbitrary CSS selectors beyond the ITT selector subset, icons, Sigma node shapes, and saving moved Sigma/Cytoscape positions back to ITT source.
+Not supported in V1: arbitrary CSS selectors beyond the ITM selector subset, icons, Sigma node shapes, and saving moved Sigma/Cytoscape positions back to ITM source.

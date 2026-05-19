@@ -13,6 +13,11 @@ declare module "*.itt?raw" {
   export default source;
 }
 
+declare module "*.itm?raw" {
+  const source: string;
+  export default source;
+}
+
 declare module "*.css" {
   const css: string;
   export default css;

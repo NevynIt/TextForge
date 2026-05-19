@@ -1,7 +1,8 @@
+import { serializeDocument, type ItmDocument, type ItmRelationship } from "@textforge/itm";
 import { lauxlib, lua, lualib, to_luastring } from "fengari";
 import type { Diagnostic, GraphModel, PipelineValue, TextDocument, TreeNode } from "../domain/types";
 import { parseDelimited } from "../parsers/csv";
-import { indentedTreeToGraph, parseIndentedTree } from "../parsers/itt";
+import { indentedTreeToGraph, parseIndentedTree } from "../parsers/itm";
 import { extractMarkdownHeadingTree } from "../parsers/markdown";
 import { describeLuaPipelineValue, formatLuaContract, luaValueMatchesContract } from "./luaContracts";
 import { bundledLuaModules } from "./luaModules";
@@ -241,7 +242,21 @@ function pushInputTable(L: unknown, context: LuaExecutionContext): void {
   lua.lua_pushjsfunction(L, (state: unknown) => {
     const input = currentInput(context);
     if (input.kind !== "text") {
-      return lauxlib.luaL_error(state, to_luastring("input:parse_itt() requires text input."));
+      return lauxlib.luaL_error(state, to_luastring("input:parse_itm() requires text input."));
+    }
+    const parsed = parseIndentedTree(input.text, input.languageId, {
+      currentDocumentId: input.documentId,
+      currentFileName: input.fileName,
+      includeDocuments: context.request.documents || []
+    });
+    pushJsValue(state, parsed.nodes);
+    return 1;
+  });
+  lua.lua_setfield(L, -2, to_luastring("parse_itm"));
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    const input = currentInput(context);
+    if (input.kind !== "text") {
+      return lauxlib.luaL_error(state, to_luastring("input:parse_itm() requires text input."));
     }
     const parsed = parseIndentedTree(input.text, input.languageId, {
       currentDocumentId: input.documentId,
@@ -276,7 +291,13 @@ function pushInputTable(L: unknown, context: LuaExecutionContext): void {
 
   lua.lua_pushjsfunction(L, (state: unknown) => {
     const nodes = luaToJsValue(state, 2) as TreeNode[];
-    pushJsValue(state, { kind: "text", languageId: "text.indented-tree", text: emitIndentedTree(nodes) });
+    pushJsValue(state, { kind: "text", languageId: "text.itm", text: emitIndentedTree(nodes) });
+    return 1;
+  });
+  lua.lua_setfield(L, -2, to_luastring("emit_itm"));
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    const nodes = luaToJsValue(state, 2) as TreeNode[];
+    pushJsValue(state, { kind: "text", languageId: "text.itm", text: emitIndentedTree(nodes) });
     return 1;
   });
   lua.lua_setfield(L, -2, to_luastring("emit_itt"));
@@ -354,6 +375,15 @@ function installConsoleGlobals(L: unknown): void {
     return 1;
   });
   lua.lua_setglobal(L, to_luastring("open"));
+
+  lua.lua_pushjsfunction(L, (state: unknown) => {
+    lua.lua_getglobal(state, to_luastring("input"));
+    lua.lua_getfield(state, -1, to_luastring("parse_itm"));
+    lua.lua_pushvalue(state, -2);
+    callLuaFunction(state, 1, 1);
+    return 1;
+  });
+  lua.lua_setglobal(L, to_luastring("parse_itm"));
 
   lua.lua_pushjsfunction(L, (state: unknown) => {
     lua.lua_getglobal(state, to_luastring("input"));
@@ -513,9 +543,9 @@ function currentInput(context: LuaExecutionContext): PipelineValue {
 }
 
 function runBuiltInPipelineStep(id: string, input: PipelineValue, context: LuaExecutionContext): PipelineValue {
-  if (id === "itt-to-tree") {
+  if (id === "itm-to-tree" || id === "itt-to-tree") {
     if (input.kind !== "text") {
-      throw new Error("itt-to-tree requires text input.");
+      throw new Error("itm-to-tree requires text input.");
     }
     const parsed = parseIndentedTree(input.text, input.languageId, {
       currentDocumentId: input.documentId,
@@ -524,10 +554,10 @@ function runBuiltInPipelineStep(id: string, input: PipelineValue, context: LuaEx
     });
     return { kind: "model", modelType: "model.tree", data: parsed.nodes, diagnostics: parsed.diagnostics };
   }
-  if (id === "itt-to-graph") {
-    const tree = runBuiltInPipelineStep("itt-to-tree", input, context);
+  if (id === "itm-to-graph" || id === "itt-to-graph") {
+    const tree = runBuiltInPipelineStep("itm-to-tree", input, context);
     if (tree.kind !== "model" || tree.modelType !== "model.tree") {
-      throw new Error("itt-to-graph could not produce a tree model.");
+      throw new Error("itm-to-graph could not produce a tree model.");
     }
     return { kind: "model", modelType: "model.graph", data: indentedTreeToGraph(tree.data), diagnostics: tree.diagnostics };
   }
@@ -832,33 +862,67 @@ function getLuaFieldString(L: unknown, index: number, field: string): string {
 }
 
 function emitIndentedTree(nodes: TreeNode[]): string {
-  const lines: string[] = [];
-  const visit = (node: TreeNode, depth: number) => {
-    const parts: string[] = [];
-    if (node.declaredId) {
-      parts.push(`&${node.declaredId}`);
+  return serializeDocument(treeNodesToItmDocument(nodes));
+}
+
+function treeNodesToItmDocument(nodes: TreeNode[]): ItmDocument {
+  const entities: ItmDocument["entities"] = [];
+  const relationships: ItmRelationship[] = [];
+  let entityCounter = 0;
+  let relationshipCounter = 0;
+
+  const visit = (node: TreeNode, parentUid: string | undefined, depth: number, rank: number): string => {
+    entityCounter += 1;
+    const localId = node.declaredId || (isSafeLocalId(node.id) ? node.id : undefined);
+    const qualifiedId = localId ? `local::${localId}` : undefined;
+    const uid = qualifiedId ? `entity:${qualifiedId}` : `entity:auto:${entityCounter}`;
+    entities.push({
+      uid,
+      kind: "entity",
+      ...(localId ? { id: localId, localId, qualifiedId, namespacePrefix: "local" } : {}),
+      label: node.label || "(empty)",
+      ...(node.type ? { typeRef: node.type } : {}),
+      ...(node.tags?.length ? { tags: node.tags } : {}),
+      ...(node.attributes && Object.keys(node.attributes).length ? { attributes: { values: node.attributes } } : {}),
+      ...(node.details ? { description: { format: "markdown", text: node.details } } : {}),
+      ...(parentUid ? { parentId: parentUid } : {}),
+      depth,
+      rank
+    });
+    for (const link of node.links || []) {
+      relationshipCounter += 1;
+      const targetRef = link.target.includes("::") ? link.target : `local::${link.target}`;
+      relationships.push({
+        uid: `relationship:${relationshipCounter}`,
+        kind: "relationship",
+        sourceId: uid,
+        ...(qualifiedId ? { sourceRef: qualifiedId } : {}),
+        targetRef,
+        typeRef: link.type === "related-to" ? "related_to" : (link.type || "related_to"),
+        relationshipKind: "explicit",
+        implicit: false,
+        virtual: false,
+        sourceSyntax: "inline-relationship",
+        ...(link.style && Object.keys(link.style).length ? { attributes: { values: link.style } } : {})
+      });
     }
-    if (node.type) {
-      parts.push(`[${node.type}]`);
-    }
-    parts.push(node.label || "(empty)");
-    for (const tag of node.tags || []) {
-      parts.push(`#${tag}`);
-    }
-    if (node.attributes && Object.keys(node.attributes).length) {
-      parts.push(`{${Object.entries(node.attributes).map(([key, value]) => `${key}: ${value}`).join(", ")}}`);
-    }
-    if (node.links?.length) {
-      parts.push(node.links.map((link) => `@${link.type ? `${link.type}:` : ""}${link.target}`).join(", "));
-    }
-    lines.push(`${"  ".repeat(depth)}${parts.join(" ")}`);
-    if (node.details) {
-      node.details.split(/\r?\n/).forEach((line) => lines.push(`${"  ".repeat(depth + 1)}| ${line}`));
-    }
-    (node.children || []).forEach((child) => visit(child, depth + 1));
+    (node.children || []).forEach((child, index) => visit(child, uid, depth + 1, index));
+    return uid;
   };
-  nodes.forEach((node) => visit(node, 0));
-  return `${lines.join("\n")}\n`;
+
+  nodes.forEach((node, index) => visit(node, undefined, 0, index));
+
+  return {
+    format: "itm",
+    modelVersion: "1.0.0",
+    metadata: { defaultNamespace: "local" },
+    entities,
+    relationships
+  };
+}
+
+function isSafeLocalId(value: string | undefined): boolean {
+  return Boolean(value && /^[A-Za-z_][A-Za-z0-9_-]*$/.test(value));
 }
 
 function emitDelimited(value: unknown, delimiter?: string): string {

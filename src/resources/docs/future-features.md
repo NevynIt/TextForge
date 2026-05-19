@@ -5,9 +5,9 @@ Status: deferred.
 
 Rationale: jsMind owns tree layout. Dragging nodes safely requires layout overrides, subtree movement, and a source write-back model.
 
-Notes: Store node position relative to parent, move subtrees together, and consider future ITT attributes such as `{x: 32, y: -12}`.
+Notes: Store node position relative to parent, move subtrees together, and consider future ITM attributes such as `{x: 32, y: -12}`.
 
-## ITT Write-Back For Viewer Layout
+## ITM Write-Back For Viewer Layout
 Status: deferred.
 
 Rationale: Viewers are projections; text remains the source of truth.

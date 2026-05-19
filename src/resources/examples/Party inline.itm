@@ -3,10 +3,10 @@ title: Family birthday party plan
 version: 2
 defaultLinkType: related-to
 author: Example
-purpose: Demonstrate ITT hierarchy, ids, typed links, tags, attributes, details, styles, includes, and views with TextForge V1-renderable attributes.
+purpose: Demonstrate ITM hierarchy, ids, typed links, tags, attributes, details, styles, includes, and views with TextForge V1-renderable attributes.
 ---
 
-%include shared-party-supplies.itt
+%include shared-party-supplies.itm
 
 %style * { font-size: 12px; }
 %style [event] { shape: pill; fill: #28343c; stroke: #1f2933; }

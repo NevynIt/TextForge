@@ -1,19 +1,6 @@
+import { parseDocumentResult, resolveDocument, type ItmAttributeBag, type ItmDiagnostic, type ItmDocument, type ItmEntity, type ItmRelationship, type ItmSourceRange, type ResolvedItmDocument, type ResolvedItmEntity, type ResolvedItmRelationship } from "@textforge/itm";
 import type { Diagnostic, GraphEdge, GraphModel, TextDocument, TreeNode } from "../domain/types";
 import { sourceRange } from "./source";
-
-interface StackItem {
-  indent: number;
-  node: TreeNode;
-}
-
-interface PreparedLine {
-  raw: string;
-  offset: number;
-  documentText: string;
-  languageId: string;
-  documentId?: string;
-  fileName?: string;
-}
 
 export interface IttStyleRule {
   selector: string;
@@ -29,125 +16,28 @@ export interface ParseIndentedTreeOptions {
 
 export function parseIndentedTree(
   text: string,
-  languageId = "text.indented-tree",
+  languageId = "text.itm",
   options: ParseIndentedTreeOptions = {}
 ): { nodes: TreeNode[]; diagnostics: Diagnostic[]; styleRules: IttStyleRule[] } {
-  const prepared = prepareIttInput(text, languageId, options, rootIncludeKeys(options));
-  const diagnostics: Diagnostic[] = [...prepared.diagnostics];
-  const roots: TreeNode[] = [];
-  const stack: StackItem[] = [];
-  const idMap = new Map<string, TreeNode>();
-  let previousNode: TreeNode | null = null;
-  let previousDetailIndent: number | null = null;
-  let counter = 0;
-  let inFrontMatter = false;
+  const parsed = parseDocumentResult(text, {
+    uri: options.currentFileName,
+    strict: false
+  });
+  const resolved = resolveDocument(parsed.value);
+  const styleRules = collectStyleRules(parsed.value);
+  const roots = sortEntities(resolved.entities.filter((entity) => !entity.parent)).map((entity) => itmEntityToTreeNode(entity, text));
+  const diagnostics = parsed.diagnostics.map((diagnostic) => toTextForgeDiagnostic(diagnostic, text, languageId, options.currentDocumentId));
 
-  for (const line of prepared.lines) {
-    const rawLine = line.raw;
-    const trimmed = rawLine.trim();
-    const lineStart = line.offset;
-
-    if (trimmed === "---" && !roots.length) {
-      inFrontMatter = !inFrontMatter;
-      continue;
-    }
-    if (inFrontMatter || !trimmed || trimmed.startsWith("%")) {
-      continue;
-    }
-    if (rawLine.includes("\t")) {
-      diagnostics.push(lineDiagnostic(line, "warning", "Tabs in indentation are ambiguous; use spaces."));
-    }
-
-    const indent = rawLine.match(/^\s*/)?.[0].replaceAll("\t", "  ").length || 0;
-    const content = rawLine.trimStart();
-    if (content.startsWith("|")) {
-      if (!previousNode) {
-        diagnostics.push(lineDiagnostic(line, "warning", "Detail block has no preceding node."));
-        continue;
-      }
-      if (indent < findIndentForNode(stack, previousNode)) {
-        diagnostics.push(lineDiagnostic(line, "warning", "Detail block indentation is less than its node indentation."));
-      }
-      if (previousDetailIndent !== null && indent !== previousDetailIndent) {
-        diagnostics.push(lineDiagnostic(line, "warning", "Detail block indentation changed inside the same block."));
-      }
-      previousDetailIndent = indent;
-      previousNode.details = [previousNode.details, content.slice(1).trimStart()].filter(Boolean).join("\n");
-      continue;
-    }
-
-    previousDetailIndent = null;
-    while (stack.length && stack[stack.length - 1].indent >= indent) {
-      stack.pop();
-    }
-    if (indent > 0 && stack.length === 0 && roots.length === 0) {
-      diagnostics.push(lineDiagnostic(line, "warning", "First node is indented without a parent."));
-    }
-
-    const parsed = parseNodeContent(content);
-    const node: TreeNode = {
-      id: parsed.declaredId || `itt-${counter++}`,
-      declaredId: parsed.declaredId,
-      label: parsed.label || "(empty)",
-      type: parsed.type,
-      tags: parsed.tags,
-      attributes: parsed.attributes,
-      links: parsed.links,
-      children: [],
-      sourceRange: sourceRange(line.documentText, lineStart, lineStart + rawLine.length)
-    };
-    node.links?.forEach((link) => {
-      link.sourceRange = link.sourceRange || node.sourceRange;
-    });
-    if (!parsed.label) {
-      diagnostics.push({
-        ...lineDiagnostic(line, "warning", "Node label is empty."),
-        range: node.sourceRange
-      });
-    }
-    if (node.declaredId) {
-      if (idMap.has(node.declaredId)) {
-        diagnostics.push({
-          ...lineDiagnostic(line, "error", `Duplicate node id "${node.declaredId}".`),
-          range: node.sourceRange
-        });
-      }
-      idMap.set(node.declaredId, node);
-    }
-
-    if (stack.length) {
-      stack[stack.length - 1].node.children.push(node);
-    } else {
-      roots.push(node);
-    }
-    stack.push({ indent, node });
-    previousNode = node;
-  }
-
-  applyTreeStyles(roots, prepared.styleRules);
+  applyTreeStyles(roots, styleRules);
   if (roots[0]) {
     Object.defineProperty(roots[0], "__ittStyleRules", {
-      value: prepared.styleRules,
+      value: styleRules,
       enumerable: false,
       configurable: true
     });
   }
 
-  for (const node of flattenTree(roots)) {
-    for (const link of node.links || []) {
-      if (!idMap.has(link.target)) {
-        diagnostics.push({
-          source: "itt-parser",
-          severity: "warning",
-          languageId,
-          message: `Unresolved link target "${link.target}".`,
-          range: node.sourceRange
-        });
-      }
-    }
-  }
-
-  return { nodes: roots, diagnostics, styleRules: prepared.styleRules };
+  return { nodes: roots, diagnostics, styleRules };
 }
 
 export function indentedTreeToGraph(nodes: TreeNode[]): GraphModel {
@@ -222,92 +112,148 @@ export function indentedTreeToGraph(nodes: TreeNode[]): GraphModel {
   return { nodes: Array.from(graphNodes.values()), edges, directed: true, graph: { attrs: { ittStyleRules: styleRules } } };
 }
 
-function prepareIttInput(
+function collectStyleRules(document: ItmDocument): IttStyleRule[] {
+  return (document.styles || []).map((style, index) => ({
+    selector: style.selector.raw,
+    declarations: stringifyAttributeBag(style.style) || {},
+    target: selectorTarget(style.selector.raw)
+  })).filter((rule) => Object.keys(rule.declarations).length > 0);
+}
+
+function itmEntityToTreeNode(entity: ResolvedItmEntity, text: string): TreeNode {
+  const source = toSourceRange(entity.sourceRange, text);
+  const node: TreeNode = {
+    id: entityNodeId(entity),
+    declaredId: entity.id || entity.localId,
+    label: entity.label || "(empty)",
+    type: entity.typeRef,
+    tags: entity.tags,
+    attributes: stringifyAttributeBag(entity.attributes),
+    details: entity.description?.text,
+    links: explicitLinksForEntity(entity, text),
+    children: sortEntities(entity.children).map((child) => itmEntityToTreeNode(child, text)),
+    sourceRange: source
+  };
+  node.links?.forEach((link) => {
+    link.sourceRange = link.sourceRange || source;
+  });
+  return node;
+}
+
+function explicitLinksForEntity(entity: ResolvedItmEntity, text: string): GraphEdge[] {
+  return sortRelationships(entity.outgoing)
+    .filter((relationship) => relationship.relationshipKind === "explicit")
+    .map((relationship, index) => ({
+      id: relationship.id || relationship.uid || `link-${entity.uid}-${index}`,
+      target: relationshipTargetId(relationship),
+      type: normalizeRelationshipType(relationship.typeRef),
+      label: normalizeRelationshipType(relationship.typeRef),
+      sourceRange: toSourceRange(relationship.sourceRange, text),
+      style: stringifyAttributeBag(relationship.attributes)
+    }));
+}
+
+function toTextForgeDiagnostic(
+  diagnostic: ItmDiagnostic,
   text: string,
   languageId: string,
-  options: ParseIndentedTreeOptions,
-  includeKeys: Set<string>
-): { lines: PreparedLine[]; styleRules: IttStyleRule[]; diagnostics: Diagnostic[] } {
-  const lines: PreparedLine[] = [];
-  const styleRules: IttStyleRule[] = [];
-  const diagnostics: Diagnostic[] = [];
-  const rawLines = text.split(/\r?\n/);
-  const offsets: number[] = [];
-  let offset = 0;
-  rawLines.forEach((line) => {
-    offsets.push(offset);
-    offset += line.length + 1;
-  });
+  documentId?: string
+): Diagnostic {
+  return {
+    source: diagnostic.source || "itm.parser",
+    severity: diagnostic.severity,
+    languageId,
+    documentId,
+    message: diagnostic.message,
+    range: toSourceRange(diagnostic.range, text)
+  };
+}
 
-  for (let index = 0; index < rawLines.length; index += 1) {
-    const rawLine = rawLines[index];
-    const trimmed = rawLine.trim();
-    const preparedLine: PreparedLine = {
-      raw: rawLine,
-      offset: offsets[index],
-      documentText: text,
-      languageId,
-      documentId: options.currentDocumentId,
-      fileName: options.currentFileName
-    };
-
-    if (trimmed.startsWith("%style")) {
-      const block = collectStyleBlock(rawLines, index);
-      index = block.endIndex;
-      const parsedRules = parseStyleDirective(block.text);
-      if (parsedRules.length) {
-        styleRules.push(...parsedRules);
-      } else {
-        diagnostics.push(lineDiagnostic(preparedLine, "warning", "Could not parse %style directive."));
-      }
-      if (!block.closed) {
-        diagnostics.push(lineDiagnostic(preparedLine, "warning", "Multiline %style directive is missing a closing brace."));
-      }
-      continue;
-    }
-
-    if (trimmed.startsWith("%include")) {
-      const target = parseIncludeTarget(trimmed);
-      if (!target) {
-        diagnostics.push(lineDiagnostic(preparedLine, "warning", "Could not parse %include directive."));
-        continue;
-      }
-      const document = findIncludedDocument(target, options.includeDocuments || []);
-      if (!document) {
-        diagnostics.push(lineDiagnostic(preparedLine, "warning", `%include target "${target}" is not open in the editor.`));
-        continue;
-      }
-      const aliases = documentIncludeKeys(document);
-      if (aliases.some((alias) => includeKeys.has(alias))) {
-        diagnostics.push(lineDiagnostic(preparedLine, "warning", `%include target "${target}" would create a circular include.`));
-        continue;
-      }
-      const nextKeys = new Set(includeKeys);
-      aliases.forEach((alias) => nextKeys.add(alias));
-      const included = prepareIttInput(
-        document.text,
-        document.languageId,
-        {
-          ...options,
-          currentDocumentId: document.id,
-          currentFileName: document.fileName
-        },
-        nextKeys
-      );
-      lines.push(...included.lines);
-      styleRules.push(...included.styleRules);
-      diagnostics.push(...included.diagnostics);
-      continue;
-    }
-
-    if (trimmed.startsWith("%")) {
-      continue;
-    }
-
-    lines.push(preparedLine);
+function toSourceRange(range: ItmSourceRange | undefined, text: string) {
+  if (!range) {
+    return undefined;
   }
+  if (typeof range.startOffset === "number" && typeof range.endOffset === "number") {
+    return sourceRange(text, range.startOffset, range.endOffset);
+  }
+  const offsets = lineOffsets(text);
+  const from = Math.max(0, lineColumnToOffset(offsets, range.startLine, range.startColumn));
+  const to = Math.max(from, lineColumnToOffset(offsets, range.endLine, range.endColumn));
+  return sourceRange(text, from, to);
+}
 
-  return { lines, styleRules, diagnostics };
+function lineOffsets(text: string): number[] {
+  const offsets = [0];
+  for (let index = 0; index < text.length; index += 1) {
+    if (text[index] === "\n") {
+      offsets.push(index + 1);
+    }
+  }
+  return offsets;
+}
+
+function lineColumnToOffset(offsets: number[], line: number, column: number): number {
+  const lineIndex = Math.max(0, Math.min(offsets.length - 1, line - 1));
+  return offsets[lineIndex] + Math.max(0, column - 1);
+}
+
+function stringifyAttributeBag(bag: ItmAttributeBag | undefined): Record<string, string> | undefined {
+  if (!bag) {
+    return undefined;
+  }
+  const entries = Object.entries(bag.values).map(([key, value]) => [key, stringifyAttributeValue(value)]);
+  return Object.fromEntries(entries.filter(([, value]) => value.length > 0));
+}
+
+function stringifyAttributeValue(value: unknown): string {
+  if (typeof value === "string") {
+    return value;
+  }
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (value === null || value === undefined) {
+    return "";
+  }
+  return JSON.stringify(value);
+}
+
+function entityNodeId(entity: Pick<ItmEntity, "id" | "localId" | "qualifiedId" | "uid">): string {
+  return entity.id || entity.localId || localNameFromReference(entity.qualifiedId) || entity.uid;
+}
+
+function relationshipTargetId(relationship: Pick<ResolvedItmRelationship, "target" | "targetRef">): string {
+  return relationship.target ? entityNodeId(relationship.target) : localNameFromReference(relationship.targetRef) || relationship.targetRef || "missing-target";
+}
+
+function localNameFromReference(value: string | undefined): string | undefined {
+  if (!value) {
+    return undefined;
+  }
+  const parts = value.split("::");
+  return parts[parts.length - 1] || value;
+}
+
+function normalizeRelationshipType(value: string | undefined): string | undefined {
+  if (!value) {
+    return value;
+  }
+  return value === "related_to" ? "related-to" : value;
+}
+
+function sortEntities<T extends Pick<ResolvedItmEntity, "rank">>(entities: readonly T[]): T[] {
+  return [...entities].sort((left, right) => (left.rank ?? 0) - (right.rank ?? 0));
+}
+
+function sortRelationships<T extends Pick<ItmRelationship, "sourceRange">>(relationships: readonly T[]): T[] {
+  return [...relationships].sort((left, right) => {
+    const leftLine = left.sourceRange?.startLine ?? 0;
+    const rightLine = right.sourceRange?.startLine ?? 0;
+    if (leftLine !== rightLine) {
+      return leftLine - rightLine;
+    }
+    return (left.sourceRange?.startColumn ?? 0) - (right.sourceRange?.startColumn ?? 0);
+  });
 }
 
 function collectStyleBlock(lines: string[], startIndex: number): { text: string; endIndex: number; closed: boolean } {
@@ -425,17 +371,6 @@ function stripQuotes(value: string): string {
     return trimmed.slice(1, -1);
   }
   return trimmed;
-}
-
-function lineDiagnostic(line: PreparedLine, severity: Diagnostic["severity"], message: string): Diagnostic {
-  return {
-    source: "itt-parser",
-    severity,
-    languageId: line.languageId,
-    documentId: line.documentId,
-    message,
-    range: sourceRange(line.documentText, line.offset, line.offset + line.raw.length)
-  };
 }
 
 function applyTreeStyles(nodes: TreeNode[], styleRules: IttStyleRule[], inherited: Record<string, string> = {}): void {
@@ -700,10 +635,6 @@ function parseAttributes(text: string): Record<string, string> {
     }
   });
   return attributes;
-}
-
-function findIndentForNode(stack: StackItem[], node: TreeNode): number {
-  return stack.find((item) => item.node === node)?.indent ?? 0;
 }
 
 export function flattenTree(nodes: TreeNode[]): TreeNode[] {

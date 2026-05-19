@@ -300,11 +300,11 @@ function consoleHelpText(actions: RegisteredLuaAction[]): string {
     "  help                 show this message",
     "  actions              list registered Lua actions",
     "  run selection        run selected Lua from the active editor",
-    "  run <pipeline-id>    run a whitelisted built-in bridge, e.g. run itt-to-graph",
+    "  run <pipeline-id>    run a whitelisted built-in bridge, e.g. run itm-to-graph",
     "  action <action-id>   run a registered Lua action",
     "  open <command>       run a shortcut or Lua expression and open the result as a document",
     "  open last            open the previous result as a document",
-    "Lua helpers available in code: run(id), run_action(id), action(id), parse_itt(), parse_markdown().",
+    "Lua helpers available in code: run(id), run_action(id), action(id), parse_itm(), parse_markdown().",
     actions.length ? `${actions.length} Lua action${actions.length === 1 ? "" : "s"} registered.` : "No Lua actions registered."
   ].join("\r\n");
 }

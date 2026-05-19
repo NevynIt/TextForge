@@ -1,6 +1,6 @@
-# ITT Mindmap Style Support
+# ITM Mindmap Style Support
 
-TextForge V1 reads a small, local-only subset of ITT node attributes and `%style` directives in the jsMind viewer.
+TextForge V1 reads a small, local-only subset of ITM node attributes and `%style` directives in the jsMind viewer.
 
 Supported node selectors:
 
@@ -50,6 +50,6 @@ Example:
   &ui UI work {background: #fff3e0, line-color: #cf6f2a, line-width: 3} @depends:api
 ```
 
-`%include other-file.itt` is supported for ITT mind-map visualizers, limited to files currently open in the editor. Includes are expanded in place and circular includes are ignored with a diagnostic.
+`%include other-file.itm` is supported for ITM mind-map visualizers, limited to files currently open in the editor. Includes are expanded in place and circular includes are ignored with a diagnostic.
 
-Not supported in V1: arbitrary CSS selectors beyond the ITT selector subset, remote images, per-branch hierarchy line styling, layout coordinates, icons, and write-back from the mindmap viewer.
+Not supported in V1: arbitrary CSS selectors beyond the ITM selector subset, remote images, per-branch hierarchy line styling, layout coordinates, icons, and write-back from the mindmap viewer.

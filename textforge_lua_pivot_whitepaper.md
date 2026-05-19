@@ -531,7 +531,7 @@ src/lua/libs/tf/tree.lua
 src/lua/libs/tf/graph.lua
 src/lua/libs/tf/table.lua
 src/lua/libs/tf/stringx.lua
-src/lua/libs/tf/itt.lua
+src/lua/libs/tf/itm.lua
 src/lua/libs/tf/markdown.lua
 src/lua/libs/tf/pipeline.lua
 src/lua/libs/tf/actions.lua
@@ -1101,7 +1101,7 @@ src/resources/
     manual-test-plan.md
     future-features.md
   examples/
-    markdown-headings-to-itt.lua
+    markdown-headings-to-itm.lua
     itt-normalize-ids.lua
     csv-to-graph.lua
     graph-filter.lua
@@ -1609,8 +1609,8 @@ Actions:
 Suggested document naming:
 
 ```text
-examples/itt/full-feature-example.itt
-examples/lua/markdown-headings-to-itt.lua
+examples/itm/full-feature-example.itm
+examples/lua/markdown-headings-to-itm.lua
 examples/markdown/diagrams-and-math.md
 examples/mermaid/flowchart-samples.mmd
 docs/manual-test-plan.md
@@ -2294,7 +2294,7 @@ This pivot keeps TextForge powerful while making its security story much easier 
 - TextForge plugin development docs: https://github.com/NevynIt/TextForge/blob/main/docs/plugin-development.md
 - TextForge plugin registry: https://github.com/NevynIt/TextForge/blob/main/src/core/pluginRegistry.ts
 - TextForge domain types: https://github.com/NevynIt/TextForge/blob/main/src/domain/types.ts
-- TextForge ITT parser: https://github.com/NevynIt/TextForge/blob/main/src/parsers/itt.ts
+- TextForge ITM parser adapter: https://github.com/NevynIt/TextForge/blob/main/src/parsers/itm.ts
 - TextForge viewer core: https://github.com/NevynIt/TextForge/blob/main/src/plugins/viewerCore.ts
 - TextForge popup host: https://github.com/NevynIt/TextForge/blob/main/src/components/PopupHost.tsx
 - TextForge viewer components: https://github.com/NevynIt/TextForge/blob/main/src/components/viewers.tsx

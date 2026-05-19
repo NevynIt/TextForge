@@ -103,8 +103,8 @@ function resourceGroupId(resource: TextForgeResource): string {
   if (resource.path.startsWith("docs/") || resource.path === "README.md") {
     return "docs";
   }
-  if (resource.path.startsWith("examples/itt/") || resource.languageId === "text.indented-tree") {
-    return "examples-itt";
+  if (resource.path.startsWith("examples/itm/") || resource.languageId === "text.itm" || resource.languageId === "text.indented-tree") {
+    return "examples-itm";
   }
   if (resource.path.startsWith("examples/lua/") || resource.languageId === "text.lua") {
     return "examples-lua";
@@ -125,8 +125,8 @@ function resourceGroupTitle(id: string): string {
   if (id === "docs") {
     return "Documentation";
   }
-  if (id === "examples-itt") {
-    return "ITT Examples";
+  if (id === "examples-itm") {
+    return "ITM Examples";
   }
   if (id === "examples-lua") {
     return "Lua Examples";
