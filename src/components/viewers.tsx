@@ -246,10 +246,11 @@ function SvgView({
 }) {
   const frameRef = useRef<HTMLDivElement>(null);
   const ref = useRef<HTMLDivElement>(null);
-  const dragRef = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+  const dragRef = useRef<{ id: number; x: number; y: number; panX: number; panY: number } | null>(null);
   const [fitScale, setFitScale] = useState(1);
   const [svgView, setSvgView] = useState({ panX: 0, panY: 0 });
   const [findState, setFindState] = useState<FindState>({ count: 0, activeIndex: -1, markers: [] });
+  const [isPanning, setIsPanning] = useState(false);
   const background = safeClassName(stringSetting(settings.svgBackground, "white"));
   const fitMode = safeClassName(stringSetting(settings.fitMode, "contain"));
 
@@ -317,34 +318,51 @@ function SvgView({
     setSvgView({ panX: fitted.x, panY: fitted.y });
   }, [fitMode]);
 
-  function startPan(event: MouseEvent): void {
+  function startPan(event: JSX.TargetedPointerEvent<HTMLDivElement>): void {
     if (event.button !== 0 || event.target instanceof Element && event.target.closest("button")) {
       return;
     }
-    dragRef.current = { x: event.clientX, y: event.clientY, panX: svgView.panX, panY: svgView.panY };
+    dragRef.current = { id: event.pointerId, x: event.clientX, y: event.clientY, panX: svgView.panX, panY: svgView.panY };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+    setIsPanning(true);
   }
 
-  function updatePan(event: MouseEvent): void {
+  function updatePan(event: JSX.TargetedPointerEvent<HTMLDivElement>): void {
     const drag = dragRef.current;
-    if (!drag) {
+    if (!drag || drag.id !== event.pointerId) {
       return;
+    }
+    if (Math.abs(event.clientX - drag.x) > 2 || Math.abs(event.clientY - drag.y) > 2) {
+      event.preventDefault();
     }
     setSvgView((current) => ({ ...current, panX: drag.panX + event.clientX - drag.x, panY: drag.panY + event.clientY - drag.y }));
   }
 
-  function stopPan(): void {
+  function stopPan(event: JSX.TargetedPointerEvent<HTMLDivElement>): void {
+    const drag = dragRef.current;
+    if (!drag || drag.id !== event.pointerId) {
+      return;
+    }
+    event.currentTarget.releasePointerCapture?.(event.pointerId);
     dragRef.current = null;
+    setIsPanning(false);
+  }
+
+  function cancelPan(): void {
+    dragRef.current = null;
+    setIsPanning(false);
   }
 
   return (
     <section class={`viewer-content viewer-svg svg-bg-${background} svg-fit-${fitMode}`} style={{ "--viewer-zoom": "1" }}>
       <div
-        class="svg-frame"
+        class={`svg-frame${isPanning ? " is-panning" : ""}`}
         ref={frameRef}
-        onMouseDown={startPan}
-        onMouseMove={updatePan}
-        onMouseUp={stopPan}
-        onMouseLeave={stopPan}
+        onPointerDown={startPan}
+        onPointerMove={updatePan}
+        onPointerUp={stopPan}
+        onPointerCancel={cancelPan}
+        onLostPointerCapture={cancelPan}
         onWheel={(event) => {
           event.preventDefault();
           onZoomChange?.(clamp(zoom + (event.deltaY > 0 ? -0.1 : 0.1), 0.2, 5));
@@ -3196,7 +3214,8 @@ function embeddedSvgBounds(svg: SVGSVGElement): { x: number; y: number; width: n
   }
   const width = svg.width?.baseVal;
   const height = svg.height?.baseVal;
-  if (width?.unitType === SVGLength.SVG_LENGTHTYPE_NUMBER && height?.unitType === SVGLength.SVG_LENGTHTYPE_NUMBER && width.value > 0 && height.value > 0) {
+  const numericLengthUnit = typeof SVGLength === "undefined" ? 1 : SVGLength.SVG_LENGTHTYPE_NUMBER;
+  if (width?.unitType === numericLengthUnit && height?.unitType === numericLengthUnit && width.value > 0 && height.value > 0) {
     return { x: 0, y: 0, width: width.value, height: height.value };
   }
   try {

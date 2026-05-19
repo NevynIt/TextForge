@@ -897,11 +897,19 @@ button:disabled {
   height: 100%;
   min-height: 0;
   overflow: auto;
+  scrollbar-width: none;
   padding: 14px;
   cursor: grab;
+  touch-action: none;
 }
 
-.svg-frame:active {
+.svg-frame::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.svg-frame:active,
+.svg-frame.is-panning {
   cursor: grabbing;
 }
 
