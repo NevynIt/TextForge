@@ -6,6 +6,7 @@ import katex from "katex";
 import hljs from "highlight.js";
 import mermaid from "mermaid";
 import * as viz from "@viz-js/viz";
+import { renderMermaidSvg } from "./renderMermaidSvg";
 import "katex/dist/katex.min.css";
 import "highlight.js/styles/github.css";
 
@@ -168,9 +169,7 @@ async function renderDiagramArtifact(
 
 async function renderMermaid(source: string, id: string, context: Parameters<NonNullable<TextForgePlugin["transformers"]>[number]["transform"]>[1]): Promise<string> {
   await context.runtime.load("mermaid", () => Promise.resolve(mermaid));
-  mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
-  const rendered = await mermaid.render(`textforge-md-${id}`, source);
-  return rendered.svg;
+  return renderMermaidSvg(`textforge-md-${id}`, source);
 }
 
 async function renderGraphviz(source: string, context: Parameters<NonNullable<TextForgePlugin["transformers"]>[number]["transform"]>[1]): Promise<string> {

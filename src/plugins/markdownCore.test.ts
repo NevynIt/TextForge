@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const renderMock = vi.fn<(id: string, source: string) => Promise<{ svg: string }>>();
+const renderMock = vi.fn<(id: string, source: string, container?: Element) => Promise<{ svg: string }>>();
 
 vi.mock("mermaid", () => ({
   default: {
