@@ -1,5 +1,5 @@
 import type { TextForgePlugin } from "../domain/types";
-import { indentedTreeToGraph, parseIndentedTree, parseItmValue } from "../parsers/itm";
+import { indentedTreeToGraph, parseIndentedTreeAsync, parseItmValueAsync } from "../parsers/itm";
 
 const plugin: TextForgePlugin = {
   id: "itm-core",
@@ -11,12 +11,12 @@ const plugin: TextForgePlugin = {
       id: "itm-linter",
       name: "Indented Text Model Parser",
       accepts: "text.itm",
-      lint(document, context) {
-        return parseItmValue(document.text, document.languageId, {
+      async lint(document, context) {
+        return (await parseItmValueAsync(document.text, document.languageId, {
           currentDocumentId: document.id,
           currentFileName: document.fileName,
           includeDocuments: context.documents || []
-        }).diagnostics || [];
+        })).diagnostics || [];
       }
     }
   ],
@@ -27,11 +27,11 @@ const plugin: TextForgePlugin = {
       name: "ITM Parse",
       input: "text.itm",
       output: "model.itm",
-      transform(value, context) {
+      async transform(value, context) {
         if (value.kind !== "text") {
           throw new Error("ITM parser requires text input.");
         }
-        const parsed = parseItmValue(value.text, value.languageId, {
+        const parsed = await parseItmValueAsync(value.text, value.languageId, {
           currentDocumentId: value.documentId,
           currentFileName: value.fileName,
           includeDocuments: context.documents || []
@@ -48,11 +48,11 @@ const plugin: TextForgePlugin = {
       name: "ITM to Tree Model",
       input: "text.itm",
       output: "model.tree",
-      transform(value, context) {
+      async transform(value, context) {
         if (value.kind !== "text") {
           throw new Error("ITM tree transformer requires text input.");
         }
-        const parsed = parseIndentedTree(value.text, value.languageId, {
+        const parsed = await parseIndentedTreeAsync(value.text, value.languageId, {
           currentDocumentId: value.documentId,
           currentFileName: value.fileName,
           includeDocuments: context.documents || []
@@ -71,11 +71,11 @@ const plugin: TextForgePlugin = {
       name: "ITM to Graph Model",
       input: "text.itm",
       output: "model.graph",
-      transform(value, context) {
+      async transform(value, context) {
         if (value.kind !== "text") {
           throw new Error("ITM graph transformer requires text input.");
         }
-        const parsed = parseIndentedTree(value.text, value.languageId, {
+        const parsed = await parseIndentedTreeAsync(value.text, value.languageId, {
           currentDocumentId: value.documentId,
           currentFileName: value.fileName,
           includeDocuments: context.documents || []

@@ -7,6 +7,11 @@ interface StoredWorkspace {
 
 export interface PluginPreferences {
   autoloadPluginIds: string[];
+  disabledPipelines?: Array<{
+    pluginId: string;
+    pipelineId: string;
+    reason?: "user" | "conflict";
+  }>;
 }
 
 export class TextForgeStorage {
@@ -40,7 +45,7 @@ export class TextForgeStorage {
   }
 
   async loadPluginPreferences(): Promise<PluginPreferences> {
-    return (await this.get<PluginPreferences>("pluginPreferences")) || { autoloadPluginIds: [] };
+    return (await this.get<PluginPreferences>("pluginPreferences")) || { autoloadPluginIds: [], disabledPipelines: [] };
   }
 
   async savePluginPreferences(preferences: PluginPreferences): Promise<void> {

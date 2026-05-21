@@ -16,7 +16,7 @@
     "verify:file": "node scripts/verify-file-build.mjs",
     "verify:browser-no-network": "node scripts/browser-no-network-smoke.mjs",
     "verify:security": "node scripts/verify-security.mjs",
-    "check": "npm run test && npm run build && npm run verify:file && npm run verify:security"
+    "check": "npm run test && npm run build && npm run verify:file && npm run verify:security && npm run verify:browser-no-network"
   },
   "dependencies": {
     "@codemirror/commands": "^6.8.1",
@@ -32,7 +32,7 @@
     "@codemirror/view": "^6.36.3",
     "@lezer/highlight": "^1.2.1",
     "@preact/preset-vite": "^2.9.3",
-    "@textforge/itm": "^0.2.1",
+    "@textforge/itm": "^0.3.0",
     "@vitejs/plugin-legacy": "^6.0.0",
     "@viz-js/viz": "^3.17.0",
     "@xterm/addon-fit": "^0.11.0",

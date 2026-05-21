@@ -29,7 +29,7 @@ import {
   ZoomIn,
   ZoomOut
 } from "lucide-preact";
-import type { PipelineTraceStep, PipelineValue, PluginState, PopupRecord, SourceRange, TextDocument, ViewerControlDefinition, ViewerSettingValue, VisualSelection } from "../domain/types";
+import type { PipelineTraceStep, PipelineValue, PluginDiagnostic, PluginState, PopupRecord, RegisteredPipeline, SourceRange, TextDocument, ViewerControlDefinition, ViewerSettingValue, VisualSelection } from "../domain/types";
 import { serializeItmPipelineDocument } from "../viewers/itm/itmSerialization";
 import type { RegisteredLuaAction } from "../lua/luaScriptRegistry";
 import type { LuaRunResult } from "../lua/types";
@@ -44,8 +44,13 @@ interface PopupHostProps {
   documents: TextDocument[];
   activeDocument?: TextDocument;
   pluginStates: PluginState[];
+  registeredPipelines: RegisteredPipeline[];
+  pluginDiagnostics: PluginDiagnostic[];
   luaActions: RegisteredLuaAction[];
   resources: TextForgeResource[];
+  onTogglePluginAutoload: (pluginId: string, autoload: boolean) => void;
+  onSetPipelineEnabled: (pluginId: string, pipelineId: string, enabled: boolean) => void;
+  onAcknowledgePluginDiagnostic: (diagnosticId: string) => void;
   onRunLuaCommand: (source: string) => Promise<LuaRunResult>;
   onRunActiveLuaDocument: () => Promise<LuaRunResult>;
   onRunSelectedLuaText: () => Promise<LuaRunResult>;
@@ -67,8 +72,13 @@ export function PopupHost({
   documents,
   activeDocument,
   pluginStates,
+  registeredPipelines,
+  pluginDiagnostics,
   luaActions,
   resources,
+  onTogglePluginAutoload,
+  onSetPipelineEnabled,
+  onAcknowledgePluginDiagnostic,
   onRunLuaCommand,
   onRunActiveLuaDocument,
   onRunSelectedLuaText,
@@ -303,7 +313,16 @@ export function PopupHost({
                 />
               ) : null}
               {popup.kind === "diagnostics" ? <DiagnosticsList popup={popup} onUpdate={onUpdate} /> : null}
-              {popup.kind === "plugin-manager" ? <PluginManagerList states={pluginStates} /> : null}
+              {popup.kind === "plugin-manager" ? (
+                <PluginManagerList
+                  states={pluginStates}
+                  pipelines={registeredPipelines}
+                  diagnostics={pluginDiagnostics}
+                  onTogglePluginAutoload={onTogglePluginAutoload}
+                  onSetPipelineEnabled={onSetPipelineEnabled}
+                  onAcknowledgeDiagnostic={onAcknowledgePluginDiagnostic}
+                />
+              ) : null}
               {popup.kind === "pipeline-trace" ? (
                 <PipelineTrace
                   trace={popup.trace || []}
@@ -783,7 +802,21 @@ function diagnosticLocation(diagnostic: NonNullable<PopupRecord["diagnostics"]>[
   return `${line + 1}:${typeof column === "number" ? column + 1 : 1}`;
 }
 
-function PluginManagerList({ states }: { states: PluginState[] }) {
+function PluginManagerList({
+  states,
+  pipelines,
+  diagnostics,
+  onTogglePluginAutoload,
+  onSetPipelineEnabled,
+  onAcknowledgeDiagnostic
+}: {
+  states: PluginState[];
+  pipelines: RegisteredPipeline[];
+  diagnostics: PluginDiagnostic[];
+  onTogglePluginAutoload: (pluginId: string, autoload: boolean) => void;
+  onSetPipelineEnabled: (pluginId: string, pipelineId: string, enabled: boolean) => void;
+  onAcknowledgeDiagnostic: (diagnosticId: string) => void;
+}) {
   return (
     <div class="plugin-list">
       <div class="plugin-upload">
@@ -797,6 +830,44 @@ function PluginManagerList({ states }: { states: PluginState[] }) {
           </div>
           <span class={`plugin-status ${state.status}`}>{state.status}</span>
           <small>{state.contributionIds.join(", ")}</small>
+          <div class="plugin-actions">
+            <label>
+              <input
+                type="checkbox"
+                checked={state.autoload}
+                onChange={(event) => onTogglePluginAutoload(state.id, event.currentTarget.checked)}
+              />
+              Autoload
+            </label>
+          </div>
+          {(pipelines.filter((pipeline) => pipeline.pluginId === state.id)).map((pipeline) => (
+            <div class="plugin-actions" key={`${state.id}:${pipeline.pipeline.id}`}>
+              <span>{pipeline.pipeline.name}</span>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={pipeline.enabled}
+                  onChange={(event) => onSetPipelineEnabled(state.id, pipeline.pipeline.id, event.currentTarget.checked)}
+                />
+                Enabled
+              </label>
+              <small>{pipeline.disabledReason ? `disabled: ${pipeline.disabledReason}` : "active"}</small>
+            </div>
+          ))}
+          {diagnostics
+            .filter((diagnostic) => diagnostic.pluginId === state.id)
+            .map((diagnostic) => (
+              <div class="plugin-actions" key={diagnostic.id}>
+                <small>{diagnostic.message}</small>
+                {!diagnostic.acknowledged ? (
+                  <button type="button" onClick={() => onAcknowledgeDiagnostic(diagnostic.id)}>
+                    Acknowledge
+                  </button>
+                ) : (
+                  <small>acknowledged</small>
+                )}
+              </div>
+            ))}
           {state.error ? <p>{state.error}</p> : null}
         </article>
       ))}

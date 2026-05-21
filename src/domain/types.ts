@@ -1,7 +1,7 @@
 import type { ItmDiagnostic, ItmDocument, ResolvedItmDocument } from "@textforge/itm";
 
 export type ContributionKind = "transformer" | "viewer" | "editor" | "linter";
-export type PipelineStatus = "available" | "missing-plugin" | "missing-contribution" | "disabled-plugin" | "runtime-failed" | "failed";
+export type PipelineStatus = "available" | "missing-plugin" | "missing-contribution" | "runtime-failed" | "failed";
 export type Severity = "error" | "warning" | "information" | "observation";
 
 export interface TextDocument {
@@ -274,6 +274,20 @@ export interface PipelineContribution {
   category?: string;
 }
 
+export interface RegisteredPipelineConflict {
+  pluginId: string;
+  pipelineId: string;
+  pipelineName: string;
+}
+
+export interface RegisteredPipeline {
+  pipeline: PipelineContribution;
+  pluginId: string;
+  enabled: boolean;
+  disabledReason?: "user" | "conflict";
+  conflictWith?: RegisteredPipelineConflict[];
+}
+
 export interface TextForgePlugin {
   id: string;
   name: string;
@@ -293,6 +307,10 @@ export interface PluginManifestEntry {
   autoLoad?: boolean;
   languages?: LanguageDefinition[];
   pipelines?: PipelineContribution[];
+  contributions?: Array<{
+    id: string;
+    kind: ContributionKind;
+  }>;
   contributionIds: string[];
   load: () => Promise<{ default: TextForgePlugin } | TextForgePlugin>;
 }
@@ -305,6 +323,17 @@ export interface PluginState {
   autoload: boolean;
   error?: string;
   contributionIds: string[];
+}
+
+export interface PluginDiagnostic {
+  id: string;
+  source: "plugin-registry";
+  severity: Severity;
+  pluginId?: string;
+  pipelineId?: string;
+  message: string;
+  createdAt: string;
+  acknowledged?: boolean;
 }
 
 export interface PipelineTraceStep {

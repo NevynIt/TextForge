@@ -22,14 +22,24 @@ export const pluginManifest: PluginManifestEntry[] = [
       "tree-visual-editor-skeleton",
       "graph-visual-editor-skeleton"
     ],
+    contributions: [
+      { id: "html-viewer", kind: "viewer" },
+      { id: "source-html-viewer", kind: "viewer" },
+      { id: "itm-inspector-viewer", kind: "viewer" },
+      { id: "itm-tree-viewer", kind: "viewer" },
+      { id: "itm-mindmap-viewer", kind: "viewer" },
+      { id: "itm-cytoscape-viewer", kind: "viewer" },
+      { id: "itm-sigma-viewer", kind: "viewer" },
+      { id: "tree-viewer", kind: "viewer" },
+      { id: "table-viewer", kind: "viewer" },
+      { id: "svg-viewer", kind: "viewer" },
+      { id: "mindmap-viewer", kind: "viewer" },
+      { id: "cytoscape-graph-viewer", kind: "viewer" },
+      { id: "sigma-graph-viewer", kind: "viewer" },
+      { id: "tree-visual-editor-skeleton", kind: "editor" },
+      { id: "graph-visual-editor-skeleton", kind: "editor" }
+    ],
     pipelines: [
-      {
-        id: "view-itm-inspector",
-        name: "ITM -> ITM Inspector",
-        input: "text.itm",
-        steps: ["itm-parse", "itm-inspector-viewer"],
-        category: "View"
-      },
       {
         id: "view-source-html",
         name: "Source -> Highlighted HTML",
@@ -70,6 +80,10 @@ export const pluginManifest: PluginManifestEntry[] = [
       }
     ],
     contributionIds: ["markdown-to-html", "markdown-heading-tree"],
+    contributions: [
+      { id: "markdown-to-html", kind: "transformer" },
+      { id: "markdown-heading-tree", kind: "transformer" }
+    ],
     load: () => import("./markdownCore")
   },
   {
@@ -86,6 +100,10 @@ export const pluginManifest: PluginManifestEntry[] = [
       }
     ],
     contributionIds: ["json-linter", "json-to-tree"],
+    contributions: [
+      { id: "json-linter", kind: "linter" },
+      { id: "json-to-tree", kind: "transformer" }
+    ],
     load: () => import("./jsonCore")
   },
   {
@@ -102,6 +120,10 @@ export const pluginManifest: PluginManifestEntry[] = [
       }
     ],
     contributionIds: ["xml-linter", "xml-to-tree"],
+    contributions: [
+      { id: "xml-linter", kind: "linter" },
+      { id: "xml-to-tree", kind: "transformer" }
+    ],
     load: () => import("./xmlCore")
   },
   {
@@ -135,6 +157,10 @@ export const pluginManifest: PluginManifestEntry[] = [
       }
     ],
     contributionIds: ["bpmn-viewer", "bpmn-to-svg"],
+    contributions: [
+      { id: "bpmn-viewer", kind: "viewer" },
+      { id: "bpmn-to-svg", kind: "transformer" }
+    ],
     load: () => import("./bpmnCore")
   },
   {
@@ -151,6 +177,10 @@ export const pluginManifest: PluginManifestEntry[] = [
       }
     ],
     contributionIds: ["delimited-linter", "delimited-to-table"],
+    contributions: [
+      { id: "delimited-linter", kind: "linter" },
+      { id: "delimited-to-table", kind: "transformer" }
+    ],
     load: () => import("./csvCore")
   },
   {
@@ -209,6 +239,12 @@ export const pluginManifest: PluginManifestEntry[] = [
       }
     ],
     contributionIds: ["itm-linter", "itm-parse", "itm-to-tree", "itm-to-graph"],
+    contributions: [
+      { id: "itm-linter", kind: "linter" },
+      { id: "itm-parse", kind: "transformer" },
+      { id: "itm-to-tree", kind: "transformer" },
+      { id: "itm-to-graph", kind: "transformer" }
+    ],
     load: () => import("./itmCore")
   },
   {
@@ -253,6 +289,11 @@ export const pluginManifest: PluginManifestEntry[] = [
       }
     ],
     contributionIds: ["mermaid-to-svg", "graphviz-dot-to-svg", "graphviz-dot-to-graph"],
+    contributions: [
+      { id: "mermaid-to-svg", kind: "transformer" },
+      { id: "graphviz-dot-to-svg", kind: "transformer" },
+      { id: "graphviz-dot-to-graph", kind: "transformer" }
+    ],
     load: () => import("./diagramCore")
   }
 ];

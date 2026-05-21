@@ -89,6 +89,7 @@ export function App() {
       .then(async () => {
         const preferences = await services.storage.loadPluginPreferences();
         preferences.autoloadPluginIds.forEach((pluginId) => services.plugins.setAutoload(pluginId, true));
+        services.plugins.applyPipelinePreferences(preferences.disabledPipelines || []);
         for (const pluginId of services.plugins.listAutoloadPluginIds()) {
           try {
             await services.plugins.loadPlugin(pluginId);
@@ -167,6 +168,10 @@ export function App() {
     : undefined;
   const pipelines = activeDocument ? services.plugins.listPipelinesForLanguage(activeDocument.languageId) : [];
   const pluginStates = useMemo(() => services.plugins.listPluginStates(), [services, pluginRevision]);
+  const registeredPipelines = useMemo(() => services.plugins.listRegisteredPipelines(), [services, pluginRevision]);
+  const pluginDiagnostics = useMemo(() => services.plugins.listPluginDiagnostics(), [services, pluginRevision]);
+  const hasPluginAttention = pluginDiagnostics.some((diagnostic) => !diagnostic.acknowledged);
+  const hasDiagnosticsAttention = hasPluginAttention;
 
   function commitWorkspace(nextStatus?: string): void {
     const snapshot = services.workspace.snapshot();
@@ -175,6 +180,20 @@ export function App() {
       setStatus(nextStatus);
     }
     void services.storage.saveWorkspace(snapshot);
+  }
+
+  async function persistPluginPreferences(): Promise<void> {
+    const preferences = await services.storage.loadPluginPreferences();
+    preferences.autoloadPluginIds = services.plugins.listAutoloadPluginIds();
+    preferences.disabledPipelines = services.plugins
+      .listRegisteredPipelines()
+      .filter((record) => !record.enabled)
+      .map((record) => ({
+        pluginId: record.pluginId,
+        pipelineId: record.pipeline.id,
+        reason: record.disabledReason
+      }));
+    await services.storage.savePluginPreferences(preferences);
   }
 
   function newDocument(): void {
@@ -343,9 +362,41 @@ export function App() {
       return;
     }
     setStatus("Running diagnostics.");
-    const diagnostics = await services.diagnostics.run(activeDocument);
+    const diagnostics = [
+      ...(await services.diagnostics.run(activeDocument)),
+      ...pluginDiagnostics.map((diagnostic, index): Diagnostic => ({
+        id: diagnostic.id,
+        source: diagnostic.source,
+        severity: diagnostic.severity,
+        message: diagnostic.message,
+        languageId: activeDocument.languageId,
+        documentId: activeDocument.id,
+        documentVersion: activeDocument.version,
+        contributionId: diagnostic.pluginId,
+        pipelineId: diagnostic.pipelineId,
+        line: index,
+        column: 0
+      }))
+    ];
     upsertPopup(createDiagnosticsPopup(activeDocument, diagnostics), (popup) => popup.kind === "diagnostics");
     setStatus(`Diagnostics complete: ${diagnostics.length} result${diagnostics.length === 1 ? "" : "s"}.`);
+  }
+
+  async function togglePluginAutoload(pluginId: string, autoload: boolean): Promise<void> {
+    services.plugins.setAutoload(pluginId, autoload);
+    await persistPluginPreferences();
+    setPluginRevision((value) => value + 1);
+  }
+
+  async function setPipelineEnabled(pluginId: string, pipelineId: string, enabled: boolean): Promise<void> {
+    services.plugins.setPipelineEnabled(pluginId, pipelineId, enabled);
+    await persistPluginPreferences();
+    setPluginRevision((value) => value + 1);
+  }
+
+  function acknowledgePluginDiagnostic(id: string): void {
+    services.plugins.acknowledgePluginDiagnostic(id);
+    setPluginRevision((value) => value + 1);
   }
 
   async function runPipeline(pipelineId: string): Promise<void> {
@@ -631,13 +682,13 @@ export function App() {
             <Download size={16} />
             Download
           </button>
-          <button type="button" onClick={() => void runDiagnostics()} disabled={!activeDocument}>
+          <button type="button" class={hasDiagnosticsAttention ? "attention" : ""} onClick={() => void runDiagnostics()} disabled={!activeDocument}>
             <Bug size={16} />
-            Diagnostics
+            Diagnostics{hasDiagnosticsAttention ? " *" : ""}
           </button>
-          <button type="button" onClick={openPluginManager}>
+          <button type="button" class={hasPluginAttention ? "attention" : ""} onClick={openPluginManager}>
             <Puzzle size={16} />
-            Plugins
+            Plugins{hasPluginAttention ? " *" : ""}
           </button>
           <button type="button" onClick={openPipelineTrace} disabled={!lastTrace.length}>
             <ListChecks size={16} />
@@ -845,8 +896,13 @@ export function App() {
         documents={workspace.documents}
         activeDocument={activeDocument}
         pluginStates={pluginStates}
+        registeredPipelines={registeredPipelines}
+        pluginDiagnostics={pluginDiagnostics}
         luaActions={luaActions}
         resources={textForgeResources}
+        onTogglePluginAutoload={(pluginId, autoload) => void togglePluginAutoload(pluginId, autoload)}
+        onSetPipelineEnabled={(pluginId, pipelineId, enabled) => void setPipelineEnabled(pluginId, pipelineId, enabled)}
+        onAcknowledgePluginDiagnostic={acknowledgePluginDiagnostic}
         onRunLuaCommand={runLuaConsoleCommand}
         onRunActiveLuaDocument={runActiveLuaDocument}
         onRunSelectedLuaText={runSelectedLuaText}

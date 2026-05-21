@@ -27,6 +27,16 @@ describe("WorkspaceManager", () => {
     expect(workspace.listDocuments()[1].identity.badgeLabel).toBeTruthy();
   });
 
+  it("increments version on file rename", () => {
+    const workspace = new WorkspaceManager();
+    const doc = workspace.openDocument({ fileName: "a.txt", languageId: "text.plain", text: "one" });
+
+    const renamed = workspace.updateFileName(doc.id, "b.txt");
+
+    expect(renamed?.version).toBe(doc.version + 1);
+    expect(renamed?.fileName).toBe("b.txt");
+  });
+
   it("assigns unique badges when many documents are opened in sequence", () => {
     const workspace = new WorkspaceManager();
     for (let index = 0; index < 12; index += 1) {

@@ -1,4 +1,4 @@
-import { parseDocumentResult, resolveDocument, type ItmAttributeBag, type ItmDiagnostic, type ItmDocument, type ItmEntity, type ItmRelationship, type ItmSourceRange, type ResolvedItmDocument, type ResolvedItmEntity, type ResolvedItmRelationship } from "@textforge/itm";
+import { parseDocumentResult, parseDocumentResultAsync, resolveDocument, type ItmAttributeBag, type ItmDiagnostic, type ItmDocument, type ItmEntity, type ItmRelationship, type ItmSourceRange, type ItmSourceProvider, type ResolvedItmDocument, type ResolvedItmEntity, type ResolvedItmRelationship } from "@textforge/itm";
 import type { Diagnostic, GraphEdge, GraphModel, ItmPipelineValue, TextDocument, TreeNode } from "../domain/types";
 import { sourceRange } from "./source";
 
@@ -42,6 +42,35 @@ export function parseItmValue(
   };
 }
 
+export async function parseItmValueAsync(
+  text: string,
+  languageId = "text.itm",
+  options: ParseIndentedTreeOptions = {}
+): Promise<ItmPipelineValue> {
+  const parsed = await parseDocumentResultAsync(text, {
+    uri: options.currentFileName,
+    strict: false,
+    sourceProvider: createWorkspaceItmSourceProvider(options.includeDocuments || [])
+  });
+  const resolved = resolveDocument(parsed.value);
+  const diagnostics = parsed.diagnostics.map((diagnostic) => toTextForgeDiagnostic(diagnostic, text, languageId, options.currentDocumentId));
+
+  return {
+    kind: "model",
+    modelType: "model.itm",
+    document: parsed.value,
+    resolved,
+    diagnostics,
+    itmDiagnostics: parsed.diagnostics,
+    source: {
+      languageId,
+      fileName: options.currentFileName,
+      documentId: options.currentDocumentId,
+      text
+    }
+  };
+}
+
 export function parseIndentedTree(
   text: string,
   languageId = "text.itm",
@@ -62,6 +91,50 @@ export function parseIndentedTree(
   }
 
   return { nodes: roots, diagnostics, styleRules };
+}
+
+export async function parseIndentedTreeAsync(
+  text: string,
+  languageId = "text.itm",
+  options: ParseIndentedTreeOptions = {}
+): Promise<{ nodes: TreeNode[]; diagnostics: Diagnostic[]; styleRules: IttStyleRule[] }> {
+  const parsed = await parseItmValueAsync(text, languageId, options);
+  const styleRules = collectStyleRules(parsed.document);
+  const roots = sortEntities(parsed.resolved.entities.filter((entity) => !entity.parent)).map((entity) => itmEntityToTreeNode(entity, text));
+  const diagnostics = parsed.diagnostics || [];
+
+  applyTreeStyles(roots, styleRules);
+  if (roots[0]) {
+    Object.defineProperty(roots[0], "__itmStyleRules", {
+      value: styleRules,
+      enumerable: false,
+      configurable: true
+    });
+  }
+
+  return { nodes: roots, diagnostics, styleRules };
+}
+
+function createWorkspaceItmSourceProvider(documents: TextDocument[]): ItmSourceProvider {
+  return {
+    read(request) {
+      const normalizedTarget = normalizeIncludeKey(request.target);
+      const targetBase = normalizeIncludeKey(baseName(request.target));
+      const document = documents.find((candidate) => {
+        const keys = documentIncludeKeys(candidate);
+        return keys.includes(normalizedTarget) || keys.includes(targetBase);
+      });
+
+      if (!document) {
+        return undefined;
+      }
+
+      return {
+        uri: document.fileName,
+        text: document.text
+      };
+    }
+  };
 }
 
 export function indentedTreeToGraph(nodes: TreeNode[]): GraphModel {

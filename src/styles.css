@@ -48,6 +48,11 @@ button:hover,
   border-color: #7b8a9b;
 }
 
+button.attention {
+  border-color: #c05a2b;
+  box-shadow: 0 0 0 1px rgba(192, 90, 43, 0.2);
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;

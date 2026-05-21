@@ -112,6 +112,7 @@ export class WorkspaceManager {
     const updated = {
       ...document,
       fileName: nextFileName,
+      version: document.version + 1,
       dirty: true,
       updatedAt: new Date().toISOString()
     };
