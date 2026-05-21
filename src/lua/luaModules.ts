@@ -16,7 +16,6 @@ export const bundledLuaModules: Record<string, string> = {
   "tf.table": tfTable,
   "tf.stringx": tfStringx,
   "tf.itm": tfItm,
-  "tf.itt": tfItm,
   "tf.markdown": tfMarkdown,
   "tf.pipeline": tfPipeline,
   "tf.actions": tfActions,

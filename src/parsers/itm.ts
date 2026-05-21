@@ -54,7 +54,7 @@ export function parseIndentedTree(
 
   applyTreeStyles(roots, styleRules);
   if (roots[0]) {
-    Object.defineProperty(roots[0], "__ittStyleRules", {
+    Object.defineProperty(roots[0], "__itmStyleRules", {
       value: styleRules,
       enumerable: false,
       configurable: true
@@ -133,7 +133,7 @@ export function indentedTreeToGraph(nodes: TreeNode[]): GraphModel {
   }
 
   nodes.forEach((node, index) => visit(node, undefined, 0, index));
-  return { nodes: Array.from(graphNodes.values()), edges, directed: true, graph: { attrs: { ittStyleRules: styleRules } } };
+  return { nodes: Array.from(graphNodes.values()), edges, directed: true, graph: { attrs: { itmStyleRules: styleRules } } };
 }
 
 function collectStyleRules(document: ItmDocument): IttStyleRule[] {
@@ -342,10 +342,10 @@ function parseStyleDeclarations(text: string): Record<string, string> {
 
 function selectorTarget(selector: string): IttStyleRule["target"] {
   const trimmed = selector.trim();
-  if (trimmed === "=>") {
+  if (trimmed === "=>" || trimmed === "~>") {
     return "hierarchy-edge";
   }
-  if (trimmed === "->" || /^->\[[^\]]+\]$/.test(trimmed)) {
+  if (trimmed === "->" || /^->\[[^\]]+\]$/.test(trimmed) || trimmed.startsWith("@")) {
     return "cross-link";
   }
   return "node";
@@ -535,8 +535,8 @@ function pickStyle(attributes: Record<string, string>, keys: string[]): Record<s
 }
 
 function collectTreeStyleRules(nodes: TreeNode[]): IttStyleRule[] {
-  const root = nodes[0] as (TreeNode & { __ittStyleRules?: IttStyleRule[] }) | undefined;
-  return root?.__ittStyleRules || [];
+  const root = nodes[0] as (TreeNode & { __itmStyleRules?: IttStyleRule[] }) | undefined;
+  return root?.__itmStyleRules || [];
 }
 
 function edgeStyleForRules(styleRules: IttStyleRule[], target: IttStyleRule["target"], type?: string): Record<string, string> {
@@ -555,11 +555,18 @@ function edgeStyleForRules(styleRules: IttStyleRule[], target: IttStyleRule["tar
 
 function edgeSelectorMatches(selector: string, type?: string): boolean {
   const trimmed = selector.trim();
-  if (trimmed === "->") {
+  if (trimmed === "->" || trimmed === "~>" || trimmed === "=>") {
     return true;
   }
   const match = /^->\[([^\]]+)\]$/.exec(trimmed);
-  return Boolean(match && type && match[1].trim() === type);
+  if (match) {
+    return Boolean(type && match[1].trim() === type);
+  }
+  if (trimmed.startsWith("@")) {
+    const atMatch = /^@([^:]+)(?::(.+))?$/.exec(trimmed);
+    return Boolean(atMatch && type && atMatch[1].trim() === type);
+  }
+  return false;
 }
 
 function effectiveStyle(node: TreeNode): Record<string, string> {

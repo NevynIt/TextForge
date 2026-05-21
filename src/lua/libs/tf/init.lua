@@ -14,7 +14,6 @@ return {
   table = tablex,
   stringx = stringx,
   itm = itm,
-  itt = itm,
   markdown = markdown,
   pipeline = pipeline,
   actions = actions,

@@ -253,20 +253,6 @@ function pushInputTable(L: unknown, context: LuaExecutionContext): void {
     return 1;
   });
   lua.lua_setfield(L, -2, to_luastring("parse_itm"));
-  lua.lua_pushjsfunction(L, (state: unknown) => {
-    const input = currentInput(context);
-    if (input.kind !== "text") {
-      return lauxlib.luaL_error(state, to_luastring("input:parse_itm() requires text input."));
-    }
-    const parsed = parseIndentedTree(input.text, input.languageId, {
-      currentDocumentId: input.documentId,
-      currentFileName: input.fileName,
-      includeDocuments: context.request.documents || []
-    });
-    pushJsValue(state, parsed.nodes);
-    return 1;
-  });
-  lua.lua_setfield(L, -2, to_luastring("parse_itt"));
 
   lua.lua_pushjsfunction(L, (state: unknown) => {
     const input = currentInput(context);
@@ -295,12 +281,6 @@ function pushInputTable(L: unknown, context: LuaExecutionContext): void {
     return 1;
   });
   lua.lua_setfield(L, -2, to_luastring("emit_itm"));
-  lua.lua_pushjsfunction(L, (state: unknown) => {
-    const nodes = luaToJsValue(state, 2) as TreeNode[];
-    pushJsValue(state, { kind: "text", languageId: "text.itm", text: emitIndentedTree(nodes) });
-    return 1;
-  });
-  lua.lua_setfield(L, -2, to_luastring("emit_itt"));
 
   lua.lua_pushjsfunction(L, (state: unknown) => {
     const languageId = lua.lua_tojsstring(state, 2) || "text.plain";
@@ -384,15 +364,6 @@ function installConsoleGlobals(L: unknown): void {
     return 1;
   });
   lua.lua_setglobal(L, to_luastring("parse_itm"));
-
-  lua.lua_pushjsfunction(L, (state: unknown) => {
-    lua.lua_getglobal(state, to_luastring("input"));
-    lua.lua_getfield(state, -1, to_luastring("parse_itt"));
-    lua.lua_pushvalue(state, -2);
-    callLuaFunction(state, 1, 1);
-    return 1;
-  });
-  lua.lua_setglobal(L, to_luastring("parse_itt"));
 
   lua.lua_pushjsfunction(L, (state: unknown) => {
     lua.lua_getglobal(state, to_luastring("input"));
@@ -543,7 +514,7 @@ function currentInput(context: LuaExecutionContext): PipelineValue {
 }
 
 function runBuiltInPipelineStep(id: string, input: PipelineValue, context: LuaExecutionContext): PipelineValue {
-  if (id === "itm-to-tree" || id === "itt-to-tree") {
+  if (id === "itm-to-tree") {
     if (input.kind !== "text") {
       throw new Error("itm-to-tree requires text input.");
     }
@@ -554,7 +525,7 @@ function runBuiltInPipelineStep(id: string, input: PipelineValue, context: LuaEx
     });
     return { kind: "model", modelType: "model.tree", data: parsed.nodes, diagnostics: parsed.diagnostics };
   }
-  if (id === "itm-to-graph" || id === "itt-to-graph") {
+  if (id === "itm-to-graph") {
     const tree = runBuiltInPipelineStep("itm-to-tree", input, context);
     if (tree.kind !== "model" || tree.modelType !== "model.tree") {
       throw new Error("itm-to-graph could not produce a tree model.");

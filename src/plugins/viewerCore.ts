@@ -519,8 +519,8 @@ function highlightSource(text: string, languageId: string): string {
   if (languageId === "text.python") {
     return highlightByRules(text, pythonRules);
   }
-  if (languageId === "text.itm" || languageId === "text.indented-tree" || languageId === "text.itt") {
-    return highlightByRules(text, ittRules);
+  if (languageId === "text.itm" || languageId === "text.indented-tree") {
+    return highlightByRules(text, itmRules);
   }
   if (languageId === "text.csv") {
     return highlightByRules(text, delimitedRules);
@@ -627,7 +627,7 @@ const xmlRules: HighlightRule[] = [
   { className: "keyword", pattern: /\/?>/ }
 ];
 
-const ittRules: HighlightRule[] = [
+const itmRules: HighlightRule[] = [
   { className: "comment", pattern: /[|%][^\n\r]*/ },
   { className: "atom", pattern: /&[A-Za-z][A-Za-z0-9_-]*/ },
   { className: "keyword", pattern: /\[[^\]\n\r]+\]/ },

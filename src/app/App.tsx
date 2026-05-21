@@ -945,7 +945,7 @@ function extensionForLanguage(languageId: string): string {
   if (languageId === "text.csv") {
     return "csv";
   }
-  if (languageId === "text.itm" || languageId === "text.indented-tree" || languageId === "text.itt") {
+  if (languageId === "text.itm" || languageId === "text.indented-tree") {
     return "itm";
   }
   if (languageId === "text.javascript") {
@@ -961,7 +961,7 @@ function extensionForLanguage(languageId: string): string {
 }
 
 function isIndentedTextLanguage(languageId: string): boolean {
-  return languageId === "text.itm" || languageId === "text.indented-tree" || languageId === "text.itt";
+  return languageId === "text.itm" || languageId === "text.indented-tree";
 }
 
 function looksLikeJson(value: string): boolean {

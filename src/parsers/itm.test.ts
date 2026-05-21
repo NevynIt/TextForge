@@ -73,4 +73,16 @@ describe("Indented Tree parser", () => {
     expect(explicitRelationships[0]?.typeRef).toBe("depends_on");
     expect(parsed.resolved.entities.some((entity) => ["{", "pipeline:", "owner:", "lifecycle:"].includes(entity.label || ""))).toBe(false);
   });
+
+  it("parses style directives that use attribute selectors and multiline bodies", () => {
+    const parsed = parseItmValue(`%style [Task]
+{
+  fill: "#e8f1ff"
+}`);
+
+    expect(parsed.document.styles?.[0]?.selector.raw).toBe("[Task]");
+    expect(parsed.document.styles?.[0]?.selector.source).toBeTruthy();
+    expect(parsed.document.styles?.[0]?.sourceRange).toBeTruthy();
+    expect(parsed.diagnostics).toEqual([]);
+  });
 });

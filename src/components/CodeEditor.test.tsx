@@ -205,4 +205,24 @@ describe("CodeEditor", () => {
     expect(container.querySelector(".cm-editor")?.textContent).toContain("&root Root");
     expect(container.querySelector(".cm-editor")?.textContent).toContain("%style [Child]");
   });
+
+  it("folds multiline style directives that use attribute selectors", async () => {
+    const value = [
+      "%style {status=done}",
+      "{",
+      '  fill: "#eeeeee"',
+      "}"
+    ].join("\n");
+
+    const { container } = render(
+      <CodeEditor
+        value={value}
+        languageId="text.itm"
+        onChange={() => {}}
+        editorCommand={{ revision: 1, action: "fold-all" }}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelectorAll(".cm-foldPlaceholder").length).toBe(1));
+  });
 });

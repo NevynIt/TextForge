@@ -86,9 +86,9 @@ export function registerBaseLanguages(registry: LanguageRegistry): void {
       id: "text.itm",
       name: "Indented Text Model",
       parentId: "text",
-      extensions: [".itm", ".itt"],
+      extensions: [".itm"],
       mediaType: "text/plain",
-      aliases: ["text.indented-tree", "text.itt", "itm", "indented-tree"]
+      aliases: ["text.indented-tree", "itm", "indented-tree"]
     },
     {
       id: "text.json",

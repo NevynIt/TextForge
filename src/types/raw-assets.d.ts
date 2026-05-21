@@ -8,11 +8,6 @@ declare module "*.md?raw" {
   export default source;
 }
 
-declare module "*.itt?raw" {
-  const source: string;
-  export default source;
-}
-
 declare module "*.itm?raw" {
   const source: string;
   export default source;
