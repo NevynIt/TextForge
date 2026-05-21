@@ -725,6 +725,20 @@ button:disabled {
   overflow: auto;
 }
 
+.viewer-html .tf-source-bridge {
+  scroll-margin: 20px;
+}
+
+.viewer-html pre.tf-source-bridge,
+.viewer-html .tf-embedded-artifact.tf-source-bridge {
+  cursor: pointer;
+}
+
+.viewer-html .tf-source-selected {
+  outline: 2px solid #cf6f2a;
+  outline-offset: 2px;
+}
+
 .tf-embedded-artifact {
   margin: 16px 0;
   border: 1px solid #d8d4c8;

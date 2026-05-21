@@ -6,7 +6,7 @@ import { json } from "@codemirror/lang-json";
 import { javascript } from "@codemirror/lang-javascript";
 import { python } from "@codemirror/lang-python";
 import { xml } from "@codemirror/lang-xml";
-import { HighlightStyle, StreamLanguage, syntaxHighlighting, type StreamParser } from "@codemirror/language";
+import { HighlightStyle, StreamLanguage, foldAll, foldEffect, foldService, syntaxHighlighting, unfoldAll, type StreamParser } from "@codemirror/language";
 import { lua as luaLegacy } from "@codemirror/legacy-modes/mode/lua";
 import { Compartment, EditorState, Transaction } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
@@ -22,9 +22,15 @@ interface CodeEditorProps {
   onEditorReady?: (view: EditorView) => void;
   onSelectionChange?: (range: SourceRange, selectedText: string) => void;
   onSelectSourceRange?: (range: SourceRange) => void;
+  editorCommand?: CodeEditorCommand;
 }
 
-export function CodeEditor({ value, languageId, onChange, revealRange, onRevealHandled, onEditorReady, onSelectionChange, onSelectSourceRange }: CodeEditorProps) {
+export interface CodeEditorCommand {
+  revision: number;
+  action: "fold-all" | "unfold-all" | "fold-leading-directives";
+}
+
+export function CodeEditor({ value, languageId, onChange, revealRange, onRevealHandled, onEditorReady, onSelectionChange, onSelectSourceRange, editorCommand }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const languageCompartmentRef = useRef(new Compartment());
@@ -165,6 +171,20 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onRevealH
     onRevealHandledRef.current?.(revealRange.revision);
   }, [revealRange?.revision, revealRange?.from, revealRange?.to]);
 
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !editorCommand?.revision) {
+      return;
+    }
+    if (editorCommand.action === "fold-all") {
+      foldAll(view);
+    } else if (editorCommand.action === "fold-leading-directives") {
+      foldLeadingDirectives(view);
+    } else if (editorCommand.action === "unfold-all") {
+      unfoldAll(view);
+    }
+  }, [editorCommand?.revision]);
+
   return <div ref={containerRef} class="code-editor" />;
 }
 
@@ -192,7 +212,7 @@ function languageExtension(languageId: string) {
     return xml();
   }
   if (languageId === "text.itm" || languageId === "text.indented-tree" || languageId === "text.itt") {
-    return StreamLanguage.define(ittParser);
+    return [StreamLanguage.define(ittParser), foldService.of(itmFoldService)];
   }
   if (languageId === "text.csv") {
     return StreamLanguage.define(delimitedParser);
@@ -206,18 +226,48 @@ function languageExtension(languageId: string) {
 interface IttParserState {
   inAttributes: boolean;
   expectingValue: boolean;
+  directiveDepth: number;
+  directivePendingBlock: boolean;
 }
 
 const ittParser: StreamParser<IttParserState> = {
   startState() {
-    return { inAttributes: false, expectingValue: false };
+    return { inAttributes: false, expectingValue: false, directiveDepth: 0, directivePendingBlock: false };
   },
   token(stream, state) {
     if (stream.sol()) {
+      const trimmedLine = stream.string.trim();
+      if (state.directiveDepth > 0) {
+        state.directiveDepth = Math.max(0, state.directiveDepth + braceBalance(trimmedLine));
+        stream.skipToEnd();
+        return "comment";
+      }
+      if (state.directivePendingBlock) {
+        if (!trimmedLine) {
+          stream.skipToEnd();
+          return null;
+        }
+        if (trimmedLine.startsWith("{")) {
+          state.directivePendingBlock = false;
+          state.directiveDepth = Math.max(0, braceBalance(trimmedLine));
+          stream.skipToEnd();
+          return "comment";
+        }
+        state.directivePendingBlock = false;
+      }
       if (stream.eatSpace()) {
         return null;
       }
-      if (stream.match(/[|%].*/)) {
+      const remaining = stream.string.slice(stream.pos);
+      const trimmed = remaining.trim();
+      if (trimmed.startsWith("%")) {
+        state.directiveDepth = trimmed.includes("{") ? Math.max(0, braceBalance(trimmed)) : 0;
+        state.directivePendingBlock = !trimmed.includes("{");
+        stream.skipToEnd();
+        return "comment";
+      }
+      if (trimmed.startsWith("|")) {
+        stream.skipToEnd();
         return "comment";
       }
     }
@@ -279,6 +329,161 @@ const ittParser: StreamParser<IttParserState> = {
     return null;
   }
 };
+
+function itmFoldService(state: EditorState, from: number): { from: number; to: number } | null {
+  const line = state.doc.lineAt(from);
+  const directiveFold = directiveFoldRange(state, line.number)?.range;
+  if (directiveFold) {
+    return directiveFold;
+  }
+  const detailFold = detailFoldRange(state, line.number);
+  if (detailFold) {
+    return detailFold;
+  }
+  return branchFoldRange(state, line.number);
+}
+
+function directiveFoldRange(state: EditorState, lineNumber: number): { range: { from: number; to: number } | null; endLineNumber: number } | null {
+  const line = state.doc.line(lineNumber);
+  const trimmed = line.text.trim();
+  if (!trimmed.startsWith("%")) {
+    return null;
+  }
+  if (!trimmed.includes("{")) {
+    const next = nextNonEmptyLine(state, lineNumber + 1);
+    if (!next || !next.text.trim().startsWith("{")) {
+      return { range: null, endLineNumber: lineNumber };
+    }
+    if (braceBalance(next.text.trim()) <= 0) {
+      return { range: { from: line.to, to: next.to }, endLineNumber: next.number };
+    }
+    const endLineNumber = findDirectiveBlockEnd(state, next.number, braceBalance(next.text.trim()));
+    return {
+      range: endLineNumber > lineNumber ? { from: line.to, to: state.doc.line(endLineNumber).to } : null,
+      endLineNumber
+    };
+  }
+  const initialBalance = braceBalance(trimmed);
+  if (initialBalance <= 0) {
+    return { range: null, endLineNumber: lineNumber };
+  }
+  const endLineNumber = findDirectiveBlockEnd(state, lineNumber, initialBalance);
+  return {
+    range: endLineNumber > lineNumber ? { from: line.to, to: state.doc.line(endLineNumber).to } : null,
+    endLineNumber
+  };
+}
+
+function findDirectiveBlockEnd(state: EditorState, startLineNumber: number, initialBalance: number): number {
+  let balance = initialBalance;
+  let lineNumber = startLineNumber;
+  while (balance > 0 && lineNumber < state.doc.lines) {
+    lineNumber += 1;
+    balance += braceBalance(state.doc.line(lineNumber).text.trim());
+  }
+  return lineNumber;
+}
+
+function detailFoldRange(state: EditorState, lineNumber: number): { from: number; to: number } | null {
+  const line = state.doc.line(lineNumber);
+  if (!line.text.trim().startsWith("|")) {
+    return null;
+  }
+  let endLineNumber = lineNumber;
+  while (endLineNumber + 1 <= state.doc.lines && state.doc.line(endLineNumber + 1).text.trim().startsWith("|")) {
+    endLineNumber += 1;
+  }
+  return endLineNumber > lineNumber ? { from: line.to, to: state.doc.line(endLineNumber).to } : null;
+}
+
+function branchFoldRange(state: EditorState, lineNumber: number): { from: number; to: number } | null {
+  const line = state.doc.line(lineNumber);
+  const trimmed = line.text.trim();
+  if (!trimmed || trimmed.startsWith("%") || trimmed.startsWith("|")) {
+    return null;
+  }
+  const baseIndent = lineIndent(line.text);
+  let endLineNumber = lineNumber;
+  for (let cursor = lineNumber + 1; cursor <= state.doc.lines; cursor += 1) {
+    const candidate = state.doc.line(cursor);
+    const candidateTrimmed = candidate.text.trim();
+    if (!candidateTrimmed) {
+      if (endLineNumber > lineNumber) {
+        endLineNumber = cursor;
+      }
+      continue;
+    }
+    if (lineIndent(candidate.text) <= baseIndent) {
+      break;
+    }
+    endLineNumber = cursor;
+  }
+  return endLineNumber > lineNumber ? { from: line.to, to: state.doc.line(endLineNumber).to } : null;
+}
+
+function nextNonEmptyLine(state: EditorState, lineNumber: number) {
+  for (let cursor = lineNumber; cursor <= state.doc.lines; cursor += 1) {
+    const line = state.doc.line(cursor);
+    if (line.text.trim()) {
+      return line;
+    }
+  }
+  return null;
+}
+
+function lineIndent(text: string): number {
+  const match = /^\s*/.exec(text);
+  return match ? match[0].length : 0;
+}
+
+function foldLeadingDirectives(view: EditorView): void {
+  let lineNumber = 1;
+  let startLineNumber: number | null = null;
+  let endLineNumber: number | null = null;
+  while (lineNumber <= view.state.doc.lines) {
+    const line = view.state.doc.line(lineNumber);
+    const trimmed = line.text.trim();
+    if (!trimmed) {
+      if (startLineNumber !== null) {
+        endLineNumber = lineNumber;
+      }
+      lineNumber += 1;
+      continue;
+    }
+    if (!trimmed.startsWith("%")) {
+      break;
+    }
+    if (startLineNumber === null) {
+      startLineNumber = lineNumber;
+    }
+    const directive = directiveFoldRange(view.state, lineNumber);
+    if (!directive) {
+      break;
+    }
+    endLineNumber = directive.endLineNumber;
+    lineNumber = directive.endLineNumber + 1;
+  }
+  if (startLineNumber !== null && endLineNumber !== null && endLineNumber > startLineNumber) {
+    view.dispatch({
+      effects: foldEffect.of({
+        from: view.state.doc.line(startLineNumber).to,
+        to: view.state.doc.line(endLineNumber).to
+      })
+    });
+  }
+}
+
+function braceBalance(text: string): number {
+  let balance = 0;
+  for (const char of text) {
+    if (char === "{") {
+      balance += 1;
+    } else if (char === "}") {
+      balance -= 1;
+    }
+  }
+  return balance;
+}
 
 const textForgeHighlightStyle = HighlightStyle.define([
   { tag: tags.atom, color: "#7b4d00", fontWeight: "600" },

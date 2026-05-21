@@ -13,7 +13,7 @@ const forbiddenTokens = [
 ];
 const remoteReferencePattern = /\b(?:https?:)?\/\//i;
 const scannedExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".html", ".json", ".css"]);
-const ignoredDirs = new Set(["node_modules", "dist", ".git", "coverage"]);
+const ignoredDirs = new Set(["node_modules", "dist", ".git", "coverage", "external"]);
 
 function extensionOf(fileName) {
   const index = fileName.lastIndexOf(".");

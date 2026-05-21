@@ -96,6 +96,8 @@ export function ViewerContent({
         toolbarAction={toolbarAction}
         onSearchStateChange={onSearchStateChange}
         onOpenSvgArtifact={onOpenSvgArtifact}
+        sourceSelection={sourceSelection}
+        onSelectSourceRange={onSelectSourceRange}
       />
     );
   }
@@ -347,7 +349,9 @@ function HtmlView({
   searchCommand,
   toolbarAction,
   onSearchStateChange,
-  onOpenSvgArtifact
+  onOpenSvgArtifact,
+  sourceSelection,
+  onSelectSourceRange
 }: {
   html: string;
   query: string;
@@ -357,13 +361,17 @@ function HtmlView({
   toolbarAction?: ViewerToolbarAction;
   onSearchStateChange?: (state: { count: number; index: number }) => void;
   onOpenSvgArtifact?: (svg: string, title: string) => void;
+  sourceSelection?: VisualSelection;
+  onSelectSourceRange?: (range: SourceRange) => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const openSvgArtifactRef = useRef(onOpenSvgArtifact);
+  const selectSourceRangeRef = useRef(onSelectSourceRange);
   const [findState, setFindState] = useState<FindState>({ count: 0, activeIndex: -1, markers: [] });
   const theme = safeClassName(stringSetting(settings.readingTheme, "light"));
   const width = safeClassName(stringSetting(settings.contentWidth, "normal"));
   openSvgArtifactRef.current = onOpenSvgArtifact;
+  selectSourceRangeRef.current = onSelectSourceRange;
 
   useEffect(() => {
     if (!ref.current) {
@@ -371,14 +379,23 @@ function HtmlView({
     }
     ref.current.innerHTML = html;
     enhanceHtmlHeadings(ref.current);
-    enhanceMarkdownArtifacts(ref.current, (svg, title) => openSvgArtifactRef.current?.(svg, title));
+    enhanceMarkdownArtifacts(
+      ref.current,
+      (svg, title) => openSvgArtifactRef.current?.(svg, title),
+      (range) => selectSourceRangeRef.current?.(range)
+    );
     const matches = highlightTextNodes(ref.current, query);
     setFindState({
       count: matches.length,
       activeIndex: matches.length ? 0 : -1,
       markers: findMarkers(matches, ref.current)
     });
+    applyMarkdownSourceSelection(ref.current, sourceSelection?.sourceRange);
   }, [html, query]);
+
+  useEffect(() => {
+    applyMarkdownSourceSelection(ref.current, sourceSelection?.sourceRange);
+  }, [sourceSelection?.revision, sourceSelection?.sourceRange?.from, sourceSelection?.sourceRange?.to]);
 
   useEffect(() => {
     updateActiveFindMatch(ref.current, findState.activeIndex);
@@ -2888,6 +2905,39 @@ function sourceRangeSpan(range: SourceRange | undefined): number {
   return range ? Math.max(0, range.to - range.from) : Number.POSITIVE_INFINITY;
 }
 
+function applyMarkdownSourceSelection(root: HTMLElement | null, range: SourceRange | undefined): void {
+  if (!root) {
+    return;
+  }
+  root.querySelectorAll(".tf-source-selected").forEach((element) => element.classList.remove("tf-source-selected"));
+  if (!range) {
+    return;
+  }
+  const match = Array.from(root.querySelectorAll<HTMLElement>(".tf-source-bridge"))
+    .map((element) => ({ element, range: elementSourceRange(element) }))
+    .filter((entry): entry is { element: HTMLElement; range: SourceRange } => Boolean(entry.range && sourceRangesTouch(entry.range, range)))
+    .sort((left, right) => sourceRangeSpan(left.range) - sourceRangeSpan(right.range))[0];
+  if (!match) {
+    return;
+  }
+  match.element.classList.add("tf-source-selected");
+  match.element.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+}
+
+function elementSourceRange(element: HTMLElement): SourceRange | null {
+  const from = Number.parseInt(element.dataset.sourceFrom || "", 10);
+  const to = Number.parseInt(element.dataset.sourceTo || "", 10);
+  if (!Number.isFinite(from) || !Number.isFinite(to)) {
+    return null;
+  }
+  return {
+    from,
+    to,
+    line: 0,
+    column: 0
+  };
+}
+
 interface InspectorItem {
   kind: string;
   title: string;
@@ -4166,7 +4216,11 @@ function enhanceHtmlHeadings(root: HTMLElement): void {
   });
 }
 
-function enhanceMarkdownArtifacts(root: HTMLElement, onOpenSvgArtifact?: (svg: string, title: string) => void): void {
+function enhanceMarkdownArtifacts(
+  root: HTMLElement,
+  onOpenSvgArtifact?: (svg: string, title: string) => void,
+  onSelectSourceRange?: (range: SourceRange) => void
+): void {
   root.querySelectorAll<HTMLElement>(".tf-embedded-artifact").forEach((artifact) => {
     const body = artifact.querySelector<HTMLElement>(".tf-artifact-body");
     const toolbar = artifact.querySelector<HTMLElement>(".tf-artifact-toolbar");
@@ -4241,6 +4295,27 @@ function enhanceMarkdownArtifacts(root: HTMLElement, onOpenSvgArtifact?: (svg: s
     scheduleFit();
     artifact.querySelectorAll<HTMLButtonElement>("[data-artifact-action]").forEach((button) => {
       button.addEventListener("click", () => handleArtifactAction(button.dataset.artifactAction || "", artifact, body, svg, view, apply, onOpenSvgArtifact));
+    });
+  });
+  root.querySelectorAll<HTMLElement>(".tf-source-bridge").forEach((element) => {
+    if (element.dataset.sourceBridgeEnhanced === "true") {
+      return;
+    }
+    element.dataset.sourceBridgeEnhanced = "true";
+    element.addEventListener("click", (event) => {
+      if (!(event.ctrlKey || event.metaKey)) {
+        return;
+      }
+      if (event.target instanceof Element && event.target.closest("button, a")) {
+        return;
+      }
+      const range = elementSourceRange(element);
+      if (!range) {
+        return;
+      }
+      event.preventDefault();
+      event.stopPropagation();
+      onSelectSourceRange?.(range);
     });
   });
 }

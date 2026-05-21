@@ -14,6 +14,7 @@
     "test:smoke": "vitest run src/app/App.smoke.test.tsx --environment jsdom",
     "test:security": "vitest run src/security.verify.test.js",
     "verify:file": "node scripts/verify-file-build.mjs",
+    "verify:browser-no-network": "node scripts/browser-no-network-smoke.mjs",
     "verify:security": "node scripts/verify-security.mjs",
     "check": "npm run test && npm run build && npm run verify:file && npm run verify:security"
   },

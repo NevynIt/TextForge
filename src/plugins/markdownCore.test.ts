@@ -106,4 +106,45 @@ describe("markdownCore", () => {
     expect(result.html).not.toContain("TEXTFORGE_ARTIFACT");
     expect(result.html).not.toContain("TEXTFORGE_INLINE_MATH");
   });
+
+  it("emits source bridge metadata for embedded diagrams and fenced code blocks", async () => {
+    renderMock.mockImplementation(async (_id, source) => ({ svg: `<svg data-rendered="${source}"></svg>` }));
+
+    const { default: plugin } = await import("./markdownCore");
+    const transformer = plugin.transformers?.find((item) => item.id === "markdown-to-html");
+
+    expect(transformer).toBeDefined();
+
+    const result = await transformer!.transform(
+      {
+        kind: "text",
+        languageId: "text.markdown",
+        text: [
+          "```mermaid",
+          "graph TD",
+          "  A --> B",
+          "```",
+          "",
+          "```js",
+          "const answer = 42;",
+          "```"
+        ].join("\n")
+      },
+      {
+        runtime: {
+          load: async (_id, loader) => loader()
+        }
+      }
+    );
+
+    expect(result.kind).toBe("html");
+    if (result.kind !== "html") {
+      throw new Error("Expected HTML result.");
+    }
+
+    expect(result.html).toContain('class="tf-embedded-artifact tf-source-bridge"');
+    expect(result.html).toMatch(/data-source-from="\d+" data-source-to="\d+"/);
+    expect(result.html).toContain('data-source-kind="code-block"');
+    expect(result.html).toContain('class="hljs language-js tf-source-bridge"');
+  });
 });

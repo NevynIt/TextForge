@@ -1,22 +1,29 @@
 import type { DocumentIdentity, TextDocument } from "../domain/types";
 import { createId } from "./id";
+import { createUniqueDocumentIdentity, documentIdentityForShapezCode, isValidShapezOneLayerCode } from "./shapezBadges";
 
 export class WorkspaceManager {
   private records = new Map<string, TextDocument>();
   private order: string[] = [];
   private activeDocumentId: string | null = null;
+  private openSequence = 0;
 
   openDocument(input: Partial<TextDocument> & Pick<TextDocument, "text" | "languageId">): TextDocument {
     const now = new Date().toISOString();
     const id = input.id || createId("doc");
+    const fileName = input.fileName || "untitled.txt";
+    const languageId = input.languageId || "text.plain";
+    const existing = existingShapeCodes(this.records.values());
+    const sequence = this.openSequence;
+    this.openSequence += 1;
     const document: TextDocument = {
       id,
-      fileName: input.fileName || "untitled.txt",
-      languageId: input.languageId || "text.plain",
+      fileName,
+      languageId,
       text: input.text || "",
       version: input.version || 1,
       dirty: input.dirty ?? false,
-      identity: normalizeDocumentIdentity(input.identity, id),
+      identity: normalizeDocumentIdentity(input.identity, documentIdentitySeed({ id, fileName, languageId }, sequence), existing),
       createdAt: input.createdAt || now,
       updatedAt: input.updatedAt || now
     };
@@ -142,13 +149,26 @@ export class WorkspaceManager {
   restore(documents: TextDocument[], activeDocumentId?: string): void {
     this.records.clear();
     this.order = [];
-    for (const document of documents) {
+    const existing = new Set<string>();
+    documents.forEach((document, index) => {
       this.records.set(document.id, {
         ...document,
-        identity: normalizeDocumentIdentity(document.identity, document.id)
+        identity: normalizeDocumentIdentity(
+          document.identity,
+          documentIdentitySeed(
+            {
+              id: document.id,
+              fileName: document.fileName || "untitled.txt",
+              languageId: document.languageId || "text.plain"
+            },
+            index
+          ),
+          existing
+        )
       });
       this.order.push(document.id);
-    }
+    });
+    this.openSequence = documents.length;
     this.activeDocumentId = activeDocumentId && this.records.has(activeDocumentId) ? activeDocumentId : this.order[0] || null;
   }
 
@@ -161,46 +181,35 @@ export class WorkspaceManager {
 
 }
 
-const shapeCodes = ["C", "R", "W", "S"];
-const shapeColorCodes = ["r", "g", "b", "y", "p", "c", "u", "w"];
-const identityPalette = ["#e35757", "#5aa36f", "#4c78c8", "#d7a12f", "#8b67c7", "#4bb3b4", "#bfc4ca", "#ffffff"];
-
-export function createDocumentIdentity(seed: string): DocumentIdentity {
-  const source = seed || createId("identity");
-  let hash = 0;
-  for (let index = 0; index < source.length; index += 1) {
-    hash = (hash * 31 + source.charCodeAt(index)) >>> 0;
+function normalizeDocumentIdentity(identity: DocumentIdentity | undefined, seed: string, existing: Set<string>): DocumentIdentity {
+  const preferredCode = identity?.shapeCode || identity?.badgeLabel;
+  if (isValidShapezOneLayerCode(preferredCode) && !existing.has(preferredCode)) {
+    existing.add(preferredCode);
+    return {
+      ...identity,
+      ...documentIdentityForShapezCode(preferredCode),
+      badgeLabel: preferredCode,
+      badgeKind: "shapez-one-layer",
+      shapeCode: preferredCode
+    };
   }
-  const shapeCode = createShapeCode(hash);
-  return {
-    color: identityPalette[hash % identityPalette.length],
-    badgeLabel: shapeCode,
-    badgeKind: "shapez-one-layer",
-    shapeCode
-  };
+  return createUniqueDocumentIdentity(seed, existing, preferredCode);
 }
 
-function normalizeDocumentIdentity(identity: DocumentIdentity | undefined, seed: string): DocumentIdentity {
-  if (identity?.shapeCode) {
-    return identity;
+function existingShapeCodes(documents: Iterable<TextDocument>): Set<string> {
+  const existing = new Set<string>();
+  for (const document of documents) {
+    const code = document.identity?.shapeCode || document.identity?.badgeLabel;
+    if (isValidShapezOneLayerCode(code)) {
+      existing.add(code);
+    }
   }
-  const generated = createDocumentIdentity(seed);
-  return {
-    ...generated,
-    color: identity?.color || generated.color,
-    badgeKind: "shapez-one-layer"
-  };
+  return existing;
 }
 
-function createShapeCode(seed: number): string {
-  let value = seed || 1;
-  const quadrants: string[] = [];
-  for (let index = 0; index < 4; index += 1) {
-    value = Math.imul(value ^ (index + 17), 2654435761) >>> 0;
-    const shape = shapeCodes[value % shapeCodes.length];
-    value = Math.imul(value ^ (index + 29), 1597334677) >>> 0;
-    const color = shapeColorCodes[value % shapeColorCodes.length];
-    quadrants.push(`${shape}${color}`);
-  }
-  return quadrants.join("");
+function documentIdentitySeed(
+  document: { id: string; fileName: string; languageId: string },
+  sequence: number
+): string {
+  return `${document.id}|${document.fileName}|${document.languageId}|${sequence}`;
 }

@@ -133,4 +133,76 @@ describe("CodeEditor", () => {
     await waitFor(() => expect(container.querySelector(".cm-editor")).toBeTruthy());
     expect(container.querySelector("output")?.textContent).toBe("1");
   });
+
+  it("folds and unfolds ITM directive and branch blocks on command", async () => {
+    const value = [
+      "%view dependencies",
+      "{",
+      "  pipeline:",
+      '    - select: "[Component]"',
+      "}",
+      "",
+      "&root Root",
+      "  child",
+      "  | detail line"
+    ].join("\n");
+
+    const { container, rerender } = render(
+      <CodeEditor
+        value={value}
+        languageId="text.itm"
+        onChange={() => {}}
+        editorCommand={{ revision: 1, action: "fold-all" }}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelectorAll(".cm-foldPlaceholder").length).toBeGreaterThan(0));
+
+    rerender(
+      <CodeEditor
+        value={value}
+        languageId="text.itm"
+        onChange={() => {}}
+        editorCommand={{ revision: 2, action: "unfold-all" }}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelectorAll(".cm-foldPlaceholder").length).toBe(0));
+  });
+
+  it("folds only the leading ITM directives on command", async () => {
+    const value = [
+      "%metadata",
+      "{",
+      "  title: Example",
+      "}",
+      "",
+      "%view dependencies",
+      "{",
+      "  pipeline:",
+      '    - select: "[Component]"',
+      "}",
+      "",
+      "&root Root",
+      "  child",
+      "",
+      "%style [Child]",
+      "{",
+      "  fill: #eee",
+      "}"
+    ].join("\n");
+
+    const { container } = render(
+      <CodeEditor
+        value={value}
+        languageId="text.itm"
+        onChange={() => {}}
+        editorCommand={{ revision: 1, action: "fold-leading-directives" }}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelectorAll(".cm-foldPlaceholder").length).toBe(1));
+    expect(container.querySelector(".cm-editor")?.textContent).toContain("&root Root");
+    expect(container.querySelector(".cm-editor")?.textContent).toContain("%style [Child]");
+  });
 });

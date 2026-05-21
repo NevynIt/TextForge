@@ -1,15 +1,20 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { shouldSuppressSvgSelection, ViewerContent, zoomStandaloneSvgViewAtPoint } from "../components/viewers";
-import type { ViewerResult } from "../domain/types";
+import type { ViewerResult, VisualSelection } from "../domain/types";
 import { parseItmValue } from "../parsers/itm";
 
 const svgNamespace = "ht" + "tp://www.w3.org/2000/svg";
 
-function renderHtmlViewer(html: string, toolbarAction?: { revision: number; action: string }) {
+function renderHtmlViewer(
+  html: string,
+  toolbarAction?: { revision: number; action: string },
+  sourceSelection?: VisualSelection,
+  onSelectSourceRange?: (range: { from: number; to: number; line: number; column: number }) => void
+) {
   const result: ViewerResult = {
     kind: "html",
     title: "Markdown",
@@ -23,6 +28,8 @@ function renderHtmlViewer(html: string, toolbarAction?: { revision: number; acti
       zoom={1}
       settings={{}}
       toolbarAction={toolbarAction}
+      sourceSelection={sourceSelection}
+      onSelectSourceRange={onSelectSourceRange}
     />
   );
 }
@@ -184,6 +191,57 @@ describe("App smoke", () => {
 
     expect(paragraphs[0]?.hidden).toBe(false);
     expect(paragraphs[1]?.hidden).toBe(false);
+  });
+
+  it("bridges markdown artifact and code block source selections", async () => {
+    const onSelectSourceRange = vi.fn();
+    const html = [
+      '<article class="rendered-markdown">',
+      '<div class="tf-embedded-artifact tf-source-bridge" data-source-from="10" data-source-to="24">',
+      '  <div class="tf-artifact-toolbar" style="display:none"></div>',
+      '  <div class="tf-artifact-body">',
+      `    <svg xmlns="${svgNamespace}" width="120" height="80" viewBox="0 0 120 80"><text x="10" y="20">Diagram</text></svg>`,
+      "  </div>",
+      "</div>",
+      '<pre class="tf-source-bridge" data-source-kind="code-block" data-source-from="30" data-source-to="48"><code>const answer = 42;</code></pre>',
+      "</article>"
+    ].join("");
+
+    const { container, rerender } = renderHtmlViewer(
+      html,
+      undefined,
+      {
+        documentId: "doc-1",
+        documentVersion: 1,
+        sourceRange: { from: 31, to: 31, line: 0, column: 0 },
+        revision: 1
+      },
+      onSelectSourceRange
+    );
+
+    await waitFor(() => expect(container.querySelector("pre.tf-source-bridge")?.classList.contains("tf-source-selected")).toBe(true));
+
+    const artifact = container.querySelector(".tf-embedded-artifact") as HTMLElement;
+    fireEvent.click(artifact, { ctrlKey: true });
+    expect(onSelectSourceRange).toHaveBeenCalledWith(expect.objectContaining({ from: 10, to: 24 }));
+
+    rerender(
+      <ViewerContent
+        result={{ kind: "html", title: "Markdown", html }}
+        query=""
+        zoom={1}
+        settings={{}}
+        sourceSelection={{
+          documentId: "doc-1",
+          documentVersion: 1,
+          sourceRange: { from: 12, to: 12, line: 0, column: 0 },
+          revision: 2
+        }}
+        onSelectSourceRange={onSelectSourceRange}
+      />
+    );
+
+    await waitFor(() => expect(container.querySelector(".tf-embedded-artifact")?.classList.contains("tf-source-selected")).toBe(true));
   });
 
   it("suppresses selection for non-text SVG drag targets", () => {

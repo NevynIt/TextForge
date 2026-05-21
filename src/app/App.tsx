@@ -25,7 +25,7 @@ import { WorkspaceManager } from "../core/workspaceManager";
 import type { Diagnostic, PipelineTraceStep, PipelineValue, PopupRecord, SourceRange, TextDocument, VisualSelection } from "../domain/types";
 import { pluginManifest } from "../plugins/manifest";
 import { serializeItmPipelineValue } from "../viewers/itm/itmSerialization";
-import { CodeEditor } from "../components/CodeEditor";
+import { CodeEditor, type CodeEditorCommand } from "../components/CodeEditor";
 import { DocumentBadge } from "../components/DocumentBadge";
 import { PopupHost } from "../components/PopupHost";
 import { LuaTransformService } from "../lua/luaTransformService";
@@ -78,6 +78,7 @@ export function App() {
   const [visualSelection, setVisualSelection] = useState<VisualSelection | undefined>();
   const [editorReveal, setEditorReveal] = useState<VisualSelection | undefined>();
   const [editorSelection, setEditorSelection] = useState<{ documentId: string; documentVersion: number; range: SourceRange; text: string } | undefined>();
+  const [editorCommand, setEditorCommand] = useState<CodeEditorCommand | undefined>();
   const popupsRef = useRef(popups);
   popupsRef.current = popups;
 
@@ -783,6 +784,31 @@ export function App() {
             </select>
           )}
         </div>
+        {activeDocument && isIndentedTextLanguage(activeDocument.languageId) ? (
+          <>
+            <button
+              type="button"
+              title="Fold top directives"
+              onClick={() => setEditorCommand((current) => ({ revision: (current?.revision || 0) + 1, action: "fold-leading-directives" }))}
+            >
+              Fold directives
+            </button>
+            <button
+              type="button"
+              title="Fold all ITM sections"
+              onClick={() => setEditorCommand((current) => ({ revision: (current?.revision || 0) + 1, action: "fold-all" }))}
+            >
+              Fold all
+            </button>
+            <button
+              type="button"
+              title="Unfold all ITM sections"
+              onClick={() => setEditorCommand((current) => ({ revision: (current?.revision || 0) + 1, action: "unfold-all" }))}
+            >
+              Unfold all
+            </button>
+          </>
+        ) : null}
         <span class="document-status">
           {activeDocument ? `${activeDocument.languageId} - v${activeDocument.version} - ${activeDocument.dirty ? "dirty" : "clean"}` : "No document"}
         </span>
@@ -799,6 +825,7 @@ export function App() {
               onRevealHandled={clearHandledEditorReveal}
               onSelectionChange={updateEditorSelection}
               onSelectSourceRange={(range) => selectSourceRange(activeDocument.id, range)}
+              editorCommand={editorCommand}
               revealRange={
                 editorReveal?.documentId === activeDocument.id && editorReveal.documentVersion === activeDocument.version
                   ? { ...editorReveal.sourceRange, revision: editorReveal.revision }
@@ -931,6 +958,10 @@ function extensionForLanguage(languageId: string): string {
     return "lua";
   }
   return "txt";
+}
+
+function isIndentedTextLanguage(languageId: string): boolean {
+  return languageId === "text.itm" || languageId === "text.indented-tree" || languageId === "text.itt";
 }
 
 function looksLikeJson(value: string): boolean {

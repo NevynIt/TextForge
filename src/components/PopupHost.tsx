@@ -1,5 +1,5 @@
 import type { JSX } from "preact";
-import { useState } from "preact/hooks";
+import { useEffect, useRef, useState } from "preact/hooks";
 import {
   Activity,
   ArrowRight,
@@ -486,20 +486,50 @@ type WindowLayoutTarget = "top-left" | "top-right" | "bottom-left" | "bottom-rig
 
 function WindowQuadrantMenu({ popupId, onUpdate }: { popupId: string; onUpdate: PopupHostProps["onUpdate"] }) {
   const [open, setOpen] = useState(false);
+  const closeTimerRef = useRef<number | null>(null);
+
+  useEffect(() => () => {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+    }
+  }, []);
+
+  function cancelClose(): void {
+    if (closeTimerRef.current !== null) {
+      window.clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }
+
+  function scheduleClose(): void {
+    cancelClose();
+    closeTimerRef.current = window.setTimeout(() => {
+      closeTimerRef.current = null;
+      setOpen(false);
+    }, 350);
+  }
+
   function apply(layout: WindowLayoutTarget): void {
     onUpdate(popupId, layoutPatch(layout));
+    cancelClose();
     setOpen(false);
   }
 
   return (
     <div
       class={`window-layout-menu ${open ? "open" : ""}`}
-      onMouseEnter={() => setOpen(true)}
-      onMouseLeave={() => setOpen(false)}
-      onFocusIn={() => setOpen(true)}
+      onMouseEnter={() => {
+        cancelClose();
+        setOpen(true);
+      }}
+      onMouseLeave={scheduleClose}
+      onFocusIn={() => {
+        cancelClose();
+        setOpen(true);
+      }}
       onFocusOut={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setOpen(false);
+          scheduleClose();
         }
       }}
     >

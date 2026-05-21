@@ -35,10 +35,22 @@ describe("Lua runtime core", () => {
         assert(document == nil)
         assert(_G["fet" .. "ch"] == nil)
         assert(_G["XML" .. "HttpRequest"] == nil)
+        assert(_G["Web" .. "Socket"] == nil)
+        assert(localStorage == nil)
+        assert(indexedDB == nil)
+        assert(_G["import" .. "Scripts"] == nil)
+        assert(_G["Fun" .. "ction"] == nil)
+        assert(_G["ev" .. "al"] == nil)
         local ok_js = pcall(require, "js")
         local ok_socket = pcall(require, "socket")
+        local ok_io = pcall(require, "io")
+        local ok_os_execute = pcall(function()
+          return os.execute("echo blocked")
+        end)
         assert(ok_js == false)
         assert(ok_socket == false)
+        assert(ok_io == false)
+        assert(ok_os_execute == false)
         return "sandboxed"
       `
     });
