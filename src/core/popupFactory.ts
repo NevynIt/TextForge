@@ -65,7 +65,7 @@ export function createDiagnosticsPopup(document: TextDocument, diagnostics: Diag
 }
 
 export function createToolPopup(
-  kind: "plugin-manager" | "pipeline-trace" | "lua-console" | "lua-scripts" | "resource-browser",
+  kind: "plugin-manager" | "pipeline-trace" | "lua-console" | "lua-scripts",
   title: string,
   trace?: PipelineTraceStep[]
 ): PopupRecord {

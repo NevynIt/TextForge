@@ -367,7 +367,7 @@ export interface PipelineRunResult {
 
 export interface PopupRecord {
   id: string;
-  kind: "viewer" | "diagnostics" | "plugin-manager" | "pipeline-trace" | "lua-console" | "lua-scripts" | "resource-browser";
+  kind: "viewer" | "diagnostics" | "plugin-manager" | "pipeline-trace" | "lua-console" | "lua-scripts";
   title: string;
   documentId?: string;
   documentName?: string;

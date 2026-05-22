@@ -349,6 +349,57 @@ button:disabled {
   color: #6d7177;
 }
 
+.file-metadata-panel {
+  display: grid;
+  align-content: start;
+  gap: 16px;
+  min-height: 100%;
+  padding: 24px;
+  background:
+    linear-gradient(180deg, rgba(247, 244, 236, 0.96), rgba(238, 234, 223, 0.94)),
+    radial-gradient(circle at top right, rgba(102, 140, 128, 0.12), transparent 38%);
+}
+
+.file-metadata-panel header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.file-metadata-panel header span,
+.file-metadata-panel p,
+.file-metadata-panel dt {
+  color: #5f676c;
+}
+
+.file-metadata-panel dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.file-metadata-panel dl div {
+  display: grid;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid #d8d4c8;
+  border-radius: 10px;
+  background: rgba(255, 254, 250, 0.92);
+}
+
+.file-metadata-panel dd {
+  margin: 0;
+  color: #202225;
+  word-break: break-word;
+}
+
+.file-metadata-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
 .statusbar {
   min-height: 30px;
   padding: 6px 12px;
@@ -711,11 +762,6 @@ button:disabled {
   overflow: auto;
   min-height: 0;
   position: relative;
-}
-
-.popup-body.resource-browser-body {
-  display: grid;
-  overflow: hidden;
 }
 
 .viewer-content {
@@ -1780,152 +1826,6 @@ button:disabled {
   border-radius: 8px;
   background: #20272b;
   color: #f6f3e8;
-}
-
-.resource-browser-panel {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  height: 100%;
-  min-height: 0;
-  background: #f8f6ef;
-  overflow: hidden;
-}
-
-.resource-browser-layout {
-  display: grid;
-  grid-template-columns: minmax(220px, 0.8fr) minmax(320px, 1.2fr);
-  height: 100%;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.resource-list-pane {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-content: start;
-  gap: 12px;
-  min-height: 0;
-  overflow: auto;
-  padding: 14px;
-  border-right: 1px solid #d8d4c8;
-}
-
-.resource-group {
-  display: grid;
-  gap: 8px;
-  align-content: start;
-}
-
-.resource-group-toggle {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  width: 100%;
-  padding: 8px 10px;
-  border: 1px solid #d8d4c8;
-  border-radius: 8px;
-  background: #fffefa;
-  color: #202225;
-  text-align: left;
-  cursor: pointer;
-}
-
-.resource-group-toggle strong {
-  font-size: 12px;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: #4d5559;
-}
-
-.resource-group-toggle span {
-  min-width: 24px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: #e9e6da;
-  color: #5d6468;
-  font-size: 11px;
-  text-align: center;
-}
-
-.resource-group-toggle::before {
-  content: ">";
-  color: #636866;
-  font-size: 12px;
-}
-
-.resource-group-toggle.open::before {
-  content: "v";
-}
-
-.resource-group-list {
-  display: grid;
-  gap: 8px;
-}
-
-.resource-list-pane article {
-  margin: 0;
-}
-
-.resource-list-pane article button {
-  display: grid;
-  gap: 5px;
-  width: 100%;
-  padding: 11px;
-  border: 1px solid #d8d4c8;
-  border-radius: 8px;
-  background: #fffefa;
-  color: #202225;
-  text-align: left;
-  cursor: pointer;
-}
-
-.resource-list-pane article.active button {
-  border-color: #317a73;
-  box-shadow: 0 0 0 2px rgba(49, 122, 115, 0.16);
-}
-
-.resource-list-pane article span,
-.resource-list-pane article small {
-  color: #636866;
-}
-
-.resource-preview {
-  display: grid;
-  grid-template-rows: auto 1fr;
-  min-width: 0;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.resource-preview header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border-bottom: 1px solid #d8d4c8;
-  background: #fffefa;
-}
-
-.resource-preview header span {
-  color: #636866;
-  font-size: 12px;
-}
-
-.resource-preview-body {
-  overflow: auto;
-  min-height: 0;
-}
-
-.resource-preview pre {
-  margin: 0;
-  overflow: visible;
-  padding: 14px;
-  background: #fbfbf8;
-  color: #202225;
-  font: 12px/1.45 Consolas, "Liberation Mono", monospace;
-  white-space: pre-wrap;
 }
 
 .trace-list li div {

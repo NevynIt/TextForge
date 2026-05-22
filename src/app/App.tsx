@@ -40,6 +40,7 @@ export function App() {
   const allDocuments = services.workspace.listAllTextFileViews();
   const activeDocument = services.workspace.getActiveDocument();
   const activeEntry = workspace.selectedEntryId ? services.workspace.getEntry(workspace.selectedEntryId) : undefined;
+  const selectedBinaryFile = activeEntry?.kind === "file" && activeEntry.fileKind === "binary" ? activeEntry : undefined;
   const pipelines = activeDocument ? services.plugins.listPipelinesForLanguage(activeDocument.languageId) : [];
   const pluginStates = useMemo(() => services.plugins.listPluginStates(), [services, pluginRevision]);
   const registeredPipelines = useMemo(() => services.plugins.listRegisteredPipelines(), [services, pluginRevision]);
@@ -383,8 +384,8 @@ export function App() {
     }
     const terminalStep = result.trace[result.trace.length - 1];
     if (result.status === "available" && result.value && terminalStep?.contributionKind === "transformer") {
-      const output = services.workspace.openDocument(pipelineValueToDocument(result.value));
-      commitWorkspace(`${pipeline?.name || pipelineId} opened as ${output.fileName}.`);
+      const output = openGeneratedValue(result.value, pipeline?.name || pipelineId);
+      commitWorkspace(`${pipeline?.name || pipelineId} created ${output.path}.`);
       return;
     }
     upsertPopup(
@@ -569,9 +570,41 @@ export function App() {
     upsertPopup(createDiagnosticsPopup(document, diagnostics), (popup) => popup.kind === "diagnostics" && popup.documentId === document.id);
   }
 
+  function openGeneratedValue(value: PipelineValue, pipelineName: string): { path: string } {
+    const folder = services.workspace.ensureFolder(`/generated/${safeGeneratedFolderName(pipelineName)}`, "generated");
+    const document = pipelineValueToDocument(value);
+    const created = services.workspace.createTextFile(
+      folder.id,
+      document.fileName || `generated.${extensionForLanguage(document.languageId)}`,
+      document.text,
+      document.languageId,
+      { origin: "generated", dirty: false }
+    );
+    services.workspace.selectEntry(created.id);
+    if (value.kind === "html") {
+      setPopups((items) => [
+        ...items,
+        createViewerPopup(services.workspace.getDocument(created.id)!, { kind: "html", title: created.name, html: value.html })
+      ]);
+      return { path: created.path };
+    }
+    if (value.kind === "svg") {
+      setPopups((items) => [
+        ...items,
+        createViewerPopup(
+          services.workspace.getDocument(created.id)!,
+          { kind: "svg", title: created.name, svg: value.svg, capabilities: { zoom: true, pan: true, search: true, export: true } }
+        )
+      ]);
+      return { path: created.path };
+    }
+    services.workspace.openFile(created.id);
+    return { path: created.path };
+  }
+
   function openLuaResult(value: PipelineValue): void {
-    const document = services.workspace.openDocument(pipelineValueToDocument(value));
-    commitWorkspace(`Opened Lua result as ${document.fileName}.`);
+    const output = openGeneratedValue(value, "lua-result");
+    commitWorkspace(`Created ${output.path} from Lua output.`);
   }
 
   function openTraceStepDocument(_popupId: string, step: PipelineTraceStep): void {
@@ -783,7 +816,41 @@ export function App() {
           />
         ) : null}
         <section class="editor-pane">
-          {activeDocument ? (
+          {selectedBinaryFile ? (
+            <section class="file-metadata-panel">
+              <header>
+                <strong>{selectedBinaryFile.name}</strong>
+                <span>{selectedBinaryFile.mediaType || "application/octet-stream"}</span>
+              </header>
+              <dl>
+                <div>
+                  <dt>Path</dt>
+                  <dd>{selectedBinaryFile.path}</dd>
+                </div>
+                <div>
+                  <dt>Size</dt>
+                  <dd>{formatFileSize(selectedBinaryFile.size)}</dd>
+                </div>
+                <div>
+                  <dt>Origin</dt>
+                  <dd>{selectedBinaryFile.origin}</dd>
+                </div>
+                <div>
+                  <dt>Updated</dt>
+                  <dd>{new Date(selectedBinaryFile.updatedAt).toLocaleString()}</dd>
+                </div>
+              </dl>
+              <p>Binary files are stored in the workspace and can be exported, but no editor is available for this type yet.</p>
+              <div class="file-metadata-actions">
+                <button type="button" onClick={() => void handleExportEntry(selectedBinaryFile.id)}>
+                  Download
+                </button>
+                <button type="button" onClick={() => handleSelectEntry(selectedBinaryFile.parentId)}>
+                  Reveal Parent Folder
+                </button>
+              </div>
+            </section>
+          ) : activeDocument ? (
             <CodeEditor
               key={activeDocument.id}
               value={activeDocument.text}
@@ -926,6 +993,20 @@ function extensionForLanguage(languageId: string): string {
     return "lua";
   }
   return "txt";
+}
+
+function formatFileSize(size: number): string {
+  if (size < 1024) {
+    return `${size} B`;
+  }
+  if (size < 1024 * 1024) {
+    return `${(size / 1024).toFixed(1)} KB`;
+  }
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function safeGeneratedFolderName(name: string): string {
+  return name.toLowerCase().replace(/[^a-z0-9._-]+/g, "-").replace(/^-+|-+$/g, "") || "generated";
 }
 
 
