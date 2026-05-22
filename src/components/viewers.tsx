@@ -13,7 +13,7 @@ import { escapeHtml } from "../parsers/source";
 import { serializeItmPipelineDocument } from "../viewers/itm/itmSerialization";
 import { countEntities, entityTopic, getEntityAttributes, getEntityDescription, getEntityId, getEntityLabel, getEntityStyleRecord, getEntityTags, getEntityType, getOutgoingRelationships, getRelationshipId, getRelationshipLabel, getRelationshipTargetId, getRootEntities, getSourceRange, projectItmGraph, sortEntities, stringifyAttributeValue, type ItmGraphViewEdge, type ItmGraphViewModel, type ItmGraphViewNode } from "../viewers/itm/itmViewModel";
 
-interface ViewerContentProps {
+export interface ViewerContentProps {
   result: ViewerResult;
   query: string;
   zoom: number;
@@ -38,7 +38,15 @@ export interface ViewerToolbarAction {
 }
 
 export function shouldSuppressSvgSelection(target: EventTarget | null): boolean {
-  return !(target instanceof Element && target.closest("text, tspan"));
+  let current = target;
+  while (current instanceof Element) {
+    const tagName = current.tagName.toLowerCase();
+    if (tagName === "text" || tagName === "tspan") {
+      return false;
+    }
+    current = current.parentElement;
+  }
+  return true;
 }
 
 export function zoomStandaloneSvgViewAtPoint(
@@ -71,175 +79,7 @@ interface BpmnViewerInstance {
   destroy(): void;
 }
 
-export function ViewerContent({
-  result,
-  query,
-  zoom,
-  settings,
-  searchCommand,
-  toolbarAction,
-  onSearchStateChange,
-  onZoomChange,
-  onOpenSvgArtifact,
-  sourceSelection,
-  onSelectSourceRange
-}: ViewerContentProps) {
-  const style = { "--viewer-zoom": String(zoom) };
-  if (result.kind === "html") {
-    return (
-      <HtmlView
-        html={result.html}
-        query={query}
-        zoom={zoom}
-        settings={settings}
-        searchCommand={searchCommand}
-        toolbarAction={toolbarAction}
-        onSearchStateChange={onSearchStateChange}
-        onOpenSvgArtifact={onOpenSvgArtifact}
-        sourceSelection={sourceSelection}
-        onSelectSourceRange={onSelectSourceRange}
-      />
-    );
-  }
-  if (result.kind === "svg") {
-    return (
-      <SvgView
-        svg={result.svg}
-        query={query}
-        zoom={zoom}
-        settings={settings}
-        searchCommand={searchCommand}
-        toolbarAction={toolbarAction}
-        onSearchStateChange={onSearchStateChange}
-        onZoomChange={onZoomChange}
-      />
-    );
-  }
-  if (result.kind === "bpmn") {
-    return (
-      <BpmnView
-        xml={result.xml}
-        zoom={zoom}
-        toolbarAction={toolbarAction}
-        onZoomChange={onZoomChange}
-      />
-    );
-  }
-  if (result.kind === "tree") {
-    return (
-      <div class="viewer-content viewer-tree" style={style}>
-        <TreeView
-          nodes={filterTree(result.nodes, query)}
-          query={query}
-          settings={settings}
-          toolbarAction={toolbarAction}
-          sourceSelection={sourceSelection}
-          onSelectSourceRange={onSelectSourceRange}
-        />
-      </div>
-    );
-  }
-  if (result.kind === "itm-tree") {
-    return (
-      <div class="viewer-content viewer-tree" style={style}>
-        <ItmTreeView
-          model={result.model}
-          query={query}
-          settings={settings}
-          toolbarAction={toolbarAction}
-          sourceSelection={sourceSelection}
-          onSelectSourceRange={onSelectSourceRange}
-        />
-      </div>
-    );
-  }
-  if (result.kind === "itm-mindmap") {
-    return (
-      <div class="viewer-content viewer-mindmap" style={{ "--viewer-zoom": "1" }}>
-        <ItmMindMapView
-          model={result.model}
-          query={query}
-          zoom={zoom}
-          settings={settings}
-          searchCommand={searchCommand}
-          toolbarAction={toolbarAction}
-          onSearchStateChange={onSearchStateChange}
-          onZoomChange={onZoomChange}
-          sourceSelection={sourceSelection}
-          onSelectSourceRange={onSelectSourceRange}
-        />
-      </div>
-    );
-  }
-  if (result.kind === "table") {
-    return (
-      <div class="viewer-content viewer-table" style={style}>
-        <TableView table={result.table} query={query} settings={settings} />
-      </div>
-    );
-  }
-  if (result.kind === "mindmap") {
-    return (
-      <div class="viewer-content viewer-mindmap" style={{ "--viewer-zoom": "1" }}>
-        <MindMapView
-          nodes={result.nodes}
-          query={query}
-          zoom={zoom}
-          settings={settings}
-          searchCommand={searchCommand}
-          toolbarAction={toolbarAction}
-          onSearchStateChange={onSearchStateChange}
-          onZoomChange={onZoomChange}
-          sourceSelection={sourceSelection}
-          onSelectSourceRange={onSelectSourceRange}
-        />
-      </div>
-    );
-  }
-  if (result.kind === "graph") {
-    return (
-      <div class="viewer-content viewer-graph" style={style}>
-        <GraphView
-          graph={result.graph}
-          engine={result.engine}
-          query={query}
-          settings={settings}
-          searchCommand={searchCommand}
-          toolbarAction={toolbarAction}
-          onSearchStateChange={onSearchStateChange}
-          sourceSelection={sourceSelection}
-          onSelectSourceRange={onSelectSourceRange}
-        />
-      </div>
-    );
-  }
-  if (result.kind === "itm-graph") {
-    return (
-      <div class="viewer-content viewer-graph" style={style}>
-        <GraphView
-          graph={projectItmGraph(result.model)}
-          engine={result.engine}
-          query={query}
-          settings={settings}
-          searchCommand={searchCommand}
-          toolbarAction={toolbarAction}
-          onSearchStateChange={onSearchStateChange}
-          sourceSelection={sourceSelection}
-          onSelectSourceRange={onSelectSourceRange}
-        />
-      </div>
-    );
-  }
-  return (
-    <div class="viewer-content editor-skeleton" style={style}>
-      <h2>{result.title}</h2>
-      <p>{result.message}</p>
-      <p>Editor surface: {result.editorKind}</p>
-    </div>
-  );
-}
-
-function BpmnView({
+export function BpmnView({
   xml,
   zoom,
   toolbarAction,
@@ -341,7 +181,7 @@ function BpmnView({
   );
 }
 
-function HtmlView({
+export function HtmlView({
   html,
   query,
   zoom,
@@ -443,7 +283,7 @@ function HtmlView({
   );
 }
 
-function SvgView({
+export function SvgView({
   svg,
   query,
   zoom,
@@ -612,7 +452,7 @@ function SvgView({
   );
 }
 
-function TreeView({
+export function TreeView({
   nodes,
   query,
   settings,
@@ -699,7 +539,7 @@ interface FilteredItmEntity {
   children: FilteredItmEntity[];
 }
 
-function ItmTreeView({
+export function ItmTreeView({
   model,
   query,
   settings,
@@ -1116,7 +956,7 @@ function TreeLinks({
   );
 }
 
-function TableView({
+export function TableView({
   table,
   query,
   settings: _settings
@@ -1204,7 +1044,7 @@ function TableView({
   );
 }
 
-function MindMapView({
+export function MindMapView({
   nodes,
   query,
   zoom,
@@ -1524,7 +1364,7 @@ function MindMapView({
   );
 }
 
-function ItmMindMapView({
+export function ItmMindMapView({
   model,
   query,
   zoom,
@@ -1859,7 +1699,7 @@ const DENSE_GRAPH_NODE_LIMIT = 250;
 const DENSE_GRAPH_EDGE_LIMIT = 800;
 const SVG_NAMESPACE = ["http:", "", "www.w3.org", "2000", "svg"].join("/");
 
-function GraphView({
+export function GraphView({
   graph,
   engine,
   query,
@@ -4811,7 +4651,7 @@ function updateActiveSvgMatch(root: HTMLElement | null, activeIndex: number): vo
   matches[activeIndex]?.scrollIntoView({ block: "center", inline: "center" });
 }
 
-function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
+export function filterTree(nodes: TreeNode[], query: string): TreeNode[] {
   const lower = query.trim().toLowerCase();
   if (!lower) {
     return nodes;

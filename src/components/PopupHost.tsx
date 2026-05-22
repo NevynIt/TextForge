@@ -37,7 +37,7 @@ import type { TextForgeResource } from "../resources/resourceCatalog";
 import { DocumentBadge, documentBadgeSvgMarkup } from "./DocumentBadge";
 import { LuaConsolePanel, LuaScriptManagerPanel } from "./LuaConsolePanel";
 import { ResourceBrowserPanel } from "./ResourceBrowserPanel";
-import { ViewerContent, viewerSnapshotHtml } from "./viewers";
+import { ViewerContent, viewerSnapshotHtml } from "../viewers/registry";
 
 interface PopupHostProps {
   popups: PopupRecord[];

@@ -3,9 +3,10 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { shouldSuppressSvgSelection, ViewerContent, zoomStandaloneSvgViewAtPoint } from "../components/viewers";
+import { shouldSuppressSvgSelection, zoomStandaloneSvgViewAtPoint } from "../components/viewers";
 import type { ViewerResult, VisualSelection } from "../domain/types";
 import { parseItmValue } from "../parsers/itm";
+import { ViewerContent } from "../viewers/registry";
 
 const svgNamespace = "ht" + "tp://www.w3.org/2000/svg";
 
