@@ -62,12 +62,26 @@ export function TopBar({
         <label class="file-button">
           <FolderOpen size={16} />
           Import
-          <input type="file" multiple onChange={(event) => onOpenFiles(event.currentTarget.files)} />
+          <input
+            type="file"
+            multiple
+            onChange={(event) => {
+              onOpenFiles(event.currentTarget.files);
+              event.currentTarget.value = "";
+            }}
+          />
         </label>
         <label class="file-button">
           <FolderOpen size={16} />
           Import ZIP
-          <input type="file" accept=".zip,application/zip" onChange={(event) => onImportZip(event.currentTarget.files)} />
+          <input
+            type="file"
+            accept=".zip,application/zip"
+            onChange={(event) => {
+              onImportZip(event.currentTarget.files);
+              event.currentTarget.value = "";
+            }}
+          />
         </label>
         <button type="button" onClick={onDownload} disabled={!hasActiveDocument}>
           <Download size={16} />
@@ -97,7 +111,7 @@ export function TopBar({
           <ScrollText size={16} />
           Scripts
         </button>
-        <button type="button" onClick={onToggleSidebar} aria-pressed={sidebarVisible}>
+        <button type="button" onClick={onToggleSidebar} aria-pressed={sidebarVisible ? "true" : "false"}>
           {sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
         </button>
       </div>

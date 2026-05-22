@@ -1,6 +1,19 @@
 import { FolderPlus, FilePlus2, Copy, Download, Eye, MoveRight, Pencil, Trash2 } from "lucide-preact";
-import { useEffect, useState } from "preact/hooks";
+import * as React from "react";
+import { createRoot, type Root as ReactRoot } from "react-dom/client";
+import { useEffect, useMemo, useRef, useState } from "preact/hooks";
+import { Tree, type NodeRendererProps, type TreeApi } from "react-arborist";
 import type { WorkspaceEntry, WorkspaceFile, WorkspaceFolder } from "../../core/workspaceTypes";
+
+interface WorkspaceTreeNode {
+  id: string;
+  name: string;
+  path: string;
+  entry: WorkspaceEntry;
+  children?: WorkspaceTreeNode[];
+}
+
+const ArboristTree = Tree as unknown as React.ComponentType<Record<string, unknown>>;
 
 interface WorkspaceExplorerProps {
   rootFolderId: string;
@@ -36,19 +49,133 @@ export function WorkspaceExplorer({
   const root = entries.find((entry) => entry.id === rootFolderId) as WorkspaceFolder | undefined;
   const selected = entries.find((entry) => entry.id === selectedEntryId) || root;
   const parentId = selected?.kind === "folder" ? selected.id : selected?.parentId || rootFolderId;
-  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Record<string, boolean>>(() => createInitialCollapsedState(entries, rootFolderId));
+  const treeRef = useRef<TreeApi<WorkspaceTreeNode> | null>(null);
+  const treeHostRef = useRef<HTMLDivElement | null>(null);
+  const reactRootRef = useRef<ReactRoot | null>(null);
+  const [treeHeight, setTreeHeight] = useState(480);
+  const treeData = useMemo(() => (root ? [createTreeNode(root, createChildrenIndex(entries))] : []), [entries, root]);
+  const initialOpenState = useMemo(() => ({ [rootFolderId]: true }), [rootFolderId]);
 
   useEffect(() => {
-    setCollapsedFolderIds((current) => {
-      const next = createInitialCollapsedState(entries, rootFolderId);
-      for (const entry of entries) {
-        if (entry.kind === "folder" && entry.id in current) {
-          next[entry.id] = current[entry.id];
+    const element = treeHostRef.current;
+    if (!element) {
+      return;
+    }
+    const updateHeight = () => setTreeHeight(Math.max(element.clientHeight, 240));
+    updateHeight();
+    if (typeof globalThis.ResizeObserver !== "function") {
+      return;
+    }
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!treeRef.current) {
+      return;
+    }
+    treeRef.current.open(rootFolderId);
+    const focusId = selectedEntryId || activeFileId || rootFolderId;
+    if (focusId) {
+      treeRef.current.openParents(focusId);
+    }
+  }, [activeFileId, rootFolderId, selectedEntryId, treeData]);
+
+  function WorkspaceNodeRenderer({ node, style }: NodeRendererProps<WorkspaceTreeNode>) {
+    const entry = node.data.entry;
+
+    return React.createElement(
+      "div",
+      { style, className: `workspace-node ${entry.kind}` },
+      React.createElement(
+        "button",
+        {
+          type: "button",
+          className: `workspace-node-button${node.isSelected ? " selected" : ""}${entry.id === activeFileId ? " active" : ""}`,
+          onClick: () => {
+            node.select();
+            onSelectEntry(entry.id);
+          },
+          onDoubleClick: () => {
+            if (entry.kind === "file") {
+              if (entry.fileKind === "text" && !entry.readOnly) {
+                onOpenEntry(entry.id);
+              } else {
+                onViewEntry(entry.id);
+              }
+              return;
+            }
+            node.toggle();
+          },
+          title: entry.path
+        },
+        entry.kind === "folder"
+          ? React.createElement(
+              "span",
+              {
+                className: `workspace-node-glyph folder-toggle${node.isOpen ? "" : " collapsed"}`,
+                onClick: (event: MouseEvent) => {
+                  event.stopPropagation();
+                  node.toggle();
+                },
+                role: "button",
+                tabIndex: 0,
+                onKeyDown: (event: KeyboardEvent) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    node.toggle();
+                  }
+                },
+                "aria-label": node.isOpen ? `Collapse ${entry.name || "root"}` : `Expand ${entry.name || "root"}`
+              },
+              node.isOpen ? "v" : ">"
+            )
+          : React.createElement("span", { className: "workspace-node-glyph" }, "-"),
+        React.createElement("span", { className: "workspace-node-label" }, entry.path === "/" ? "/" : entry.name),
+        entry.readOnly ? React.createElement("small", null, "ro") : null
+      )
+    );
+  }
+
+  useEffect(() => {
+    const host = treeHostRef.current;
+    if (!host || !root) {
+      return;
+    }
+    if (!reactRootRef.current) {
+      reactRootRef.current = createRoot(host);
+    }
+    reactRootRef.current.render(
+      React.createElement(
+        ArboristTree,
+        {
+          ref: treeRef,
+          data: treeData,
+          width: "100%",
+          height: treeHeight,
+          rowHeight: 34,
+          indent: 18,
+          paddingTop: 4,
+          paddingBottom: 12,
+          openByDefault: false,
+          disableMultiSelection: true,
+          disableDrag: true,
+          disableDrop: true,
+          selection: selectedEntryId || rootFolderId,
+          initialOpenState,
+          className: "workspace-arborist",
+          children: WorkspaceNodeRenderer,
         }
-      }
-      return next;
-    });
-  }, [entries, rootFolderId]);
+      )
+    );
+  }, [WorkspaceNodeRenderer, initialOpenState, root, rootFolderId, selectedEntryId, activeFileId, treeData, treeHeight]);
+
+  useEffect(() => () => {
+    reactRootRef.current?.unmount();
+    reactRootRef.current = null;
+  }, []);
 
   return (
     <aside class="workspace-explorer">
@@ -66,21 +193,7 @@ export function WorkspaceExplorer({
           </button>
         </div>
       </header>
-      <div class="workspace-tree">
-        {root ? (
-          <WorkspaceNode
-            entry={root}
-            entries={entries}
-            selectedEntryId={selectedEntryId}
-            activeFileId={activeFileId}
-            collapsedFolderIds={collapsedFolderIds}
-            onToggleFolder={(id) => setCollapsedFolderIds((current) => ({ ...current, [id]: !current[id] }))}
-            onSelectEntry={onSelectEntry}
-            onOpenEntry={onOpenEntry}
-            onViewEntry={onViewEntry}
-          />
-        ) : null}
-      </div>
+      <div class="workspace-tree" ref={treeHostRef} />
       {selected ? (
         <footer class="workspace-entry-panel">
           <strong>{selected.kind === "folder" ? selected.path || "/" : selected.name}</strong>
@@ -129,107 +242,37 @@ export function WorkspaceExplorer({
   );
 }
 
-function WorkspaceNode({
-  entry,
-  entries,
-  selectedEntryId,
-  activeFileId,
-  collapsedFolderIds,
-  onToggleFolder,
-  onSelectEntry,
-  onOpenEntry,
-  onViewEntry
-}: {
-  entry: WorkspaceEntry;
-  entries: WorkspaceEntry[];
-  selectedEntryId: string | null;
-  activeFileId: string | null;
-  collapsedFolderIds: Record<string, boolean>;
-  onToggleFolder: (id: string) => void;
-  onSelectEntry: (id: string) => void;
-  onOpenEntry: (id: string) => void;
-  onViewEntry: (id: string) => void;
-}) {
-  const children = entries
-    .filter((candidate) => candidate.parentId === entry.id)
-    .sort((left, right) => {
-      if (left.kind !== right.kind) {
-        return left.kind === "folder" ? -1 : 1;
-      }
-      return left.name.localeCompare(right.name);
-    });
-  const collapsed = entry.kind === "folder" ? Boolean(collapsedFolderIds[entry.id]) : false;
-
-  return (
-    <div class={`workspace-node ${entry.kind}`}>
-      <button
-        type="button"
-        class={`workspace-node-button${entry.id === selectedEntryId ? " selected" : ""}${entry.id === activeFileId ? " active" : ""}`}
-        onClick={() => onSelectEntry(entry.id)}
-        onDblClick={() => {
-          if (entry.kind === "file") {
-            if (entry.fileKind === "text" && !entry.readOnly) {
-              onOpenEntry(entry.id);
-            } else {
-              onViewEntry(entry.id);
-            }
-          }
-        }}
-        title={entry.path}
-      >
-        {entry.kind === "folder" ? (
-          <span
-            class={`workspace-node-glyph folder-toggle${collapsed ? " collapsed" : ""}`}
-            onClick={(event) => {
-              event.stopPropagation();
-              onToggleFolder(entry.id);
-            }}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(event) => {
-              if (event.key === "Enter" || event.key === " ") {
-                event.preventDefault();
-                event.stopPropagation();
-                onToggleFolder(entry.id);
-              }
-            }}
-            aria-label={collapsed ? `Expand ${entry.name || "root"}` : `Collapse ${entry.name || "root"}`}
-          >
-            {collapsed ? ">" : "v"}
-          </span>
-        ) : (
-          <span class="workspace-node-glyph">-</span>
-        )}
-        <span class="workspace-node-label">{entry.path === "/" ? "/" : entry.name}</span>
-        {entry.readOnly ? <small>ro</small> : null}
-      </button>
-      {children.length && !collapsed ? (
-        <div class="workspace-node-children">
-          {children.map((child) => (
-            <WorkspaceNode
-              key={child.id}
-              entry={child}
-              entries={entries}
-              selectedEntryId={selectedEntryId}
-              activeFileId={activeFileId}
-              collapsedFolderIds={collapsedFolderIds}
-              onToggleFolder={onToggleFolder}
-              onSelectEntry={onSelectEntry}
-              onOpenEntry={onOpenEntry}
-              onViewEntry={onViewEntry}
-            />
-          ))}
-        </div>
-      ) : null}
-    </div>
-  );
+function createChildrenIndex(entries: WorkspaceEntry[]): Map<string, WorkspaceEntry[]> {
+  const childrenByParent = new Map<string, WorkspaceEntry[]>();
+  for (const entry of entries) {
+    if (!entry.parentId) {
+      continue;
+    }
+    const group = childrenByParent.get(entry.parentId) || [];
+    group.push(entry);
+    childrenByParent.set(entry.parentId, group);
+  }
+  childrenByParent.forEach((group) => group.sort(compareWorkspaceEntries));
+  return childrenByParent;
 }
 
-function createInitialCollapsedState(entries: WorkspaceEntry[], rootFolderId: string): Record<string, boolean> {
-  return entries.reduce<Record<string, boolean>>((state, entry) => {
-    if (entry.kind === "folder") {
-      state[entry.id] = entry.id !== rootFolderId;
-    }
-    return state;
-  }, {});
+function createTreeNode(entry: WorkspaceEntry, childrenByParent: Map<string, WorkspaceEntry[]>): WorkspaceTreeNode {
+  const children = entry.kind === "folder"
+    ? (childrenByParent.get(entry.id) || []).map((child) => createTreeNode(child, childrenByParent))
+    : undefined;
+
+  return {
+    id: entry.id,
+    name: entry.path === "/" ? "/" : entry.name,
+    path: entry.path,
+    entry,
+    children
+  };
+}
+
+function compareWorkspaceEntries(left: WorkspaceEntry, right: WorkspaceEntry): number {
+  if (left.kind !== right.kind) {
+    return left.kind === "folder" ? -1 : 1;
+  }
+  return left.name.localeCompare(right.name);
 }

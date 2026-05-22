@@ -270,18 +270,20 @@ button:disabled {
 
 .workspace-tree {
   min-height: 0;
-  overflow: auto;
+  overflow: hidden;
   padding: 10px 8px 20px;
+}
+
+.workspace-arborist {
+  height: 100%;
+}
+
+.workspace-tree [role="tree"] {
+  outline: none;
 }
 
 .workspace-node {
   min-width: 0;
-}
-
-.workspace-node-children {
-  margin-left: 14px;
-  padding-left: 8px;
-  border-left: 1px solid rgba(126, 136, 142, 0.24);
 }
 
 .workspace-node-button {
@@ -290,6 +292,7 @@ button:disabled {
   border-color: transparent;
   background: transparent;
   padding: 6px 8px;
+  min-width: 0;
 }
 
 .workspace-node-button.selected {

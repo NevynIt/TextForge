@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Download,
   ExternalLink,
+  FileText,
   FilePlus2,
   Filter,
   FoldVertical,
@@ -36,7 +37,6 @@ import type { LuaRunResult } from "../lua/types";
 import { DocumentBadge, documentBadgeSvgMarkup } from "./DocumentBadge";
 import { LuaConsolePanel, LuaScriptManagerPanel } from "./LuaConsolePanel";
 import { ViewerContent, viewerSnapshotHtml } from "../viewers/registry";
-
 interface PopupHostProps {
   popups: PopupRecord[];
   documents: TextDocument[];
@@ -1037,14 +1037,14 @@ function exportPopup(popup: PopupRecord): void {
   URL.revokeObjectURL(url);
 }
 
-function exportFileName(popup: PopupRecord): string {
+function exportFileName(popup: PopupRecord, extensionOverride?: string): string {
   if (!popup.result) {
-    return "textforge-view.html";
+    return `textforge-view.${extensionOverride || "html"}`;
   }
   const payload = exportPayload(popup.result);
   const sourceName = popup.documentName ? popup.documentName.replace(/\.[^.]+$/, "") : popup.title;
   const title = `${sourceName}-${popup.result.title || popup.title}`;
-  return `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "textforge-view"}.${payload.extension}`;
+  return `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "textforge-view"}.${extensionOverride || payload.extension}`;
 }
 
 function exportPayload(result: NonNullable<PopupRecord["result"]>): { content: string; extension: string; type: string } {

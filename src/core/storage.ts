@@ -1,3 +1,4 @@
+import Dexie, { type EntityTable } from "dexie";
 import type { WorkspaceState } from "./workspaceTypes";
 
 export interface PluginPreferences {
@@ -9,8 +10,24 @@ export interface PluginPreferences {
   }>;
 }
 
+interface KeyValueRecord {
+  key: string;
+  value: PluginPreferences | WorkspaceState;
+}
+
+class TextForgeDatabase extends Dexie {
+  kv!: EntityTable<KeyValueRecord, "key">;
+
+  constructor() {
+    super("textforge-workspace");
+    this.version(1).stores({
+      kv: "&key"
+    });
+  }
+}
+
 export class TextForgeStorage {
-  private db: IDBDatabase | null = null;
+  private db: TextForgeDatabase | null = null;
   private idbUnavailable = false;
 
   async init(): Promise<void> {
@@ -18,17 +35,13 @@ export class TextForgeStorage {
       this.idbUnavailable = true;
       return;
     }
-    this.db = await new Promise<IDBDatabase>((resolve) => {
-      const request = indexedDB.open("textforge-workspace", 1);
-      request.onupgradeneeded = () => {
-        request.result.createObjectStore("kv");
-      };
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => {
-        this.idbUnavailable = true;
-        resolve(null as unknown as IDBDatabase);
-      };
-    });
+    try {
+      this.db = new TextForgeDatabase();
+      await this.db.open();
+    } catch {
+      this.idbUnavailable = true;
+      this.db = null;
+    }
   }
 
   async loadWorkspace(): Promise<WorkspaceState | null> {
@@ -51,23 +64,22 @@ export class TextForgeStorage {
     if (!this.db || this.idbUnavailable) {
       return null;
     }
-    return new Promise<T | null>((resolve) => {
-      const tx = this.db!.transaction("kv", "readonly");
-      const request = tx.objectStore("kv").get(key);
-      request.onsuccess = () => resolve((request.result as T) || null);
-      request.onerror = () => resolve(null);
-    });
+    try {
+      const record = await this.db.kv.get(key);
+      return (record?.value as T | undefined) ?? null;
+    } catch {
+      return null;
+    }
   }
 
   async set<T>(key: string, value: T): Promise<void> {
     if (!this.db || this.idbUnavailable) {
       return;
     }
-    await new Promise<void>((resolve) => {
-      const tx = this.db!.transaction("kv", "readwrite");
-      tx.objectStore("kv").put(value, key);
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => resolve();
-    });
+    try {
+      await this.db.kv.put({ key, value: value as PluginPreferences | WorkspaceState });
+    } catch {
+      // Ignore storage write failures and keep the app usable offline.
+    }
   }
 }

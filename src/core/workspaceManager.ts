@@ -63,6 +63,33 @@ export class WorkspaceManager {
     return entry?.kind === "folder" ? entry : undefined;
   }
 
+  resolveWritableFolderId(preferredEntryId?: string | null, fallbackPath = "/docs"): string {
+    const fallback = this.findByPath(fallbackPath);
+    const visited = new Set<string>();
+    let currentId = preferredEntryId || this.state.selectedEntryId || this.state.activeFileId;
+
+    while (currentId && !visited.has(currentId)) {
+      visited.add(currentId);
+      const entry = this.getEntry(currentId);
+      if (!entry) {
+        break;
+      }
+      if (entry.kind === "folder" && !entry.readOnly && entry.id !== this.state.rootFolderId) {
+        return entry.id;
+      }
+      currentId = entry.parentId;
+    }
+
+    if (fallback?.kind === "folder" && !fallback.readOnly) {
+      return fallback.id;
+    }
+    const root = this.getFolder(this.state.rootFolderId);
+    if (root && !root.readOnly) {
+      return root.id;
+    }
+    return this.state.rootFolderId;
+  }
+
   findByPath(path: string): WorkspaceEntry | undefined {
     const normalized = normalizeWorkspacePath(path);
     return Object.values(this.state.entries).find((entry) => entry.path === normalized);

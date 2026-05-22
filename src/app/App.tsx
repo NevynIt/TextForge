@@ -163,13 +163,7 @@ export function App() {
   }
 
   function selectedFolderId(): string {
-    if (activeEntry?.kind === "folder") {
-      return activeEntry.id;
-    }
-    if (activeEntry?.parentId) {
-      return activeEntry.parentId;
-    }
-    return workspace.rootFolderId;
+    return services.workspace.resolveWritableFolderId(activeEntry?.id ?? workspace.selectedEntryId ?? workspace.activeFileId);
   }
 
   function newDocument(): void {

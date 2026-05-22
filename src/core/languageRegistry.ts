@@ -30,7 +30,7 @@ export class LanguageRegistry {
     return Array.from(this.languages.values()).sort((a, b) => a.name.localeCompare(b.name));
   }
 
-  inferFromFileName(fileName: string): string {
+  inferFromFileName = (fileName: string): string => {
     const lower = fileName.toLowerCase();
     const dot = lower.lastIndexOf(".");
     const extension = dot >= 0 ? lower.slice(dot) : "";
@@ -40,7 +40,7 @@ export class LanguageRegistry {
       }
     }
     return "text.plain";
-  }
+  };
 
   ancestors(id: string): string[] {
     const result: string[] = [];

@@ -74,6 +74,17 @@ describe("WorkspaceManager", () => {
     expect(workspace.getFile(copy!.id)?.readOnly).toBeFalsy();
   });
 
+  it("falls back to a writable folder when the current selection is read-only", () => {
+    const workspace = new WorkspaceManager();
+    const resourceFolder = workspace.findByPath("/.textforge/resources/examples")!;
+
+    workspace.selectEntry(resourceFolder.id);
+
+    expect(workspace.getFolder(workspace.resolveWritableFolderId())?.path).toBe("/docs");
+    expect(() => workspace.importFiles(workspace.resolveWritableFolderId(), [{ path: "imported.md", text: "# Imported", languageId: "text.markdown" }])).not.toThrow();
+    expect(workspace.findByPath("/docs/imported.md")).toBeTruthy();
+  });
+
   it("preserves valid unique badges on restore", () => {
     const workspace = new WorkspaceManager();
     const docs = workspace.findByPath("/docs")!;

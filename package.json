@@ -41,6 +41,7 @@
     "bpmn-js": "^18.16.1",
     "codemirror": "^6.0.1",
     "cytoscape": "^3.31.2",
+    "dexie": "^4.4.2",
     "dompurify": "^3.4.4",
     "fengari": "^0.1.5",
     "graphology": "^0.26.0",
@@ -55,10 +56,15 @@
     "markdown-it": "^14.1.0",
     "mermaid": "^11.4.1",
     "preact": "^10.25.1",
+    "react": "^19.2.6",
+    "react-arborist": "^3.7.0",
+    "react-dom": "^19.2.6",
     "sigma": "^3.0.0"
   },
   "devDependencies": {
     "@testing-library/preact": "^3.2.4",
+    "@types/react": "^19.2.15",
+    "@types/react-dom": "^19.2.3",
     "jsdom": "^25.0.1",
     "typescript": "^5.7.2",
     "vite": "^6.0.3",
