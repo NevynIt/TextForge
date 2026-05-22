@@ -16,6 +16,7 @@ export function TopBar({
   hasDiagnosticsAttention,
   hasPluginAttention,
   hasTrace,
+  sidebarVisible,
   onNewDocument,
   onOpenFiles,
   onDownload,
@@ -23,13 +24,15 @@ export function TopBar({
   onOpenPluginManager,
   onOpenTrace,
   onOpenLuaConsole,
-  onOpenLuaScripts
+  onOpenLuaScripts,
+  onToggleSidebar
 }: {
   ready: boolean;
   hasActiveDocument: boolean;
   hasDiagnosticsAttention: boolean;
   hasPluginAttention: boolean;
   hasTrace: boolean;
+  sidebarVisible: boolean;
   onNewDocument: () => void;
   onOpenFiles: (files: FileList | null) => void;
   onDownload: () => void;
@@ -38,6 +41,7 @@ export function TopBar({
   onOpenTrace: () => void;
   onOpenLuaConsole: () => void;
   onOpenLuaScripts: () => void;
+  onToggleSidebar: () => void;
 }) {
   return (
     <header class="topbar">
@@ -78,6 +82,9 @@ export function TopBar({
         <button type="button" onClick={onOpenLuaScripts}>
           <ScrollText size={16} />
           Scripts
+        </button>
+        <button type="button" onClick={onToggleSidebar} aria-pressed={sidebarVisible}>
+          {sidebarVisible ? "Hide Sidebar" : "Show Sidebar"}
         </button>
       </div>
     </header>

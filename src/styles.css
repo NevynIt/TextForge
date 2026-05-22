@@ -225,6 +225,10 @@ button:disabled {
   overflow: hidden;
 }
 
+.workspace.sidebar-hidden {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .workspace-explorer {
   display: grid;
   grid-template-rows: auto 1fr auto;
@@ -300,6 +304,18 @@ button:disabled {
 .workspace-node-glyph {
   width: 16px;
   color: #6a7176;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 16px;
+}
+
+.folder-toggle {
+  border-radius: 4px;
+}
+
+.folder-toggle:hover {
+  background: rgba(127, 149, 130, 0.14);
 }
 
 .workspace-node-label {

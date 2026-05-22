@@ -133,6 +133,16 @@ describe("App smoke", () => {
     });
   });
 
+  it("lets the user hide the sidebar", async () => {
+    const { container } = render(<App />);
+
+    await waitFor(() => expect(screen.getByText("Ready.")).toBeTruthy());
+
+    fireEvent.click(screen.getByRole("button", { name: "Hide Sidebar" }));
+    expect(container.querySelector(".workspace-explorer")).toBeNull();
+    expect(screen.getByRole("button", { name: "Show Sidebar" })).toBeTruthy();
+  });
+
   it("hides wrapped markdown section content when a heading is folded", () => {
     const { container } = renderHtmlViewer([
       '<article class="rendered-markdown">',

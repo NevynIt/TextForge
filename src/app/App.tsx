@@ -30,6 +30,7 @@ export function App() {
   const [editorReveal, setEditorReveal] = useState<VisualSelection | undefined>();
   const [editorSelection, setEditorSelection] = useState<{ documentId: string; documentVersion: number; range: SourceRange; text: string } | undefined>();
   const [editorCommand, setEditorCommand] = useState<CodeEditorCommand | undefined>();
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   const popupsRef = useRef(popups);
   popupsRef.current = popups;
 
@@ -667,6 +668,7 @@ export function App() {
         hasDiagnosticsAttention={hasPluginAttention}
         hasPluginAttention={hasPluginAttention}
         hasTrace={Boolean(lastTrace.length)}
+        sidebarVisible={sidebarVisible}
         onNewDocument={newDocument}
         onOpenFiles={(files) => void openFiles(files)}
         onDownload={downloadActiveDocument}
@@ -675,6 +677,7 @@ export function App() {
         onOpenTrace={openPipelineTrace}
         onOpenLuaConsole={openLuaConsole}
         onOpenLuaScripts={openLuaScripts}
+        onToggleSidebar={() => setSidebarVisible((value) => !value)}
       />
 
       <DocumentTabs
@@ -704,20 +707,22 @@ export function App() {
         onSetEditorCommand={setEditorCommand}
       />
 
-      <main class="workspace">
-        <WorkspaceExplorer
-          rootFolderId={workspace.rootFolderId}
-          entries={Object.values(workspace.entries)}
-          selectedEntryId={workspace.selectedEntryId}
-          activeFileId={workspace.activeFileId}
-          onSelectEntry={handleSelectEntry}
-          onOpenEntry={handleOpenEntry}
-          onViewEntry={handleViewEntry}
-          onCreateFile={handleCreateFile}
-          onCreateFolder={handleCreateFolder}
-          onCopyEntry={handleCopyEntry}
-          onDeleteEntry={handleDeleteEntry}
-        />
+      <main class={`workspace${sidebarVisible ? "" : " sidebar-hidden"}`}>
+        {sidebarVisible ? (
+          <WorkspaceExplorer
+            rootFolderId={workspace.rootFolderId}
+            entries={Object.values(workspace.entries)}
+            selectedEntryId={workspace.selectedEntryId}
+            activeFileId={workspace.activeFileId}
+            onSelectEntry={handleSelectEntry}
+            onOpenEntry={handleOpenEntry}
+            onViewEntry={handleViewEntry}
+            onCreateFile={handleCreateFile}
+            onCreateFolder={handleCreateFolder}
+            onCopyEntry={handleCopyEntry}
+            onDeleteEntry={handleDeleteEntry}
+          />
+        ) : null}
         <section class="editor-pane">
           {activeDocument ? (
             <CodeEditor

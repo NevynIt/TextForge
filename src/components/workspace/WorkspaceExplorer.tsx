@@ -1,4 +1,5 @@
 import { FolderPlus, FilePlus2, Copy, Eye, Pencil, Trash2 } from "lucide-preact";
+import { useEffect, useState } from "preact/hooks";
 import type { WorkspaceEntry, WorkspaceFile, WorkspaceFolder } from "../../core/workspaceTypes";
 
 interface WorkspaceExplorerProps {
@@ -31,6 +32,19 @@ export function WorkspaceExplorer({
   const root = entries.find((entry) => entry.id === rootFolderId) as WorkspaceFolder | undefined;
   const selected = entries.find((entry) => entry.id === selectedEntryId) || root;
   const parentId = selected?.kind === "folder" ? selected.id : selected?.parentId || rootFolderId;
+  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Record<string, boolean>>(() => createInitialCollapsedState(entries, rootFolderId));
+
+  useEffect(() => {
+    setCollapsedFolderIds((current) => {
+      const next = createInitialCollapsedState(entries, rootFolderId);
+      for (const entry of entries) {
+        if (entry.kind === "folder" && entry.id in current) {
+          next[entry.id] = current[entry.id];
+        }
+      }
+      return next;
+    });
+  }, [entries, rootFolderId]);
 
   return (
     <aside class="workspace-explorer">
@@ -55,6 +69,8 @@ export function WorkspaceExplorer({
             entries={entries}
             selectedEntryId={selectedEntryId}
             activeFileId={activeFileId}
+            collapsedFolderIds={collapsedFolderIds}
+            onToggleFolder={(id) => setCollapsedFolderIds((current) => ({ ...current, [id]: !current[id] }))}
             onSelectEntry={onSelectEntry}
             onOpenEntry={onOpenEntry}
             onViewEntry={onViewEntry}
@@ -104,6 +120,8 @@ function WorkspaceNode({
   entries,
   selectedEntryId,
   activeFileId,
+  collapsedFolderIds,
+  onToggleFolder,
   onSelectEntry,
   onOpenEntry,
   onViewEntry
@@ -112,6 +130,8 @@ function WorkspaceNode({
   entries: WorkspaceEntry[];
   selectedEntryId: string | null;
   activeFileId: string | null;
+  collapsedFolderIds: Record<string, boolean>;
+  onToggleFolder: (id: string) => void;
   onSelectEntry: (id: string) => void;
   onOpenEntry: (id: string) => void;
   onViewEntry: (id: string) => void;
@@ -124,6 +144,7 @@ function WorkspaceNode({
       }
       return left.name.localeCompare(right.name);
     });
+  const collapsed = entry.kind === "folder" ? Boolean(collapsedFolderIds[entry.id]) : false;
 
   return (
     <div class={`workspace-node ${entry.kind}`}>
@@ -142,11 +163,33 @@ function WorkspaceNode({
         }}
         title={entry.path}
       >
-        <span class="workspace-node-glyph">{entry.kind === "folder" ? ">" : "-"}</span>
+        {entry.kind === "folder" ? (
+          <span
+            class={`workspace-node-glyph folder-toggle${collapsed ? " collapsed" : ""}`}
+            onClick={(event) => {
+              event.stopPropagation();
+              onToggleFolder(entry.id);
+            }}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                event.stopPropagation();
+                onToggleFolder(entry.id);
+              }
+            }}
+            aria-label={collapsed ? `Expand ${entry.name || "root"}` : `Collapse ${entry.name || "root"}`}
+          >
+            {collapsed ? ">" : "v"}
+          </span>
+        ) : (
+          <span class="workspace-node-glyph">-</span>
+        )}
         <span class="workspace-node-label">{entry.path === "/" ? "/" : entry.name}</span>
         {entry.readOnly ? <small>ro</small> : null}
       </button>
-      {children.length ? (
+      {children.length && !collapsed ? (
         <div class="workspace-node-children">
           {children.map((child) => (
             <WorkspaceNode
@@ -155,6 +198,8 @@ function WorkspaceNode({
               entries={entries}
               selectedEntryId={selectedEntryId}
               activeFileId={activeFileId}
+              collapsedFolderIds={collapsedFolderIds}
+              onToggleFolder={onToggleFolder}
               onSelectEntry={onSelectEntry}
               onOpenEntry={onOpenEntry}
               onViewEntry={onViewEntry}
@@ -164,4 +209,13 @@ function WorkspaceNode({
       ) : null}
     </div>
   );
+}
+
+function createInitialCollapsedState(entries: WorkspaceEntry[], rootFolderId: string): Record<string, boolean> {
+  return entries.reduce<Record<string, boolean>>((state, entry) => {
+    if (entry.kind === "folder") {
+      state[entry.id] = entry.id !== rootFolderId;
+    }
+    return state;
+  }, {});
 }
