@@ -7,7 +7,7 @@
   purpose: Demonstrate ITM hierarchy, ids, typed links, tags, attributes, details, styles, includes, and views with TextForge V1-renderable attributes.
 }
 
-%include shared-party-supplies.itm
+%include party-supplies.itm
 
 %style *
 {

@@ -6,7 +6,7 @@
   author: Example
 }
 
-%include shared-party-supplies.itm
+%include party-supplies.itm
 
 %style *
 {
