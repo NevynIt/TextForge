@@ -1,6 +1,5 @@
 import {
   Bug,
-  BookOpen,
   Download,
   FilePlus2,
   FolderOpen,
@@ -24,8 +23,7 @@ export function TopBar({
   onOpenPluginManager,
   onOpenTrace,
   onOpenLuaConsole,
-  onOpenLuaScripts,
-  onOpenResources
+  onOpenLuaScripts
 }: {
   ready: boolean;
   hasActiveDocument: boolean;
@@ -40,7 +38,6 @@ export function TopBar({
   onOpenTrace: () => void;
   onOpenLuaConsole: () => void;
   onOpenLuaScripts: () => void;
-  onOpenResources: () => void;
 }) {
   return (
     <header class="topbar">
@@ -55,7 +52,7 @@ export function TopBar({
         </button>
         <label class="file-button">
           <FolderOpen size={16} />
-          Open
+          Import
           <input type="file" multiple onChange={(event) => onOpenFiles(event.currentTarget.files)} />
         </label>
         <button type="button" onClick={onDownload} disabled={!hasActiveDocument}>
@@ -81,10 +78,6 @@ export function TopBar({
         <button type="button" onClick={onOpenLuaScripts}>
           <ScrollText size={16} />
           Scripts
-        </button>
-        <button type="button" onClick={onOpenResources}>
-          <BookOpen size={16} />
-          Resources
         </button>
       </div>
     </header>

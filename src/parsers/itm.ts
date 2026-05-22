@@ -130,7 +130,7 @@ function createWorkspaceItmSourceProvider(documents: TextDocument[]): ItmSourceP
       }
 
       return {
-        uri: document.fileName,
+        uri: document.path || document.fileName,
         text: document.text
       };
     }
@@ -451,7 +451,7 @@ function rootIncludeKeys(options: ParseIndentedTreeOptions): Set<string> {
 }
 
 function documentIncludeKeys(document: TextDocument): string[] {
-  return [document.id, document.fileName, baseName(document.fileName)].map(normalizeIncludeKey).filter(Boolean);
+  return [document.id, document.path || "", document.fileName, baseName(document.path || document.fileName)].map(normalizeIncludeKey).filter(Boolean);
 }
 
 function normalizeIncludeKey(value: string): string {

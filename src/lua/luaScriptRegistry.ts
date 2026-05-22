@@ -12,7 +12,10 @@ export async function buildLuaActionsPlugin(
   documents: TextDocument[],
   service: LuaTransformService
 ): Promise<{ plugin: TextForgePlugin; actions: RegisteredLuaAction[] }> {
-  const luaDocuments = documents.filter((document) => document.languageId === "text.lua" || document.fileName.toLowerCase().endsWith(".lua"));
+  const luaDocuments = documents.filter((document) => {
+    const path = (document.path || document.fileName).replaceAll("\\", "/").toLowerCase();
+    return path.startsWith("/.textforge/automation/lua/") && (document.languageId === "text.lua" || path.endsWith(".lua"));
+  });
   const actions: RegisteredLuaAction[] = [];
   for (const document of luaDocuments) {
     const descriptors = await service.inspectActions({

@@ -7,6 +7,7 @@ export type Severity = "error" | "warning" | "information" | "observation";
 export interface TextDocument {
   id: string;
   fileName: string;
+  path?: string;
   languageId: string;
   text: string;
   version: number;

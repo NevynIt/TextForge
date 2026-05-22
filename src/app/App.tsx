@@ -1,20 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import { createDiagnosticsPopup, createToolPopup, createViewerPopup } from "../core/popupFactory";
-import type { Diagnostic, PipelineTraceStep, PipelineValue, PopupRecord, SourceRange, TextDocument, VisualSelection } from "../domain/types";
-import { serializeItmPipelineValue } from "../viewers/itm/itmSerialization";
-import { CodeEditor, type CodeEditorCommand } from "../components/CodeEditor";
-import { PopupHost } from "../components/PopupHost";
-import { buildLuaActionsPlugin, type RegisteredLuaAction } from "../lua/luaScriptRegistry";
-import type { LuaRunResult } from "../lua/types";
-import { textForgeResources, type TextForgeResource } from "../resources/resourceCatalog";
-import { useAppServices } from "./useAppServices";
 import { ActionBar } from "../components/shell/ActionBar";
 import { DocumentTabs } from "../components/shell/DocumentTabs";
 import { TopBar } from "../components/shell/TopBar";
+import { PopupHost } from "../components/PopupHost";
+import { CodeEditor, type CodeEditorCommand } from "../components/CodeEditor";
+import { WorkspaceExplorer } from "../components/workspace/WorkspaceExplorer";
+import { createDiagnosticsPopup, createToolPopup, createViewerPopup } from "../core/popupFactory";
+import { defaultPipelineIdForDocument } from "../core/viewPipelineRouter";
+import type { Diagnostic, PipelineTraceStep, PipelineValue, PopupRecord, SourceRange, TextDocument, VisualSelection } from "../domain/types";
+import type { WorkspaceEntry } from "../core/workspaceTypes";
+import { serializeItmPipelineValue } from "../viewers/itm/itmSerialization";
+import { buildLuaActionsPlugin, type RegisteredLuaAction } from "../lua/luaScriptRegistry";
+import type { LuaRunResult } from "../lua/types";
+import { useAppServices } from "./useAppServices";
 
 export function App() {
   const services = useAppServices();
-
   const [workspace, setWorkspace] = useState(services.workspace.snapshot());
   const [popups, setPopups] = useState<PopupRecord[]>([]);
   const [status, setStatus] = useState("Starting TextForge.");
@@ -32,6 +33,16 @@ export function App() {
   const popupsRef = useRef(popups);
   popupsRef.current = popups;
 
+  const openDocuments = services.workspace.listDocuments();
+  const allDocuments = services.workspace.listAllTextFileViews();
+  const activeDocument = services.workspace.getActiveDocument();
+  const activeEntry = workspace.selectedEntryId ? services.workspace.getEntry(workspace.selectedEntryId) : undefined;
+  const pipelines = activeDocument ? services.plugins.listPipelinesForLanguage(activeDocument.languageId) : [];
+  const pluginStates = useMemo(() => services.plugins.listPluginStates(), [services, pluginRevision]);
+  const registeredPipelines = useMemo(() => services.plugins.listRegisteredPipelines(), [services, pluginRevision]);
+  const pluginDiagnostics = useMemo(() => services.plugins.listPluginDiagnostics(), [services, pluginRevision]);
+  const hasPluginAttention = pluginDiagnostics.some((diagnostic) => !diagnostic.acknowledged);
+
   useEffect(() => {
     let cancelled = false;
     services.storage
@@ -44,7 +55,7 @@ export function App() {
           try {
             await services.plugins.loadPlugin(pluginId);
           } catch {
-            // The plugin manager displays the stored load error.
+            // Load diagnostics are surfaced through plugin state.
           }
         }
         setPluginRevision((value) => value + 1);
@@ -54,16 +65,25 @@ export function App() {
         if (cancelled) {
           return;
         }
-        if (stored?.documents?.length) {
-          services.workspace.restore(stored.documents, stored.activeDocumentId || undefined);
+        if (stored?.schemaVersion === 1) {
+          services.workspace.restore(stored);
         } else {
-          services.workspace.openDocument({
-            fileName: "untitled.txt",
-            languageId: "text.plain",
-            text: "Welcome to TextForge.\n\nCreate or open a text document, choose a language, then run a viewer pipeline."
-          });
+          services.workspace.resetToDefaultWorkspace();
+          const docsFolder = services.workspace.findByPath("/docs");
+          if (docsFolder?.kind === "folder") {
+            const file = services.workspace.createTextFile(
+              docsFolder.id,
+              "welcome.md",
+              "# Welcome to TextForge\n\nThis workspace is private to the app. Create files, browse bundled resources under `/.textforge/resources`, and view documents directly from the tree.",
+              "text.markdown"
+            );
+            services.workspace.openFile(file.id);
+            services.workspace.selectEntry(file.id);
+          }
         }
-        setWorkspace(services.workspace.snapshot());
+        const snapshot = services.workspace.snapshot();
+        setWorkspace(snapshot);
+        void services.storage.saveWorkspace(snapshot);
         setReady(true);
         setStatus("Ready.");
       })
@@ -78,20 +98,22 @@ export function App() {
       return;
     }
     const timer = window.setTimeout(() => {
-      void buildLuaActionsPlugin(services.workspace.listDocuments(), services.lua).then(({ plugin, actions }) => {
-        services.plugins.replaceGeneratedPlugin(plugin);
-        setLuaActions(actions);
-        setPluginRevision((value) => value + 1);
-      }).catch((error) => {
-        setLuaActions([]);
-        setStatus(error instanceof Error ? `Lua action scan failed: ${error.message}` : "Lua action scan failed.");
-      });
-    }, 350);
+      void buildLuaActionsPlugin(services.workspace.listAllTextFileViews(), services.lua)
+        .then(({ plugin, actions }) => {
+          services.plugins.replaceGeneratedPlugin(plugin);
+          setLuaActions(actions);
+          setPluginRevision((value) => value + 1);
+        })
+        .catch((error) => {
+          setLuaActions([]);
+          setStatus(error instanceof Error ? `Lua action scan failed: ${error.message}` : "Lua action scan failed.");
+        });
+    }, 250);
     return () => window.clearTimeout(timer);
   }, [
     ready,
     services,
-    workspace.documents.map((document) => `${document.id}:${document.version}:${document.fileName}:${document.languageId}`).join("|")
+    allDocuments.map((document) => `${document.id}:${document.version}:${document.path || document.fileName}`).join("|")
   ]);
 
   useEffect(() => {
@@ -99,7 +121,7 @@ export function App() {
       if (!popup.followSource || !popup.documentId || popup.sourceVersion === undefined) {
         return false;
       }
-      const document = workspace.documents.find((candidate) => candidate.id === popup.documentId);
+      const document = services.workspace.getDocument(popup.documentId);
       return Boolean(document && document.version > popup.sourceVersion);
     });
     if (!staleFollowPopups.length) {
@@ -111,17 +133,7 @@ export function App() {
       });
     }, 350);
     return () => window.clearTimeout(timer);
-  }, [workspace, popups]);
-
-  const activeDocument = workspace.activeDocumentId
-    ? workspace.documents.find((document) => document.id === workspace.activeDocumentId)
-    : undefined;
-  const pipelines = activeDocument ? services.plugins.listPipelinesForLanguage(activeDocument.languageId) : [];
-  const pluginStates = useMemo(() => services.plugins.listPluginStates(), [services, pluginRevision]);
-  const registeredPipelines = useMemo(() => services.plugins.listRegisteredPipelines(), [services, pluginRevision]);
-  const pluginDiagnostics = useMemo(() => services.plugins.listPluginDiagnostics(), [services, pluginRevision]);
-  const hasPluginAttention = pluginDiagnostics.some((diagnostic) => !diagnostic.acknowledged);
-  const hasDiagnosticsAttention = hasPluginAttention;
+  }, [workspace, popups, services]);
 
   function commitWorkspace(nextStatus?: string): void {
     const snapshot = services.workspace.snapshot();
@@ -146,68 +158,56 @@ export function App() {
     await services.storage.savePluginPreferences(preferences);
   }
 
+  function selectedFolderId(): string {
+    if (activeEntry?.kind === "folder") {
+      return activeEntry.id;
+    }
+    if (activeEntry?.parentId) {
+      return activeEntry.parentId;
+    }
+    return workspace.rootFolderId;
+  }
+
   function newDocument(): void {
-    services.workspace.openDocument({
-      fileName: "untitled.txt",
-      languageId: "text.plain",
-      text: ""
-    });
-    commitWorkspace("New document opened.");
+    const folderId = selectedFolderId();
+    const file = services.workspace.createTextFile(folderId, "untitled.txt", "", "text.plain");
+    services.workspace.openFile(file.id);
+    services.workspace.selectEntry(file.id);
+    commitWorkspace(`Created ${file.path}.`);
   }
 
   async function openFiles(files: FileList | null): Promise<void> {
     if (!files?.length) {
       return;
     }
+    const folderId = selectedFolderId();
+    const importedPaths: string[] = [];
     for (const file of Array.from(files)) {
       const text = await readFile(file);
-      services.workspace.openDocument({
-        fileName: file.name,
-        languageId: services.languages.inferFromFileName(file.name),
-        text
+      const created = services.workspace.createTextFile(folderId, file.name, text, services.languages.inferFromFileName(file.name), {
+        origin: "uploaded",
+        dirty: false,
+        sourcePath: file.name
       });
+      importedPaths.push(created.path);
     }
-    commitWorkspace(`Opened ${files.length} file${files.length === 1 ? "" : "s"}.`);
+    const first = importedPaths[0] ? services.workspace.findByPath(importedPaths[0]) : undefined;
+    if (first?.kind === "file") {
+      services.workspace.openFile(first.id);
+      services.workspace.selectEntry(first.id);
+    }
+    commitWorkspace(`Imported ${files.length} file${files.length === 1 ? "" : "s"} into ${services.workspace.getFolder(folderId)?.path}.`);
   }
 
   function closeDocument(id: string): void {
     services.workspace.closeDocument(id);
     setPopups((items) => items.filter((popup) => popup.documentId !== id));
-    if (!services.workspace.listDocuments().length) {
-      services.workspace.openDocument({ fileName: "untitled.txt", languageId: "text.plain", text: "" });
-    }
-    commitWorkspace("Document closed.");
-  }
-
-  function openTraceStepDocument(popupId: string, step: PipelineTraceStep): void {
-    if (!step.serializedValue) {
-      return;
-    }
-    const languageId = languageForTraceStep(step);
-    const document = services.workspace.openDocument({
-      fileName: traceStepFileName(step, languageId),
-      languageId,
-      text: step.serializedValue
-    });
-    setPopups((items) =>
-      items.map((popup) =>
-        popup.id === popupId
-          ? {
-              ...popup,
-              trace: popup.trace?.map((candidate) =>
-                candidate.stepId === step.stepId
-                  ? { ...candidate, targetDocumentId: document.id, targetDocumentName: document.fileName }
-                  : candidate
-              )
-            }
-          : popup
-      )
-    );
-    commitWorkspace(`Opened ${step.stepId} as ${document.fileName}.`);
+    commitWorkspace("Closed editor tab.");
   }
 
   function switchDocument(id: string): void {
     services.workspace.switchDocument(id);
+    services.workspace.selectEntry(id);
     commitWorkspace();
   }
 
@@ -225,11 +225,15 @@ export function App() {
     if (!renamingDocumentId) {
       return;
     }
-    const nextName = renameDraft.trim();
-    services.workspace.updateFileName(renamingDocumentId, nextName || "untitled.txt");
+    services.workspace.updateFileName(renamingDocumentId, renameDraft.trim() || "untitled.txt");
     setRenamingDocumentId("");
     setRenameDraft("");
-    commitWorkspace("Document renamed.");
+    commitWorkspace("Renamed workspace file.");
+  }
+
+  function cancelRename(): void {
+    setRenamingDocumentId("");
+    setRenameDraft("");
   }
 
   function updateText(text: string): void {
@@ -237,7 +241,7 @@ export function App() {
       return;
     }
     services.workspace.updateText(activeDocument.id, text);
-    commitWorkspace(`Editing ${activeDocument.fileName}.`);
+    commitWorkspace(`Edited ${activeDocument.path || activeDocument.fileName}.`);
   }
 
   function updateLanguage(languageId: string): void {
@@ -245,7 +249,7 @@ export function App() {
       return;
     }
     services.workspace.updateLanguage(activeDocument.id, languageId);
-    commitWorkspace(`Language changed to ${languageId}.`);
+    commitWorkspace(`Language changed for ${activeDocument.path || activeDocument.fileName}.`);
   }
 
   function updateEditorSelection(range: SourceRange, selectedText: string): void {
@@ -265,8 +269,8 @@ export function App() {
     if (!document) {
       return;
     }
-    if (workspace.activeDocumentId !== documentId) {
-      services.workspace.switchDocument(documentId);
+    if (workspace.activeFileId !== documentId) {
+      services.workspace.switchFile(documentId);
       commitWorkspace();
     }
     const nextSelection = {
@@ -277,7 +281,7 @@ export function App() {
     };
     setVisualSelection(nextSelection);
     setEditorReveal(nextSelection);
-    setStatus(`Selected source in ${document.fileName}.`);
+    setStatus(`Selected source in ${document.path || document.fileName}.`);
   }
 
   function clearHandledEditorReveal(revision?: number): void {
@@ -303,8 +307,8 @@ export function App() {
     anchor.download = activeDocument.fileName || "untitled.txt";
     anchor.click();
     URL.revokeObjectURL(url);
-    services.workspace.markClean(activeDocument.id);
-    commitWorkspace(`Downloaded ${activeDocument.fileName}.`);
+    services.workspace.exportFile(activeDocument.id);
+    commitWorkspace(`Exported ${activeDocument.path || activeDocument.fileName}.`);
   }
 
   async function runDiagnostics(): Promise<void> {
@@ -332,61 +336,41 @@ export function App() {
     setStatus(`Diagnostics complete: ${diagnostics.length} result${diagnostics.length === 1 ? "" : "s"}.`);
   }
 
-  async function togglePluginAutoload(pluginId: string, autoload: boolean): Promise<void> {
-    services.plugins.setAutoload(pluginId, autoload);
-    await persistPluginPreferences();
-    setPluginRevision((value) => value + 1);
-  }
-
-  async function setPipelineEnabled(pluginId: string, pipelineId: string, enabled: boolean): Promise<void> {
-    services.plugins.setPipelineEnabled(pluginId, pipelineId, enabled);
-    await persistPluginPreferences();
-    setPluginRevision((value) => value + 1);
-  }
-
-  function acknowledgePluginDiagnostic(id: string): void {
-    services.plugins.acknowledgePluginDiagnostic(id);
-    setPluginRevision((value) => value + 1);
-  }
-
-  function cancelRename(): void {
-    setRenamingDocumentId("");
-    setRenameDraft("");
-  }
-
-  async function runPipeline(pipelineId: string): Promise<void> {
-    if (!activeDocument || !pipelineId) {
+  async function runPipeline(pipelineId: string, document = activeDocument): Promise<void> {
+    if (!document || !pipelineId) {
       return;
     }
     const pipeline = services.plugins.getPipeline(pipelineId);
     setStatus(`Running ${pipeline?.name || pipelineId}.`);
-    const result = await services.pipelines.run(pipelineId, activeDocument);
+    const result = await services.pipelines.run(pipelineId, document);
     setLastTrace(result.trace);
     const viewerResult = result.viewerResult || result.editorResult;
     if (viewerResult) {
-      const popup = createViewerPopup(activeDocument, viewerResult, {
-        pipelineId,
-        contributionId: result.trace[result.trace.length - 1]?.stepId,
-        trace: result.trace
-      });
-      setPopups((items) => [...items, popup]);
+      setPopups((items) => [
+        ...items,
+        createViewerPopup(document, viewerResult, {
+          pipelineId,
+          contributionId: result.trace[result.trace.length - 1]?.stepId,
+          trace: result.trace
+        })
+      ]);
       setStatus(`${pipeline?.name || pipelineId} opened.`);
       return;
     }
     const terminalStep = result.trace[result.trace.length - 1];
     if (result.status === "available" && result.value && terminalStep?.contributionKind === "transformer") {
-      const document = services.workspace.openDocument(pipelineValueToDocument(result.value));
-      commitWorkspace(`${pipeline?.name || pipelineId} opened as ${document.fileName}.`);
+      const output = services.workspace.openDocument(pipelineValueToDocument(result.value));
+      commitWorkspace(`${pipeline?.name || pipelineId} opened as ${output.fileName}.`);
       return;
     }
     upsertPopup(
       {
         ...createToolPopup("pipeline-trace", "Pipeline Trace", result.trace),
-        documentId: activeDocument.id,
-        documentName: activeDocument.fileName,
-        documentLanguageId: activeDocument.languageId,
-        documentIdentity: activeDocument.identity,
-        sourceVersion: activeDocument.version
+        documentId: document.id,
+        documentName: document.fileName,
+        documentLanguageId: document.languageId,
+        documentIdentity: document.identity,
+        sourceVersion: document.version
       },
       (popup) => popup.kind === "pipeline-trace"
     );
@@ -402,33 +386,7 @@ export function App() {
     if (!document) {
       return;
     }
-    const result = await services.pipelines.run(popup.pipelineId, document);
-    const viewerResult = result.viewerResult || result.editorResult;
-    setLastTrace(result.trace);
-    if (!viewerResult) {
-      setPopups((items) =>
-        items.map((item) => (item.id === id ? { ...item, trace: result.trace, refreshedAt: new Date().toISOString() } : item))
-      );
-      return;
-    }
-    setPopups((items) =>
-      items.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              title: viewerResult.title,
-              result: viewerResult,
-              trace: result.trace,
-              sourceVersion: document.version,
-              documentName: document.fileName,
-              documentLanguageId: document.languageId,
-              documentIdentity: document.identity,
-              refreshedAt: new Date().toISOString()
-            }
-          : item
-      )
-    );
-    setStatus(`Refreshed ${popup.title}.`);
+    await runPipeline(popup.pipelineId, document);
   }
 
   function updatePopup(id: string, patch: Partial<PopupRecord>): void {
@@ -455,6 +413,23 @@ export function App() {
       };
       return [...items.slice(0, index), ...items.slice(index + 1), updated];
     });
+  }
+
+  async function togglePluginAutoload(pluginId: string, autoload: boolean): Promise<void> {
+    services.plugins.setAutoload(pluginId, autoload);
+    await persistPluginPreferences();
+    setPluginRevision((value) => value + 1);
+  }
+
+  async function setPipelineEnabled(pluginId: string, pipelineId: string, enabled: boolean): Promise<void> {
+    services.plugins.setPipelineEnabled(pluginId, pipelineId, enabled);
+    await persistPluginPreferences();
+    setPluginRevision((value) => value + 1);
+  }
+
+  function acknowledgePluginDiagnostic(id: string): void {
+    services.plugins.acknowledgePluginDiagnostic(id);
+    setPluginRevision((value) => value + 1);
   }
 
   function openPluginManager(): void {
@@ -485,17 +460,12 @@ export function App() {
     upsertPopup(createToolPopup("lua-scripts", "Lua Scripts"), (popup) => popup.kind === "lua-scripts");
   }
 
-  function openResourceBrowser(): void {
-    upsertPopup(createToolPopup("resource-browser", "Resource Browser"), (popup) => popup.kind === "resource-browser");
-  }
-
   function newLuaScript(): void {
-    services.workspace.openDocument({
-      fileName: "transform.lua",
-      languageId: "text.lua",
-      text: luaActionBoilerplate
-    });
-    commitWorkspace("New Lua script opened.");
+    const folderId = selectedFolderId();
+    const file = services.workspace.createTextFile(folderId, "transform.lua", luaActionBoilerplate, "text.lua");
+    services.workspace.openFile(file.id);
+    services.workspace.selectEntry(file.id);
+    commitWorkspace(`Created ${file.path}.`);
   }
 
   async function runLuaConsoleCommand(source: string): Promise<LuaRunResult> {
@@ -505,7 +475,7 @@ export function App() {
       source,
       fileName: "console.lua",
       input,
-      documents: services.workspace.listDocuments(),
+      documents: allDocuments,
       actions: luaActions
     });
     publishLuaDiagnostics(result, activeDocument);
@@ -520,13 +490,13 @@ export function App() {
     const result = await services.lua.run({
       mode: "script",
       source: activeDocument.text,
-      fileName: activeDocument.fileName,
+      fileName: activeDocument.path || activeDocument.fileName,
       input: documentInput(activeDocument),
-      documents: services.workspace.listDocuments(),
+      documents: allDocuments,
       actions: luaActions
     });
     publishLuaDiagnostics(result, activeDocument);
-    setStatus(result.ok ? `Ran ${activeDocument.fileName}.` : result.error || "Lua script failed.");
+    setStatus(result.ok ? `Ran ${activeDocument.path || activeDocument.fileName}.` : result.error || "Lua script failed.");
     return result;
   }
 
@@ -545,18 +515,18 @@ export function App() {
     const result = await services.lua.run({
       mode: "script",
       source: editorSelection.text,
-      fileName: `${activeDocument.fileName} selection`,
+      fileName: `${activeDocument.path || activeDocument.fileName} selection`,
       sourceOffset: {
         from: editorSelection.range.from,
         line: editorSelection.range.line,
         column: editorSelection.range.column
       },
       input: documentInput(activeDocument),
-      documents: services.workspace.listDocuments(),
+      documents: allDocuments,
       actions: luaActions
     });
     publishLuaDiagnostics(result, activeDocument);
-    setStatus(result.ok ? `Ran selection from ${activeDocument.fileName}.` : result.error || "Lua selection failed.");
+    setStatus(result.ok ? `Ran selection from ${activeDocument.path || activeDocument.fileName}.` : result.error || "Lua selection failed.");
     return result;
   }
 
@@ -580,45 +550,87 @@ export function App() {
     commitWorkspace(`Opened Lua result as ${document.fileName}.`);
   }
 
-  function openResource(resource: TextForgeResource): void {
+  function openTraceStepDocument(_popupId: string, step: PipelineTraceStep): void {
+    if (!step.serializedValue) {
+      return;
+    }
     const document = services.workspace.openDocument({
-      fileName: resource.path,
-      languageId: resource.languageId,
-      text: resource.text,
-      dirty: true
+      fileName: traceStepFileName(step, languageForTraceStep(step)),
+      languageId: languageForTraceStep(step),
+      text: step.serializedValue
     });
-    commitWorkspace(`Opened ${document.fileName}.`);
+    commitWorkspace(`Opened ${step.stepId} as ${document.fileName}.`);
   }
 
-  async function viewResource(resource: TextForgeResource): Promise<void> {
-    const document = services.workspace.openDocument({
-      fileName: resource.path,
-      languageId: resource.languageId,
-      text: resource.text,
-      dirty: false
-    });
-    if (resource.languageId !== "text.markdown") {
-      commitWorkspace(`Opened ${document.fileName}.`);
+  function handleSelectEntry(id: string): void {
+    services.workspace.selectEntry(id);
+    commitWorkspace();
+  }
+
+  function handleOpenEntry(id: string): void {
+    services.workspace.openFile(id);
+    services.workspace.selectEntry(id);
+    commitWorkspace(`Opened ${services.workspace.getFile(id)?.path}.`);
+  }
+
+  function handleViewEntry(id: string): void {
+    const document = services.workspace.getDocument(id);
+    if (!document) {
+      setStatus("Only text workspace files can be viewed in this build.");
       return;
     }
-    const pipelineId = "view-markdown-html";
-    const pipeline = services.plugins.getPipeline(pipelineId);
-    setStatus(`Running ${pipeline?.name || pipelineId}.`);
-    const result = await services.pipelines.run(pipelineId, document);
-    setLastTrace(result.trace);
-    const viewerResult = result.viewerResult || result.editorResult;
-    if (viewerResult) {
-      const popup = createViewerPopup(document, viewerResult, {
-        pipelineId,
-        contributionId: result.trace[result.trace.length - 1]?.stepId,
-        trace: result.trace
-      });
-      setPopups((items) => [...items, popup]);
-      commitWorkspace(`Opened ${document.fileName} in ${pipeline?.name || pipelineId}.`);
+    void runPipeline(defaultPipelineIdForDocument(document), document);
+  }
+
+  function handleCreateFile(parentId: string): void {
+    const name = window.prompt("New file name", "untitled.txt")?.trim();
+    if (!name) {
       return;
     }
-    commitWorkspace(`Opened ${document.fileName}.`);
-    setStatus(result.status === "available" ? "Pipeline complete." : `Pipeline ${result.status}.`);
+    const file = services.workspace.createTextFile(parentId, name, "", services.languages.inferFromFileName(name));
+    services.workspace.openFile(file.id);
+    services.workspace.selectEntry(file.id);
+    commitWorkspace(`Created ${file.path}.`);
+  }
+
+  function handleCreateFolder(parentId: string): void {
+    const name = window.prompt("New folder name", "folder")?.trim();
+    if (!name) {
+      return;
+    }
+    const folder = services.workspace.createFolder(parentId, name);
+    services.workspace.selectEntry(folder.id);
+    commitWorkspace(`Created ${folder.path}.`);
+  }
+
+  function handleCopyEntry(id: string): void {
+    const entry = services.workspace.getEntry(id);
+    if (!entry) {
+      return;
+    }
+    const defaultTarget = entry.path.includes("/examples/") ? "/examples" : "/docs";
+    const target = services.workspace.findByPath(defaultTarget);
+    if (!target || target.kind !== "folder") {
+      return;
+    }
+    const copied = services.workspace.copyEntry(id, target.id);
+    if (copied) {
+      services.workspace.selectEntry(copied.id);
+      if (copied.kind === "file" && copied.fileKind === "text") {
+        services.workspace.openFile(copied.id);
+      }
+      commitWorkspace(`Copied ${entry.path} to ${copied.path}.`);
+    }
+  }
+
+  function handleDeleteEntry(id: string): void {
+    const entry = services.workspace.getEntry(id);
+    if (!entry || !entry.parentId || entry.readOnly || !window.confirm(`Delete ${entry.path}?`)) {
+      return;
+    }
+    services.workspace.deleteEntry(id);
+    setPopups((items) => items.filter((popup) => popup.documentId !== id));
+    commitWorkspace(`Deleted ${entry.path}.`);
   }
 
   function openSvgArtifact(originPopupId: string, svg: string, title: string): void {
@@ -652,7 +664,7 @@ export function App() {
       <TopBar
         ready={ready}
         hasActiveDocument={Boolean(activeDocument)}
-        hasDiagnosticsAttention={hasDiagnosticsAttention}
+        hasDiagnosticsAttention={hasPluginAttention}
         hasPluginAttention={hasPluginAttention}
         hasTrace={Boolean(lastTrace.length)}
         onNewDocument={newDocument}
@@ -663,12 +675,11 @@ export function App() {
         onOpenTrace={openPipelineTrace}
         onOpenLuaConsole={openLuaConsole}
         onOpenLuaScripts={openLuaScripts}
-        onOpenResources={openResourceBrowser}
       />
 
       <DocumentTabs
-        documents={workspace.documents}
-        activeDocumentId={workspace.activeDocumentId}
+        documents={openDocuments}
+        activeDocumentId={workspace.activeFileId}
         draggedTabId={draggedTabId}
         onSetDraggedTabId={setDraggedTabId}
         onSwitchDocument={switchDocument}
@@ -694,6 +705,19 @@ export function App() {
       />
 
       <main class="workspace">
+        <WorkspaceExplorer
+          rootFolderId={workspace.rootFolderId}
+          entries={Object.values(workspace.entries)}
+          selectedEntryId={workspace.selectedEntryId}
+          activeFileId={workspace.activeFileId}
+          onSelectEntry={handleSelectEntry}
+          onOpenEntry={handleOpenEntry}
+          onViewEntry={handleViewEntry}
+          onCreateFile={handleCreateFile}
+          onCreateFolder={handleCreateFolder}
+          onCopyEntry={handleCopyEntry}
+          onDeleteEntry={handleDeleteEntry}
+        />
         <section class="editor-pane">
           {activeDocument ? (
             <CodeEditor
@@ -705,6 +729,7 @@ export function App() {
               onSelectionChange={updateEditorSelection}
               onSelectSourceRange={(range) => selectSourceRange(activeDocument.id, range)}
               editorCommand={editorCommand}
+              readOnly={Boolean(activeDocument.readOnly)}
               revealRange={
                 editorReveal?.documentId === activeDocument.id && editorReveal.documentVersion === activeDocument.version
                   ? { ...editorReveal.sourceRange, revision: editorReveal.revision }
@@ -712,7 +737,7 @@ export function App() {
               }
             />
           ) : (
-            <div class="empty-editor">No document open.</div>
+            <div class="empty-editor">Select a file from the workspace tree or create a new one.</div>
           )}
         </section>
       </main>
@@ -721,13 +746,12 @@ export function App() {
 
       <PopupHost
         popups={popups}
-        documents={workspace.documents}
+        documents={allDocuments}
         activeDocument={activeDocument}
         pluginStates={pluginStates}
         registeredPipelines={registeredPipelines}
         pluginDiagnostics={pluginDiagnostics}
         luaActions={luaActions}
-        resources={textForgeResources}
         onTogglePluginAutoload={(pluginId, autoload) => void togglePluginAutoload(pluginId, autoload)}
         onSetPipelineEnabled={(pluginId, pipelineId, enabled) => void setPipelineEnabled(pluginId, pipelineId, enabled)}
         onAcknowledgePluginDiagnostic={acknowledgePluginDiagnostic}
@@ -743,8 +767,6 @@ export function App() {
         }
         onOpenLuaResult={openLuaResult}
         onNewLuaScript={newLuaScript}
-        onOpenResource={openResource}
-        onViewResource={(resource) => void viewResource(resource)}
         onOpenSvgArtifact={openSvgArtifact}
         sourceSelection={visualSelection}
         onSelectSourceRange={selectSourceRange}
@@ -762,7 +784,7 @@ function documentInput(document: TextDocument): PipelineValue {
     kind: "text",
     languageId: document.languageId,
     text: document.text,
-    fileName: document.fileName,
+    fileName: document.path || document.fileName,
     documentId: document.id
   };
 }
@@ -770,7 +792,7 @@ function documentInput(document: TextDocument): PipelineValue {
 function pipelineValueToDocument(value: PipelineValue): Partial<TextDocument> & Pick<TextDocument, "text" | "languageId"> {
   if (value.kind === "text") {
     return {
-      fileName: value.fileName || `lua-result.${extensionForLanguage(value.languageId)}`,
+      fileName: value.fileName?.split("/").pop() || `lua-result.${extensionForLanguage(value.languageId)}`,
       languageId: value.languageId,
       text: value.text
     };
@@ -784,7 +806,7 @@ function pipelineValueToDocument(value: PipelineValue): Partial<TextDocument> & 
       };
     }
     return {
-      fileName: `lua-result.json`,
+      fileName: "lua-result.json",
       languageId: "text.json",
       text: JSON.stringify(value.data, null, 2)
     };
@@ -805,9 +827,6 @@ function languageForTraceStep(step: PipelineTraceStep): string {
   }
   if (type === "svg" || type === "html") {
     return "text.xml";
-  }
-  if (looksLikeJson(step.serializedValue || "")) {
-    return "text.json";
   }
   return "text.plain";
 }
@@ -843,11 +862,6 @@ function extensionForLanguage(languageId: string): string {
     return "lua";
   }
   return "txt";
-}
-
-function looksLikeJson(value: string): boolean {
-  const trimmed = value.trim();
-  return trimmed.startsWith("{") || trimmed.startsWith("[");
 }
 
 function readFile(file: File): Promise<string> {

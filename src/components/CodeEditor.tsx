@@ -17,6 +17,7 @@ interface CodeEditorProps {
   value: string;
   languageId: string;
   onChange: (text: string) => void;
+  readOnly?: boolean;
   revealRange?: (SourceRange & { revision?: number }) | null;
   onRevealHandled?: (revision?: number) => void;
   onEditorReady?: (view: EditorView) => void;
@@ -30,10 +31,11 @@ export interface CodeEditorCommand {
   action: "fold-all" | "unfold-all" | "fold-leading-directives";
 }
 
-export function CodeEditor({ value, languageId, onChange, revealRange, onRevealHandled, onEditorReady, onSelectionChange, onSelectSourceRange, editorCommand }: CodeEditorProps) {
+export function CodeEditor({ value, languageId, onChange, readOnly, revealRange, onRevealHandled, onEditorReady, onSelectionChange, onSelectSourceRange, editorCommand }: CodeEditorProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const languageCompartmentRef = useRef(new Compartment());
+  const readOnlyCompartmentRef = useRef(new Compartment());
   const onChangeRef = useRef(onChange);
   const onRevealHandledRef = useRef(onRevealHandled);
   const onSelectionChangeRef = useRef(onSelectionChange);
@@ -56,6 +58,7 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onRevealH
         basicSetup,
         keymap.of([indentWithTab]),
         languageCompartment.of(languageExtension(languageId)),
+        readOnlyCompartmentRef.current.of(EditorState.readOnly.of(Boolean(readOnly))),
         EditorView.lineWrapping,
         EditorView.domEventHandlers({
           mousedown: (_event, view) => {
@@ -146,9 +149,12 @@ export function CodeEditor({ value, languageId, onChange, revealRange, onRevealH
       return;
     }
     view.dispatch({
-      effects: languageCompartmentRef.current.reconfigure(languageExtension(languageId))
+      effects: [
+        languageCompartmentRef.current.reconfigure(languageExtension(languageId)),
+        readOnlyCompartmentRef.current.reconfigure(EditorState.readOnly.of(Boolean(readOnly)))
+      ]
     });
-  }, [languageId]);
+  }, [languageId, readOnly]);
 
   useEffect(() => {
     const view = viewRef.current;

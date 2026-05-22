@@ -121,7 +121,7 @@ describe("App smoke", () => {
     await waitFor(() => {
       const editor = container.querySelector(".cm-editor");
       expect(editor).toBeTruthy();
-      expect(editor?.textContent).toContain("Welcome to TextForge.");
+      expect(editor?.textContent).toContain("Welcome to TextForge");
     });
 
     fireEvent.click((container.querySelectorAll(".document-tabs > button")[1] as HTMLButtonElement));

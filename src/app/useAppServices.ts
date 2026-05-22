@@ -34,8 +34,8 @@ export function useAppServices(): AppServices {
       runtime,
       plugins,
       workspace,
-      pipelines: new PipelineRunner(plugins, runtime, () => workspace.listDocuments()),
-      diagnostics: new DiagnosticsService(plugins, runtime, () => workspace.listDocuments()),
+      pipelines: new PipelineRunner(plugins, runtime, () => workspace.listAllTextFileViews()),
+      diagnostics: new DiagnosticsService(plugins, runtime, () => workspace.listAllTextFileViews()),
       storage: new TextForgeStorage(),
       lua
     };

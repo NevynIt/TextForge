@@ -380,6 +380,13 @@ export class WorkspaceManager {
       .filter(Boolean) as WorkspaceTextFileView[];
   }
 
+  listAllTextFileViews(): WorkspaceTextFileView[] {
+    return this.listEntries()
+      .filter((entry): entry is WorkspaceFile => entry.kind === "file" && entry.fileKind === "text")
+      .map((file) => this.toTextDocument(file))
+      .filter(Boolean) as WorkspaceTextFileView[];
+  }
+
   getActiveTextFileView(): WorkspaceTextFileView | undefined {
     return this.toTextDocument(this.state.activeFileId ? this.getFile(this.state.activeFileId) : undefined);
   }
@@ -541,14 +548,25 @@ export class WorkspaceManager {
     }
     const previousPath = entry.path;
     const nextUpdatedAt = new Date().toISOString();
-    this.state.entries[id] = {
-      ...entry,
-      name: nextName,
-      path: nextPath,
-      parentId: parentId ?? entry.parentId,
-      updatedAt: nextUpdatedAt,
-      ...(entry.kind === "file" ? { dirty: true, version: entry.version + 1 } : {})
-    };
+    if (entry.kind === "file") {
+      this.state.entries[id] = {
+        ...entry,
+        name: nextName,
+        path: nextPath,
+        parentId: parentId ?? entry.parentId,
+        updatedAt: nextUpdatedAt,
+        dirty: true,
+        version: entry.version + 1
+      };
+    } else {
+      this.state.entries[id] = {
+        ...entry,
+        name: nextName,
+        path: nextPath,
+        parentId: parentId ?? entry.parentId,
+        updatedAt: nextUpdatedAt
+      };
+    }
     if (entry.kind === "folder") {
       for (const child of this.listChildren(id)) {
         const childPath = child.path.replace(previousPath, nextPath);

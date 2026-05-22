@@ -33,10 +33,8 @@ import type { PipelineTraceStep, PipelineValue, PluginDiagnostic, PluginState, P
 import { serializeItmPipelineDocument } from "../viewers/itm/itmSerialization";
 import type { RegisteredLuaAction } from "../lua/luaScriptRegistry";
 import type { LuaRunResult } from "../lua/types";
-import type { TextForgeResource } from "../resources/resourceCatalog";
 import { DocumentBadge, documentBadgeSvgMarkup } from "./DocumentBadge";
 import { LuaConsolePanel, LuaScriptManagerPanel } from "./LuaConsolePanel";
-import { ResourceBrowserPanel } from "./ResourceBrowserPanel";
 import { ViewerContent, viewerSnapshotHtml } from "../viewers/registry";
 
 interface PopupHostProps {
@@ -47,7 +45,6 @@ interface PopupHostProps {
   registeredPipelines: RegisteredPipeline[];
   pluginDiagnostics: PluginDiagnostic[];
   luaActions: RegisteredLuaAction[];
-  resources: TextForgeResource[];
   onTogglePluginAutoload: (pluginId: string, autoload: boolean) => void;
   onSetPipelineEnabled: (pluginId: string, pipelineId: string, enabled: boolean) => void;
   onAcknowledgePluginDiagnostic: (diagnosticId: string) => void;
@@ -57,8 +54,6 @@ interface PopupHostProps {
   selectedLuaText?: string;
   onOpenLuaResult: (value: PipelineValue) => void;
   onNewLuaScript: () => void;
-  onOpenResource: (resource: TextForgeResource) => void;
-  onViewResource: (resource: TextForgeResource) => void;
   onOpenSvgArtifact: (originPopupId: string, svg: string, title: string) => void;
   sourceSelection?: VisualSelection;
   onSelectSourceRange: (documentId: string, range: SourceRange) => void;
@@ -76,7 +71,6 @@ export function PopupHost({
   registeredPipelines,
   pluginDiagnostics,
   luaActions,
-  resources,
   onTogglePluginAutoload,
   onSetPipelineEnabled,
   onAcknowledgePluginDiagnostic,
@@ -86,8 +80,6 @@ export function PopupHost({
   selectedLuaText,
   onOpenLuaResult,
   onNewLuaScript,
-  onOpenResource,
-  onViewResource,
   onOpenSvgArtifact,
   sourceSelection,
   onSelectSourceRange,
@@ -286,7 +278,7 @@ export function PopupHost({
                 {popup.refreshedAt ? <span>Refreshed {new Date(popup.refreshedAt).toLocaleTimeString()}</span> : null}
               </div>
             ) : null}
-            <main class={`popup-body${popup.kind === "resource-browser" ? " resource-browser-body" : ""}`}>
+            <main class="popup-body">
               {popup.kind === "viewer" && popup.result ? (
                 <ViewerContent
                   result={popup.result}
@@ -345,9 +337,6 @@ export function PopupHost({
               ) : null}
               {popup.kind === "lua-scripts" ? (
                 <LuaScriptManagerPanel documents={documents} actions={luaActions} onNewScript={onNewLuaScript} />
-              ) : null}
-              {popup.kind === "resource-browser" ? (
-                <ResourceBrowserPanel resources={resources} onOpenResource={onOpenResource} onViewResource={onViewResource} />
               ) : null}
             </main>
             <div class="popup-resize-handle" title="Resize" onPointerDown={(event) => startPopupResize(event, popup, frame, onUpdate)} />
