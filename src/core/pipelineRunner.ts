@@ -161,7 +161,7 @@ export class PipelineRunner {
 
   private context(): ContributionContext {
     const workspace = this.workspaceProvider();
-    return { runtime: this.runtime, workspace, documents: workspace.listTextFiles() };
+    return { runtime: this.runtime, workspace };
   }
 }
 

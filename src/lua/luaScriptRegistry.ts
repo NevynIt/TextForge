@@ -9,10 +9,10 @@ export interface RegisteredLuaAction extends LuaAvailableAction {
 }
 
 export async function buildLuaActionsPlugin(
-  documents: TextDocument[],
+  workspaceTextFiles: TextDocument[],
   service: LuaTransformService
 ): Promise<{ plugin: TextForgePlugin; actions: RegisteredLuaAction[] }> {
-  const luaDocuments = documents.filter((document) => {
+  const luaDocuments = workspaceTextFiles.filter((document) => {
     const path = (document.path || document.fileName).replaceAll("\\", "/").toLowerCase();
     return path.startsWith("/.textforge/automation/lua/") && (document.languageId === "text.lua" || path.endsWith(".lua"));
   });
@@ -22,7 +22,7 @@ export async function buildLuaActionsPlugin(
       source: document.text,
       fileName: document.path || document.fileName,
       input: { kind: "text", languageId: "text.plain", text: "" },
-      documents
+      workspaceTextFiles
     });
     descriptors.forEach((descriptor, index) => {
       const actionId = descriptor.id || `${document.id}-${index + 1}`;
@@ -40,11 +40,11 @@ export async function buildLuaActionsPlugin(
   }
   return {
     actions,
-    plugin: createLuaActionsPlugin(actions, documents, service)
+    plugin: createLuaActionsPlugin(actions, workspaceTextFiles, service)
   };
 }
 
-function createLuaActionsPlugin(actions: RegisteredLuaAction[], documents: TextDocument[], service: LuaTransformService): TextForgePlugin {
+function createLuaActionsPlugin(actions: RegisteredLuaAction[], workspaceTextFiles: TextDocument[], service: LuaTransformService): TextForgePlugin {
   return {
     id: "lua-actions",
     name: "Lua Actions",
@@ -72,7 +72,7 @@ function createLuaActionsPlugin(actions: RegisteredLuaAction[], documents: TextD
           fileName: latestDocument?.path || latestDocument?.fileName || action.fileName,
           actionId: action.id,
           input: value,
-          documents: workspaceDocuments.length ? workspaceDocuments : documents,
+          workspaceTextFiles: workspaceDocuments.length ? workspaceDocuments : workspaceTextFiles,
           actions: latestActions
         });
         if (!result.ok || !result.value) {

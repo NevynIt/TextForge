@@ -45,7 +45,7 @@ export interface LuaRunRequest {
   sourceOffset?: Pick<SourceRange, "from" | "line" | "column">;
   actionId?: string;
   input?: PipelineValue;
-  documents?: TextDocument[];
+  workspaceTextFiles?: TextDocument[];
   actions?: LuaAvailableAction[];
   limits?: Partial<LuaLimits>;
   recursionDepth?: number;

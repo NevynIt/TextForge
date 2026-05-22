@@ -63,7 +63,7 @@ return {
 - `tf.actions`
 - `tf.console`
 
-Open `.lua` documents can also be required as local user modules by name. Unknown modules fail with a TextForge module-not-found error. There is no filesystem, network, native library, or JavaScript module searcher.
+Workspace `.lua` files can also be required as local user modules by name. Resolution starts from the active script folder, then falls back to `/lua`, `/lib`, and `/.textforge/automation/lua`. Unknown modules fail with a TextForge module-not-found error. There is no filesystem, network, native library, or JavaScript module searcher.
 
 ## Runtime Limits
 

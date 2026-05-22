@@ -27,7 +27,7 @@ Rationale: V1 favors fresh Lua states for predictable isolation.
 ## User Lua Libraries With Dependency Declarations
 Status: partial.
 
-Rationale: Open `.lua` documents can be required as local modules. Rich package metadata can come later.
+Rationale: Workspace `.lua` files can be required as local modules. Rich package metadata can come later.
 
 ## Optional Compressed Example Packs
 Status: deferred.

@@ -53,7 +53,7 @@ return {
 
 CSV parsing returns a table model payload with `columns`, `rows`, `delimiter`, and parser diagnostics. `input:emit_csv(...)` accepts either that payload or a `model.table` value and returns editable `text.csv`.
 
-Open `.lua` documents can also be required as local user modules by name. There is no filesystem, network, or JavaScript module resolution.
+Workspace `.lua` files can also be required as local user modules by name. Resolution starts from the active script folder, then falls back to `/lua`, `/lib`, and `/.textforge/automation/lua`. There is no filesystem, network, or JavaScript module resolution.
 
 ## Lua Console Shortcuts
 

@@ -25,8 +25,7 @@ const emptyContext: ContributionContext = {
     resolvePath: (_baseFileId, target) => target,
     readText: () => undefined,
     readBinary: () => undefined
-  },
-  documents: []
+  }
 };
 
 describe("markdownCore", () => {

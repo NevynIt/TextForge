@@ -249,7 +249,7 @@ function pushInputTable(L: unknown, context: LuaExecutionContext): void {
     const parsed = parseIndentedTree(input.text, input.languageId, {
       currentDocumentId: input.documentId,
       currentFileName: input.fileName,
-      includeDocuments: context.request.documents || []
+      includeDocuments: context.request.workspaceTextFiles || []
     });
     pushJsValue(state, parsed.nodes);
     return 1;
@@ -523,7 +523,7 @@ function runBuiltInPipelineStep(id: string, input: PipelineValue, context: LuaEx
     const parsed = parseIndentedTree(input.text, input.languageId, {
       currentDocumentId: input.documentId,
       currentFileName: input.fileName,
-      includeDocuments: context.request.documents || []
+      includeDocuments: context.request.workspaceTextFiles || []
     });
     return { kind: "model", modelType: "model.tree", data: parsed.nodes, diagnostics: parsed.diagnostics };
   }
@@ -934,7 +934,7 @@ function inferDelimiter(text: string): string {
 
 function buildUserModuleRegistry(request: LuaRunRequest): Record<string, string> {
   const modules: Record<string, string> = {};
-  for (const document of request.documents || []) {
+  for (const document of request.workspaceTextFiles || []) {
     const path = normalizeLuaModulePath(document.path || document.fileName);
     if (!path || (document.languageId !== "text.lua" && !path.toLowerCase().endsWith(".lua"))) {
       continue;
@@ -948,7 +948,7 @@ function buildUserModuleRegistry(request: LuaRunRequest): Record<string, string>
 
 function listUserModuleNames(request: LuaRunRequest): string[] {
   const names = new Set<string>();
-  for (const document of request.documents || []) {
+  for (const document of request.workspaceTextFiles || []) {
     const path = normalizeLuaModulePath(document.path || document.fileName);
     if (!path || !path.toLowerCase().endsWith(".lua")) {
       continue;

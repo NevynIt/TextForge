@@ -19,7 +19,7 @@ export class DiagnosticsService {
       try {
         const linter = contribution as LinterContribution;
         const workspace = this.workspaceProvider();
-        const results = await linter.lint(document, { runtime: this.runtime, workspace, documents: workspace.listTextFiles() });
+        const results = await linter.lint(document, { runtime: this.runtime, workspace });
         diagnostics.push(
           ...results.map((diagnostic, index) => ({
             ...diagnostic,

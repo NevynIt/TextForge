@@ -221,7 +221,7 @@ describe("Lua runtime core", () => {
         local helpers = require("helpers")
         return input:emit_text("text.plain", helpers.upper("hello"))
       `,
-      documents: [
+      workspaceTextFiles: [
         {
           id: "main",
           fileName: "main.lua",
@@ -262,7 +262,7 @@ describe("Lua runtime core", () => {
         local auto = require("helpers")
         return input:emit_text("text.plain", lib.word() .. ":" .. auto.word())
       `,
-      documents: [
+      workspaceTextFiles: [
         {
           id: "lib-util",
           fileName: "util.lua",

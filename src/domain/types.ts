@@ -228,7 +228,6 @@ export interface RuntimeLoader {
 export interface ContributionContext {
   runtime: RuntimeLoader;
   workspace: WorkspaceContributionContext;
-  documents?: TextDocument[];
 }
 
 export interface WorkspaceFileSummary {

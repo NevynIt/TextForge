@@ -500,7 +500,7 @@ export function App() {
       source,
       fileName: "console.lua",
       input,
-      documents: allDocuments,
+      workspaceTextFiles: allDocuments,
       actions: luaActions
     });
     publishLuaDiagnostics(result, activeDocument);
@@ -517,7 +517,7 @@ export function App() {
       source: activeDocument.text,
       fileName: activeDocument.path || activeDocument.fileName,
       input: documentInput(activeDocument),
-      documents: allDocuments,
+      workspaceTextFiles: allDocuments,
       actions: luaActions
     });
     publishLuaDiagnostics(result, activeDocument);
@@ -547,7 +547,7 @@ export function App() {
         column: editorSelection.range.column
       },
       input: documentInput(activeDocument),
-      documents: allDocuments,
+      workspaceTextFiles: allDocuments,
       actions: luaActions
     });
     publishLuaDiagnostics(result, activeDocument);
