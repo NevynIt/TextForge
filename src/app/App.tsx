@@ -1,69 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "preact/hooks";
-import {
-  Bug,
-  BookOpen,
-  Download,
-  FilePlus2,
-  FolderOpen,
-  Languages,
-  ListChecks,
-  PanelTopOpen,
-  Puzzle,
-  ScrollText,
-  Terminal,
-  Workflow,
-  X
-} from "lucide-preact";
-import { DiagnosticsService } from "../core/diagnosticsService";
-import { LanguageRegistry, registerBaseLanguages } from "../core/languageRegistry";
-import { PipelineRunner } from "../core/pipelineRunner";
 import { createDiagnosticsPopup, createToolPopup, createViewerPopup } from "../core/popupFactory";
-import { PluginRegistry } from "../core/pluginRegistry";
-import { RuntimeLoader } from "../core/runtimeLoader";
-import { TextForgeStorage } from "../core/storage";
-import { WorkspaceManager } from "../core/workspaceManager";
 import type { Diagnostic, PipelineTraceStep, PipelineValue, PopupRecord, SourceRange, TextDocument, VisualSelection } from "../domain/types";
-import { pluginManifest } from "../plugins/manifest";
 import { serializeItmPipelineValue } from "../viewers/itm/itmSerialization";
 import { CodeEditor, type CodeEditorCommand } from "../components/CodeEditor";
-import { DocumentBadge } from "../components/DocumentBadge";
 import { PopupHost } from "../components/PopupHost";
-import { LuaTransformService } from "../lua/luaTransformService";
 import { buildLuaActionsPlugin, type RegisteredLuaAction } from "../lua/luaScriptRegistry";
 import type { LuaRunResult } from "../lua/types";
 import { textForgeResources, type TextForgeResource } from "../resources/resourceCatalog";
-
-interface AppServices {
-  languages: LanguageRegistry;
-  workspace: WorkspaceManager;
-  runtime: RuntimeLoader;
-  plugins: PluginRegistry;
-  pipelines: PipelineRunner;
-  diagnostics: DiagnosticsService;
-  storage: TextForgeStorage;
-  lua: LuaTransformService;
-}
+import { useAppServices } from "./useAppServices";
+import { ActionBar } from "../components/shell/ActionBar";
+import { DocumentTabs } from "../components/shell/DocumentTabs";
+import { TopBar } from "../components/shell/TopBar";
 
 export function App() {
-  const services = useMemo<AppServices>(() => {
-    const languages = new LanguageRegistry();
-    registerBaseLanguages(languages);
-    const runtime = new RuntimeLoader();
-    const plugins = new PluginRegistry(languages);
-    const workspace = new WorkspaceManager();
-    const lua = new LuaTransformService();
-    plugins.registerManifest(pluginManifest);
-    return {
-      languages,
-      runtime,
-      plugins,
-      workspace,
-      pipelines: new PipelineRunner(plugins, runtime, () => workspace.listDocuments()),
-      diagnostics: new DiagnosticsService(plugins, runtime, () => workspace.listDocuments()),
-      storage: new TextForgeStorage(),
-      lua
-    };
-  }, []);
+  const services = useAppServices();
 
   const [workspace, setWorkspace] = useState(services.workspace.snapshot());
   const [popups, setPopups] = useState<PopupRecord[]>([]);
@@ -399,6 +349,11 @@ export function App() {
     setPluginRevision((value) => value + 1);
   }
 
+  function cancelRename(): void {
+    setRenamingDocumentId("");
+    setRenameDraft("");
+  }
+
   async function runPipeline(pipelineId: string): Promise<void> {
     if (!activeDocument || !pipelineId) {
       return;
@@ -663,207 +618,49 @@ export function App() {
 
   return (
     <div class="app-shell">
-      <header class="topbar">
-        <div class="brand">
-          <PanelTopOpen size={20} />
-          <strong>TextForge</strong>
-        </div>
-        <div class="toolbar">
-          <button type="button" onClick={newDocument} disabled={!ready}>
-            <FilePlus2 size={16} />
-            New
-          </button>
-          <label class="file-button">
-            <FolderOpen size={16} />
-            Open
-            <input type="file" multiple onChange={(event) => void openFiles(event.currentTarget.files)} />
-          </label>
-          <button type="button" onClick={downloadActiveDocument} disabled={!activeDocument}>
-            <Download size={16} />
-            Download
-          </button>
-          <button type="button" class={hasDiagnosticsAttention ? "attention" : ""} onClick={() => void runDiagnostics()} disabled={!activeDocument}>
-            <Bug size={16} />
-            Diagnostics{hasDiagnosticsAttention ? " *" : ""}
-          </button>
-          <button type="button" class={hasPluginAttention ? "attention" : ""} onClick={openPluginManager}>
-            <Puzzle size={16} />
-            Plugins{hasPluginAttention ? " *" : ""}
-          </button>
-          <button type="button" onClick={openPipelineTrace} disabled={!lastTrace.length}>
-            <ListChecks size={16} />
-            Trace
-          </button>
-          <button type="button" onClick={openLuaConsole}>
-            <Terminal size={16} />
-            Lua
-          </button>
-          <button type="button" onClick={openLuaScripts}>
-            <ScrollText size={16} />
-            Scripts
-          </button>
-          <button type="button" onClick={openResourceBrowser}>
-            <BookOpen size={16} />
-            Resources
-          </button>
-        </div>
-      </header>
+      <TopBar
+        ready={ready}
+        hasActiveDocument={Boolean(activeDocument)}
+        hasDiagnosticsAttention={hasDiagnosticsAttention}
+        hasPluginAttention={hasPluginAttention}
+        hasTrace={Boolean(lastTrace.length)}
+        onNewDocument={newDocument}
+        onOpenFiles={(files) => void openFiles(files)}
+        onDownload={downloadActiveDocument}
+        onRunDiagnostics={() => void runDiagnostics()}
+        onOpenPluginManager={openPluginManager}
+        onOpenTrace={openPipelineTrace}
+        onOpenLuaConsole={openLuaConsole}
+        onOpenLuaScripts={openLuaScripts}
+        onOpenResources={openResourceBrowser}
+      />
 
-      <nav
-        class="document-tabs"
-        onDragOver={(event) => {
-          if (event.dataTransfer?.types.includes("Files") || event.dataTransfer?.types.includes("application/x-textforge-document-id")) {
-            event.preventDefault();
-          }
-        }}
-        onDrop={(event) => {
-          event.preventDefault();
-          const transfer = event.dataTransfer;
-          const tabId = transfer?.getData("application/x-textforge-document-id") || draggedTabId;
-          if (tabId) {
-            reorderDocument(tabId, undefined, "end");
-            setDraggedTabId("");
-          } else if (transfer) {
-            void openFiles(transfer.files);
-          }
-        }}
-        onDblClick={(event) => {
-          if (event.target === event.currentTarget) {
-            newDocument();
-          }
-        }}
-      >
-        {workspace.documents.map((document) => (
-          <button
-            type="button"
-            class={document.id === workspace.activeDocumentId ? "active" : ""}
-            onClick={() => switchDocument(document.id)}
-            key={document.id}
-            draggable
-            onDragStart={(event) => {
-              setDraggedTabId(document.id);
-              event.dataTransfer?.setData("application/x-textforge-document-id", document.id);
-              event.dataTransfer?.setData("text/plain", document.fileName);
-              if (event.dataTransfer) {
-                event.dataTransfer.effectAllowed = "move";
-              }
-            }}
-            onDragOver={(event) => {
-              if (event.dataTransfer?.types.includes("application/x-textforge-document-id")) {
-                event.preventDefault();
-                event.dataTransfer.dropEffect = "move";
-              }
-            }}
-            onDrop={(event) => {
-              const sourceId = event.dataTransfer?.getData("application/x-textforge-document-id") || draggedTabId;
-              if (!sourceId) {
-                return;
-              }
-              event.preventDefault();
-              event.stopPropagation();
-              const rect = event.currentTarget.getBoundingClientRect();
-              reorderDocument(sourceId, document.id, event.clientX > rect.left + rect.width / 2 ? "after" : "before");
-              setDraggedTabId("");
-            }}
-            onDragEnd={() => setDraggedTabId("")}
-            title={`${document.id} - ${document.languageId} - v${document.version}`}
-          >
-            <DocumentBadge identity={document.identity} />
-            <span>{document.dirty ? "* " : ""}{document.fileName}</span>
-            <X
-              size={14}
-              onClick={(event) => {
-                event.stopPropagation();
-                closeDocument(document.id);
-              }}
-            />
-          </button>
-        ))}
-      </nav>
+      <DocumentTabs
+        documents={workspace.documents}
+        activeDocumentId={workspace.activeDocumentId}
+        draggedTabId={draggedTabId}
+        onSetDraggedTabId={setDraggedTabId}
+        onSwitchDocument={switchDocument}
+        onReorderDocument={reorderDocument}
+        onCloseDocument={closeDocument}
+        onOpenFiles={(files) => void openFiles(files)}
+        onNewDocument={newDocument}
+      />
 
-      <section class="actionbar">
-        {activeDocument ? (
-          <div class="active-document-chip">
-            <DocumentBadge identity={activeDocument.identity} />
-            {renamingDocumentId === activeDocument.id ? (
-              <input
-                class="rename-input"
-                value={renameDraft}
-                autoFocus
-                onInput={(event) => setRenameDraft(event.currentTarget.value)}
-                onBlur={finishRename}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    finishRename();
-                  } else if (event.key === "Escape") {
-                    setRenamingDocumentId("");
-                    setRenameDraft("");
-                  }
-                }}
-              />
-            ) : (
-              <button type="button" class="document-title-button" title="Rename file" onClick={() => startRename(activeDocument)}>
-                <strong>{activeDocument.fileName}</strong>
-              </button>
-            )}
-          </div>
-        ) : null}
-        <label title="Language" aria-label="Language">
-          <Languages size={16} />
-          <select value={activeDocument?.languageId || "text.plain"} onChange={(event) => updateLanguage(event.currentTarget.value)} disabled={!activeDocument}>
-            {services.languages.list().map((language) => (
-              <option value={language.id} key={language.id}>
-                {language.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <div class="pipeline-picker" title="Pipeline" aria-label="Pipeline">
-          <Workflow size={16} />
-          {pipelines.length === 1 ? (
-            <button type="button" onClick={() => void runPipeline(pipelines[0].id)} disabled={!activeDocument}>
-              {pipelines[0].name}
-            </button>
-          ) : (
-            <select value="" onChange={(event) => void runPipeline(event.currentTarget.value)} disabled={!activeDocument || !pipelines.length}>
-              <option value="">{pipelines.length ? "Choose action..." : "No actions"}</option>
-              {pipelines.map((pipeline) => (
-                <option value={pipeline.id} key={pipeline.id}>
-                  {pipeline.name}
-                </option>
-              ))}
-            </select>
-          )}
-        </div>
-        {activeDocument && isIndentedTextLanguage(activeDocument.languageId) ? (
-          <>
-            <button
-              type="button"
-              title="Fold top directives"
-              onClick={() => setEditorCommand((current) => ({ revision: (current?.revision || 0) + 1, action: "fold-leading-directives" }))}
-            >
-              Fold directives
-            </button>
-            <button
-              type="button"
-              title="Fold all ITM sections"
-              onClick={() => setEditorCommand((current) => ({ revision: (current?.revision || 0) + 1, action: "fold-all" }))}
-            >
-              Fold all
-            </button>
-            <button
-              type="button"
-              title="Unfold all ITM sections"
-              onClick={() => setEditorCommand((current) => ({ revision: (current?.revision || 0) + 1, action: "unfold-all" }))}
-            >
-              Unfold all
-            </button>
-          </>
-        ) : null}
-        <span class="document-status">
-          {activeDocument ? `${activeDocument.languageId} - v${activeDocument.version} - ${activeDocument.dirty ? "dirty" : "clean"}` : "No document"}
-        </span>
-      </section>
+      <ActionBar
+        activeDocument={activeDocument}
+        languages={services.languages.list()}
+        pipelines={pipelines}
+        renamingDocumentId={renamingDocumentId}
+        renameDraft={renameDraft}
+        onRenameDraftChange={setRenameDraft}
+        onFinishRename={finishRename}
+        onCancelRename={cancelRename}
+        onStartRename={startRename}
+        onUpdateLanguage={updateLanguage}
+        onRunPipeline={(pipelineId) => void runPipeline(pipelineId)}
+        onSetEditorCommand={setEditorCommand}
+      />
 
       <main class="workspace">
         <section class="editor-pane">
@@ -1014,10 +811,6 @@ function extensionForLanguage(languageId: string): string {
     return "lua";
   }
   return "txt";
-}
-
-function isIndentedTextLanguage(languageId: string): boolean {
-  return languageId === "text.itm" || languageId === "text.indented-tree";
 }
 
 function looksLikeJson(value: string): boolean {
