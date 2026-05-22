@@ -1,29 +1,34 @@
 # TextForge User Manual
 
-## 1. Start With Plain Text
+## 1. Start With The Workspace
 
-TextForge is easiest to understand if you begin with the editor, not the viewers.
+TextForge is easiest to understand if you begin with the workspace tree, then move into the editor and viewers.
 
 1. Open the app.
-2. Create a new document or open a local file.
-3. Give it the right language.
-4. Edit the text directly.
+2. Select a folder in the workspace tree.
+3. Create a file or import one into that folder.
+4. Give it the right language.
+5. Edit the text directly.
 
 The editor is the source of truth. Every tree, graph, rendered page, SVG, or transformed output is derived from text and can be regenerated from it.
 
 Useful basics:
 
+- keep many files in the workspace without opening them all at once;
 - open multiple documents at once;
-- rename documents in place;
+- rename files in place;
 - drag tabs to reorder them;
 - switch languages for the current document;
-- open files by picker or drag-and-drop;
-- download the active document back to disk;
-- distinguish documents by their deterministic Shapez-style badges.
+- import files by picker;
+- import ZIP archives into the selected folder;
+- export the active file, a selected folder, or the whole workspace;
+- distinguish open documents by their deterministic Shapez-style badges.
+
+The workspace is private to TextForge and stored in IndexedDB. It is not a live mirror of a local folder. Files only cross the local filesystem boundary through explicit import and export actions.
 
 ## 2. Use The Built-In Resources
 
-Open the Resource Browser to explore bundled documentation and examples.
+Open `/.textforge/resources` in the workspace tree to explore bundled documentation and examples.
 
 It includes:
 
@@ -34,7 +39,7 @@ It includes:
 - the executive summary;
 - test and design notes.
 
-The resource list is grouped by category. Start by expanding only one group at a time. Open a resource as an editable copy when you want to experiment without changing the original bundled text. Markdown resources can also be sent directly to the HTML viewer, and any resource can be copied to the clipboard from the browser.
+Resources are read-only. View them directly when you only need reference material. Copy them into `/docs`, `/examples`, or another editable folder when you want to modify them. Markdown resources can be sent directly to the HTML viewer from the workspace explorer.
 
 ## 3. Render Markdown And Technical Notes
 
@@ -60,7 +65,7 @@ ITM supports:
 - hierarchy through indentation;
 - ids, tags, attributes, and links;
 - `%style` directives, including multiline blocks;
-- `%include` resolution against currently open documents;
+- `%include` resolution against workspace paths;
 - tree, mind map, Cytoscape, and Sigma projections.
 
 The tree viewer is a good bridge between text and structure.
@@ -73,11 +78,7 @@ Useful interactions:
 - use the fold and unfold controls to manage large trees;
 - enable inline details when you want the tree to read more like a structured outline.
 
-TextForge also exposes two ITM edit skeleton actions. They are placeholders for future visual editing surfaces, not round-trip visual editors.
-
 ## 5. Follow Source Between Text And Visuals
-
-One of the most useful TextForge features is the source-selection bridge.
 
 The editor and several viewers keep each other aligned:
 
@@ -86,9 +87,7 @@ The editor and several viewers keep each other aligned:
 - viewer popups can be set to Follow source;
 - source-aware refresh keeps popups current when the underlying document changes.
 
-This makes exploration faster because you can move from text to structure and back without losing context. Viewer popups also support search, zoom, export, detached snapshot windows, and layout shortcuts, so you can keep several synchronized views open without turning the editor into a canvas tool.
-
-If you are learning a new document format, keep the editor and a viewer side by side and watch how the visual selection tracks the source.
+Viewer popups also support search, zoom, export, detached snapshot windows, and layout shortcuts, so you can keep several synchronized views open without turning the editor into a canvas tool.
 
 ## 6. Explore Graphs Interactively
 
@@ -100,33 +99,9 @@ You can open graph-shaped data in:
 - Sigma/Graphology for large graph navigation and focused filtering;
 - SVG when the result is better treated as a diagram artifact.
 
-Particularly useful graph features include:
+Useful graph features include search, layout controls, optional labels, Sigma filtering to matches, Sigma neighbor focusing, and panning and zooming in graph and SVG surfaces.
 
-- viewer search;
-- layout controls;
-- optional labels and edge labels;
-- background and presentation controls;
-- Sigma filtering to matches;
-- Sigma neighbor focusing to reduce visual noise;
-- panning and zooming in graph and SVG surfaces.
-
-A good workflow is to search for a concept, filter the Sigma graph to matches, then inspect only the local neighborhood before jumping back to the source text.
-
-## 7. Use Mind Maps And Trees For Reading
-
-Mind maps are useful when you want a presentation-friendly overview of the same ITM source.
-
-TextForge supports:
-
-- fold and unfold for branches;
-- fit and center commands;
-- cross-links between branches;
-- draggable cross-link labels during the current session;
-- source-aware selection so the map can still lead you back to the text.
-
-Use the mind map when the shape of the idea matters more than the exact text layout, then return to the tree or source editor for precise edits.
-
-## 8. Use JSON, XML, CSV, And BPMN
+## 7. Use JSON, XML, CSV, And BPMN
 
 TextForge is not only for Markdown and ITM.
 
@@ -137,13 +112,9 @@ Current built-in actions also cover:
 - delimited text to table viewing for `.csv`, `.tsv`, and `.tab` files;
 - BPMN 2.0 XML to either a BPMN diagram viewer or an SVG viewer.
 
-These formats fit the same model as the rest of the app: text stays editable in the main editor, and viewers are opened on demand through named actions.
-
-## 9. Run Pipelines And Inspect The Trace
+## 8. Run Pipelines And Inspect The Trace
 
 Pipelines connect parsers, transforms, viewers, and serializers by contract.
-
-That matters because a transformation in TextForge is not just a button that changes text. It is a named flow with inspectable steps.
 
 Use pipelines when you want to:
 
@@ -151,15 +122,14 @@ Use pipelines when you want to:
 - render Markdown or diagrams;
 - produce SVG, HTML, or text output;
 - inspect intermediate values in the trace popup;
-- open a trace step as a new editable document.
+- open a trace step as a new editable document;
+- create generated workspace output under `/generated/...`.
 
 When something looks wrong, the trace is often the quickest way to see whether the issue is in parsing, transformation, or final rendering.
 
-## 10. Automate With Lua
+## 9. Automate With Lua
 
-Once the built-in actions are familiar, move to Lua.
-
-TextForge uses Lua for user extensibility because it is easier to sandbox than arbitrary browser JavaScript. Lua runs locally in a restricted Fengari worker with curated TextForge helpers.
+TextForge uses Lua for user extensibility because it is easier to sandbox than arbitrary browser JavaScript.
 
 Typical Lua tasks:
 
@@ -169,11 +139,13 @@ Typical Lua tasks:
 - filter nodes and edges;
 - compose built-in pipeline steps;
 - emit new text, JSON, ITM, or CSV documents;
-- register saved named actions from open `.lua` files.
+- register saved named actions from `/.textforge/automation/lua/`.
 
-Lua runs with explicit limits on execution time, instructions, output size, recursion depth, and model/table size. The bundled Lua tutorial is the best next stop after this manual.
+Ordinary `.lua` files are inert by default. A Lua file anywhere in the workspace can still be run manually when open, but auto-loaded actions only come from the dedicated automation root. Lua can also `require()` workspace-local libraries from the active script folder, `/lua`, `/lib`, and the automation root without accessing the real filesystem.
 
-## 11. Use The Lua Console For Fast Experiments
+Lua runs with explicit limits on execution time, instructions, output size, recursion depth, and model/table size.
+
+## 10. Use The Lua Console For Fast Experiments
 
 The Lua Console is a lightweight local command surface powered by xterm.js.
 
@@ -184,23 +156,9 @@ It is useful for:
 - running only the selected Lua text;
 - listing registered Lua actions;
 - executing built-in pipeline bridges;
-- opening the previous result as a new document.
+- opening the previous result as a generated workspace file.
 
-Common shortcuts:
-
-```text
-help
-actions
-run selection
-run itm-to-graph
-action your-action-id
-open run itm-to-graph
-open last
-```
-
-This is often the fastest way to probe a document, test a transformation idea, or build a custom workflow incrementally.
-
-## 12. Manage Internal Plugins And Pipelines
+## 11. Manage Internal Plugins And Pipelines
 
 The Plugin Manager is for packaged TextForge plugins, not end-user JavaScript uploads.
 
@@ -211,32 +169,26 @@ Use it to:
 - disable individual shipped pipelines when you want a narrower action list;
 - review and acknowledge plugin diagnostics.
 
-User extensibility remains Lua-only in the current build.
-
-## 13. Practical Learning Path
+## 12. Practical Learning Path
 
 If you want a smooth ramp instead of exploring everything at once, use this order:
 
-1. Edit a plain text or Markdown document.
-2. Open the Resource Browser and load a bundled example.
+1. Create or import a Markdown file.
+2. Open `/.textforge/resources` and copy a bundled example.
 3. Render Markdown with diagrams or math.
 4. Open an ITM example in the tree viewer.
 5. Try Ctrl-click and Follow source.
 6. Open the same ITM in Sigma and use search plus filtering.
 7. Inspect the pipeline trace.
 8. Run a small Lua snippet in the console.
-9. Turn that snippet into a saved Lua action.
+9. Promote a Lua script into `/.textforge/automation/lua/`.
 
-## 14. What To Keep In Mind
+## 13. What To Keep In Mind
 
 TextForge works best when you treat it as a workbench for exploration rather than a hidden document database.
-
-A few habits make the most of it:
 
 - keep the text readable, because every other view depends on it;
 - use viewers to inspect and navigate, not to replace the source;
 - use filtering and search before trying to read a large graph all at once;
 - use Lua for repeatable transformations instead of manual copy-paste;
 - use the bundled examples as starting points for your own data.
-
-When used that way, TextForge becomes a compact local environment for understanding structured text, not just editing it.

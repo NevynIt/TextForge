@@ -213,6 +213,87 @@ describe("Lua runtime core", () => {
     expect(result.value).toMatchObject({ kind: "text", languageId: "text.plain", text: "HELLO" });
   });
 
+  it("resolves workspace-local Lua modules from the active script folder", () => {
+    const result = executeLuaInProcess({
+      mode: "script",
+      fileName: "/lua/main.lua",
+      source: `
+        local helpers = require("helpers")
+        return input:emit_text("text.plain", helpers.upper("hello"))
+      `,
+      documents: [
+        {
+          id: "main",
+          fileName: "main.lua",
+          path: "/lua/main.lua",
+          languageId: "text.lua",
+          text: "return true",
+          version: 1,
+          dirty: false,
+          identity: { color: "#000", badgeLabel: "M" },
+          createdAt: "2026-05-22T00:00:00.000Z",
+          updatedAt: "2026-05-22T00:00:00.000Z"
+        },
+        {
+          id: "helpers",
+          fileName: "helpers.lua",
+          path: "/lua/helpers.lua",
+          languageId: "text.lua",
+          text: `return { upper = function(value) return string.upper(value) end }`,
+          version: 1,
+          dirty: false,
+          identity: { color: "#111", badgeLabel: "H" },
+          createdAt: "2026-05-22T00:00:00.000Z",
+          updatedAt: "2026-05-22T00:00:00.000Z"
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.value).toMatchObject({ kind: "text", text: "HELLO" });
+  });
+
+  it("falls back to /lib and automation roots for workspace Lua require", () => {
+    const result = executeLuaInProcess({
+      mode: "script",
+      fileName: "/projects/demo/main.lua",
+      source: `
+        local lib = require("shared.util")
+        local auto = require("helpers")
+        return input:emit_text("text.plain", lib.word() .. ":" .. auto.word())
+      `,
+      documents: [
+        {
+          id: "lib-util",
+          fileName: "util.lua",
+          path: "/lib/shared/util.lua",
+          languageId: "text.lua",
+          text: `return { word = function() return "lib" end }`,
+          version: 1,
+          dirty: false,
+          identity: { color: "#000", badgeLabel: "L" },
+          createdAt: "2026-05-22T00:00:00.000Z",
+          updatedAt: "2026-05-22T00:00:00.000Z"
+        },
+        {
+          id: "auto-helper",
+          fileName: "helpers.lua",
+          path: "/.textforge/automation/lua/helpers.lua",
+          languageId: "text.lua",
+          text: `return { word = function() return "auto" end }`,
+          version: 1,
+          dirty: false,
+          identity: { color: "#111", badgeLabel: "A" },
+          createdAt: "2026-05-22T00:00:00.000Z",
+          updatedAt: "2026-05-22T00:00:00.000Z"
+        }
+      ]
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.value).toMatchObject({ kind: "text", text: "lib:auto" });
+  });
+
   it("enforces Lua action input contracts for nested calls", () => {
     const result = executeLuaInProcess({
       mode: "command",

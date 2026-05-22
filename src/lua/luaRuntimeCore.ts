@@ -40,6 +40,7 @@ interface LuaExecutionContext {
   instructions: number;
   request: LuaRunRequest;
   userModules: Record<string, string>;
+  userModuleNames: string[];
   moduleCache: Map<string, (state: unknown) => void>;
 }
 
@@ -53,6 +54,7 @@ export function executeLuaInProcess(request: LuaRunRequest): LuaRunResult {
     instructions: 0,
     request,
     userModules: buildUserModuleRegistry(request),
+    userModuleNames: listUserModuleNames(request),
     moduleCache: new Map()
   };
   const L = lauxlib.luaL_newstate();
@@ -151,7 +153,7 @@ function installRequire(L: unknown, context: LuaExecutionContext): void {
   lua.lua_newtable(L);
   lua.lua_setfield(L, -2, to_luastring("loaded"));
   lua.lua_newtable(L);
-  for (const name of Object.keys({ ...bundledLuaModules, ...context.userModules })) {
+  for (const name of [...Object.keys(bundledLuaModules), ...context.userModuleNames]) {
     lua.lua_pushboolean(L, true);
     lua.lua_setfield(L, -2, to_luastring(name));
   }
@@ -175,7 +177,7 @@ function requireModule(L: unknown, context: LuaExecutionContext): number {
     cached(L);
     return 1;
   }
-  const source = bundledLuaModules[name] || context.userModules[name];
+  const source = bundledLuaModules[name] || resolveUserModuleSource(name, context);
   if (!source) {
     return lauxlib.luaL_error(
       L,
@@ -933,15 +935,70 @@ function inferDelimiter(text: string): string {
 function buildUserModuleRegistry(request: LuaRunRequest): Record<string, string> {
   const modules: Record<string, string> = {};
   for (const document of request.documents || []) {
-    if (document.languageId !== "text.lua" && !document.fileName.toLowerCase().endsWith(".lua")) {
+    const path = normalizeLuaModulePath(document.path || document.fileName);
+    if (!path || (document.languageId !== "text.lua" && !path.toLowerCase().endsWith(".lua"))) {
       continue;
     }
-    const moduleName = document.fileName.replace(/\\/g, "/").replace(/\.lua$/i, "").replace(/[/-]/g, ".").replace(/^\.+|\.+$/g, "");
-    if (moduleName && document.text !== request.source) {
-      modules[moduleName] = document.text;
+    if (document.text !== request.source || path !== normalizeLuaModulePath(request.fileName || "")) {
+      modules[path] = document.text;
     }
   }
   return modules;
+}
+
+function listUserModuleNames(request: LuaRunRequest): string[] {
+  const names = new Set<string>();
+  for (const document of request.documents || []) {
+    const path = normalizeLuaModulePath(document.path || document.fileName);
+    if (!path || !path.toLowerCase().endsWith(".lua")) {
+      continue;
+    }
+    const modulePath = path.replace(/\.lua$/i, "").replace(/\/init$/i, "");
+    const dotted = modulePath.replace(/^\/+/, "").replace(/\//g, ".");
+    if (dotted) {
+      names.add(dotted);
+    }
+  }
+  return Array.from(names).sort();
+}
+
+function resolveUserModuleSource(name: string, context: LuaExecutionContext): string | undefined {
+  const normalizedName = name.replace(/\\/g, "/").replace(/\./g, "/").replace(/^\/+|\/+$/g, "");
+  if (!normalizedName) {
+    return undefined;
+  }
+  for (const candidate of candidateLuaModulePaths(normalizeLuaModulePath(context.request.fileName || ""), normalizedName)) {
+    if (context.userModules[candidate]) {
+      return context.userModules[candidate];
+    }
+  }
+  return undefined;
+}
+
+function candidateLuaModulePaths(baseScriptPath: string | undefined, moduleName: string): string[] {
+  const candidates: string[] = [];
+  const parent = baseScriptPath ? baseLuaParentPath(baseScriptPath) : undefined;
+  if (parent) {
+    candidates.push(`${parent}/${moduleName}.lua`, `${parent}/${moduleName}/init.lua`);
+  }
+  for (const root of ["/lua", "/lib", "/.textforge/automation/lua"]) {
+    candidates.push(`${root}/${moduleName}.lua`, `${root}/${moduleName}/init.lua`);
+  }
+  return Array.from(new Set(candidates.map(normalizeLuaModulePath).filter(Boolean) as string[]));
+}
+
+function baseLuaParentPath(path: string): string {
+  const normalized = normalizeLuaModulePath(path) || "/";
+  const index = normalized.lastIndexOf("/");
+  return index <= 0 ? "/" : normalized.slice(0, index);
+}
+
+function normalizeLuaModulePath(path: string): string | undefined {
+  const normalized = path.replace(/\\/g, "/").replace(/\/+/g, "/").trim();
+  if (!normalized.startsWith("/")) {
+    return undefined;
+  }
+  return normalized;
 }
 
 function sanitizeId(value: string): string {

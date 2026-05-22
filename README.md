@@ -1,95 +1,67 @@
 # TextForge
 
-TextForge is a local-first, text-first workbench for editing, visualizing, and transforming structured text. It is built for document-centric workflows where plain text stays primary and trees, graphs, rendered pages, BPMN diagrams, SVG artifacts, and transformed outputs remain derived, inspectable views.
+TextForge is a local-first, text-first workbench for editing, visualizing, and transforming structured text inside an application-private workspace. Plain text stays primary while trees, graphs, rendered pages, BPMN diagrams, SVG artifacts, and generated outputs remain derived, inspectable views.
 
-The current implementation ships most of the Lua pivot described in the whitepaper: trusted internal TypeScript plugins still own parsing, rendering, and viewers, while user extensibility runs through a restricted Lua runtime with bundled libraries, pipeline bridges, and a local xterm.js console.
+The current implementation ships the workspace architecture from the whitepaper together with the Lua pivot: trusted internal TypeScript plugins still own parsing, rendering, and viewers, while user extensibility runs through a restricted Lua runtime with bundled libraries, pipeline bridges, and a local xterm.js console.
 
 ## Highlights
 
-- multi-document CodeMirror workspace with tab reordering, inline rename, download, and deterministic Shapez-style document badges;
-- broad language support for plain text, Markdown, ITM, Lua, JSON, XML, BPMN 2.0 XML, CSV/TSV, Mermaid, Graphviz DOT, JavaScript, and Python;
-- local-only execution with no app-code network APIs and a browser-extension CSP that keeps `connect-src 'none'`;
-- popup-hosted viewers with search, zoom, export, detach, follow-source refresh, and window layout controls, plus diagnostics, pipeline traces, Lua console, Lua script manager, plugin manager, and bundled resource browser;
-- IndexedDB persistence with localStorage fallback for local workspace state.
+- IndexedDB-backed virtual workspace with folders, files, read-only bundled resources, open-file tabs, and deterministic Shapez-style badges.
+- ZIP import into the selected folder plus ZIP export for a selected subtree or the whole workspace.
+- Broad language support for plain text, Markdown, ITM, Lua, JSON, XML, BPMN 2.0 XML, CSV/TSV, Mermaid, Graphviz DOT, JavaScript, and Python.
+- Popup-hosted viewers with search, zoom, export, detach, follow-source refresh, and window layout controls, plus diagnostics, pipeline traces, Lua console, Lua script manager, and plugin manager.
+- Local-only execution with no app-code network APIs and a browser-extension CSP that keeps `connect-src 'none'`.
 
-## What You Can Do
+## Workspace Model
 
-### Explore Text Through Multiple Views
+TextForge owns a private project tree inside IndexedDB.
+
+- Import one or more files into the selected workspace folder.
+- Import a ZIP archive into the selected workspace folder.
+- Export the active file, a selected folder subtree, or the whole workspace root.
+- Browse bundled docs and examples under `/.textforge/resources`.
+- Keep files in the workspace without opening them in editor tabs.
+- Open editable text files in CodeMirror or view them directly through their default pipeline.
+- Store generated outputs under `/generated/...` instead of treating them as temporary tabs.
+
+The workspace boundary is strict: files cross the local filesystem boundary only through explicit import and export actions. TextForge does not map live local folders and does not use the File System Access API.
+
+## Viewers And Pipelines
 
 TextForge includes packaged viewers for:
 
 - rendered Markdown HTML with syntax highlighting, Mermaid, Graphviz, and KaTeX;
 - BPMN 2.0 diagrams rendered directly from `.bpmn` XML;
-- SVG with infinite-canvas style panning, cursor-relative zooming, and fit controls;
+- SVG with panning, zooming, and fit controls;
 - tree and mind map projections for ITM and other hierarchical data;
 - Cytoscape graph views for rich graph interaction and relayout;
 - Sigma/Graphology graph views with filtering and neighborhood focus controls;
 - read-only syntax-highlighted source and table views.
 
-Several viewers participate in source-aware navigation. You can keep the editor and a popup aligned, enable Follow source on viewer windows, and move back from visuals to code or text through mapped source ranges. Tree nodes can jump back to source with Ctrl-click, and tree cross-link badges can either select the linked node or jump to the exact source range.
+Several viewers participate in source-aware navigation. You can keep the editor and a popup aligned, enable Follow source on viewer windows, and move back from visuals to code through mapped source ranges.
 
-Viewer popups also support search, window tiling/maximize controls, detached snapshot windows, and snapshot export. The pipeline trace popup can reopen serialized intermediate results as editable documents.
+Transformer and Lua outputs now become generated workspace files. Text outputs open as editor tabs, while visual outputs are stored in the workspace and opened in a viewer.
 
-### Work Incrementally With Structured Text
-
-Markdown, ITM, Mermaid, Graphviz, delimited text, JSON, XML, and BPMN all live in the same workbench. A typical workflow is:
-
-1. edit the source text;
-2. run a built-in action or viewer pipeline;
-3. inspect the result in a popup;
-4. search, filter, or navigate the visual view;
-5. open the output or an intermediate trace step back into the editor.
-
-This keeps text as the source of truth while still making large structures easier to read and explore.
-
-### Automate Transformations With Lua
+## Lua Automation
 
 User extensibility is Lua, not uploaded JavaScript.
 
-The current Lua feature set includes:
+The Lua feature set includes:
 
 - restricted Fengari runtime with no browser globals, DOM, network, filesystem, or unrestricted JS interop;
 - bundled modules such as `tf`, `tf.tree`, `tf.graph`, `tf.table`, `tf.stringx`, `tf.itm`, `tf.markdown`, `tf.pipeline`, `tf.actions`, and `tf.console`;
 - built-in bridges for parsing ITM, Markdown, and CSV, emitting text/ITM/JSON/CSV, and calling named pipeline steps;
-- automatic discovery of named Lua actions from open `.lua` documents;
-- action registration into the same action/pipeline surface as built-in transforms;
+- automatic discovery of named Lua actions only from `/.textforge/automation/lua/**/*.lua`;
+- workspace-local `require()` resolution for Lua libraries under the active script folder, `/lua`, `/lib`, and `/.textforge/automation/lua`;
 - execution in a worker-backed sandbox with diagnostics routed back to the editor or selected source block, plus execution limits for time, instructions, output size, recursion depth, and model/table growth.
 
-The Lua Console is an in-app command surface backed by xterm.js. It can run quick snippets, run the active Lua document, run only the selected Lua text, list registered actions, invoke built-in pipeline bridges, and open the previous result as a new document.
+Ordinary `.lua` files stay inert by default. A Lua file anywhere in the workspace can still be run manually when open. Promotion into the automation root is explicit.
 
-### Inspect Graphs Instead Of Guessing
-
-Graph workflows are a strong part of the current app:
-
-- ITM can be projected into tree, mind map, Cytoscape, and Sigma views;
-- Sigma toolbars expose useful exploration controls such as filtering to search matches and focusing on neighbors;
-- graph and viewer search helps narrow large structures before reading them in full;
-- pipeline trace popups let you inspect intermediate graph, tree, text, HTML, or SVG values step by step.
-
-## Other Supported Formats
-
-TextForge also ships targeted workflows for non-ITM structured text:
-
-- JSON and XML can be linted and projected into tree viewers;
-- delimited text (`.csv`, `.tsv`, `.tab`) can be linted and opened in the table viewer;
-- Mermaid and Graphviz DOT can render to SVG, with Graphviz DOT also supporting Cytoscape and Sigma graph viewers;
-- BPMN 2.0 XML can open either in the embedded BPMN viewer or as generated SVG.
-
-## ITM And Markdown Support
-
-ITM `%style` directives support the selector forms from the whitepaper: `*`, `&id`, `[type]`, `#tag`, `{key=value}`, `->`, `->[type]`, and `=>`. Styles can be written on one line or as multiline blocks. `%include` is currently resolved by the parser library, with TextForge using the shared package-backed parse surface.
-
-Markdown rendering overlaps intentionally with the strongest local-preview ideas from tools such as Markdown Viewer, but TextForge pushes them into a broader structured-text workbench. Markdown documents can contain diagrams, math, and code, then feed into the same popup, export, and source-aware workflow used by the other viewers.
-
-Viewer-specific style references are bundled in the app:
-
-- `docs/itm-tree-style-support.md`
-- `docs/itm-mindmap-style-support.md`
-- `docs/itm-graph-style-support.md`
+The Lua Console can run quick snippets, run the active Lua document, run selected Lua text, list registered actions, invoke built-in pipeline bridges, and store the previous result as a generated workspace file.
 
 ## Bundled Resources
 
-The Resource Browser ships with documentation and examples inside the app, including:
+Bundled documentation and examples ship inside the workspace tree under `/.textforge/resources`, including:
 
 - the README;
 - the executive summary;
@@ -98,7 +70,7 @@ The Resource Browser ships with documentation and examples inside the app, inclu
 - plugin and format documentation;
 - Graphviz, Mermaid, Markdown, Lua, and ITM examples.
 
-Resources are grouped in the browser, can be previewed directly, copied, or opened as editable working copies. Markdown resources can also be sent straight to the HTML viewer from the browser.
+Resources are read-only, can be viewed directly, exported, or copied into editable workspace folders.
 
 ## Development
 

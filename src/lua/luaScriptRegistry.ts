@@ -20,7 +20,7 @@ export async function buildLuaActionsPlugin(
   for (const document of luaDocuments) {
     const descriptors = await service.inspectActions({
       source: document.text,
-      fileName: document.fileName,
+      fileName: document.path || document.fileName,
       input: { kind: "text", languageId: "text.plain", text: "" },
       documents
     });
@@ -30,9 +30,9 @@ export async function buildLuaActionsPlugin(
         ...descriptor,
         id: actionId,
         source: document.text,
-        fileName: document.fileName,
+        fileName: document.path || document.fileName,
         documentId: document.id,
-        documentName: document.fileName,
+        documentName: document.path || document.fileName,
         pipelineId: `lua-pipeline-${document.id}-${actionId}`,
         transformerId: `lua-transformer-${document.id}-${actionId}`
       });
@@ -62,13 +62,13 @@ function createLuaActionsPlugin(actions: RegisteredLuaAction[], documents: TextD
           return {
             ...candidate,
             source: sourceDocument?.text || candidate.source,
-            fileName: sourceDocument?.fileName || candidate.fileName
+            fileName: sourceDocument?.path || sourceDocument?.fileName || candidate.fileName
           };
         });
         const result = await service.run({
           mode: "action",
           source: latestDocument?.text || action.source,
-          fileName: latestDocument?.fileName || action.fileName,
+          fileName: latestDocument?.path || latestDocument?.fileName || action.fileName,
           actionId: action.id,
           input: value,
           documents: context.documents || documents,
