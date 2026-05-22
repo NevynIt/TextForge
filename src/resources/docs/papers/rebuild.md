@@ -1747,9 +1747,9 @@ The rebuild should maintain the following source-of-truth documents or their upd
 | File | Preserve as | Reason |
 |---|---|---|
 | `indented_text_model_format_description_updated.md` | ITM specification | Required canonical model spec. |
-| `docs/tree-styles.md` | viewer style support reference | Required if tree styles are preserved. |
-| `docs/mindmap-styles.md` | viewer style support reference | Required for mindmap styling. |
-| `docs/graph-styles.md` | viewer style support reference | Required for graph styling. |
+| `docs/specs/tree-styles.md` | viewer style support reference | Required if tree styles are preserved. |
+| `docs/specs/mindmap-styles.md` | viewer style support reference | Required for mindmap styling. |
+| `docs/specs/graph-styles.md` | viewer style support reference | Required for graph styling. |
 
 ### 11.3 User-facing resources
 

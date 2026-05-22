@@ -8,7 +8,7 @@ describe("WorkspaceManager", () => {
 
     expect(snapshot.rootFolderId).toBeTruthy();
     expect(snapshot.openFileIds).toEqual([]);
-    expect(workspace.findByPath("/.textforge/resources/docs/user-guide.md")).toBeTruthy();
+    expect(workspace.findByPath("/.textforge/resources/docs/start-here/read-me-first.md")).toBeTruthy();
   });
 
   it("creates, opens, edits, closes, and reopens a text file without deleting it", () => {
@@ -63,7 +63,7 @@ describe("WorkspaceManager", () => {
 
   it("keeps read-only resource files immutable but allows copying them", () => {
     const workspace = new WorkspaceManager();
-    const resource = workspace.findByPath("/.textforge/resources/examples/party.itm");
+    const resource = workspace.findByPath("/.textforge/resources/examples/itm/party.itm");
     const examples = workspace.findByPath("/examples");
 
     expect(() => workspace.updateText(resource!.id, "change")).toThrow(/read-only/);
