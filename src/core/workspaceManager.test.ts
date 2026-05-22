@@ -2,132 +2,92 @@ import { describe, expect, it } from "vitest";
 import { WorkspaceManager } from "./workspaceManager";
 
 describe("WorkspaceManager", () => {
-  it("increments versions and tracks dirty state on text changes", () => {
+  it("creates a default workspace with bundled resources and no open tabs", () => {
     const workspace = new WorkspaceManager();
-    const doc = workspace.openDocument({ fileName: "a.txt", languageId: "text.plain", text: "one" });
+    const snapshot = workspace.snapshot();
 
-    const updated = workspace.updateText(doc.id, "two");
+    expect(snapshot.rootFolderId).toBeTruthy();
+    expect(snapshot.openFileIds).toEqual([]);
+    expect(workspace.findByPath("/.textforge/resources/docs/user-manual.md")).toBeTruthy();
+  });
 
-    expect(updated?.version).toBe(doc.version + 1);
+  it("creates, opens, edits, closes, and reopens a text file without deleting it", () => {
+    const workspace = new WorkspaceManager();
+    const docs = workspace.findByPath("/docs");
+    const file = workspace.createTextFile(docs!.id, "readme.md", "# One", "text.markdown");
+
+    workspace.openFile(file.id);
+    const updated = workspace.updateText(file.id, "# Two");
+    workspace.closeFile(file.id);
+
+    expect(updated?.version).toBe(2);
     expect(updated?.dirty).toBe(true);
-    expect(workspace.getActiveDocument()?.text).toBe("two");
+    expect(workspace.findByPath("/docs/readme.md")).toBeTruthy();
+    expect(workspace.listDocuments()).toEqual([]);
+
+    workspace.openFile(file.id);
+    expect(workspace.getActiveDocument()?.text).toBe("# Two");
   });
 
-  it("switches tabs without merging duplicate file names", () => {
+  it("renames files by path and keeps stable identity", () => {
     const workspace = new WorkspaceManager();
-    const first = workspace.openDocument({ fileName: "notes.md", languageId: "text.markdown", text: "# A" });
-    const second = workspace.openDocument({ fileName: "notes.md", languageId: "text.markdown", text: "# B" });
+    const docs = workspace.findByPath("/docs")!;
+    const file = workspace.createTextFile(docs.id, "a.txt", "one");
+    const identity = file.identity.badgeLabel;
 
-    workspace.switchDocument(first.id);
+    const renamed = workspace.renameEntry(file.id, "b.txt");
 
-    expect(first.id).not.toBe(second.id);
-    expect(workspace.getActiveDocument()?.text).toBe("# A");
-    expect(workspace.listDocuments().map((doc) => doc.fileName)).toEqual(["notes.md", "notes.md"]);
-    expect(workspace.listDocuments()[0].identity.badgeLabel).toBeTruthy();
-    expect(workspace.listDocuments()[1].identity.badgeLabel).toBeTruthy();
+    expect(renamed?.path).toBe("/docs/b.txt");
+    expect(workspace.getFile(file.id)?.identity.badgeLabel).toBe(identity);
   });
 
-  it("increments version on file rename", () => {
+  it("rejects duplicate interactive names in the same folder", () => {
     const workspace = new WorkspaceManager();
-    const doc = workspace.openDocument({ fileName: "a.txt", languageId: "text.plain", text: "one" });
+    const docs = workspace.findByPath("/docs")!;
+    workspace.createTextFile(docs.id, "notes.md", "# A", "text.markdown");
 
-    const renamed = workspace.updateFileName(doc.id, "b.txt");
-
-    expect(renamed?.version).toBe(doc.version + 1);
-    expect(renamed?.fileName).toBe("b.txt");
+    expect(() => workspace.createTextFile(docs.id, "notes.md", "# B", "text.markdown")).toThrow(/already exists/);
   });
 
-  it("assigns unique badges when many documents are opened in sequence", () => {
+  it("resolves import conflicts deterministically", () => {
     const workspace = new WorkspaceManager();
-    for (let index = 0; index < 12; index += 1) {
-      workspace.openDocument({
-        fileName: `batch-${index}.md`,
-        languageId: "text.markdown",
-        text: `# ${index}`
-      });
-    }
+    const docs = workspace.findByPath("/docs")!;
 
-    const codes = workspace.listDocuments().map((document) => document.identity.shapeCode);
+    const report = workspace.importFiles(docs.id, [
+      { path: "sample.md", text: "# A", languageId: "text.markdown" },
+      { path: "sample.md", text: "# B", languageId: "text.markdown" }
+    ]);
 
-    expect(new Set(codes).size).toBe(codes.length);
-    codes.forEach((code) => expect(code).toMatch(/^(([CRSW][rgbypcwu])|--){4}$/));
+    expect(report.imported.map((file) => file.name)).toEqual(["sample.md", "sample (2).md"]);
+  });
+
+  it("keeps read-only resource files immutable but allows copying them", () => {
+    const workspace = new WorkspaceManager();
+    const resource = workspace.findByPath("/.textforge/resources/examples/Party.itm");
+    const examples = workspace.findByPath("/examples");
+
+    expect(() => workspace.updateText(resource!.id, "change")).toThrow(/read-only/);
+
+    const copy = workspace.copyEntry(resource!.id, examples!.id);
+
+    expect(copy?.path).toBe("/examples/Party.itm");
+    expect(workspace.getFile(copy!.id)?.readOnly).toBeFalsy();
   });
 
   it("preserves valid unique badges on restore", () => {
     const workspace = new WorkspaceManager();
+    const docs = workspace.findByPath("/docs")!;
+    const first = workspace.createTextFile(docs.id, "a.md", "# A", "text.markdown");
+    const second = workspace.createTextFile(docs.id, "b.md", "# B", "text.markdown");
+    workspace.openFile(first.id);
+    workspace.openFile(second.id);
+    const snapshot = workspace.snapshot();
 
-    workspace.restore([
-      {
-        id: "a",
-        fileName: "a.md",
-        languageId: "text.markdown",
-        text: "# A",
-        version: 1,
-        dirty: false,
-        identity: { color: "#000", badgeLabel: "CrRgSbWu", badgeKind: "shapez-one-layer", shapeCode: "CrRgSbWu" },
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z"
-      },
-      {
-        id: "b",
-        fileName: "b.md",
-        languageId: "text.markdown",
-        text: "# B",
-        version: 1,
-        dirty: false,
-        identity: { color: "#000", badgeLabel: "WuCbRgSy", badgeKind: "shapez-one-layer", shapeCode: "WuCbRgSy" },
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z"
-      }
-    ], "a");
+    const restored = new WorkspaceManager();
+    restored.restore(snapshot);
 
-    expect(workspace.listDocuments().map((document) => document.identity.shapeCode)).toEqual(["CrRgSbWu", "WuCbRgSy"]);
-  });
-
-  it("repairs duplicate and invalid badges on restore", () => {
-    const workspace = new WorkspaceManager();
-
-    workspace.restore([
-      {
-        id: "a",
-        fileName: "a.md",
-        languageId: "text.markdown",
-        text: "# A",
-        version: 1,
-        dirty: false,
-        identity: { color: "#000", badgeLabel: "CrRgSbWu", badgeKind: "shapez-one-layer", shapeCode: "CrRgSbWu" },
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z"
-      },
-      {
-        id: "b",
-        fileName: "b.md",
-        languageId: "text.markdown",
-        text: "# B",
-        version: 1,
-        dirty: false,
-        identity: { color: "#000", badgeLabel: "CrRgSbWu", badgeKind: "shapez-one-layer", shapeCode: "CrRgSbWu" },
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z"
-      },
-      {
-        id: "c",
-        fileName: "c.md",
-        languageId: "text.markdown",
-        text: "# C",
-        version: 1,
-        dirty: false,
-        identity: { color: "#000", badgeLabel: "invalid", badgeKind: "shapez-one-layer", shapeCode: "invalid" },
-        createdAt: "2026-01-01T00:00:00.000Z",
-        updatedAt: "2026-01-01T00:00:00.000Z"
-      }
-    ], "a");
-
-    const codes = workspace.listDocuments().map((document) => document.identity.shapeCode);
-
-    expect(codes[0]).toBe("CrRgSbWu");
-    expect(codes[1]).not.toBe("CrRgSbWu");
-    expect(codes[2]).toMatch(/^(([CRSW][rgbypcwu])|--){4}$/);
-    expect(new Set(codes).size).toBe(codes.length);
+    expect(restored.listDocuments().map((document) => document.identity.shapeCode)).toEqual(
+      workspace.listDocuments().map((document) => document.identity.shapeCode)
+    );
   });
 });

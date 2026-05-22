@@ -1,9 +1,4 @@
-import type { TextDocument } from "../domain/types";
-
-interface StoredWorkspace {
-  activeDocumentId: string | null;
-  documents: TextDocument[];
-}
+import type { WorkspaceState } from "./workspaceTypes";
 
 export interface PluginPreferences {
   autoloadPluginIds: string[];
@@ -24,7 +19,7 @@ export class TextForgeStorage {
       return;
     }
     this.db = await new Promise<IDBDatabase>((resolve) => {
-      const request = indexedDB.open("textforge", 1);
+      const request = indexedDB.open("textforge-workspace", 1);
       request.onupgradeneeded = () => {
         request.result.createObjectStore("kv");
       };
@@ -36,11 +31,11 @@ export class TextForgeStorage {
     });
   }
 
-  async loadWorkspace(): Promise<StoredWorkspace | null> {
-    return this.get<StoredWorkspace>("workspace");
+  async loadWorkspace(): Promise<WorkspaceState | null> {
+    return this.get<WorkspaceState>("workspace");
   }
 
-  async saveWorkspace(workspace: StoredWorkspace): Promise<void> {
+  async saveWorkspace(workspace: WorkspaceState): Promise<void> {
     await this.set("workspace", workspace);
   }
 
@@ -54,8 +49,7 @@ export class TextForgeStorage {
 
   async get<T>(key: string): Promise<T | null> {
     if (!this.db || this.idbUnavailable) {
-      const raw = localStorage.getItem(`textforge:${key}`);
-      return raw ? (JSON.parse(raw) as T) : null;
+      return null;
     }
     return new Promise<T | null>((resolve) => {
       const tx = this.db!.transaction("kv", "readonly");
@@ -67,7 +61,6 @@ export class TextForgeStorage {
 
   async set<T>(key: string, value: T): Promise<void> {
     if (!this.db || this.idbUnavailable) {
-      localStorage.setItem(`textforge:${key}`, JSON.stringify(value));
       return;
     }
     await new Promise<void>((resolve) => {

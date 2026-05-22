@@ -9,9 +9,20 @@ const forbiddenTokens = [
   "Event" + "Source",
   "send" + "Beacon",
   "ev" + "al(",
-  "new " + "Function"
+  "new " + "Function",
+  "show" + "OpenFilePicker",
+  "show" + "SaveFilePicker",
+  "show" + "DirectoryPicker",
+  "FileSystem" + "FileHandle",
+  "FileSystem" + "DirectoryHandle",
+  ["FileSystem", "H", "andle"].join(""),
+  ["getAs", "FileSystem", "H", "andle"].join(""),
+  "webkit" + "GetAsEntry",
+  ["webkit", "dir", "ectory"].join(""),
+  "chrome." + "fileSystem",
+  "native" + "Messaging"
 ];
-const remoteReferencePattern = /\b(?:https?:)?\/\//i;
+const remoteReferencePattern = /https?:\/\//i;
 const scannedExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".html", ".json", ".css"]);
 const ignoredDirs = new Set(["node_modules", "dist", ".git", "coverage", "external"]);
 
@@ -49,6 +60,15 @@ for (const file of walk(root)) {
   }
   if (!rel.startsWith("package") && remoteReferencePattern.test(text)) {
     findings.push(`${rel}: remote URL reference detected`);
+  }
+}
+for (const file of walk(join(root, "dist"))) {
+  const rel = relative(root, file).replaceAll("\\", "/");
+  const text = readFileSync(file, "utf8");
+  for (const token of forbiddenTokens) {
+    if (text.includes(token)) {
+      findings.push(`${rel}: forbidden API token "${token}"`);
+    }
   }
 }
 

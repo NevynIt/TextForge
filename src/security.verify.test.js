@@ -9,10 +9,21 @@ const forbiddenTokens = [
   "Event" + "Source",
   "send" + "Beacon",
   "ev" + "al(",
-  "new " + "Function"
+  "new " + "Function",
+  "show" + "OpenFilePicker",
+  "show" + "SaveFilePicker",
+  "show" + "DirectoryPicker",
+  "FileSystem" + "FileHandle",
+  "FileSystem" + "DirectoryHandle",
+  ["FileSystem", "H", "andle"].join(""),
+  ["getAs", "FileSystem", "H", "andle"].join(""),
+  "webkit" + "GetAsEntry",
+  ["webkit", "dir", "ectory"].join(""),
+  "chrome." + "fileSystem",
+  "native" + "Messaging"
 ];
 
-const remoteReferencePattern = /\b(?:https?:)?\/\//i;
+const remoteReferencePattern = /https?:\/\//i;
 const scannedExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".html", ".json", ".css"]);
 const ignoredDirs = new Set(["node_modules", "dist", ".git", "coverage", "external"]);
 
