@@ -74,10 +74,10 @@ Source documents:
 
 Required changes:
 
-- Add source-range mapping from rendered Markdown artifacts back to the originating fenced code blocks or generated publication blocks.
-- Cover Mermaid, Graphviz, and any ITM-publication-generated diagram/table outputs in the Markdown viewer.
-- Keep source/view synchronization behavior consistent with the existing tree, mind map, and graph viewers.
-- Add tests for embedded artifact selection, follow-source refresh, and popup-open workflows.
+- Broaden the existing Markdown artifact source mapping so it covers the full remaining popup and follow-source cases, not only the currently shipped embedded-artifact bridge.
+- Cover Mermaid, Graphviz, and any future ITM-publication-generated diagram/table outputs consistently in the Markdown viewer.
+- Keep source/view synchronization behavior aligned with the existing tree, mind map, and graph viewers when a Markdown artifact opens in its own popup.
+- Add or extend tests for embedded artifact selection, follow-source refresh, and popup-open workflows where coverage is still thin.
 
 ### 5. Close the remaining Lua runtime and security gaps
 
@@ -133,7 +133,7 @@ Required changes:
 
 - Break up `src/app/App.tsx` before adding more major behavior such as write-back or visual editing.
 - Continue extracting viewer, popup, workspace-action, and command-routing logic into smaller modules or hooks where the remaining control flow is still concentrated.
-- Review bundled docs that still describe the app in older open-document terms and update them to the shipped workspace model.
+- Keep the deeper historical whitepapers explicitly marked as historical context when they still describe the older open-document or resource-browser terminology.
 
 ### 10. Prepare the TextForge side of ITM include/effective-document integration
 
@@ -154,3 +154,9 @@ Required changes:
 3. Implement the ITM-aware Markdown profile and embedded artifact source bridge together.
 4. Close the remaining Lua/security, identity-restore, and viewer-polish gaps.
 5. Finish the maintainability cleanup before adding larger authoring or write-back features.
+
+## Documentation status after this refresh
+
+The root README, bundled user manual, bundled executive summary, bundled start-here index, and bundled roadmap should now be treated as the current user-facing documentation set.
+
+Older planning and whitepaper documents remain useful, but they are still partly historical. Prefer the current docs above when a historical paper and the shipped product disagree.

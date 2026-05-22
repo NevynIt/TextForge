@@ -10,13 +10,13 @@ TextForge is not a general IDE and not a full modelling repository. It is a ligh
 
 ## What the application does
 
-At its core, TextForge provides a multi-document editor with a set of local actions that can parse, transform, preview, visualise, and export the active document. Documents can be opened from local files or drag-and-drop, edited in CodeMirror, assigned a language, and acted on through a consistent action menu. Each open document receives a compact one-layer Shapez-style identity badge, making it easier to distinguish files across editor tabs, viewer popups, and transformation traces.
+At its core, TextForge provides a private-workspace editor with local actions that can parse, transform, preview, visualise, and export workspace content. Files are created inside the IndexedDB-backed workspace or brought in through explicit import actions, then edited in CodeMirror, assigned a language, and acted on through a consistent action menu. Each open document receives a compact one-layer Shapez-style identity badge, making it easier to distinguish files across editor tabs, viewer popups, and transformation traces.
 
 The application supports text editing for Markdown, ITM, Lua, JSON, XML, BPMN 2.0 XML, CSV/TSV, Mermaid, Graphviz DOT, JavaScript, Python, and other structured text languages. CodeMirror provides syntax-aware editing, and ITM has dedicated support for indentation, directives, styles, views, ids, links, tags, and attributes. Lua is also a first-class editable language, because user transformations are written as Lua scripts rather than uploaded JavaScript plugins.
 
 TextForge includes viewers for rendered Markdown HTML, SVG, trees, mind maps, tables, BPMN diagrams, Cytoscape graphs, Sigma/Graphology graphs, and highlighted source. Markdown rendering supports diagrams and technical writing features, including inline or fenced Mermaid, Graphviz, and KaTeX blocks. Viewer popups can be searched, zoomed, refreshed, exported, detached into snapshot windows, and arranged with built-in layout controls. The SVG viewer behaves like an infinite canvas, matching the graph viewers' pan/zoom style rather than acting as a static image pane.
 
-Transformation workflows are handled through pipelines. A pipeline takes a document or model as input, applies one or more named steps, and produces text, a model, HTML, SVG, BPMN, or a viewer result. Standard pipelines are shipped with the application, while user-defined transformations are written in Lua. Stored Lua transformations can be named and surfaced transparently in the same action menu as built-in actions. The user can also run immediate Lua commands through an embedded CLI powered by xterm.js, allowing quick experiments, manual downselection, and ad-hoc composition of multiple transformation steps.
+Transformation workflows are handled through pipelines. A pipeline takes a document or model as input, applies one or more named steps, and produces text, a model, HTML, SVG, BPMN, or a viewer result. Standard pipelines are shipped with the application, while user-defined transformations are written in Lua. Stored Lua transformations can be named and surfaced transparently in the same action menu as built-in actions. The user can also run immediate Lua commands through an embedded CLI powered by xterm.js, allowing quick experiments, manual downselection, and ad-hoc composition of multiple transformation steps. Generated results are stored as normal workspace files under `/generated/...` instead of living only as temporary popup outputs.
 
 ## Fundamental design choices
 
@@ -34,7 +34,7 @@ The fifth choice is that **pipelines are explicit and inspectable**. A transform
 
 ```mermaid
 graph LR
-  A[Local files / editor documents] --> B[CodeMirror text editor]
+  A[Workspace files and generated outputs] --> B[CodeMirror text editor]
   B --> C[Language services]
   C --> D[Parsers and serializers]
   D --> E[Models: tree, graph, table, HTML, SVG]
@@ -73,7 +73,7 @@ sequenceDiagram
   participant L as Lua worker
   participant V as Viewer / Output document
 
-  U->>E: Open or edit local text document
+  U->>E: Create, import, or edit a workspace document
   U->>A: Choose action or run Lua command
   A->>P: Resolve named pipeline / step contract
   P->>L: Execute Lua step when required
@@ -82,7 +82,7 @@ sequenceDiagram
   V->>E: Optional source selection / navigation feedback
 ```
 
-A typical user starts by opening one or more local files. The editor infers or allows selection of the language, and the action menu shows the transformations and viewers available for that document type. For Markdown, the user can render a rich HTML preview with diagrams and KaTeX. For ITM, the user can view the document as a tree, mind map, Cytoscape graph, Sigma graph, or editor skeleton surface. For Mermaid and Graphviz, the user can render SVG or convert between intermediate text/model forms. For JSON, XML, CSV, and BPMN, the user can open built-in tree, table, BPMN, or SVG views without leaving the main workbench model.
+A typical user starts by creating or importing one or more workspace files. The editor infers or allows selection of the language, and the action menu shows the transformations and viewers available for that document type. For Markdown, the user can render a rich HTML preview with diagrams and KaTeX. For ITM, the user can view the document as a tree, mind map, Cytoscape graph, Sigma graph, or editor skeleton surface. For Mermaid and Graphviz, the user can render SVG or convert between intermediate text/model forms. For JSON, XML, CSV, and BPMN, the user can open built-in tree, table, BPMN, or SVG views without leaving the main workbench model.
 
 For more advanced work, the user writes Lua scripts. A Lua script can parse the active document, inspect tables or graph metadata, filter nodes and edges, invoke built-in transformation steps by name, compose multiple steps manually, and open the final output as a new document. Stored scripts can be registered as named actions so they appear alongside built-in pipelines. Immediate Lua commands can be run from the CLI for quick experiments or one-off transformations.
 
@@ -92,11 +92,11 @@ The result is a practical workflow for text-centric modelling: source text is ed
 
 TextForge is motivated by a gap between plain text editors, Markdown previewers, diagram tools, and modelling repositories. Plain text editors are portable but usually lack integrated visualisation and transformation. Diagram tools are visual but often lock the user into a canvas or proprietary format. Modelling repositories are powerful but heavy, server-oriented, and difficult to adapt for small local workflows. TextForge aims to occupy the middle ground: local, transparent, programmable, visual, and file-based.
 
-The local-only model is particularly important. It keeps the application suitable for sensitive content, disconnected work, browser-extension deployment, and environments where server-side installation is not possible. It also simplifies operational ownership: the application is a static bundle, not a service.
+The local-only model is particularly important. It keeps the application suitable for sensitive content, disconnected work, browser-extension deployment, and environments where server-side installation is not possible. It also simplifies operational ownership: the application is a static bundle, not a service, and the workspace boundary stays explicit through import/export rather than live folder mirroring.
 
 The Lua pivot improves the security and usability of extensibility. Uploaded JavaScript plugins are powerful but difficult to sandbox safely because JavaScript is the browser's native execution language. Lua provides a smaller interpreted environment where TextForge can decide exactly which host functions exist. This allows users to customise pipelines without giving them unrestricted access to the browser runtime.
 
-The visualisation layer makes structured text approachable. Markdown becomes a rich technical document format with diagrams and math. ITM becomes a lightweight model-first text authoring format. Mermaid and Graphviz become interchangeable rendering targets. Tables can be inspected and transformed. Graphs can be explored interactively through Cytoscape and Sigma. The same source can support multiple projections, views, and outputs.
+The visualisation layer makes structured text approachable. Markdown becomes a rich technical document format with diagrams and math. ITM becomes a lightweight model-first text authoring format. Mermaid and Graphviz become interchangeable rendering targets. Tables can be inspected and transformed. Graphs can be explored interactively through Cytoscape and Sigma. The same source can support multiple projections, views, generated outputs, and popup workflows without replacing the source text.
 
 ## Operating principles
 

@@ -1,3 +1,7 @@
+> Historical note, 2026-05-22: this file is retained as an early design artifact.
+> It predates the current private workspace model, bundled `/.textforge/resources` tree, generated workspace outputs, and Lua-first user extensibility surface.
+> Use `README.md`, `Still to do.md`, and the bundled docs under `src/resources/docs/` for the current product description.
+
 This project is based on the ideas developed in https://github.com/NevynIt/LocalEdit, but restarting to be simpler and more focused.
 When developing, one should look at that repository for inspiration and to understand some of the user iteraction patterns, especially the whitepapers in https://github.com/NevynIt/LocalEdit/tree/master/plans%20and%20features
 

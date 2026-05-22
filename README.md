@@ -72,6 +72,20 @@ Bundled documentation and examples ship inside the workspace tree under `/.textf
 
 Resources are read-only, can be viewed directly, exported, or copied into editable workspace folders.
 
+The bundled resources are organised under `/.textforge/resources/docs` and `/.textforge/resources/examples`, so the in-app workspace tree is the canonical place to discover current guides and sample files.
+
+## Current State
+
+The shipped app currently centers on a workspace-first flow:
+
+- create, import, rename, organise, and export files from the private workspace tree;
+- open text files in CodeMirror while leaving other files available for direct viewer actions from the explorer;
+- store pipeline and Lua results as generated workspace files under `/generated/...`;
+- browse packaged documentation and examples in the same tree as normal workspace content;
+- use viewer popups for search, zoom, export, follow-source refresh, and detached snapshots.
+
+Historical whitepapers in this repository still describe earlier stages of the architecture. When they refer to open-document mode, a separate resource browser, or temporary popup outputs, read those as the current private workspace model, the `/.textforge/resources` folder, and generated workspace files plus popup viewers.
+
 ## Development
 
 ```powershell

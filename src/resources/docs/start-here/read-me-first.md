@@ -14,7 +14,12 @@ This resource set is grouped by purpose so you can find the right material quick
 | Title | File name | Abstract |
 |---|---|---|
 | Read Me First | `docs/start-here/read-me-first.md` | Quick map of the bundled resources. |
-| Project README | `docs/start-here/project-readme.md` | Product overview and developer commands. |
+| TextForge Executive Summary | `docs/papers/summary.md` | Short product and architecture summary. |
+| User Manual | `docs/guides/user-guide.md` | Main workflow, workspace model, and built-in features. |
+
+The root repository `README.md` is also bundled into the in-app resources as current product-facing overview material, even though it is not listed here under a second file name.
+
+Some papers in this resource set are retained as architecture history. When a paper disagrees with the README, executive summary, user manual, or roadmap, prefer those current-facing documents.
 
 ## Conceptual Papers
 
@@ -49,7 +54,7 @@ This resource set is grouped by purpose so you can find the right material quick
 | Title | File name | Abstract |
 |---|---|---|
 | Manual Test Plan | `docs/plans/test-plan.md` | Smoke test and release checks. |
-| Future Features | `docs/plans/roadmap.md` | Deferred ideas and future work. |
+| Future Features | `docs/plans/roadmap.md` | Deferred ideas, polish items, and explicitly postponed work. |
 
 ## Examples
 

@@ -17,6 +17,7 @@ Useful basics:
 - keep many files in the workspace without opening them all at once;
 - open multiple documents at once;
 - rename files in place;
+- move or copy bundled resources into normal workspace folders when you want editable starting points;
 - drag tabs to reorder them;
 - switch languages for the current document;
 - import files by picker;
@@ -52,9 +53,9 @@ TextForge can render Markdown with:
 - Mermaid diagrams;
 - Graphviz diagrams;
 - KaTeX math;
-- embedded diagram controls for copy, download, pop-out, and reset.
+- embedded artifact controls for copy, download, pop-out, and reset.
 
-A good first exercise is to open the bundled Markdown examples and render them. Then pop the result into its own viewer window, search inside it, and Ctrl-click an embedded diagram or source-mapped code block to jump back to the owning source range.
+A good first exercise is to open the bundled Markdown examples and render them. Then pop the result into its own viewer window, search inside it, and use the embedded artifact controls to inspect diagrams without leaving the source document.
 
 ## 4. Work With ITM Models
 
@@ -65,7 +66,7 @@ ITM supports:
 - hierarchy through indentation;
 - ids, tags, attributes, and links;
 - `%style` directives, including multiline blocks;
-- `%include` resolution against workspace paths;
+- current workspace-aware include resolution for shared ITM files;
 - tree, mind map, Cytoscape, and Sigma projections.
 
 The tree viewer is a good bridge between text and structure.
@@ -99,7 +100,7 @@ You can open graph-shaped data in:
 - Sigma/Graphology for large graph navigation and focused filtering;
 - SVG when the result is better treated as a diagram artifact.
 
-Useful graph features include search, layout controls, optional labels, Sigma filtering to matches, Sigma neighbor focusing, and panning and zooming in graph and SVG surfaces.
+Useful graph features include search, layout controls, optional labels, Sigma filtering to matches, Sigma neighbor focusing, and pan/zoom support in graph and SVG surfaces.
 
 ## 7. Use JSON, XML, CSV, And BPMN
 
@@ -122,8 +123,8 @@ Use pipelines when you want to:
 - render Markdown or diagrams;
 - produce SVG, HTML, or text output;
 - inspect intermediate values in the trace popup;
-- open a trace step as a new editable document;
-- create generated workspace output under `/generated/...`.
+- open a trace step as a new editable document when that output is text;
+- store generated workspace output under `/generated/...`.
 
 When something looks wrong, the trace is often the quickest way to see whether the issue is in parsing, transformation, or final rendering.
 
@@ -168,6 +169,8 @@ Use it to:
 - enable autoload for the packs you want every session;
 - disable individual shipped pipelines when you want a narrower action list;
 - review and acknowledge plugin diagnostics.
+
+This manager is about trusted packaged functionality. End-user automation still lives in workspace Lua files rather than uploaded JavaScript plugins.
 
 ## 12. Practical Learning Path
 
