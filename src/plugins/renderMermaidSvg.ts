@@ -12,10 +12,10 @@ export async function renderMermaidSvg(id: string, source: string): Promise<stri
   host.setAttribute("aria-hidden", "true");
   host.style.position = "fixed";
   host.style.left = "-10000px";
-  host.style.top = "0";
-  host.style.width = "0";
-  host.style.height = "0";
+  host.style.top = "-10000px";
   host.style.overflow = "hidden";
+  host.style.visibility = "hidden";
+  host.style.pointerEvents = "none";
 
   document.body.append(host);
   try {

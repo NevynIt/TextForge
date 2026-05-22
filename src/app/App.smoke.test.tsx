@@ -3,7 +3,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/preact";
 import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
-import { shouldSuppressSvgSelection, zoomStandaloneSvgViewAtPoint } from "../components/viewers";
+import { computeEmbeddedArtifactViewportHeight, shouldSuppressSvgSelection, zoomStandaloneSvgViewAtPoint } from "../components/viewers";
 import type { ViewerResult, VisualSelection } from "../domain/types";
 import { parseItmValue } from "../parsers/itm";
 import { ViewerContent } from "../viewers/registry";
@@ -14,7 +14,8 @@ function renderHtmlViewer(
   html: string,
   toolbarAction?: { revision: number; action: string },
   sourceSelection?: VisualSelection,
-  onSelectSourceRange?: (range: { from: number; to: number; line: number; column: number }) => void
+  onSelectSourceRange?: (range: { from: number; to: number; line: number; column: number }) => void,
+  onOpenSvgArtifact?: (svg: string, title: string) => void
 ) {
   const result: ViewerResult = {
     kind: "html",
@@ -31,6 +32,7 @@ function renderHtmlViewer(
       toolbarAction={toolbarAction}
       sourceSelection={sourceSelection}
       onSelectSourceRange={onSelectSourceRange}
+      onOpenSvgArtifact={onOpenSvgArtifact}
     />
   );
 }
@@ -271,6 +273,43 @@ describe("App smoke", () => {
     expect(artifactBody.dispatchEvent(interactiveWheel)).toBe(false);
     expect(interactiveWheel.defaultPrevented).toBe(true);
     expect(artifactBody.classList.contains("interactive")).toBe(true);
+  });
+
+  it("pops out the original embedded svg instead of the fitted viewport crop", async () => {
+    const onOpenSvgArtifact = vi.fn();
+    const html = [
+      '<article class="rendered-markdown">',
+      '  <div class="tf-embedded-artifact">',
+      '    <div class="tf-artifact-toolbar" style="display:none">',
+      '      <button type="button" data-artifact-action="popout-svg">Pop out</button>',
+      '    </div>',
+      '    <div class="tf-artifact-body">',
+      `      <svg xmlns="${svgNamespace}" width="640" height="160" viewBox="0 0 640 160"><text x="10" y="20">Wide Diagram</text></svg>`,
+      "    </div>",
+      "  </div>",
+      "</article>"
+    ].join("");
+
+    renderHtmlViewer(html, undefined, undefined, undefined, onOpenSvgArtifact);
+
+    const popoutButton = await screen.findByRole("button", { name: "Pop out" });
+    fireEvent.click(popoutButton);
+
+    expect(onOpenSvgArtifact).toHaveBeenCalledWith(
+      expect.stringContaining('viewBox="0 0 640 160"'),
+      "diagram SVG"
+    );
+  });
+
+  it("keeps wide embedded diagrams readable by allocating extra viewport height", () => {
+    const nextHeight = computeEmbeddedArtifactViewportHeight(
+      { width: 640, height: 160 },
+      640,
+      { top: 12, bottom: 12 },
+      900
+    );
+
+    expect(nextHeight).toBeGreaterThanOrEqual(280);
   });
 
   it("suppresses selection for non-text SVG drag targets", () => {

@@ -67,6 +67,25 @@ export function zoomStandaloneSvgViewAtPoint(
   };
 }
 
+export function computeEmbeddedArtifactViewportHeight(
+  bounds: { width: number; height: number },
+  availableWidth: number,
+  padding: { top: number; bottom: number },
+  windowHeight: number
+): number {
+  const aspect = bounds.height / bounds.width;
+  const diagramAspect = bounds.width / bounds.height;
+  const fittedHeight = Math.round(availableWidth * aspect + padding.top + padding.bottom);
+  const minimumReadableHeight = diagramAspect >= 2.4
+    ? clamp(Math.round(availableWidth * 0.38), 280, 420)
+    : 220;
+  return clamp(
+    Math.max(fittedHeight, minimumReadableHeight),
+    220,
+    Math.max(720, Math.round(windowHeight * 0.82))
+  );
+}
+
 type BpmnViewerModule = typeof import("bpmn-js/lib/NavigatedViewer");
 
 interface BpmnCanvasLike {
@@ -78,6 +97,9 @@ interface BpmnViewerInstance {
   get(service: "canvas"): BpmnCanvasLike;
   destroy(): void;
 }
+
+const originalEmbeddedArtifactSvgMarkup = new WeakMap<SVGSVGElement, string>();
+const originalEmbeddedArtifactSvgBounds = new WeakMap<SVGSVGElement, { x: number; y: number; width: number; height: number }>();
 
 export function BpmnView({
   xml,
@@ -4069,6 +4091,8 @@ function enhanceMarkdownArtifacts(
       return;
     }
     artifact.dataset.enhanced = "true";
+    originalEmbeddedArtifactSvgMarkup.set(svg, svg.outerHTML);
+    originalEmbeddedArtifactSvgBounds.set(svg, embeddedSvgBounds(svg));
     toolbar.style.removeProperty("display");
     toolbar.classList.add("is-enhanced");
     svg.style.width = "100%";
@@ -4200,7 +4224,7 @@ function handleArtifactAction(
   apply: () => void,
   onOpenSvgArtifact?: (svg: string, title: string) => void
 ): void {
-  const svg = body.querySelector("svg")?.outerHTML || "";
+  const svg = originalEmbeddedArtifactSvgMarkup.get(svgRoot) || body.querySelector("svg")?.outerHTML || "";
   if (action === "copy-source") {
     void writeClipboard(decodeURIComponent(artifact.dataset.source || ""));
   } else if (action === "copy-svg" && svg) {
@@ -4222,7 +4246,7 @@ function fitEmbeddedArtifact(
   view: { x: number; y: number; width: number; height: number },
   apply: () => void
 ): void {
-  const bounds = embeddedSvgContentBounds(svg);
+  const bounds = originalEmbeddedArtifactBounds(svg);
   if (!bounds.width || !bounds.height) {
     view.x = 0;
     view.y = 0;
@@ -4237,6 +4261,10 @@ function fitEmbeddedArtifact(
   view.width = fitted.width;
   view.height = fitted.height;
   apply();
+}
+
+function originalEmbeddedArtifactBounds(svg: SVGSVGElement): { x: number; y: number; width: number; height: number } {
+  return originalEmbeddedArtifactSvgBounds.get(svg) || embeddedSvgBounds(svg);
 }
 
 function embeddedSvgBounds(svg: SVGSVGElement): { x: number; y: number; width: number; height: number } {
@@ -4284,16 +4312,19 @@ function sizeEmbeddedArtifactViewport(body: HTMLElement): void {
   if (!svg || body.dataset.userResized === "true") {
     return;
   }
-  const bounds = embeddedSvgContentBounds(svg);
+  const bounds = originalEmbeddedArtifactBounds(svg);
   if (!bounds.width || !bounds.height) {
     return;
   }
   const padding = elementPadding(body);
   const hostWidth = Math.max(320, body.parentElement?.clientWidth || body.clientWidth || 0);
   const availableWidth = Math.max(1, hostWidth - padding.left - padding.right);
-  const aspect = bounds.height / bounds.width;
-  const fittedHeight = Math.round(availableWidth * aspect + padding.top + padding.bottom);
-  const nextHeight = clamp(fittedHeight, 180, Math.max(720, Math.round(window.innerHeight * 0.82)));
+  const nextHeight = computeEmbeddedArtifactViewportHeight(
+    bounds,
+    availableWidth,
+    { top: padding.top, bottom: padding.bottom },
+    window.innerHeight
+  );
   body.style.height = `${nextHeight}px`;
 }
 
