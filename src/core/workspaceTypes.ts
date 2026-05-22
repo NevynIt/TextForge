@@ -47,7 +47,7 @@ export interface WorkspaceFile {
   languageId?: string;
   mediaType?: string;
   text?: string;
-  binaryBase64?: string;
+  blob?: Blob;
   size: number;
   version: number;
   dirty: boolean;

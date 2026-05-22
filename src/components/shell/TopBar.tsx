@@ -3,6 +3,7 @@ import {
   Download,
   FilePlus2,
   FolderOpen,
+  FolderOutput,
   ListChecks,
   PanelTopOpen,
   Puzzle,
@@ -19,7 +20,9 @@ export function TopBar({
   sidebarVisible,
   onNewDocument,
   onOpenFiles,
+  onImportZip,
   onDownload,
+  onExportWorkspace,
   onRunDiagnostics,
   onOpenPluginManager,
   onOpenTrace,
@@ -35,7 +38,9 @@ export function TopBar({
   sidebarVisible: boolean;
   onNewDocument: () => void;
   onOpenFiles: (files: FileList | null) => void;
+  onImportZip: (files: FileList | null) => void;
   onDownload: () => void;
+  onExportWorkspace: () => void;
   onRunDiagnostics: () => void;
   onOpenPluginManager: () => void;
   onOpenTrace: () => void;
@@ -59,9 +64,18 @@ export function TopBar({
           Import
           <input type="file" multiple onChange={(event) => onOpenFiles(event.currentTarget.files)} />
         </label>
+        <label class="file-button">
+          <FolderOpen size={16} />
+          Import ZIP
+          <input type="file" accept=".zip,application/zip" onChange={(event) => onImportZip(event.currentTarget.files)} />
+        </label>
         <button type="button" onClick={onDownload} disabled={!hasActiveDocument}>
           <Download size={16} />
           Download
+        </button>
+        <button type="button" onClick={onExportWorkspace} disabled={!ready}>
+          <FolderOutput size={16} />
+          Export ZIP
         </button>
         <button type="button" class={hasDiagnosticsAttention ? "attention" : ""} onClick={onRunDiagnostics} disabled={!hasActiveDocument}>
           <Bug size={16} />

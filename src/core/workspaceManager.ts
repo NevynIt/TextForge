@@ -129,7 +129,7 @@ export class WorkspaceManager {
     return file;
   }
 
-  createBinaryFile(parentId: string, name: string, blob: Blob, mediaType?: string): WorkspaceFile {
+  createBinaryFile(parentId: string, name: string, blob: Blob, mediaType?: string, options: Partial<WorkspaceFile> = {}): WorkspaceFile {
     const parent = this.requireFolder(parentId);
     this.ensureWritable(parent);
     const nextName = normalizeEntryName(name);
@@ -137,7 +137,7 @@ export class WorkspaceManager {
     const now = new Date().toISOString();
     const id = createId("file");
     const file: WorkspaceFile = {
-      id,
+      id: options.id || id,
       kind: "file",
       fileKind: "binary",
       name: nextName,
@@ -145,14 +145,18 @@ export class WorkspaceManager {
       path: joinWorkspacePath(parent.path, nextName),
       languageId: undefined,
       mediaType,
-      binaryBase64: "",
+      blob,
       size: blob.size,
-      version: 1,
-      dirty: false,
-      identity: this.nextIdentity({ id, fileName: nextName, languageId: mediaType || "application/octet-stream" }).identity,
-      createdAt: now,
-      updatedAt: now,
-      origin: "uploaded"
+      version: options.version || 1,
+      dirty: options.dirty ?? false,
+      identity: this.nextIdentity({ id: options.id || id, fileName: nextName, languageId: mediaType || "application/octet-stream" }).identity,
+      createdAt: options.createdAt || now,
+      updatedAt: options.updatedAt || now,
+      origin: options.origin || "uploaded",
+      readOnly: options.readOnly,
+      system: options.system,
+      virtual: options.virtual,
+      sourcePath: options.sourcePath
     };
     this.state.entries[file.id] = file;
     this.touch();
@@ -178,15 +182,27 @@ export class WorkspaceManager {
         }
         const desiredName = segments.at(-1) || "untitled.txt";
         const fileName = this.resolveConflictName(folder.id, desiredName);
-        imported.push(
-          this.createTextFile(folder.id, fileName, item.text || "", item.languageId || "text.plain", {
-            origin: item.origin || "uploaded",
-            dirty: false,
-            sourcePath: item.path,
-            createdAt: item.createdAt,
-            updatedAt: item.updatedAt
-          })
-        );
+        if (item.fileKind === "binary" && item.blob) {
+          imported.push(
+            this.createBinaryFile(folder.id, fileName, item.blob, item.mediaType, {
+              origin: item.origin || "uploaded",
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              sourcePath: item.path
+            })
+          );
+        } else {
+          imported.push(
+            this.createTextFile(folder.id, fileName, item.text || "", item.languageId || "text.plain", {
+              origin: item.origin || "uploaded",
+              dirty: false,
+              sourcePath: item.path,
+              createdAt: item.createdAt,
+              updatedAt: item.updatedAt,
+              mediaType: item.mediaType
+            })
+          );
+        }
       } catch {
         skipped.push(item.path);
       }
@@ -415,7 +431,23 @@ export class WorkspaceManager {
         dirty: false
       });
     }
+    if (entry.blob) {
+      return this.createBinaryFile(target.id, this.resolveConflictName(target.id, entry.name), entry.blob, entry.mediaType);
+    }
     return undefined;
+  }
+
+  ensureFolder(path: string, origin: WorkspaceFolder["origin"] = "created"): WorkspaceFolder {
+    const normalized = normalizeWorkspacePath(path);
+    const existing = this.findByPath(normalized);
+    if (existing?.kind === "folder") {
+      return existing;
+    }
+    const parent = parentPath(normalized);
+    const parentFolder = parent === "/"
+      ? this.getFolder(this.state.rootFolderId)!
+      : this.ensureFolder(parent, origin);
+    return this.createFolder(parentFolder.id, baseName(normalized));
   }
 
   resolvePath(fromFileId: string, target: string): string {

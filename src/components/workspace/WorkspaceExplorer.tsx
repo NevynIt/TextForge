@@ -1,4 +1,4 @@
-import { FolderPlus, FilePlus2, Copy, Eye, Pencil, Trash2 } from "lucide-preact";
+import { FolderPlus, FilePlus2, Copy, Download, Eye, MoveRight, Pencil, Trash2 } from "lucide-preact";
 import { useEffect, useState } from "preact/hooks";
 import type { WorkspaceEntry, WorkspaceFile, WorkspaceFolder } from "../../core/workspaceTypes";
 
@@ -13,6 +13,8 @@ interface WorkspaceExplorerProps {
   onCreateFile: (parentId: string) => void;
   onCreateFolder: (parentId: string) => void;
   onCopyEntry: (id: string) => void;
+  onExportEntry: (id: string) => void;
+  onPromoteLua: (id: string) => void;
   onDeleteEntry: (id: string) => void;
 }
 
@@ -27,6 +29,8 @@ export function WorkspaceExplorer({
   onCreateFile,
   onCreateFolder,
   onCopyEntry,
+  onExportEntry,
+  onPromoteLua,
   onDeleteEntry
 }: WorkspaceExplorerProps) {
   const root = entries.find((entry) => entry.id === rootFolderId) as WorkspaceFolder | undefined;
@@ -100,6 +104,16 @@ export function WorkspaceExplorer({
               <button type="button" onClick={() => onCopyEntry(selected.id)}>
                 <Copy size={15} />
                 Copy
+              </button>
+            ) : null}
+            <button type="button" onClick={() => onExportEntry(selected.id)}>
+              <Download size={15} />
+              Export
+            </button>
+            {selected.kind === "file" && selected.languageId === "text.lua" && !selected.path.startsWith("/.textforge/automation/lua/") ? (
+              <button type="button" onClick={() => onPromoteLua(selected.id)}>
+                <MoveRight size={15} />
+                Promote Lua
               </button>
             ) : null}
             {!selected.readOnly && selected.parentId ? (

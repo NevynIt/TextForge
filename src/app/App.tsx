@@ -7,8 +7,10 @@ import { CodeEditor, type CodeEditorCommand } from "../components/CodeEditor";
 import { WorkspaceExplorer } from "../components/workspace/WorkspaceExplorer";
 import { createDiagnosticsPopup, createToolPopup, createViewerPopup } from "../core/popupFactory";
 import { defaultPipelineIdForDocument } from "../core/viewPipelineRouter";
+import { downloadBlob, downloadWorkspaceFile, fileListToWorkspaceImports } from "../core/fileGateway";
 import type { Diagnostic, PipelineTraceStep, PipelineValue, PopupRecord, SourceRange, TextDocument, VisualSelection } from "../domain/types";
 import type { WorkspaceEntry } from "../core/workspaceTypes";
+import { exportWorkspaceFilesToZip, importZipToWorkspaceFiles } from "../core/zipGateway";
 import { serializeItmPipelineValue } from "../viewers/itm/itmSerialization";
 import { buildLuaActionsPlugin, type RegisteredLuaAction } from "../lua/luaScriptRegistry";
 import type { LuaRunResult } from "../lua/types";
@@ -182,22 +184,36 @@ export function App() {
       return;
     }
     const folderId = selectedFolderId();
-    const importedPaths: string[] = [];
-    for (const file of Array.from(files)) {
-      const text = await readFile(file);
-      const created = services.workspace.createTextFile(folderId, file.name, text, services.languages.inferFromFileName(file.name), {
-        origin: "uploaded",
-        dirty: false,
-        sourcePath: file.name
-      });
-      importedPaths.push(created.path);
-    }
+    const result = services.workspace.importFiles(folderId, await fileListToWorkspaceImports(files, services.languages.inferFromFileName));
+    const importedPaths = result.imported.map((file) => file.path);
     const first = importedPaths[0] ? services.workspace.findByPath(importedPaths[0]) : undefined;
     if (first?.kind === "file") {
       services.workspace.openFile(first.id);
       services.workspace.selectEntry(first.id);
     }
-    commitWorkspace(`Imported ${files.length} file${files.length === 1 ? "" : "s"} into ${services.workspace.getFolder(folderId)?.path}.`);
+    const skippedSuffix = result.skipped.length ? ` Skipped ${result.skipped.length}.` : "";
+    commitWorkspace(`Imported ${result.imported.length} file${result.imported.length === 1 ? "" : "s"} into ${services.workspace.getFolder(folderId)?.path}.${skippedSuffix}`);
+  }
+
+  async function importZip(files: FileList | null): Promise<void> {
+    const file = files?.[0];
+    if (!file) {
+      return;
+    }
+    const folderId = selectedFolderId();
+    const result = services.workspace.importFiles(
+      folderId,
+      await importZipToWorkspaceFiles(file, services.languages.inferFromFileName)
+    );
+    const first = result.imported[0];
+    if (first) {
+      services.workspace.selectEntry(first.id);
+      if (first.fileKind === "text") {
+        services.workspace.openFile(first.id);
+      }
+    }
+    const skippedSuffix = result.skipped.length ? ` Skipped ${result.skipped.length}.` : "";
+    commitWorkspace(`Imported ZIP into ${services.workspace.getFolder(folderId)?.path}.${skippedSuffix}`);
   }
 
   function closeDocument(id: string): void {
@@ -301,15 +317,22 @@ export function App() {
     if (!activeDocument) {
       return;
     }
-    const blob = new Blob([activeDocument.text], { type: services.languages.get(activeDocument.languageId)?.mediaType || "text/plain" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = activeDocument.fileName || "untitled.txt";
-    anchor.click();
-    URL.revokeObjectURL(url);
+    const file = services.workspace.getFile(activeDocument.id);
+    if (!file) {
+      return;
+    }
+    downloadWorkspaceFile(file);
     services.workspace.exportFile(activeDocument.id);
     commitWorkspace(`Exported ${activeDocument.path || activeDocument.fileName}.`);
+  }
+
+  async function exportWorkspace(): Promise<void> {
+    const files = services.workspace
+      .collectSubtree(workspace.rootFolderId)
+      .filter((entry): entry is Extract<WorkspaceEntry, { kind: "file" }> => entry.kind === "file");
+    const zip = await exportWorkspaceFilesToZip(files);
+    downloadBlob("textforge-workspace.zip", zip);
+    commitWorkspace("Exported workspace ZIP.");
   }
 
   async function runDiagnostics(): Promise<void> {
@@ -634,6 +657,38 @@ export function App() {
     commitWorkspace(`Deleted ${entry.path}.`);
   }
 
+  async function handleExportEntry(id: string): Promise<void> {
+    const entry = services.workspace.getEntry(id);
+    if (!entry) {
+      return;
+    }
+    if (entry.kind === "file") {
+      downloadWorkspaceFile(entry);
+      services.workspace.exportFile(entry.id);
+      commitWorkspace(`Exported ${entry.path}.`);
+      return;
+    }
+    const files = services.workspace.collectSubtree(entry.id).filter((candidate): candidate is Extract<WorkspaceEntry, { kind: "file" }> => candidate.kind === "file");
+    const zip = await exportWorkspaceFilesToZip(files, entry.path);
+    downloadBlob(`${entry.name || "workspace"}.zip`, zip);
+    commitWorkspace(`Exported ${entry.path} as ZIP.`);
+  }
+
+  function handlePromoteLua(id: string): void {
+    const entry = services.workspace.getFile(id);
+    if (!entry || entry.fileKind !== "text" || entry.languageId !== "text.lua") {
+      return;
+    }
+    const targetFolder = services.workspace.ensureFolder("/.textforge/automation/lua", "created");
+    const copied = services.workspace.copyEntry(id, targetFolder.id);
+    if (!copied || copied.kind !== "file" || copied.fileKind !== "text") {
+      return;
+    }
+    services.workspace.selectEntry(copied.id);
+    services.workspace.openFile(copied.id);
+    commitWorkspace(`Promoted ${entry.path} to ${copied.path}.`);
+  }
+
   function openSvgArtifact(originPopupId: string, svg: string, title: string): void {
     const origin = popupsRef.current.find((popup) => popup.id === originPopupId);
     const document = origin?.documentId ? services.workspace.getDocument(origin.documentId) : activeDocument;
@@ -671,7 +726,9 @@ export function App() {
         sidebarVisible={sidebarVisible}
         onNewDocument={newDocument}
         onOpenFiles={(files) => void openFiles(files)}
+        onImportZip={(files) => void importZip(files)}
         onDownload={downloadActiveDocument}
+        onExportWorkspace={() => void exportWorkspace()}
         onRunDiagnostics={() => void runDiagnostics()}
         onOpenPluginManager={openPluginManager}
         onOpenTrace={openPipelineTrace}
@@ -720,6 +777,8 @@ export function App() {
             onCreateFile={handleCreateFile}
             onCreateFolder={handleCreateFolder}
             onCopyEntry={handleCopyEntry}
+            onExportEntry={(id) => void handleExportEntry(id)}
+            onPromoteLua={handlePromoteLua}
             onDeleteEntry={handleDeleteEntry}
           />
         ) : null}
@@ -869,14 +928,6 @@ function extensionForLanguage(languageId: string): string {
   return "txt";
 }
 
-function readFile(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result || ""));
-    reader.onerror = () => reject(reader.error || new Error("Unable to read file."));
-    reader.readAsText(file);
-  });
-}
 
 const luaActionBoilerplate = `local tree = require("tf.tree")
 
