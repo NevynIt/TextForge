@@ -5,6 +5,7 @@ import { PipelineRunner } from "../core/pipelineRunner";
 import { PluginRegistry } from "../core/pluginRegistry";
 import { RuntimeLoader } from "../core/runtimeLoader";
 import { TextForgeStorage } from "../core/storage";
+import { createWorkspaceContributionContext } from "../core/workspaceContributionContext";
 import { WorkspaceManager } from "../core/workspaceManager";
 import { LuaTransformService } from "../lua/luaTransformService";
 import { pluginManifest } from "../plugins/manifest";
@@ -27,6 +28,7 @@ export function useAppServices(): AppServices {
     const runtime = new RuntimeLoader();
     const plugins = new PluginRegistry(languages);
     const workspace = new WorkspaceManager();
+    const workspaceContext = createWorkspaceContributionContext(workspace);
     const lua = new LuaTransformService();
     plugins.registerManifest(pluginManifest);
     return {
@@ -34,8 +36,8 @@ export function useAppServices(): AppServices {
       runtime,
       plugins,
       workspace,
-      pipelines: new PipelineRunner(plugins, runtime, () => workspace.listAllTextFileViews()),
-      diagnostics: new DiagnosticsService(plugins, runtime, () => workspace.listAllTextFileViews()),
+      pipelines: new PipelineRunner(plugins, runtime, () => workspaceContext),
+      diagnostics: new DiagnosticsService(plugins, runtime, () => workspaceContext),
       storage: new TextForgeStorage(),
       lua
     };

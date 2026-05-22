@@ -15,12 +15,13 @@ import { serializeItmPipelineValue } from "../viewers/itm/itmSerialization";
 import { PluginRegistry } from "./pluginRegistry";
 import { RuntimeLoader } from "./runtimeLoader";
 import { createId } from "./id";
+import type { WorkspaceContributionContext } from "../domain/types";
 
 export class PipelineRunner {
   constructor(
     private registry: PluginRegistry,
     private runtime: RuntimeLoader,
-    private documentsProvider: () => TextDocument[] = () => []
+    private workspaceProvider: () => WorkspaceContributionContext
   ) {}
 
   async run(pipelineId: string, document: TextDocument): Promise<PipelineRunResult> {
@@ -159,7 +160,8 @@ export class PipelineRunner {
   }
 
   private context(): ContributionContext {
-    return { runtime: this.runtime, documents: this.documentsProvider() };
+    const workspace = this.workspaceProvider();
+    return { runtime: this.runtime, workspace, documents: workspace.listTextFiles() };
   }
 }
 

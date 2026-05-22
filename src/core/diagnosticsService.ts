@@ -1,4 +1,4 @@
-import type { Diagnostic, LinterContribution, TextDocument } from "../domain/types";
+import type { Diagnostic, LinterContribution, TextDocument, WorkspaceContributionContext } from "../domain/types";
 import { PluginRegistry } from "./pluginRegistry";
 import { RuntimeLoader } from "./runtimeLoader";
 
@@ -6,7 +6,7 @@ export class DiagnosticsService {
   constructor(
     private registry: PluginRegistry,
     private runtime: RuntimeLoader,
-    private documentsProvider: () => TextDocument[] = () => []
+    private workspaceProvider: () => WorkspaceContributionContext
   ) {}
 
   async run(document: TextDocument): Promise<Diagnostic[]> {
@@ -18,7 +18,8 @@ export class DiagnosticsService {
       }
       try {
         const linter = contribution as LinterContribution;
-        const results = await linter.lint(document, { runtime: this.runtime, documents: this.documentsProvider() });
+        const workspace = this.workspaceProvider();
+        const results = await linter.lint(document, { runtime: this.runtime, workspace, documents: workspace.listTextFiles() });
         diagnostics.push(
           ...results.map((diagnostic, index) => ({
             ...diagnostic,

@@ -56,9 +56,10 @@ function createLuaActionsPlugin(actions: RegisteredLuaAction[], documents: TextD
       input: action.input,
       output: action.output,
       async transform(value: PipelineValue, context) {
-        const latestDocument = context.documents?.find((document) => document.id === action.documentId);
+        const workspaceDocuments = context.workspace.listTextFiles();
+        const latestDocument = workspaceDocuments.find((document) => document.id === action.documentId);
         const latestActions = actions.map((candidate) => {
-          const sourceDocument = context.documents?.find((document) => document.id === candidate.documentId);
+          const sourceDocument = workspaceDocuments.find((document) => document.id === candidate.documentId);
           return {
             ...candidate,
             source: sourceDocument?.text || candidate.source,
@@ -71,7 +72,7 @@ function createLuaActionsPlugin(actions: RegisteredLuaAction[], documents: TextD
           fileName: latestDocument?.path || latestDocument?.fileName || action.fileName,
           actionId: action.id,
           input: value,
-          documents: context.documents || documents,
+          documents: workspaceDocuments.length ? workspaceDocuments : documents,
           actions: latestActions
         });
         if (!result.ok || !result.value) {

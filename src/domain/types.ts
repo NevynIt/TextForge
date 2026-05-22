@@ -227,7 +227,34 @@ export interface RuntimeLoader {
 
 export interface ContributionContext {
   runtime: RuntimeLoader;
+  workspace: WorkspaceContributionContext;
   documents?: TextDocument[];
+}
+
+export interface WorkspaceFileSummary {
+  id: string;
+  path: string;
+  name: string;
+  kind: "folder" | "file";
+  fileKind?: "text" | "binary";
+  languageId?: string;
+  mediaType?: string;
+  readOnly?: boolean;
+  system?: boolean;
+  virtual?: boolean;
+}
+
+export interface WorkspaceContributionContext {
+  activeFileId: string | null;
+  selectedFileId: string | null;
+  listFiles(): WorkspaceFileSummary[];
+  listTextFiles(): TextDocument[];
+  listOpenTextFiles(): TextDocument[];
+  getFile(id: string): WorkspaceFileSummary | undefined;
+  findByPath(path: string): WorkspaceFileSummary | undefined;
+  resolvePath(baseFileId: string, target: string): string;
+  readText(pathOrId: string, options?: { baseFileId?: string }): string | undefined;
+  readBinary(pathOrId: string, options?: { baseFileId?: string }): Blob | undefined;
 }
 
 export interface TransformerContribution {

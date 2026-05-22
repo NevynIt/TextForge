@@ -5,6 +5,8 @@ import { PluginRegistry } from "./pluginRegistry";
 import { RuntimeLoader } from "./runtimeLoader";
 import { pluginManifest } from "../plugins/manifest";
 import type { TextDocument } from "../domain/types";
+import { WorkspaceManager } from "./workspaceManager";
+import { createWorkspaceContributionContext } from "./workspaceContributionContext";
 
 describe("PipelineRunner", () => {
   it("runs a lazy-loaded JSON tree pipeline", async () => {
@@ -12,7 +14,7 @@ describe("PipelineRunner", () => {
     registerBaseLanguages(languages);
     const registry = new PluginRegistry(languages);
     registry.registerManifest(pluginManifest);
-    const runner = new PipelineRunner(registry, new RuntimeLoader());
+    const runner = new PipelineRunner(registry, new RuntimeLoader(), () => createWorkspaceContributionContext(new WorkspaceManager()));
     const document: TextDocument = {
       id: "doc-test",
       fileName: "sample.json",
@@ -36,7 +38,7 @@ describe("PipelineRunner", () => {
     const languages = new LanguageRegistry();
     registerBaseLanguages(languages);
     const registry = new PluginRegistry(languages);
-    const runner = new PipelineRunner(registry, new RuntimeLoader());
+    const runner = new PipelineRunner(registry, new RuntimeLoader(), () => createWorkspaceContributionContext(new WorkspaceManager()));
     const document: TextDocument = {
       id: "doc-test",
       fileName: "sample.txt",
@@ -60,7 +62,12 @@ describe("PipelineRunner", () => {
     registerBaseLanguages(languages);
     const registry = new PluginRegistry(languages);
     registry.registerManifest(pluginManifest);
-    const runner = new PipelineRunner(registry, new RuntimeLoader());
+    const workspace = new WorkspaceManager();
+    const docs = workspace.findByPath("/docs");
+    if (docs?.kind === "folder") {
+      workspace.createTextFile(docs.id, "sample.itm", "&root [Component] Root\n  &child [Component] Child @depends_on:root", "text.itm");
+    }
+    const runner = new PipelineRunner(registry, new RuntimeLoader(), () => createWorkspaceContributionContext(workspace));
     const document: TextDocument = {
       id: "doc-itm",
       fileName: "sample.itm",

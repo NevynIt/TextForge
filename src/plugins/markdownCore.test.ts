@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ContributionContext } from "../domain/types";
 
 const renderMock = vi.fn<(id: string, source: string, container?: Element) => Promise<{ svg: string }>>();
 
@@ -8,6 +9,25 @@ vi.mock("mermaid", () => ({
     render: renderMock
   }
 }));
+
+const emptyContext: ContributionContext = {
+  runtime: {
+    load: async (_id, loader) => loader()
+  },
+  workspace: {
+    activeFileId: null,
+    selectedFileId: null,
+    listFiles: () => [],
+    listTextFiles: () => [],
+    listOpenTextFiles: () => [],
+    getFile: () => undefined,
+    findByPath: () => undefined,
+    resolvePath: (_baseFileId, target) => target,
+    readText: () => undefined,
+    readBinary: () => undefined
+  },
+  documents: []
+};
 
 describe("markdownCore", () => {
   beforeEach(() => {
@@ -49,11 +69,7 @@ describe("markdownCore", () => {
           "```"
         ].join("\n")
       },
-      {
-        runtime: {
-          load: async (_id, loader) => loader()
-        }
-      }
+      emptyContext
     );
 
     expect(result.kind).toBe("html");
@@ -86,11 +102,7 @@ describe("markdownCore", () => {
         languageId: "text.markdown",
         text: blocks
       },
-      {
-        runtime: {
-          load: async (_id, loader) => loader()
-        }
-      }
+      emptyContext
     );
 
     expect(result.kind).toBe("html");
@@ -130,11 +142,7 @@ describe("markdownCore", () => {
           "```"
         ].join("\n")
       },
-      {
-        runtime: {
-          load: async (_id, loader) => loader()
-        }
-      }
+      emptyContext
     );
 
     expect(result.kind).toBe("html");

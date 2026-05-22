@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ContributionContext } from "../domain/types";
 
 const uriPrefix = "ht" + "tp://";
 
@@ -44,6 +45,25 @@ const sampleXml = `<?xml version="1.0" encoding="UTF-8"?>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>`;
 
+const emptyContext: ContributionContext = {
+  runtime: {
+    load: async (_id, loader) => loader()
+  },
+  workspace: {
+    activeFileId: null,
+    selectedFileId: null,
+    listFiles: () => [],
+    listTextFiles: () => [],
+    listOpenTextFiles: () => [],
+    getFile: () => undefined,
+    findByPath: () => undefined,
+    resolvePath: (_baseFileId, target) => target,
+    readText: () => undefined,
+    readBinary: () => undefined
+  },
+  documents: []
+};
+
 describe("bpmnCore", () => {
   beforeEach(() => {
     importXmlMock.mockReset();
@@ -65,11 +85,7 @@ describe("bpmnCore", () => {
         languageId: "text.bpmn",
         text: sampleXml
       },
-      {
-        runtime: {
-          load: async (_id, loader) => loader()
-        }
-      }
+      emptyContext
     );
 
     expect(result.kind).toBe("bpmn");
@@ -93,11 +109,7 @@ describe("bpmnCore", () => {
         languageId: "text.bpmn",
         text: sampleXml
       },
-      {
-        runtime: {
-          load: async (_id, loader) => loader()
-        }
-      }
+      emptyContext
     );
 
     expect(result.kind).toBe("svg");

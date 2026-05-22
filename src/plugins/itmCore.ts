@@ -15,7 +15,7 @@ const plugin: TextForgePlugin = {
         return (await parseItmValueAsync(document.text, document.languageId, {
           currentDocumentId: document.id,
           currentFileName: document.fileName,
-          includeDocuments: context.documents || []
+          includeDocuments: context.workspace.listTextFiles()
         })).diagnostics || [];
       }
     }
@@ -34,7 +34,7 @@ const plugin: TextForgePlugin = {
         const parsed = await parseItmValueAsync(value.text, value.languageId, {
           currentDocumentId: value.documentId,
           currentFileName: value.fileName,
-          includeDocuments: context.documents || []
+          includeDocuments: context.workspace.listTextFiles()
         });
         return {
           ...parsed,
@@ -55,7 +55,7 @@ const plugin: TextForgePlugin = {
         const parsed = await parseIndentedTreeAsync(value.text, value.languageId, {
           currentDocumentId: value.documentId,
           currentFileName: value.fileName,
-          includeDocuments: context.documents || []
+          includeDocuments: context.workspace.listTextFiles()
         });
         return {
           kind: "model",
@@ -78,7 +78,7 @@ const plugin: TextForgePlugin = {
         const parsed = await parseIndentedTreeAsync(value.text, value.languageId, {
           currentDocumentId: value.documentId,
           currentFileName: value.fileName,
-          includeDocuments: context.documents || []
+          includeDocuments: context.workspace.listTextFiles()
         });
         return {
           kind: "model",
