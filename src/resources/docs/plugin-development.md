@@ -40,9 +40,11 @@ return {
 - `input.fileName`
 - `input:parse_itm()`
 - `input:parse_markdown()`
+- `input:parse_csv(delimiter?)`
 - `input:emit_text(languageId, text)`
 - `input:emit_json(value)`
 - `input:emit_itm(nodes)`
+- `input:emit_csv(table, delimiter?)`
 - `tf.pipeline.run("itm-to-tree", input)`
 - `tf.pipeline.run("itm-to-graph", input)`
 - `tf.pipeline.run("markdown-heading-tree", input)`
@@ -61,4 +63,8 @@ return {
 - `tf.actions`
 - `tf.console`
 
-Unknown modules fail with a TextForge module-not-found error. There is no filesystem, network, native library, or JavaScript module searcher.
+Open `.lua` documents can also be required as local user modules by name. Unknown modules fail with a TextForge module-not-found error. There is no filesystem, network, native library, or JavaScript module searcher.
+
+## Runtime Limits
+
+The current sandbox enforces execution and payload limits. By default, a run is capped at 1,000,000 instructions, 500 ms wall time, 2 MiB of printed output, recursion depth 200, 20,000 model nodes, 50,000 model edges, and 500,000 table cells.

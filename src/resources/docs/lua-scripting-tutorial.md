@@ -35,9 +35,11 @@ return {
 
 - `input:parse_itm()`
 - `input:parse_markdown()`
+- `input:parse_csv(delimiter?)`
 - `input:emit_text(languageId, text)`
 - `input:emit_json(value)`
 - `input:emit_itm(nodes)`
+- `input:emit_csv(table, delimiter?)`
 - `tf.pipeline.run("itm-to-tree", input)`
 - `tf.pipeline.run("itm-to-graph", input)`
 - `tf.pipeline.run("markdown-heading-tree", input)`
@@ -48,9 +50,10 @@ return {
 - Console helper: `parse_itm()`
 - Console helper: `parse_markdown()`
 - Console helper: `parse_csv(delimiter?)`
-- Input helper: `input:emit_csv(table, delimiter?)`
 
 CSV parsing returns a table model payload with `columns`, `rows`, `delimiter`, and parser diagnostics. `input:emit_csv(...)` accepts either that payload or a `model.table` value and returns editable `text.csv`.
+
+Open `.lua` documents can also be required as local user modules by name. There is no filesystem, network, or JavaScript module resolution.
 
 ## Lua Console Shortcuts
 
@@ -82,3 +85,15 @@ open last
 - `tf.pipeline`
 - `tf.actions`
 - `tf.console`
+
+## Runtime Limits
+
+The shipped Lua sandbox applies host-side limits so experiments fail predictably instead of hanging the UI. The current defaults are:
+
+- 1,000,000 instructions;
+- 500 ms wall time;
+- 2 MiB printed output;
+- recursion depth 200;
+- 20,000 model nodes;
+- 50,000 model edges;
+- 500,000 table cells.

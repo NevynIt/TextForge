@@ -17,6 +17,7 @@ Useful basics:
 - rename documents in place;
 - drag tabs to reorder them;
 - switch languages for the current document;
+- open files by picker or drag-and-drop;
 - download the active document back to disk;
 - distinguish documents by their deterministic Shapez-style badges.
 
@@ -33,7 +34,7 @@ It includes:
 - the executive summary;
 - test and design notes.
 
-The resource list is grouped by category. Start by expanding only one group at a time. Open a resource as an editable copy when you want to experiment without changing the original bundled text.
+The resource list is grouped by category. Start by expanding only one group at a time. Open a resource as an editable copy when you want to experiment without changing the original bundled text. Markdown resources can also be sent directly to the HTML viewer, and any resource can be copied to the clipboard from the browser.
 
 ## 3. Render Markdown And Technical Notes
 
@@ -48,7 +49,7 @@ TextForge can render Markdown with:
 - KaTeX math;
 - embedded diagram controls for copy, download, pop-out, and reset.
 
-A good first exercise is to open the bundled Markdown examples and render them. Then pop the result into its own viewer window and search inside it.
+A good first exercise is to open the bundled Markdown examples and render them. Then pop the result into its own viewer window, search inside it, and Ctrl-click an embedded diagram or source-mapped code block to jump back to the owning source range.
 
 ## 4. Work With ITM Models
 
@@ -59,7 +60,7 @@ ITM supports:
 - hierarchy through indentation;
 - ids, tags, attributes, and links;
 - `%style` directives, including multiline blocks;
-- `%include` across currently open documents;
+- `%include` resolution against currently open documents;
 - tree, mind map, Cytoscape, and Sigma projections.
 
 The tree viewer is a good bridge between text and structure.
@@ -72,6 +73,8 @@ Useful interactions:
 - use the fold and unfold controls to manage large trees;
 - enable inline details when you want the tree to read more like a structured outline.
 
+TextForge also exposes two ITM edit skeleton actions. They are placeholders for future visual editing surfaces, not round-trip visual editors.
+
 ## 5. Follow Source Between Text And Visuals
 
 One of the most useful TextForge features is the source-selection bridge.
@@ -83,7 +86,7 @@ The editor and several viewers keep each other aligned:
 - viewer popups can be set to Follow source;
 - source-aware refresh keeps popups current when the underlying document changes.
 
-This makes exploration faster because you can move from text to structure and back without losing context.
+This makes exploration faster because you can move from text to structure and back without losing context. Viewer popups also support search, zoom, export, detached snapshot windows, and layout shortcuts, so you can keep several synchronized views open without turning the editor into a canvas tool.
 
 If you are learning a new document format, keep the editor and a viewer side by side and watch how the visual selection tracks the source.
 
@@ -123,7 +126,20 @@ TextForge supports:
 
 Use the mind map when the shape of the idea matters more than the exact text layout, then return to the tree or source editor for precise edits.
 
-## 8. Run Pipelines And Inspect The Trace
+## 8. Use JSON, XML, CSV, And BPMN
+
+TextForge is not only for Markdown and ITM.
+
+Current built-in actions also cover:
+
+- JSON to tree viewing with JSON diagnostics;
+- XML to tree viewing with XML diagnostics;
+- delimited text to table viewing for `.csv`, `.tsv`, and `.tab` files;
+- BPMN 2.0 XML to either a BPMN diagram viewer or an SVG viewer.
+
+These formats fit the same model as the rest of the app: text stays editable in the main editor, and viewers are opened on demand through named actions.
+
+## 9. Run Pipelines And Inspect The Trace
 
 Pipelines connect parsers, transforms, viewers, and serializers by contract.
 
@@ -139,7 +155,7 @@ Use pipelines when you want to:
 
 When something looks wrong, the trace is often the quickest way to see whether the issue is in parsing, transformation, or final rendering.
 
-## 9. Automate With Lua
+## 10. Automate With Lua
 
 Once the built-in actions are familiar, move to Lua.
 
@@ -148,15 +164,16 @@ TextForge uses Lua for user extensibility because it is easier to sandbox than a
 Typical Lua tasks:
 
 - parse the current ITM or Markdown document;
+- parse delimited text into a table model;
 - walk trees and graphs;
 - filter nodes and edges;
 - compose built-in pipeline steps;
 - emit new text, JSON, ITM, or CSV documents;
 - register saved named actions from open `.lua` files.
 
-The bundled Lua tutorial is the best next stop after this manual.
+Lua runs with explicit limits on execution time, instructions, output size, recursion depth, and model/table size. The bundled Lua tutorial is the best next stop after this manual.
 
-## 10. Use The Lua Console For Fast Experiments
+## 11. Use The Lua Console For Fast Experiments
 
 The Lua Console is a lightweight local command surface powered by xterm.js.
 
@@ -183,7 +200,20 @@ open last
 
 This is often the fastest way to probe a document, test a transformation idea, or build a custom workflow incrementally.
 
-## 11. Practical Learning Path
+## 12. Manage Internal Plugins And Pipelines
+
+The Plugin Manager is for packaged TextForge plugins, not end-user JavaScript uploads.
+
+Use it to:
+
+- see which internal plugin packs are available;
+- enable autoload for the packs you want every session;
+- disable individual shipped pipelines when you want a narrower action list;
+- review and acknowledge plugin diagnostics.
+
+User extensibility remains Lua-only in the current build.
+
+## 13. Practical Learning Path
 
 If you want a smooth ramp instead of exploring everything at once, use this order:
 
@@ -197,7 +227,7 @@ If you want a smooth ramp instead of exploring everything at once, use this orde
 8. Run a small Lua snippet in the console.
 9. Turn that snippet into a saved Lua action.
 
-## 12. What To Keep In Mind
+## 14. What To Keep In Mind
 
 TextForge works best when you treat it as a workbench for exploration rather than a hidden document database.
 
