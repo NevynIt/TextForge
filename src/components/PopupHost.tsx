@@ -58,6 +58,7 @@ interface PopupHostProps {
   onOpenLuaResult: (value: PipelineValue) => void;
   onNewLuaScript: () => void;
   onOpenResource: (resource: TextForgeResource) => void;
+  onViewResource: (resource: TextForgeResource) => void;
   onOpenSvgArtifact: (originPopupId: string, svg: string, title: string) => void;
   sourceSelection?: VisualSelection;
   onSelectSourceRange: (documentId: string, range: SourceRange) => void;
@@ -86,6 +87,7 @@ export function PopupHost({
   onOpenLuaResult,
   onNewLuaScript,
   onOpenResource,
+  onViewResource,
   onOpenSvgArtifact,
   sourceSelection,
   onSelectSourceRange,
@@ -345,7 +347,7 @@ export function PopupHost({
                 <LuaScriptManagerPanel documents={documents} actions={luaActions} onNewScript={onNewLuaScript} />
               ) : null}
               {popup.kind === "resource-browser" ? (
-                <ResourceBrowserPanel resources={resources} onOpenResource={onOpenResource} />
+                <ResourceBrowserPanel resources={resources} onOpenResource={onOpenResource} onViewResource={onViewResource} />
               ) : null}
             </main>
             <div class="popup-resize-handle" title="Resize" onPointerDown={(event) => startPopupResize(event, popup, frame, onUpdate)} />

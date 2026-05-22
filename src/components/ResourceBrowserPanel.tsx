@@ -4,9 +4,10 @@ import type { TextForgeResource } from "../resources/resourceCatalog";
 interface ResourceBrowserPanelProps {
   resources: TextForgeResource[];
   onOpenResource: (resource: TextForgeResource) => void;
+  onViewResource?: (resource: TextForgeResource) => void;
 }
 
-export function ResourceBrowserPanel({ resources, onOpenResource }: ResourceBrowserPanelProps) {
+export function ResourceBrowserPanel({ resources, onOpenResource, onViewResource }: ResourceBrowserPanelProps) {
   const [selectedId, setSelectedId] = useState(resources[0]?.id || "");
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const selected = useMemo(
@@ -26,6 +27,9 @@ export function ResourceBrowserPanel({ resources, onOpenResource }: ResourceBrow
         {selected ? (
           <>
             <button type="button" onClick={() => onOpenResource(selected)}>Open copy</button>
+            {canViewResource(selected) && onViewResource ? (
+              <button type="button" onClick={() => onViewResource(selected)}>View HTML</button>
+            ) : null}
             <button type="button" onClick={() => void copyResourceText(selected)}>Copy text</button>
           </>
         ) : null}
@@ -152,4 +156,8 @@ async function copyResourceText(resource: TextForgeResource): Promise<void> {
   } catch {
     // Clipboard access is permission-gated by the browser; the preview remains selectable.
   }
+}
+
+function canViewResource(resource: TextForgeResource): boolean {
+  return resource.languageId === "text.markdown";
 }

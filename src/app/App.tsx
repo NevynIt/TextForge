@@ -590,6 +590,37 @@ export function App() {
     commitWorkspace(`Opened ${document.fileName}.`);
   }
 
+  async function viewResource(resource: TextForgeResource): Promise<void> {
+    const document = services.workspace.openDocument({
+      fileName: resource.path,
+      languageId: resource.languageId,
+      text: resource.text,
+      dirty: false
+    });
+    if (resource.languageId !== "text.markdown") {
+      commitWorkspace(`Opened ${document.fileName}.`);
+      return;
+    }
+    const pipelineId = "view-markdown-html";
+    const pipeline = services.plugins.getPipeline(pipelineId);
+    setStatus(`Running ${pipeline?.name || pipelineId}.`);
+    const result = await services.pipelines.run(pipelineId, document);
+    setLastTrace(result.trace);
+    const viewerResult = result.viewerResult || result.editorResult;
+    if (viewerResult) {
+      const popup = createViewerPopup(document, viewerResult, {
+        pipelineId,
+        contributionId: result.trace[result.trace.length - 1]?.stepId,
+        trace: result.trace
+      });
+      setPopups((items) => [...items, popup]);
+      commitWorkspace(`Opened ${document.fileName} in ${pipeline?.name || pipelineId}.`);
+      return;
+    }
+    commitWorkspace(`Opened ${document.fileName}.`);
+    setStatus(result.status === "available" ? "Pipeline complete." : `Pipeline ${result.status}.`);
+  }
+
   function openSvgArtifact(originPopupId: string, svg: string, title: string): void {
     const origin = popupsRef.current.find((popup) => popup.id === originPopupId);
     const document = origin?.documentId ? services.workspace.getDocument(origin.documentId) : activeDocument;
@@ -713,6 +744,7 @@ export function App() {
         onOpenLuaResult={openLuaResult}
         onNewLuaScript={newLuaScript}
         onOpenResource={openResource}
+        onViewResource={(resource) => void viewResource(resource)}
         onOpenSvgArtifact={openSvgArtifact}
         sourceSelection={visualSelection}
         onSelectSourceRange={selectSourceRange}

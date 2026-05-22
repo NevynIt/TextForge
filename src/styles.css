@@ -793,6 +793,18 @@ button:disabled {
   cursor: pointer;
 }
 
+.tf-artifact-interaction-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #4f5558;
+  font-size: 12px;
+}
+
+.tf-artifact-interaction-toggle input {
+  margin: 0;
+}
+
 .tf-artifact-body {
   min-width: 280px;
   min-height: 220px;
@@ -803,11 +815,15 @@ button:disabled {
   box-sizing: border-box;
   position: relative;
   width: 100%;
-  cursor: grab;
+  cursor: auto;
   background: #fbfbf8;
 }
 
-.tf-artifact-body:active {
+.tf-artifact-body.interactive {
+  cursor: grab;
+}
+
+.tf-artifact-body.interactive:active {
   cursor: grabbing;
 }
 

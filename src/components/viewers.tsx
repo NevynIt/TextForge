@@ -4096,9 +4096,30 @@ function enhanceMarkdownArtifacts(
         fitFrame = requestAnimationFrame(runFit);
       });
     };
+    let interactive = false;
+    const setInteractive = (nextInteractive: boolean) => {
+      interactive = nextInteractive;
+      artifact.dataset.interactive = nextInteractive ? "true" : "false";
+      body.classList.toggle("interactive", nextInteractive);
+      if (!nextInteractive) {
+        drag = null;
+      }
+    };
+    const interactionToggle = document.createElement("label");
+    interactionToggle.className = "tf-artifact-interaction-toggle";
+    const interactionCheckbox = document.createElement("input");
+    interactionCheckbox.type = "checkbox";
+    interactionCheckbox.setAttribute("aria-label", "Enable diagram pan and zoom");
+    const interactionLabel = document.createElement("span");
+    interactionLabel.textContent = "Interactive";
+    interactionToggle.append(interactionCheckbox, interactionLabel);
+    toolbar.append(interactionToggle);
+    interactionCheckbox.addEventListener("change", () => {
+      setInteractive(interactionCheckbox.checked);
+    });
     let drag: { x: number; y: number; startX: number; startY: number } | null = null;
     body.addEventListener("pointerdown", (event) => {
-      if (event.button !== 0 || isEmbeddedArtifactResizeGesture(body, event)) {
+      if (!interactive || event.button !== 0 || isEmbeddedArtifactResizeGesture(body, event)) {
         return;
       }
       drag = { x: event.clientX, y: event.clientY, startX: view.x, startY: view.y };
@@ -4116,11 +4137,21 @@ function enhanceMarkdownArtifacts(
     body.addEventListener("pointerup", () => {
       drag = null;
     });
+    body.addEventListener("pointercancel", () => {
+      drag = null;
+    });
+    body.addEventListener("lostpointercapture", () => {
+      drag = null;
+    });
     body.addEventListener("wheel", (event) => {
+      if (!interactive) {
+        return;
+      }
       event.preventDefault();
       zoomEmbeddedArtifact(body, view, event);
       apply();
     }, { passive: false });
+    setInteractive(false);
     const resizeObserver = typeof ResizeObserver === "undefined"
       ? null
       : new ResizeObserver(() => {

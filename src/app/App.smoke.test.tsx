@@ -245,6 +245,34 @@ describe("App smoke", () => {
     await waitFor(() => expect(container.querySelector(".tf-embedded-artifact")?.classList.contains("tf-source-selected")).toBe(true));
   });
 
+  it("keeps embedded artifact pan and zoom disabled until explicitly enabled", async () => {
+    const html = [
+      '<article class="rendered-markdown">',
+      '  <div class="tf-embedded-artifact">',
+      '    <div class="tf-artifact-toolbar" style="display:none"></div>',
+      '    <div class="tf-artifact-body">',
+      `      <svg xmlns="${svgNamespace}" width="120" height="80" viewBox="0 0 120 80"><text x="10" y="20">Diagram</text></svg>`,
+      "    </div>",
+      "  </div>",
+      "</article>"
+    ].join("");
+
+    const { container } = renderHtmlViewer(html);
+    const artifactBody = container.querySelector(".tf-artifact-body") as HTMLElement;
+
+    const inertWheel = new WheelEvent("wheel", { deltaY: -20, cancelable: true });
+    expect(artifactBody.dispatchEvent(inertWheel)).toBe(true);
+    expect(inertWheel.defaultPrevented).toBe(false);
+
+    const interactionToggle = await screen.findByRole("checkbox", { name: "Enable diagram pan and zoom" });
+    fireEvent.click(interactionToggle);
+
+    const interactiveWheel = new WheelEvent("wheel", { deltaY: -20, cancelable: true });
+    expect(artifactBody.dispatchEvent(interactiveWheel)).toBe(false);
+    expect(interactiveWheel.defaultPrevented).toBe(true);
+    expect(artifactBody.classList.contains("interactive")).toBe(true);
+  });
+
   it("suppresses selection for non-text SVG drag targets", () => {
     const { container } = renderSvgViewer();
     const frame = container.querySelector(".svg-frame") as HTMLDivElement;
