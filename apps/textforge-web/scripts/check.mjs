@@ -6,12 +6,12 @@ const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const indexHtml = await readFile(resolve(rootDir, 'index.html'), 'utf8');
 const mainJs = await readFile(resolve(rootDir, 'src/main.js'), 'utf8');
 
-if (!indexHtml.includes('/src/main.js')) {
-  throw new Error('index.html must load /src/main.js');
+if (!indexHtml.includes('./src/main.js')) {
+  throw new Error('index.html must load ./src/main.js for file:// compatibility');
 }
 
-if (!indexHtml.includes('/src/styles.css')) {
-  throw new Error('index.html must load /src/styles.css');
+if (!indexHtml.includes('./src/styles.css')) {
+  throw new Error('index.html must load ./src/styles.css for file:// compatibility');
 }
 
 if (!mainJs.includes('TextForge') || !mainJs.includes('render()')) {

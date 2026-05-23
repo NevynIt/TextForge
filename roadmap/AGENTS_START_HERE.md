@@ -57,6 +57,18 @@ Before changing code, do the following:
 
 Do not start by guessing from file names alone. The RAPID log and roadmap are the authoritative operational context.
 
+## Required phase plan shape
+
+Every agent plan for a milestone or sub-milestone must include these five checkpoints:
+
+1. Understand the target phase, current repository reality, acceptance criteria, and any instruction drift.
+2. Implement the next smallest coherent slice that advances the active milestone without skipping package boundaries.
+3. Verify with the narrowest relevant checks first, then broader checks when shared wiring or milestone boundaries are touched.
+4. Document the outcome by updating package docs, roadmap notes, and `roadmap/RAPID.md` when implementation reality, expectations, or verification evidence changed.
+5. Finalize the slice by reviewing the next roadmap step, recording remaining gaps or decisions, and leaving the repository at a clear handoff point.
+
+If a plan does not include understanding, implementation, verification, documentation, and finalization, it is incomplete.
+
 
 ## First command sequence for a fresh agent
 
@@ -87,7 +99,7 @@ If one of these commands does not exist yet, record that fact in `roadmap/RAPID.
 
 As implementation progresses, run the narrowest relevant verification repeatedly instead of waiting until the end of a large change. Prefer changed-package checks first, then broader workspace verification when the milestone slice is ready.
 
-Treat the first runnable shell as a separate milestone boundary from later feature work. The shell is stable enough for first use when it launches without a blank placeholder screen and exposes the frame, workspace/navigation chrome, main surface region, toolbar or command entry points, status feedback, and registered contribution routing.
+Treat the first runnable shell as a separate milestone boundary from later feature work. The shell is stable enough for first use when it launches without a blank placeholder screen, exposes the frame, workspace/navigation chrome, main surface region, toolbar or command entry points, status feedback, and registered contribution routing, and the built `dist/index.html` works as a direct local/static artifact instead of requiring only a preview server.
 
 ## Commit discipline
 

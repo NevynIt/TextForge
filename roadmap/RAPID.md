@@ -24,7 +24,7 @@ Keep this block current. It may be edited because it is an operational pointer, 
 Current branch: rewrite/v2-monorepo
 Current milestone: M2 Source-editor coverage and language foundation
 Current package focus: apps/textforge-web, core, workspace, surfaces, ui, editors
-Last known good command: corepack pnpm verify
+Last known good command: corepack pnpm --filter @textforge/textforge-web test
 Next recommended step: add language mode registration and source editor fallback selection
 Open questions: none recorded at document-set creation
 ```
@@ -97,3 +97,5 @@ Append every new historical row to the end of this table. Do not reorder existin
 | P-009 | Progress | M1 | Done | Updated the roadmap and agent instructions to define the first runnable shell as a separate stable baseline and to name the user-facing chrome available at that checkpoint. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/AGENTS_START_HERE.md` |
 | D-015 | Decision | M0.5 | Accepted | Implement the runnable shell as a dependency-light browser-native bootstrap with a copied static asset build and a Node static server, avoiding new runtime dependencies until the React workbench layer is introduced. | agent | 2026-05-23 | `apps/textforge-web/package.json`, `apps/textforge-web/scripts/build.mjs`, `apps/textforge-web/scripts/dev-server.mjs`, `apps/textforge-web/src/main.js` |
 | P-010 | Progress | M0.5 | Done | Built and browser-verified the first runnable TextForge shell with visible frame, workspace navigation, surface routing, and contribution registry chrome. | agent | 2026-05-23 | `apps/textforge-web/index.html`, `apps/textforge-web/src/main.js`, `apps/textforge-web/src/styles.css`, `apps/textforge-web/scripts/build.mjs`, `apps/textforge-web/scripts/check.mjs`, `apps/textforge-web/scripts/dev-server.mjs` |
+| D-016 | Decision | M0.5 | Accepted | Treat direct `file://` launchability of the built shell as part of the runnable local/static artifact requirement, not as a preview-server-only behavior to defer to a later phase. | agent | 2026-05-23 | `apps/textforge-web/index.html`, `apps/textforge-web/scripts/check.mjs`, `roadmap/AGENTS_START_HERE.md`, `apps/textforge-web/README.md` |
+| P-011 | Progress | M0.5 | Done | Fixed the shell entrypoint to use relative asset paths so `apps/textforge-web/dist/index.html` works from `file://`, re-verified the package checks, and updated the shell and agent instructions to make local/static verification and the understand-implement-verify-document-finalize phase plan explicit. | agent | 2026-05-23 | `apps/textforge-web/index.html`, `apps/textforge-web/scripts/check.mjs`, `apps/textforge-web/README.md`, `roadmap/AGENTS_START_HERE.md` |
