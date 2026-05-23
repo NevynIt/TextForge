@@ -17,4 +17,12 @@ for (const required of ['src="./assets/', 'href="./assets/']) {
   }
 }
 
+if (distIndexHtml.includes('type="module"')) {
+  throw new Error('dist/index.html must not use module scripts for direct file:// launch');
+}
+
+if (!distIndexHtml.includes('<script defer src="./assets/')) {
+  throw new Error('dist/index.html must load the bundled app through a classic deferred script');
+}
+
 console.info('TextForge dist file:// checks passed.');
