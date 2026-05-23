@@ -1,6 +1,41 @@
 import { EditorSelection, EditorState } from '@codemirror/state';
+import { json as jsonLanguage } from '@codemirror/lang-json';
+import { markdown as markdownLanguage } from '@codemirror/lang-markdown';
+import { xml as xmlLanguage } from '@codemirror/lang-xml';
+import { yaml as yamlLanguage } from '@codemirror/lang-yaml';
+import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
+import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua';
+import { tags } from '@lezer/highlight';
 import { EditorView, lineNumbers } from '@codemirror/view';
 import { getLanguageDefinition, inferLanguageId, languageDefinitions } from '@textforge/core';
+
+const parserBackedLanguageFactories = {
+  markdown: () => markdownLanguage(),
+  lua: () => StreamLanguage.define(luaMode),
+  json: () => jsonLanguage(),
+  xml: () => xmlLanguage(),
+  'bpmn-xml': () => xmlLanguage(),
+  'archimate-exchange-xml': () => xmlLanguage(),
+  svg: () => xmlLanguage(),
+  yaml: () => yamlLanguage(),
+};
+
+const parserBackedLanguageIds = new Set(Object.keys(parserBackedLanguageFactories));
+
+const textForgeHighlightStyle = HighlightStyle.define([
+  { tag: [tags.keyword, tags.operatorKeyword, tags.modifier], color: '#67e8f9' },
+  { tag: [tags.atom, tags.bool, tags.number], color: '#f4b860' },
+  { tag: [tags.string, tags.special(tags.string), tags.regexp, tags.url], color: '#86efac' },
+  { tag: [tags.propertyName, tags.attributeName], color: '#93c5fd' },
+  { tag: [tags.typeName, tags.className, tags.tagName, tags.labelName, tags.namespace], color: '#5eead4' },
+  { tag: [tags.comment, tags.quote, tags.meta], color: '#94a3b8', fontStyle: 'italic' },
+  { tag: tags.heading, color: '#f4b860', fontWeight: '700' },
+  { tag: [tags.bracket, tags.punctuation, tags.separator], color: '#cbd5e1' },
+  { tag: tags.link, color: '#93c5fd', textDecoration: 'underline' },
+  { tag: tags.strong, fontWeight: '700' },
+  { tag: tags.emphasis, fontStyle: 'italic' },
+  { tag: tags.invalid, color: '#fca5a5', textDecoration: 'underline wavy' },
+]);
 
 export function createTextEditorSelection(anchor, head = anchor) {
   return { anchor, head };
@@ -138,6 +173,7 @@ export const codeMirrorTextEditorSurfaceContribution = {
   kind: 'text-editor',
   editable: true,
   sourceRangeAware: true,
+  languageIds: languageDefinitions.map((definition) => definition.id),
   placements: ['main', 'popup', 'auxiliary'],
   resourceKinds: ['text'],
   openWithPriority: 100,
@@ -165,7 +201,7 @@ export function createTextEditorLanguageModeConfig(languageId, resource) {
     label: definition.label,
     mimeTypes: definition.mimeTypes,
     extensions: definition.extensions,
-    parserBacked: false,
+    parserBacked: parserBackedLanguageIds.has(definition.id),
     sourceEditor: true,
   };
 }
@@ -273,9 +309,17 @@ function createCodeMirrorSelection(selection, text) {
   return EditorSelection.range(clamped.anchor, clamped.head);
 }
 
+function createCodeMirrorLanguageExtension(languageId) {
+  const factory = languageId ? parserBackedLanguageFactories[languageId] : undefined;
+  return typeof factory === 'function' ? factory() : undefined;
+}
+
 function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
+  const languageExtension = createCodeMirrorLanguageExtension(model.languageMode.languageId);
   return [
     lineNumbers(),
+    ...(languageExtension ? [languageExtension] : []),
+    syntaxHighlighting(textForgeHighlightStyle),
     EditorState.readOnly.of(model.readOnly),
     EditorView.editable.of(!model.readOnly),
     EditorView.lineWrapping,

@@ -28,17 +28,31 @@ function matchesResourceKind(contribution, resourceKind) {
   return resourceKinds.length === 0 || resourceKinds.includes(resourceKind);
 }
 
-function matchesOpenRequest(contribution, request) {
-  if (request.preferredSurfaceIds?.includes(contribution.id)) {
+function matchesMimeType(contribution, mimeType) {
+  const contributionMimeTypes = contribution.mimeTypes ?? [];
+  if (contributionMimeTypes.length === 0) {
     return true;
   }
 
+  if (!mimeType) {
+    return false;
+  }
+
+  const normalizedMimeType = mimeType.toLowerCase();
+  return contributionMimeTypes.some((candidate) => candidate.toLowerCase() === normalizedMimeType);
+}
+
+function matchesOpenRequest(contribution, request) {
   const requestedPlacement = request.placement ?? 'main';
   if (!matchesPlacement(contribution, requestedPlacement)) {
     return false;
   }
 
   if (!matchesResourceKind(contribution, request.resource.kind)) {
+    return false;
+  }
+
+  if (!matchesMimeType(contribution, request.resource.mimeType)) {
     return false;
   }
 
@@ -54,15 +68,15 @@ function matchesOpenRequest(contribution, request) {
 }
 
 function chooseBestContribution(contributionsList, request) {
+  const matching = contributionsList.filter((contribution) => matchesOpenRequest(contribution, request));
   const preferred = request.preferredSurfaceIds?.map((surfaceId) =>
-    contributionsList.find((contribution) => contribution.id === surfaceId),
+    matching.find((contribution) => contribution.id === surfaceId),
   );
   const preferredMatch = preferred?.find((contribution) => Boolean(contribution));
   if (preferredMatch) {
     return preferredMatch;
   }
 
-  const matching = contributionsList.filter((contribution) => matchesOpenRequest(contribution, request));
   if (matching.length > 0) {
     return matching.sort((left, right) => (right.openWithPriority ?? 0) - (left.openWithPriority ?? 0))[0];
   }
@@ -74,21 +88,23 @@ export function createOpenWithSelection(registry, request) {
   const placement = request.placement ?? 'main';
   const candidates = registry.list()
     .filter((contribution) => matchesOpenRequest(contribution, request))
-    .sort((left, right) => (right.openWithPriority ?? 0) - (left.openWithPriority ?? 0))
-    .map((contribution, index) => ({
+    .sort((left, right) => (right.openWithPriority ?? 0) - (left.openWithPriority ?? 0));
+  const selectedSurfaceId = request.preferredSurfaceIds?.find((surfaceId) =>
+    candidates.some((candidate) => candidate.id === surfaceId),
+  ) ?? candidates[0]?.id;
+
+  return {
+    resource: request.resource,
+    placement,
+    candidates: candidates.map((contribution) => ({
       surfaceId: contribution.id,
       label: contribution.label ?? contribution.id,
       description: contribution.description,
       placement,
       priority: contribution.openWithPriority ?? 0,
-      selected: index === 0,
-    }));
-
-  return {
-    resource: request.resource,
-    placement,
-    candidates,
-    selectedSurfaceId: candidates.find((candidate) => candidate.selected)?.surfaceId,
+      selected: contribution.id === selectedSurfaceId,
+    })),
+    selectedSurfaceId,
   };
 }
 

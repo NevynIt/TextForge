@@ -22,6 +22,15 @@ const registry = createSurfaceRegistry([
     openWithPriority: 100,
   },
   {
+    id: 'surface.svg',
+    label: 'SVG viewer',
+    kind: 'asset-viewer',
+    resourceKinds: ['binary'],
+    mimeTypes: ['image/svg+xml'],
+    placements: ['main', 'popup'],
+    openWithPriority: 90,
+  },
+  {
     id: 'surface.asset',
     label: 'Asset',
     kind: 'asset-viewer',
@@ -63,8 +72,14 @@ assert.equal(mainHost.markCurrent(textSession.id)?.freshness, 'current');
 assert.equal(assetSession.placement, 'popup');
 assert.equal(createSurfaceSessionTab(textSession).resourceId, 'resource-1');
 assert.equal(createOpenWithSelection(registry, {
-  resource: { resourceId: 'resource-3', kind: 'binary', path: '/docs/system.svg' },
-}).selectedSurfaceId, 'surface.asset');
+  resource: { resourceId: 'resource-3', kind: 'binary', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
+}).selectedSurfaceId, 'surface.svg');
+assert.deepEqual(
+  createOpenWithSelection(registry, {
+    resource: { resourceId: 'resource-4', kind: 'binary', path: '/docs/report.pdf', mimeType: 'application/pdf' },
+  }).candidates.map((candidate) => candidate.surfaceId),
+  ['surface.asset'],
+);
 assert.equal(
   createSourceEditorFallback(textSession.resource, 'surface.editor', 'explicit-source-open').sourceSurfaceId,
   'surface.editor',

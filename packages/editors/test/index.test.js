@@ -25,6 +25,12 @@ test('text editor selection and edit helpers preserve document metadata', () => 
   assert.equal(surface.model.characterCount, 11);
   assert.equal(surface.model.engine, 'codemirror-6');
   assert.equal(resolveTextEditorLanguageMode(document).languageId, 'markdown');
+  assert.equal(resolveTextEditorLanguageMode(document).parserBacked, true);
+  assert.equal(resolveTextEditorLanguageMode(createTextEditorDocument(
+    { resourceId: 'resource-2', path: '/docs/chart.mmd', kind: 'text' },
+    'graph TD',
+  )).parserBacked, false);
   assert.equal(listTextEditorLanguageModes().some((mode) => mode.languageId === 'bpmn-xml'), true);
+  assert.equal(listTextEditorLanguageModes().find((mode) => mode.languageId === 'svg')?.parserBacked, true);
   assert.equal(typeof surface.mount, 'function');
 });

@@ -8,6 +8,7 @@ import {
 import {
   contributions as surfaceContributionPack,
   createMainSurfaceHost,
+  createOpenWithSelection,
   createPopupSurfaceHost,
   createSequentialSessionIdFactory,
   createSurfaceRegistry,
@@ -18,11 +19,16 @@ import {
   createCodeMirrorTextEditorSurface,
   createTextEditorDocument,
   contributions as editorContributionPack,
+  listTextEditorLanguageModes,
 } from '@textforge/editors';
 import {
   assetSurfaceContributions,
+  createBinaryAssetViewerSurface,
   createAssetViewerSurface,
   createBlobUrlLedger,
+  createImageAssetViewerSurface,
+  createPdfAssetViewerSurface,
+  createSvgAssetViewerSurface,
   createWorkspaceAssetBinding,
   contributions as assetContributionPack,
   markAssetBindingReady,
@@ -97,6 +103,13 @@ function createInitialWorkspace() {
     text: 'The first runnable shell composes package contracts instead of hard-coded view state.',
     mimeType: 'text/plain',
   });
+  const settings = workspace.createTextResource({
+    path: '/docs/settings.yaml',
+    title: 'settings.yaml',
+    text: 'workspace: textforge\nmode: local-first\n',
+    languageId: 'yaml',
+    mimeType: 'text/yaml',
+  });
   const roadmap = workspace.createTextResource({
     path: '/roadmap/phase-1-gap-audit-2026-05-23.md',
     title: 'phase-1-gap-audit-2026-05-23.md',
@@ -116,6 +129,7 @@ function createInitialWorkspace() {
     resources: {
       notes,
       architecture,
+      settings,
       roadmap,
       svg,
     },
@@ -134,9 +148,18 @@ function createBlobUrlDriver() {
   };
 }
 
+const assetSurfaceFactoryByContributionId = {
+  '@textforge/assets/image': createImageAssetViewerSurface,
+  '@textforge/assets/svg': createSvgAssetViewerSurface,
+  '@textforge/assets/pdf': createPdfAssetViewerSurface,
+  '@textforge/assets/binary': createBinaryAssetViewerSurface,
+};
+
 export function bootTextForgeShell(rootElement) {
   const { workspace, resources } = createInitialWorkspace();
   const blobLedger = createBlobUrlLedger(createBlobUrlDriver());
+  const languageModes = listTextEditorLanguageModes();
+  const parserBackedLanguageCount = languageModes.filter((mode) => mode.parserBacked).length;
   const surfaceRegistry = createSurfaceRegistry([
     codeMirrorTextEditorSurfaceContribution,
     ...assetSurfaceContributions,
@@ -163,43 +186,142 @@ export function bootTextForgeShell(rootElement) {
     return workspace.getEntry(resourceId);
   }
 
+  function listActiveSessions() {
+    return [...mainHost.list(), ...popupHost.list()].filter((session) => session.state !== 'closed');
+  }
+
+  function getHostForPlacement(placement) {
+    return placement === 'popup' ? popupHost : mainHost;
+  }
+
+  function createSurfaceOpenRequest(entry, options = {}) {
+    const placement = options.placement ?? (entry.kind === 'binary' ? 'popup' : 'main');
+    return {
+      resource: workspaceEntryToResourceRef(entry),
+      workspaceResource: entry,
+      title: entry.metadata.title ?? entry.path,
+      placement,
+      allowPopup: true,
+      preferredSurfaceIds: options.preferredSurfaceId ? [options.preferredSurfaceId] : undefined,
+    };
+  }
+
   function getSession(sessionId) {
-    return [...mainHost.list(), ...popupHost.list()].find((session) => session.id === sessionId);
+    return listActiveSessions().find((session) => session.id === sessionId);
   }
 
   function findSessionForResource(resourceId) {
-    return [...mainHost.list(), ...popupHost.list()].find((session) => session.resource.resourceId === resourceId);
+    return listActiveSessions().find((session) => session.resource.resourceId === resourceId);
   }
 
-  function openResourceEntry(entry) {
+  function openResourceEntry(entry, options = {}) {
     const existingSession = findSessionForResource(entry.id);
-    if (existingSession) {
-      if (existingSession.placement === 'popup') {
-        popupHost.focus(existingSession.id);
-      } else {
-        mainHost.focus(existingSession.id);
-      }
+    const requestedPlacement = options.placement ?? existingSession?.placement ?? (entry.kind === 'binary' ? 'popup' : 'main');
+    const preferredSurfaceId = options.preferredSurfaceId;
+    if (
+      existingSession &&
+      existingSession.placement === requestedPlacement &&
+      (!preferredSurfaceId || existingSession.contributionId === preferredSurfaceId)
+    ) {
+      getHostForPlacement(existingSession.placement).focus(existingSession.id);
       state.activeTabId = existingSession.id;
       state.selectedWorkspaceItemId = entry.id;
       render();
       return existingSession;
     }
 
-    const resource = workspaceEntryToResourceRef(entry);
-    const placement = entry.kind === 'binary' ? 'popup' : 'main';
-    const request = {
-      resource,
-      workspaceResource: entry,
-      title: entry.metadata.title ?? entry.path,
-      placement,
-      allowPopup: true,
-    };
-    const host = placement === 'popup' ? popupHost : mainHost;
+    const request = createSurfaceOpenRequest(entry, {
+      placement: requestedPlacement,
+      preferredSurfaceId,
+    });
+    const host = getHostForPlacement(request.placement);
     const session = host.open(request);
+
+    if (existingSession) {
+      getHostForPlacement(existingSession.placement).close(existingSession.id);
+    }
+
     state.activeTabId = session.id;
     state.selectedWorkspaceItemId = entry.id;
     render();
     return session;
+  }
+
+  function updateTextResourceLanguage(resourceId, languageId) {
+    const currentResource = workspace.getEntry(resourceId);
+    if (!currentResource || currentResource.kind !== 'text') {
+      return;
+    }
+
+    const nextLanguageMode = languageModes.find((mode) => mode.languageId === languageId);
+    const currentDocument = activeTextDocuments.get(resourceId) ?? createTextEditorDocument(
+      workspaceEntryToResourceRef(currentResource),
+      currentResource.text,
+      {
+        languageId: currentResource.languageId,
+        readOnly: false,
+      },
+    );
+    const nextResource = workspace.saveTextResource({
+      resourceId,
+      text: currentDocument.text,
+      languageId,
+      mimeType: nextLanguageMode?.mimeTypes[0] ?? currentResource.mimeType,
+    });
+    activeTextDocuments.set(resourceId, {
+      ...currentDocument,
+      languageId,
+      resource: workspaceEntryToResourceRef(nextResource),
+    });
+    state.selectedWorkspaceItemId = resourceId;
+    render();
+  }
+
+  function createOpenWithControl(session, resource) {
+    const selection = createOpenWithSelection(surfaceRegistry, {
+      resource: workspaceEntryToResourceRef(resource),
+      placement: session.placement,
+      allowPopup: session.placement === 'popup',
+      preferredSurfaceIds: [session.contributionId],
+    });
+
+    return {
+      id: 'surface-open-with',
+      label: 'Open with',
+      description: `${selection.candidates.length} compatible surface${selection.candidates.length === 1 ? '' : 's'} for this resource.`,
+      value: selection.selectedSurfaceId ?? '',
+      disabled: selection.candidates.length <= 1,
+      options: selection.candidates.map((candidate) => ({
+        value: candidate.surfaceId,
+        label: candidate.label,
+        description: candidate.description,
+      })),
+      onChange(surfaceId) {
+        openResourceEntry(resource, {
+          preferredSurfaceId: surfaceId,
+          placement: session.placement,
+        });
+      }
+    };
+  }
+
+  function createLanguageControl(resource, surfaceModel) {
+    return {
+      id: 'surface-language-mode',
+      label: 'Language mode',
+      description: surfaceModel.languageMode.parserBacked
+        ? 'Parser-backed CodeMirror mode active.'
+        : 'Metadata only; source-editor fallback remains explicit for this format.',
+      value: surfaceModel.languageMode.languageId,
+      disabled: false,
+      options: languageModes.map((mode) => ({
+        value: mode.languageId,
+        label: `${mode.label}${mode.parserBacked ? ' - parser-backed' : ' - metadata only'}`,
+      })),
+      onChange(languageId) {
+        updateTextResourceLanguage(resource.id, languageId);
+      },
+    };
   }
 
   function getAssetLease(resource) {
@@ -228,7 +350,7 @@ export function bootTextForgeShell(rootElement) {
   function describeWelcomeSurface() {
     return {
       title: 'Welcome to TextForge',
-      summary: 'The package-driven shell is live, with workspace, surface, editor, and asset packages composing the view.',
+      summary: 'The package-driven shell is live, with workspace, surface, editor, asset, open-with, and language-mode chrome composing the view.',
       openWith: 'Shell routing',
       state: 'open',
       placement: 'main',
@@ -242,6 +364,7 @@ export function bootTextForgeShell(rootElement) {
             <li>Surface routing from @textforge/surfaces</li>
             <li>Text editor surface from @textforge/editors</li>
             <li>Asset viewers from @textforge/assets</li>
+            <li>Open-with and language selection chrome from package models</li>
           </ul>
         `;
         container.replaceChildren(card);
@@ -279,6 +402,7 @@ export function bootTextForgeShell(rootElement) {
     }
 
     const openWith = surfaceRegistry.get(session.contributionId)?.label ?? 'Surface';
+    const controls = [createOpenWithControl(session, resource)];
     if (resource.kind === 'text') {
       const document = activeTextDocuments.get(resource.id) ?? createTextEditorDocument(
         workspaceEntryToResourceRef(resource),
@@ -306,6 +430,7 @@ export function bootTextForgeShell(rootElement) {
         openWith,
         state: session.state,
         placement: session.placement,
+        controls: [...controls, createLanguageControl(resource, surface.model)],
         mount(container) {
           surface.mount(container);
         },
@@ -321,7 +446,8 @@ export function bootTextForgeShell(rootElement) {
       provenance: 'workspace-bound',
     });
     const readyBinding = lease ? markAssetBindingReady(binding, lease.url) : binding;
-    const surface = createAssetViewerSurface(
+    const createAssetSurface = assetSurfaceFactoryByContributionId[session.contributionId] ?? createAssetViewerSurface;
+    const surface = createAssetSurface(
       {
         resource: resourceRef,
         workspaceResource: resource,
@@ -339,6 +465,7 @@ export function bootTextForgeShell(rootElement) {
       openWith,
       state: session.state,
       placement: session.placement,
+      controls,
       mount(container) {
         surface.mount(container);
       },
@@ -433,9 +560,59 @@ export function bootTextForgeShell(rootElement) {
     return button;
   }
 
+  function createSelectControl(config) {
+    const field = document.createElement('label');
+    field.className = 'surface-control';
+
+    const label = document.createElement('span');
+    label.className = 'surface-control__label';
+    label.textContent = config.label;
+
+    const input = document.createElement('select');
+    input.className = 'surface-control__input';
+    input.value = config.value;
+    input.disabled = Boolean(config.disabled);
+    for (const optionConfig of config.options) {
+      const option = document.createElement('option');
+      option.value = optionConfig.value;
+      option.textContent = optionConfig.label;
+      if (optionConfig.description) {
+        option.title = optionConfig.description;
+      }
+      input.append(option);
+    }
+
+    input.value = config.value;
+    input.addEventListener('change', (event) => {
+      config.onChange(event.currentTarget.value);
+    });
+
+    field.append(label, input);
+
+    if (config.description) {
+      const description = document.createElement('span');
+      description.className = 'surface-control__description';
+      description.textContent = config.description;
+      field.append(description);
+    }
+
+    return field;
+  }
+
+  function syncSurfaceControls(container, activeView) {
+    clearElement(container);
+    const controls = activeView.controls ?? [];
+    container.hidden = controls.length === 0;
+    if (controls.length === 0) {
+      return;
+    }
+
+    container.append(...controls.map((control) => createSelectControl(control)));
+  }
+
   function renderShell() {
     const treeItems = createWorkspaceTreeItems(workspace.snapshot());
-    const openSessions = [...mainHost.list(), ...popupHost.list()];
+    const openSessions = listActiveSessions();
     const tabs = [
       { id: 'welcome', title: 'Welcome', surfaceId: 'welcome', active: state.activeTabId === 'welcome' },
       { id: 'workspace', title: 'Workspace', surfaceId: 'workspace', active: state.activeTabId === 'workspace' },
@@ -461,6 +638,11 @@ export function bootTextForgeShell(rootElement) {
         id: 'package-status',
         label: 'Package APIs wired',
         tone: 'neutral',
+      }),
+      createStatusBadge({
+        id: 'language-status',
+        label: `${parserBackedLanguageCount} parser-backed modes`,
+        tone: 'info',
       }),
     ];
     const chromeModel = createWorkbenchChromeModel({
@@ -581,6 +763,7 @@ export function bootTextForgeShell(rootElement) {
           <div><span>Open-with</span><strong id="surface-openwith"></strong></div>
           <div><span>State</span><strong id="surface-state"></strong></div>
         </div>
+        <div class="surface-controls" id="surface-controls"></div>
       </div>
       <div class="surface-preview" id="surface-preview"></div>
     `;
@@ -596,9 +779,10 @@ export function bootTextForgeShell(rootElement) {
     const surfacePlacement = surfaceBody.querySelector('#surface-placement');
     const surfaceOpenWith = surfaceBody.querySelector('#surface-openwith');
     const surfaceState = surfaceBody.querySelector('#surface-state');
+    const surfaceControls = surfaceBody.querySelector('#surface-controls');
     const surfacePreview = surfaceBody.querySelector('#surface-preview');
 
-    if (!surfaceTitle || !surfaceSummary || !surfacePlacement || !surfaceOpenWith || !surfaceState || !surfacePreview) {
+    if (!surfaceTitle || !surfaceSummary || !surfacePlacement || !surfaceOpenWith || !surfaceState || !surfaceControls || !surfacePreview) {
       return;
     }
 
@@ -607,6 +791,7 @@ export function bootTextForgeShell(rootElement) {
     surfacePlacement.textContent = activeView.placement === 'popup' ? 'popup' : 'main';
     surfaceOpenWith.textContent = activeView.openWith;
     surfaceState.textContent = activeView.state;
+    syncSurfaceControls(surfaceControls, activeView);
     clearElement(surfacePreview);
     activeView.mount(surfacePreview);
   }
@@ -657,6 +842,7 @@ export function bootTextForgeShell(rootElement) {
         <li>Surface tabs come from live host sessions</li>
         <li>Text resources open in a mounted editable surface</li>
         <li>Binary resources open in a mounted viewer surface</li>
+        <li>Open-with and language chrome reflect package-owned models</li>
       </ul>
     `;
 
@@ -668,8 +854,8 @@ export function bootTextForgeShell(rootElement) {
     const footer = document.createElement('footer');
     footer.className = 'shell-footer';
     footer.innerHTML = `
-      <span>Phase 1 validation shell</span>
-      <span>Local-first bootstrap with package-driven workspace and mounted surface routing</span>
+      <span>Phase 2 language-foundation shell</span>
+      <span>Local-first bootstrap with package-driven workspace, mounted surface routing, and editor language chrome</span>
     `;
     return footer;
   }

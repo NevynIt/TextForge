@@ -22,10 +22,10 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current phase: Phase 2 - Source-editor coverage and language foundation
-Current package focus: packages/core, packages/surfaces, packages/editors
+Current phase: Phase 3 - ZIP workspace import/export
+Current package focus: packages/workspace
 Last known good command: corepack pnpm verify
-Next recommended step: continue Phase 2 by adding parser-backed CodeMirror language packages/configuration for the registered language IDs and exposing the language selection in shell open-with/editor chrome
+Next recommended step: begin Phase 3 by adding an fflate-backed workspace archive manifest plus full-workspace ZIP export/import in @textforge/workspace, then extend selected-folder export and conflict policy handling
 Open questions: none
 ```
 
@@ -141,3 +141,7 @@ Append every new historical row to the end of this table. Do not reorder existin
 | D-030 | Decision | M2 | Accepted | Direct local artifacts must use a source-owned classic bootstrap path. Do not depend on `<script type="module">` in the shipped file-launch HTML and do not repair it later by rewriting generated Vite HTML; emit a deterministic classic loader bundle and a canonical file-launch index instead. | agent | 2026-05-23 | `apps/textforge-web/public/index.html`, `apps/textforge-web/src/scriptLoader.js`, `apps/textforge-web/vite.config.mjs`, `roadmap/AGENTS_START_HERE.md` |
 | P-028 | Progress | M2 | Done | Replaced the dist HTML regex rewrite with a dedicated source loader entry, a canonical file-launch `public/index.html`, and focused checks that reject module HTML and runtime ES module syntax in the emitted local bundle. | agent | 2026-05-23 | `apps/textforge-web/public/index.html`, `apps/textforge-web/src/scriptLoader.js`, `apps/textforge-web/scripts/check.mjs`, `apps/textforge-web/scripts/check-dist.mjs`, `apps/textforge-web/vite.config.mjs`, `apps/textforge-web/README.md` |
 | P-029 | Progress | Docs | Done | Propagated the source-owned classic loader rule into the remaining roadmap instruction docs so runnable-shell and repository-strategy guidance no longer imply a post-build fixup path for direct local artifacts. | agent | 2026-05-23 | `roadmap/README.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/RAPID.md` |
+| D-031 | Decision | M2 | Accepted | Treat the official CodeMirror packages as the parser-backed Phase 2 coverage set for Markdown, Lua, JSON, XML-family formats, SVG, and YAML. Keep ITM, CSV/TSV, Mermaid, and DOT explicit metadata-only source modes until a suitable parser-backed integration is adopted. | agent | 2026-05-23 | `packages/editors/src/index.js`, `roadmap/packages/editors.md` |
+| P-030 | Progress | M2 | Done | Finished the Phase 2 language-foundation slice by making surface routing MIME-aware, wiring shell open-with and language controls to package/workspace state, persisting language selection on workspace resources, and adding parser-backed CodeMirror integrations with direct `file://` browser validation of the built shell. | agent | 2026-05-23 | `packages/surfaces/src/index.js`, `packages/editors/src/index.js`, `packages/workspace/src/index.js`, `apps/textforge-web/src/workbench.js`, `corepack pnpm verify` |
+| A-007 | Action | M3 | Open | Begin Phase 3 in `@textforge/workspace` with an fflate-backed archive manifest plus full-workspace ZIP export/import, then extend selected-folder export and conflict policy handling. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/workspace.md` |
+| P-031 | Progress | M2 | Done | Closed the remaining visible syntax-highlighting gap in the Phase 2 editor slice by replacing CodeMirror's generic default highlight style with a package-owned dark palette and validating distinct token colors in the built `file://` shell for YAML and Markdown resources. | agent | 2026-05-23 | `packages/editors/src/index.js`, `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/editors.md` |

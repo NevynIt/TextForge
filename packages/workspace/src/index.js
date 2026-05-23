@@ -359,6 +359,8 @@ export function createWorkspaceService(options = {}) {
     const nextResource = {
       ...current,
       text: input.text,
+      languageId: input.languageId ?? current.languageId,
+      mimeType: input.mimeType ?? current.mimeType,
       metadata: {
         ...current.metadata,
         updatedAt: input.updatedAt ?? now(),

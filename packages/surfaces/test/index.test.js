@@ -19,8 +19,16 @@ test('surface registry picks the highest-priority compatible contribution', () =
       openWithPriority: 20,
     },
     {
+      id: 'surface.svg',
+      label: 'SVG viewer',
+      resourceKinds: ['binary'],
+      mimeTypes: ['image/svg+xml'],
+      placements: ['main'],
+      openWithPriority: 50,
+    },
+    {
       id: 'surface.preview',
-      label: 'Preview',
+      label: 'Binary preview',
       resourceKinds: ['binary'],
       placements: ['main'],
       openWithPriority: 40,
@@ -41,10 +49,20 @@ test('surface registry picks the highest-priority compatible contribution', () =
   assert.equal(session.contributionId, 'surface.preview');
   assert.equal(session.freshness, 'current');
 
+  const svgSession = host.open({
+    resource: { resourceId: 'resource-2', kind: 'binary', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
+  });
+  assert.equal(svgSession.contributionId, 'surface.svg');
+
   const selection = createOpenWithSelection(registry, {
-    resource: { resourceId: 'resource-2', kind: 'text', path: '/docs/notes.md' },
+    resource: { resourceId: 'resource-3', kind: 'text', path: '/docs/notes.md' },
   });
   assert.equal(selection.selectedSurfaceId, 'surface.editor');
+
+  const svgSelection = createOpenWithSelection(registry, {
+    resource: { resourceId: 'resource-4', kind: 'binary', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
+  });
+  assert.deepEqual(svgSelection.candidates.map((candidate) => candidate.surfaceId), ['surface.svg', 'surface.preview']);
 
   const stale = host.markStale(session.id);
   assert.equal(stale?.freshness, 'stale');

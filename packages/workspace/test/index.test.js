@@ -17,10 +17,17 @@ test('workspace service normalizes paths and mutates entries', () => {
 
   const docs = workspace.createFolder({ path: '/docs' });
   const notes = workspace.createTextResource({ path: '/docs/notes.md', text: '# Notes', languageId: 'markdown' });
-  const updated = workspace.saveTextResource({ resourceId: notes.id, text: '# Updated notes' });
+  const updated = workspace.saveTextResource({
+    resourceId: notes.id,
+    text: '# Updated notes',
+    languageId: 'yaml',
+    mimeType: 'text/yaml',
+  });
 
   assert.equal(normalizeWorkspacePath('docs/../docs/notes.md'), '/docs/notes.md');
   assert.equal(docs.path, '/docs');
   assert.equal(updated.text, '# Updated notes');
+  assert.equal(updated.languageId, 'yaml');
+  assert.equal(updated.mimeType, 'text/yaml');
   assert.equal(createWorkspaceTreeItems(workspace.snapshot()).length >= 2, true);
 });

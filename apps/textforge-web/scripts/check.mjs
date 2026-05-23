@@ -58,4 +58,12 @@ for (const requiredImport of [
   }
 }
 
+if (!workbenchJs.includes('createOpenWithSelection') || !workbenchJs.includes('listTextEditorLanguageModes')) {
+  throw new Error('workbench.js must expose package-backed open-with and language selection chrome');
+}
+
+if (!workbenchJs.includes('surface-controls') || !workbenchJs.includes('updateTextResourceLanguage')) {
+  throw new Error('workbench.js must wire the surface control chrome to workspace and editor package state');
+}
+
 console.info('TextForge web shell checks passed.');

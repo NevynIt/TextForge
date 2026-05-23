@@ -47,9 +47,15 @@ const binary = workspace.createBinaryResource({
 assert.equal(workspace.getEntry(folder.id)?.path, '/docs');
 assert.equal(workspace.getEntry(text.id)?.path, '/docs/notes.md');
 assert.equal(workspace.getEntry(binary.id)?.mimeType, 'image/svg+xml');
+assert.equal(workspace.saveTextResource({
+  resourceId: text.id,
+  text: 'hello: world',
+  languageId: 'yaml',
+  mimeType: 'text/yaml',
+}).languageId, 'yaml');
 
 const items = createWorkspaceTreeItems(workspace.snapshot());
-assert.equal(items.find((item) => item.id === text.id)?.badge, 'MARKDOWN');
+assert.equal(items.find((item) => item.id === text.id)?.badge, 'YAML');
 
 const moved = workspace.moveEntry({ resourceId: text.id, parentPath: '/docs', title: 'guide.md' });
 assert.equal(moved?.path, '/docs/guide.md');

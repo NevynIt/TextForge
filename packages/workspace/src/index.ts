@@ -95,6 +95,8 @@ export interface WorkspaceCreateBinaryInput {
 export interface WorkspaceSaveTextInput {
   readonly resourceId: string;
   readonly text: string;
+  readonly languageId?: string;
+  readonly mimeType?: string;
   readonly updatedAt?: string;
 }
 
@@ -504,6 +506,8 @@ export function createWorkspaceService(options: WorkspaceServiceOptions = {}): W
     const nextResource: WorkspaceTextResource = {
       ...current,
       text: input.text,
+      languageId: input.languageId ?? current.languageId,
+      mimeType: input.mimeType ?? current.mimeType,
       metadata: {
         ...current.metadata,
         updatedAt: input.updatedAt ?? now(),

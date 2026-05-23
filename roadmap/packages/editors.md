@@ -34,7 +34,7 @@ Create. CodeMirrorTextEditorSurface with generic text editing and source range h
 
 ### Phase 2 — Source-editor coverage and language foundation
 
-Update. Add CodeMirror language modes/configuration for Markdown, ITM, Lua, JSON, XML, BPMN XML, ArchiMate exchange XML, CSV/TSV, Mermaid, DOT, SVG, YAML.
+Update. Add CodeMirror language modes, syntax highlighting, and editor configuration for Markdown, ITM, Lua, JSON, XML, BPMN XML, ArchiMate exchange XML, CSV/TSV, Mermaid, DOT, SVG, YAML.
 
 ### Phase 6 — ITM integration and model/report foundation
 
@@ -66,4 +66,4 @@ The current runnable shell uses `@codemirror/state` and `@codemirror/view` throu
 
 ## Phase 2 progress note
 
-The package now consumes the shared language definitions from `@textforge/core` and exposes CodeMirror-facing language-mode metadata for the Phase 2 language IDs. Parser-backed language support remains the next Phase 2 slice and should be added without claiming unsupported formats are fully parsed.
+The package now consumes the shared language definitions from `@textforge/core`, exposes the Phase 2 language-mode metadata for every registered source language, mounts parser-backed CodeMirror integrations for Markdown, Lua, JSON, XML-family formats, SVG, and YAML, and applies a package-owned dark syntax highlighting palette in the shell. ITM, CSV/TSV, Mermaid, and DOT remain explicit metadata-only/source-fallback modes until a suitable parser-backed integration is adopted.

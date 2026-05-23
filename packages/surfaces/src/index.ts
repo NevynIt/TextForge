@@ -14,6 +14,7 @@ export interface SurfaceContribution extends CoreSurfaceContribution {
   readonly description?: string;
   readonly placements?: ReadonlyArray<SurfacePlacement>;
   readonly resourceKinds?: ReadonlyArray<ResourceKind>;
+  readonly mimeTypes?: ReadonlyArray<string>;
   readonly allowPopup?: boolean;
   readonly openWithPriority?: number;
 }
@@ -134,17 +135,31 @@ function matchesResourceKind(contribution: SurfaceContribution, resourceKind: Re
   return resourceKinds.length === 0 || resourceKinds.includes(resourceKind);
 }
 
-function matchesOpenRequest(contribution: SurfaceContribution, request: SurfaceOpenRequest): boolean {
-  if (request.preferredSurfaceIds?.includes(contribution.id)) {
+function matchesMimeType(contribution: SurfaceContribution, mimeType: string | undefined): boolean {
+  const contributionMimeTypes = contribution.mimeTypes ?? [];
+  if (contributionMimeTypes.length === 0) {
     return true;
   }
 
+  if (!mimeType) {
+    return false;
+  }
+
+  const normalizedMimeType = mimeType.toLowerCase();
+  return contributionMimeTypes.some((candidate) => candidate.toLowerCase() === normalizedMimeType);
+}
+
+function matchesOpenRequest(contribution: SurfaceContribution, request: SurfaceOpenRequest): boolean {
   const requestedPlacement = request.placement ?? 'main';
   if (!matchesPlacement(contribution, requestedPlacement)) {
     return false;
   }
 
   if (!matchesResourceKind(contribution, request.resource.kind)) {
+    return false;
+  }
+
+  if (!matchesMimeType(contribution, request.resource.mimeType)) {
     return false;
   }
 
@@ -160,15 +175,15 @@ function matchesOpenRequest(contribution: SurfaceContribution, request: SurfaceO
 }
 
 function chooseBestContribution(contributionsList: ReadonlyArray<SurfaceContribution>, request: SurfaceOpenRequest): SurfaceContribution | undefined {
+  const matching = contributionsList.filter((contribution) => matchesOpenRequest(contribution, request));
   const preferred = request.preferredSurfaceIds?.map((surfaceId) =>
-    contributionsList.find((contribution) => contribution.id === surfaceId),
+    matching.find((contribution) => contribution.id === surfaceId),
   );
   const preferredMatch = preferred?.find((contribution): contribution is SurfaceContribution => Boolean(contribution));
   if (preferredMatch) {
     return preferredMatch;
   }
 
-  const matching = contributionsList.filter((contribution) => matchesOpenRequest(contribution, request));
   if (matching.length > 0) {
     return matching.sort((left, right) => (right.openWithPriority ?? 0) - (left.openWithPriority ?? 0))[0];
   }
@@ -329,10 +344,32 @@ export function createOpenWithSurfaceCommand(surfaceId: string, label: string, p
   } as const;
 }
 
-export declare function createOpenWithSelection(
+export function createOpenWithSelection(
   registry: SurfaceRegistry,
   request: SurfaceOpenRequest,
-): OpenWithSelection;
+): OpenWithSelection {
+  const placement = request.placement ?? 'main';
+  const candidates = registry.list()
+    .filter((contribution) => matchesOpenRequest(contribution, request))
+    .sort((left, right) => (right.openWithPriority ?? 0) - (left.openWithPriority ?? 0));
+  const selectedSurfaceId = request.preferredSurfaceIds?.find((surfaceId) =>
+    candidates.some((candidate) => candidate.id === surfaceId),
+  ) ?? candidates[0]?.id;
+
+  return {
+    resource: request.resource,
+    placement,
+    candidates: candidates.map((contribution) => ({
+      surfaceId: contribution.id,
+      label: contribution.label ?? contribution.id,
+      description: contribution.description,
+      placement,
+      priority: contribution.openWithPriority ?? 0,
+      selected: contribution.id === selectedSurfaceId,
+    })),
+    selectedSurfaceId,
+  };
+}
 
 export declare function createSourceEditorFallback(
   resource: ResourceRef,

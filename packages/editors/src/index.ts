@@ -93,6 +93,7 @@ export const codeMirrorTextEditorSurfaceContribution: TextEditorSurfaceContribut
   kind: 'text-editor',
   editable: true,
   sourceRangeAware: true,
+  languageIds: languageDefinitions.map((definition) => definition.id),
   placements: ['main', 'popup', 'auxiliary'],
   resourceKinds: ['text'],
   openWithPriority: 100,
