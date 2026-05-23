@@ -114,6 +114,8 @@ Maintain `roadmap/RAPID.md` continuously. RAPID means **Risks, Actions, Progress
 
 The historical RAPID entries are append-only: do not edit or delete previous entries. If an entry becomes obsolete, add a new entry with `Status` set to `Superseded` and link it to the previous entry. If a mistake must be corrected, add a correction entry and link it to the mistaken entry.
 
+Append every new historical RAPID row at the end of the file. Do not insert entries earlier in the table to keep decisions, risks, actions, progress, or issues grouped by type; the table is meant to preserve chronological order.
+
 The only editable part of `RAPID.md` is the current-status block at the top, because it is an operational pointer rather than the historical record.
 
 Use this table shape consistently:

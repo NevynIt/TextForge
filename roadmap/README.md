@@ -20,7 +20,7 @@ The roadmap folder contains the standalone architecture body, package-aware impl
 2. Start with `roadmap/AGENTS_START_HERE.md`.
 3. Follow `roadmap/02_repository_pivot_instruction.md` if the repository has not yet been pivoted.
 4. Use `roadmap/00_package_aware_roadmap.md` to determine the current milestone.
-5. Maintain `roadmap/RAPID.md` continuously. Historical RAPID rows are append-only; add superseding or correction rows instead of editing old entries.
+5. Maintain `roadmap/RAPID.md` continuously. Historical RAPID rows are append-only and must always be appended at the end of the file; add superseding or correction rows instead of editing old entries or regrouping rows by type.
 6. Commit roadmap/RAPID updates together with implementation changes.
 
 ## Repository-local structure after upload

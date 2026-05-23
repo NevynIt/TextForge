@@ -10,6 +10,10 @@ This log is append-only.
 
 Do not edit or delete previous entries. If an entry becomes obsolete, add a new entry with `Status` set to `Superseded` and link it to the previous entry. If a mistake must be corrected, add a new correction entry and link it to the mistaken entry.
 
+Historical entries must always be appended at the end of the file. Do not insert new rows beside similar types, under earlier milestone clusters, or into an older section for convenience.
+
+Keep the historical table in event order so decisions, risks, actions, progress, and issues remain in the sequence they happened rather than being regrouped by type.
+
 The append-only rule makes the implementation history auditable across agent runs.
 
 ## Current status block
@@ -60,6 +64,8 @@ Typical use:
 
 ## RAPID entries
 
+Append every new historical row to the end of this table. Do not reorder existing rows or insert a new row above older history just to keep types together.
+
 | ID | Type | Milestone | Status | Entry | Owner | Updated | Links |
 |---|---|---|---|---|---|---|---|
 | D-001 | Decision | M-1 | Accepted | Use one Git repository with pnpm workspaces, not Git submodules. | Jill | 2026-05-23 |  |
@@ -80,3 +86,4 @@ Typical use:
 | P-003 | Progress | M-1 | Done | Removed the old app tree, build artifacts, legacy root configs, and the `external/ITM` submodule from the rewrite branch, then added the pnpm workspace skeleton and placeholder package boundaries. | agent | 2026-05-23 | `apps/textforge-web`, `packages/core`, `pnpm-workspace.yaml` |
 | P-004 | Progress | M-1 | Done | Installed the pnpm workspace through Corepack and verified the placeholder workspace scripts with `corepack pnpm verify`. | agent | 2026-05-23 | `pnpm-lock.yaml`, `package.json` |
 | P-005 | Progress | M0 | Done | Implemented the Phase 0 package contract block for `@textforge/core`, `@textforge/security-profile`, `@textforge/examples-docs`, and `@textforge/ui`, then re-verified the workspace with `corepack pnpm verify`. | agent | 2026-05-23 | `packages/core/src/index.ts`, `packages/security-profile/src/index.ts`, `packages/security-profile/package.json`, `packages/examples-docs/src/index.ts`, `packages/ui/src/index.ts` |
+| D-011 | Decision | M0 | Accepted | Future RAPID history must be appended only at the end of the file so the single table stays in chronological event order rather than being regrouped by type. | Jill | 2026-05-23 | `roadmap/RAPID.md`, `roadmap/AGENTS_START_HERE.md`, `roadmap/README.md` |
