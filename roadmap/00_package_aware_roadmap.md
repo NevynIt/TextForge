@@ -29,6 +29,8 @@ The first stable user-facing checkpoint is the one where the app shell can launc
 
 Phase 1 and later milestones add substantive workbench behavior. They do not replace the need for a first runnable shell.
 
+Operationally, treat this as Phase 0.5: the first runnable shell sits between the repository pivot and Phase 1 workspace/surface skeleton work.
+
 
 ## Agent operating model
 

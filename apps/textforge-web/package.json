@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "echo build placeholder",
-    "test": "echo test placeholder",
-    "lint": "echo lint placeholder",
-    "typecheck": "echo typecheck placeholder"
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev-server.mjs",
+    "preview": "node scripts/dev-server.mjs --dir dist",
+    "test": "node scripts/check.mjs",
+    "lint": "node scripts/check.mjs",
+    "typecheck": "node scripts/check.mjs"
   }
 }

@@ -23,7 +23,7 @@ Keep this block current. It may be edited because it is an operational pointer, 
 ```text
 Current branch: rewrite/v2-monorepo
 Current milestone: M2 Source-editor coverage and language foundation
-Current package focus: core, surfaces, editors
+Current package focus: apps/textforge-web, core, workspace, surfaces, ui, editors
 Last known good command: corepack pnpm verify
 Next recommended step: add language mode registration and source editor fallback selection
 Open questions: none recorded at document-set creation
@@ -95,3 +95,5 @@ Append every new historical row to the end of this table. Do not reorder existin
 | D-012 | Decision | M1 | Accepted | Agents must validate progressively during implementation and run the best available milestone-scoped verification before any milestone commit, logging any remaining verification gap in RAPID. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md` |
 | D-014 | Decision | M1 | Accepted | Define the first stable user-facing state as a runnable shell that shows the frame, workspace/navigation chrome, main surface region, toolbar or command entry points, status feedback, and contribution routing, rather than treating package placeholders as ready. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/AGENTS_START_HERE.md` |
 | P-009 | Progress | M1 | Done | Updated the roadmap and agent instructions to define the first runnable shell as a separate stable baseline and to name the user-facing chrome available at that checkpoint. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/AGENTS_START_HERE.md` |
+| D-015 | Decision | M0.5 | Accepted | Implement the runnable shell as a dependency-light browser-native bootstrap with a copied static asset build and a Node static server, avoiding new runtime dependencies until the React workbench layer is introduced. | agent | 2026-05-23 | `apps/textforge-web/package.json`, `apps/textforge-web/scripts/build.mjs`, `apps/textforge-web/scripts/dev-server.mjs`, `apps/textforge-web/src/main.js` |
+| P-010 | Progress | M0.5 | Done | Built and browser-verified the first runnable TextForge shell with visible frame, workspace navigation, surface routing, and contribution registry chrome. | agent | 2026-05-23 | `apps/textforge-web/index.html`, `apps/textforge-web/src/main.js`, `apps/textforge-web/src/styles.css`, `apps/textforge-web/scripts/build.mjs`, `apps/textforge-web/scripts/check.mjs`, `apps/textforge-web/scripts/dev-server.mjs` |
