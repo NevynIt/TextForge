@@ -35,7 +35,8 @@ const readyBinding = markAssetBindingReady(binding, lease.url);
 const surface = createAssetViewerSurface(request, { binding: readyBinding, lease });
 
 assert.equal(surface.model.viewerKind, 'svg');
-assert.match(surface.html, /asset-viewer/);
+assert.equal(surface.model.blobUrl, 'blob:asset-check');
+assert.equal(typeof surface.mount, 'function');
 assert.equal(createAssetViewerSurfaceModel(request, readyBinding, lease).mimeType, 'image/svg+xml');
 
 console.info('assets package checks passed');

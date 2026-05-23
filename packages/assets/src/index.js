@@ -164,6 +164,93 @@ function bytesToText(bytes) {
   return new TextDecoder().decode(bytes);
 }
 
+function createMediaNode(ownerDocument, model) {
+  const stage = ownerDocument.createElement('div');
+  stage.className = 'asset-viewer__stage';
+
+  if (model.viewerKind === 'svg' || model.viewerKind === 'image') {
+    if (model.blobUrl) {
+      const img = ownerDocument.createElement('img');
+      img.className = 'asset-viewer__media';
+      img.src = model.blobUrl;
+      img.alt = model.title;
+      img.loading = 'lazy';
+      stage.append(img);
+    } else {
+      const fallback = ownerDocument.createElement('pre');
+      fallback.className = 'asset-viewer__fallback';
+      fallback.textContent = model.resourceText || 'No image data available.';
+      stage.append(fallback);
+    }
+  } else if (model.viewerKind === 'pdf') {
+    if (model.blobUrl) {
+      const frame = ownerDocument.createElement('iframe');
+      frame.className = 'asset-viewer__media';
+      frame.src = model.blobUrl;
+      frame.title = model.title;
+      stage.append(frame);
+    } else {
+      const fallback = ownerDocument.createElement('pre');
+      fallback.className = 'asset-viewer__fallback';
+      fallback.textContent = 'PDF preview is available when a blob URL is bound.';
+      stage.append(fallback);
+    }
+  } else {
+    const fallback = ownerDocument.createElement('pre');
+    fallback.className = 'asset-viewer__fallback';
+    fallback.textContent = model.resourceText || 'Binary resource preview';
+    stage.append(fallback);
+  }
+
+  return stage;
+}
+
+function createAssetViewerMarkup(model) {
+  const downloadLabel = model.blobUrl ? 'Download asset' : 'No download link';
+  const downloadMarkup = model.blobUrl
+    ? `<a class="asset-viewer__download" data-download-link href="${escapeHtml(model.blobUrl)}" download="${escapeHtml(model.title)}">${escapeHtml(downloadLabel)}</a>`
+    : `<span class="asset-viewer__download asset-viewer__download--disabled" data-download-link aria-disabled="true">${escapeHtml(downloadLabel)}</span>`;
+  return `
+    <section class="asset-viewer asset-viewer--${model.viewerKind}">
+      <header class="asset-viewer__header">
+        <div>
+          <span class="asset-viewer__eyebrow">Asset viewer</span>
+          <h4>${escapeHtml(model.title)}</h4>
+        </div>
+        <div class="asset-viewer__meta">
+          <span>${escapeHtml(model.viewerKind)}</span>
+          <span>${escapeHtml(model.mimeType)}</span>
+        </div>
+      </header>
+      <div class="asset-viewer__body">
+        <div class="asset-viewer__stage"></div>
+        <aside class="asset-viewer__details">
+          <div class="asset-viewer__detail">
+            <span>State</span>
+            <strong>${escapeHtml(model.state)}</strong>
+          </div>
+          <div class="asset-viewer__detail">
+            <span>Source</span>
+            <strong>${escapeHtml(model.provenance)}</strong>
+          </div>
+          <div class="asset-viewer__detail">
+            <span>Blob URL</span>
+            <strong>${model.blobUrl ? 'bound' : 'unbound'}</strong>
+          </div>
+          <div class="asset-viewer__detail">
+            <span>Action</span>
+            <strong>${downloadMarkup}</strong>
+          </div>
+        </aside>
+      </div>
+      <footer class="asset-viewer__footer">
+        <span>${escapeHtml(model.state)}</span>
+        <span>${escapeHtml(model.provenance)}</span>
+      </footer>
+    </section>
+  `;
+}
+
 export function createAssetViewerSurfaceModel(request, binding, lease) {
   const resolvedBinding = binding ?? createWorkspaceAssetBinding(request);
   const viewerKind = resolvedBinding.viewerKind;
@@ -177,42 +264,6 @@ export function createAssetViewerSurfaceModel(request, binding, lease) {
       ? request.workspaceResource.text
       : '';
 
-  let previewHtml = `
-    <section class="asset-viewer asset-viewer--${viewerKind}">
-      <header class="asset-viewer__header">
-        <div>
-          <span class="asset-viewer__eyebrow">Asset viewer</span>
-          <h4>${escapeHtml(title)}</h4>
-        </div>
-        <div class="asset-viewer__meta">
-          <span>${escapeHtml(viewerKind)}</span>
-          <span>${escapeHtml(mimeType)}</span>
-        </div>
-      </header>
-      <div class="asset-viewer__body">
-  `;
-
-  if (viewerKind === 'svg' || viewerKind === 'image') {
-    previewHtml += blobUrl
-      ? `<img class="asset-viewer__media" src="${escapeHtml(blobUrl)}" alt="${escapeHtml(title)}" />`
-      : `<pre class="asset-viewer__fallback">${escapeHtml(resourceText || 'No image data available.')}</pre>`;
-  } else if (viewerKind === 'pdf') {
-    previewHtml += blobUrl
-      ? `<iframe class="asset-viewer__media" src="${escapeHtml(blobUrl)}" title="${escapeHtml(title)}"></iframe>`
-      : `<pre class="asset-viewer__fallback">PDF preview is available when a blob URL is bound.</pre>`;
-  } else {
-    previewHtml += `<pre class="asset-viewer__fallback">${escapeHtml(resourceText || 'Binary resource preview')}</pre>`;
-  }
-
-  previewHtml += `
-      </div>
-      <footer class="asset-viewer__footer">
-        <span>${escapeHtml(state)}</span>
-        <span>${request.provenance ? escapeHtml(request.provenance) : 'workspace-bound'}</span>
-      </footer>
-    </section>
-  `;
-
   return {
     id: `asset-viewer:${request.resource.resourceId}`,
     title,
@@ -222,20 +273,42 @@ export function createAssetViewerSurfaceModel(request, binding, lease) {
     mimeType,
     binding: resolvedBinding,
     lease,
-    previewHtml,
+    blobUrl,
+    resourceText,
+    provenance: request.provenance ?? 'workspace-bound',
   };
 }
 
 export function createAssetViewerSurface(request, options = {}) {
   const binding = options.binding ?? createWorkspaceAssetBinding(request);
+  const model = createAssetViewerSurfaceModel(request, binding, options.lease);
   return {
-    id: `asset-viewer:${request.resource.resourceId}`,
+    id: model.id,
     contribution:
       assetSurfaceContributions.find((candidate) => candidate.viewerKind === binding.viewerKind) ??
       assetSurfaceContributions[assetSurfaceContributions.length - 1],
     binding,
     lease: options.lease,
-    model: createAssetViewerSurfaceModel(request, binding, options.lease),
-    html: createAssetViewerSurfaceModel(request, binding, options.lease).previewHtml,
+    model,
+    mount(container) {
+      container.innerHTML = createAssetViewerMarkup(model);
+      const stage = container.querySelector('.asset-viewer__stage');
+      if (!stage) {
+        return () => {};
+      }
+
+      const ownerDocument = container.ownerDocument ?? globalThis.document;
+      if (!ownerDocument) {
+        return () => {};
+      }
+
+      stage.replaceChildren(createMediaNode(ownerDocument, model));
+      const downloadLink = container.querySelector('[data-download-link]');
+      if (downloadLink && model.blobUrl) {
+        downloadLink.setAttribute('href', model.blobUrl);
+        downloadLink.setAttribute('download', model.title);
+      }
+      return () => {};
+    },
   };
 }

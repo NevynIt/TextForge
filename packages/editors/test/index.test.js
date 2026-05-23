@@ -19,5 +19,7 @@ test('text editor selection and edit helpers preserve document metadata', () => 
   const surface = createCodeMirrorTextEditorSurface({ document });
 
   assert.equal(nextDocument.text, 'Hello TextForge');
-  assert.match(surface.html, /textarea/);
+  assert.equal(surface.model.lineCount, 1);
+  assert.equal(surface.model.characterCount, 11);
+  assert.equal(typeof surface.mount, 'function');
 });

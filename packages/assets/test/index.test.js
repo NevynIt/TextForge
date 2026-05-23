@@ -29,6 +29,9 @@ test('asset viewer helpers select and bind viewer kinds', () => {
   });
 
   assert.equal(selectAssetViewerKind(request), 'svg');
-  assert.equal(createAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'svg');
+  const surface = createAssetViewerSurface(request, { binding, lease });
+  assert.equal(surface.model.viewerKind, 'svg');
+  assert.equal(surface.model.blobUrl, 'blob:asset-test');
+  assert.equal(typeof surface.mount, 'function');
   assert.equal(markAssetBindingReleased(binding).state, 'released');
 });

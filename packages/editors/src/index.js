@@ -127,12 +127,146 @@ function escapeHtml(text) {
     .replaceAll('"', '&quot;');
 }
 
+function normalizeLineEndings(text) {
+  return text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+}
+
+function splitLines(text) {
+  return normalizeLineEndings(text).split('\n');
+}
+
+function countLines(text) {
+  return splitLines(text).length;
+}
+
+function formatSelectionLabel(selection, text) {
+  const normalized = normalizeTextSelection(selection);
+  const start = Math.min(normalized.anchor, normalized.head);
+  const end = Math.max(normalized.anchor, normalized.head);
+  const lines = splitLines(text);
+
+  let line = 1;
+  let column = start + 1;
+  let cursor = 0;
+  for (const currentLine of lines) {
+    const nextCursor = cursor + currentLine.length;
+    if (start <= nextCursor) {
+      column = start - cursor + 1;
+      break;
+    }
+    cursor = nextCursor + 1;
+    line += 1;
+  }
+
+  const span = end - start;
+  return `L${line}:C${column}${span > 0 ? `, ${span} selected` : ''}`;
+}
+
+function createEditorSurfaceMarkup(model) {
+  const diagnosticsCount = model.diagnostics.length;
+  const lineNumbers = Array.from({ length: model.lineCount }, (_, index) => `<span>${index + 1}</span>`).join('');
+  return `
+    <section class="editor-frame editor-frame--${model.state}">
+      <header class="editor-frame__header">
+        <div>
+          <span class="editor-frame__eyebrow">Text editor</span>
+          <h4>${escapeHtml(model.title)}</h4>
+        </div>
+        <div class="editor-frame__meta">
+          <span>${escapeHtml(model.languageLabel)}</span>
+          <span>${model.state}</span>
+        </div>
+      </header>
+      <div class="editor-frame__body">
+        <aside class="editor-frame__gutter" aria-hidden="true">${lineNumbers}</aside>
+        <div
+          class="editor-frame__surface"
+          data-editor-input
+          contenteditable="${model.readOnly ? 'false' : 'plaintext-only'}"
+          role="textbox"
+          aria-label="${escapeHtml(model.title)}"
+          aria-multiline="true"
+          spellcheck="false"
+          tabindex="0"
+        >${escapeHtml(model.text)}</div>
+      </div>
+      <div class="editor-frame__diagnostics" aria-live="polite">
+        <span>${diagnosticsCount} diagnostics</span>
+        <span>${escapeHtml(model.selectionLabel)}</span>
+      </div>
+      <footer class="editor-frame__footer">
+        <span>Range ${model.range.start.line}:${model.range.start.column} to ${model.range.end.line}:${model.range.end.column}</span>
+        <span>${model.characterCount} characters</span>
+      </footer>
+    </section>
+  `;
+}
+
+function getTextOffset(root, node, offset) {
+  if (!root || !node) {
+    return 0;
+  }
+
+  const doc = root.ownerDocument ?? globalThis.document;
+  if (!doc || typeof doc.createTreeWalker !== 'function') {
+    return 0;
+  }
+
+  const textNodes = [];
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let current = walker.nextNode();
+  while (current) {
+    textNodes.push(current);
+    current = walker.nextNode();
+  }
+
+  let position = 0;
+  for (const textNode of textNodes) {
+    if (textNode === node) {
+      return position + Math.min(offset, textNode.data.length);
+    }
+
+    position += textNode.data.length;
+  }
+
+  if (node.nodeType === Node.ELEMENT_NODE) {
+    const child = node.childNodes?.[offset] ?? null;
+    if (child) {
+      return position + getTextOffset(root, child, 0);
+    }
+  }
+
+  return position;
+}
+
+function getSelectionFromEditor(editor) {
+  const ownerDocument = editor.ownerDocument;
+  if (!ownerDocument || typeof ownerDocument.getSelection !== 'function') {
+    return createTextEditorSelection(0);
+  }
+
+  const selection = ownerDocument.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return createTextEditorSelection(0);
+  }
+
+  const range = selection.getRangeAt(0);
+  if (!editor.contains(range.startContainer) || !editor.contains(range.endContainer)) {
+    return createTextEditorSelection(0);
+  }
+
+  const anchor = getTextOffset(editor, range.startContainer, range.startOffset);
+  const head = getTextOffset(editor, range.endContainer, range.endOffset);
+  return createTextEditorSelection(anchor, head);
+}
+
 export function createTextEditorSurfaceModel(document, diagnostics = []) {
   const title = document.resource.path ?? document.resource.resourceId;
   const selection = document.selection ?? createTextEditorSelection(0);
   const range = document.sourceRange ?? selectionToSourceRange(selection);
   const state = document.readOnly ? 'read-only' : 'editable';
   const languageLabel = document.languageId ?? document.resource.languageId ?? 'plain text';
+  const text = normalizeLineEndings(document.text);
 
   return {
     id: `text-editor:${document.resource.resourceId}`,
@@ -141,67 +275,133 @@ export function createTextEditorSurfaceModel(document, diagnostics = []) {
     state,
     languageLabel,
     selection,
+    selectionLabel: formatSelectionLabel(selection, text),
     range,
     diagnostics,
-    text: document.text,
-    previewHtml: `
-      <section class="editor-frame">
-        <header class="editor-frame__header">
-          <div>
-            <span class="editor-frame__eyebrow">Text editor</span>
-            <h4>${escapeHtml(title)}</h4>
-          </div>
-          <div class="editor-frame__meta">
-            <span>${escapeHtml(languageLabel)}</span>
-            <span>${state}</span>
-          </div>
-        </header>
-        <textarea
-          class="editor-frame__textarea"
-          data-editor-input
-          spellcheck="false"
-          aria-label="${escapeHtml(title)}"
-        >${escapeHtml(document.text)}</textarea>
-        <footer class="editor-frame__footer">
-          <span>Range ${range.start.line}:${range.start.column} to ${range.end.line}:${range.end.column}</span>
-          <span>${diagnostics.length} diagnostics</span>
-        </footer>
-      </section>
-    `,
+    text,
+    lineCount: countLines(text),
+    characterCount: text.length,
+    readOnly: Boolean(document.readOnly),
   };
 }
 
 export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], onChange } = {}) {
-  const model = createTextEditorSurfaceModel(document, diagnostics);
+  const baseDocument = document ?? createTextEditorDocument(
+    { resourceId: 'text-editor-document', kind: 'text' },
+    '',
+  );
+  const model = createTextEditorSurfaceModel(baseDocument, diagnostics);
+
   return {
     id: model.id,
     contribution: codeMirrorTextEditorSurfaceContribution,
-    document,
+    document: baseDocument,
     diagnostics,
     model,
-    html: model.previewHtml,
-    bind(container, handlers = {}) {
+    mount(container, handlers = {}) {
+      container.innerHTML = createEditorSurfaceMarkup(model);
+
       const editor = container.querySelector('[data-editor-input]');
-      if (!editor) {
+      const gutter = container.querySelector('.editor-frame__gutter');
+      const selectionLabel = container.querySelector('.editor-frame__diagnostics span:last-child');
+      const diagnosticsLabel = container.querySelector('.editor-frame__diagnostics span:first-child');
+      const rangeLabel = container.querySelector('.editor-frame__footer span:first-child');
+      const characterLabel = container.querySelector('.editor-frame__footer span:last-child');
+      if (!editor || !gutter || !selectionLabel || !diagnosticsLabel || !rangeLabel || !characterLabel) {
         return () => {};
       }
 
       const update = typeof handlers.onChange === 'function' ? handlers.onChange : onChange;
-      if (typeof update !== 'function' || document.readOnly) {
-        return () => {};
+      let currentDocument = baseDocument;
+
+      const refreshSurfaceState = () => {
+        const text = normalizeLineEndings(editor.textContent ?? '');
+        const nextSelection = getSelectionFromEditor(editor);
+        const nextModel = createTextEditorSurfaceModel({
+          ...currentDocument,
+          text,
+          selection: nextSelection,
+          sourceRange: selectionToSourceRange(nextSelection),
+        }, diagnostics);
+
+        gutter.innerHTML = Array.from({ length: nextModel.lineCount }, (_, index) => `<span>${index + 1}</span>`).join('');
+        selectionLabel.textContent = nextModel.selectionLabel;
+        diagnosticsLabel.textContent = `${diagnostics.length} diagnostics`;
+        rangeLabel.textContent = `Range ${nextModel.range.start.line}:${nextModel.range.start.column} to ${nextModel.range.end.line}:${nextModel.range.end.column}`;
+        characterLabel.textContent = `${nextModel.characterCount} characters`;
+        currentDocument = {
+          ...currentDocument,
+          text: nextModel.text,
+          version: currentDocument.version + 1,
+          selection: nextSelection,
+          sourceRange: selectionToSourceRange(nextSelection),
+        };
+
+        return currentDocument;
+      };
+
+      const onInput = () => {
+        if (currentDocument.readOnly) {
+          return;
+        }
+
+        const nextDocument = refreshSurfaceState();
+        if (typeof update === 'function') {
+          update(nextDocument);
+        }
+      };
+
+      const onSelectionChange = () => {
+        const selection = getSelectionFromEditor(editor);
+        const nextModel = createTextEditorSurfaceModel({
+          ...currentDocument,
+          selection,
+          sourceRange: selectionToSourceRange(selection),
+        }, diagnostics);
+        selectionLabel.textContent = nextModel.selectionLabel;
+        rangeLabel.textContent = `Range ${nextModel.range.start.line}:${nextModel.range.start.column} to ${nextModel.range.end.line}:${nextModel.range.end.column}`;
+      };
+
+      editor.addEventListener('input', onInput);
+      editor.addEventListener('keyup', onSelectionChange);
+      editor.addEventListener('mouseup', onSelectionChange);
+      editor.addEventListener('blur', onSelectionChange);
+
+      const ownerDocument = editor.ownerDocument;
+      if (ownerDocument && typeof ownerDocument.addEventListener === 'function') {
+        const handleSelectionChange = () => {
+          if (!editor.isConnected) {
+            return;
+          }
+
+          const selection = ownerDocument.getSelection?.();
+          if (!selection || selection.rangeCount === 0) {
+            return;
+          }
+
+          if (!editor.contains(selection.anchorNode) && !editor.contains(selection.focusNode)) {
+            return;
+          }
+
+          onSelectionChange();
+        };
+
+        ownerDocument.addEventListener('selectionchange', handleSelectionChange);
+        return () => {
+          editor.removeEventListener('input', onInput);
+          editor.removeEventListener('keyup', onSelectionChange);
+          editor.removeEventListener('mouseup', onSelectionChange);
+          editor.removeEventListener('blur', onSelectionChange);
+          ownerDocument.removeEventListener('selectionchange', handleSelectionChange);
+        };
       }
 
-      editor.addEventListener('input', () => {
-        const nextDocument = applyTextEdit(document, {
-          kind: 'replace',
-          start: 0,
-          end: document.text.length,
-          text: editor.value,
-        });
-        update(nextDocument);
-      });
-
-      return () => {};
+      return () => {
+        editor.removeEventListener('input', onInput);
+        editor.removeEventListener('keyup', onSelectionChange);
+        editor.removeEventListener('mouseup', onSelectionChange);
+        editor.removeEventListener('blur', onSelectionChange);
+      };
     },
   };
 }
