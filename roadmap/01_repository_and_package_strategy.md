@@ -45,6 +45,8 @@ route registered contributions through the shell
 
 That checkpoint is the boundary between repository plumbing and a usable first-run experience. Phase 1 and later milestones extend that shell with real workspace, surface, editor, and asset behavior.
 
+If that shell must also ship as a direct local `file://` artifact, the packaged local entry should be treated as a first-class source path, not as an afterthought. Do not ship the local artifact behind `<script type="module">` and then repair generated HTML in a postprocess step. Prefer a source-owned file-launch HTML document, a dedicated loader entry, and a deterministic classic bundle with focused checks that reject runtime ES module syntax.
+
 ## Recommended model
 
 ```text

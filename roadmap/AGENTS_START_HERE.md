@@ -116,6 +116,8 @@ Do not let preview-server success weaken the local runnable-artifact requirement
 
 Treat relative built asset paths in `dist/index.html` as necessary but not sufficient evidence. Agents must preserve the runtime behavior needed for the shell to execute as a local artifact or extension surface, not just the packaging shape of the built output.
 
+When a runnable local artifact must support direct `file://` launch, do not ship that artifact behind `<script type="module">` or rely on a post-build rewrite of generated HTML to repair a module entry. Chromium-based browsers can block module-script local launches. Prefer a source-owned classic bootstrap path: a dedicated loader entry, a canonical file-launch HTML document, and focused checks that reject runtime ES module syntax in the emitted local bundle.
+
 ## Commit discipline
 
 Commit after every coherent phase slice.

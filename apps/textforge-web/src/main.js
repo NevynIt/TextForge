@@ -1,9 +1,9 @@
 import { bootTextForgeShell } from './workbench.js';
 
-const app = document.getElementById('app');
+export function mountTextForgeShell(rootElement = document.getElementById('app')) {
+  if (!rootElement) {
+    throw new Error('TextForge app root not found.');
+  }
 
-if (!app) {
-  throw new Error('TextForge app root not found.');
+  bootTextForgeShell(rootElement);
 }
-
-bootTextForgeShell(app);

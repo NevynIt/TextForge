@@ -105,7 +105,7 @@ The web shell is again packaged by Vite, so CodeMirror and workspace package dep
 The remaining Phase 1 closure gaps are now closed.
 
 - `@textforge/assets` exposes typed, package-owned image, SVG, PDF, and generic binary viewer surface factories rather than only a generic blob-preview facade.
-- The Vite build emits relative `./assets/...` links and the web package build runs a dist check so `apps/textforge-web/dist/index.html` remains suitable for direct `file://` launch.
+- The local artifact now uses a source-owned `public/index.html` plus a deterministic classic loader bundle under `./assets/`, and the web package build runs focused checks so `apps/textforge-web/dist/index.html` remains suitable for direct `file://` launch without module-script HTML.
 - CDP validation against the running preview proved the shell mounts CodeMirror 6, dispatches an editor edit, opens the SVG asset viewer, binds media/download paths to a blob URL, and routes through the `SVG viewer` contribution.
 - Workspace verification passed with `corepack pnpm verify`.
 

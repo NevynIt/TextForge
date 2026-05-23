@@ -4,6 +4,8 @@ This package is arranged as a single drop-in `roadmap/` folder for the TextForge
 
 The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, and the append-only RAPID log for risks, actions, progress, issues, and decisions.
 
+For runnable local artifacts, the live instruction set now assumes a source-owned bootstrap path: a canonical file-launch HTML document plus a deterministic classic loader bundle, not a shipped module-script HTML entry repaired by post-build rewriting.
+
 Authority split:
 
 - `textforge_rebuild_whitepaper_main.md` owns target architecture, invariants, and design rationale.

@@ -27,6 +27,8 @@ The first stable user-facing checkpoint is the one where the app shell can launc
 - status badges or equivalent shell feedback
 - contribution registration and open-with routing for the registered surfaces
 
+When that checkpoint must also remain runnable as a direct local `file://` artifact, do not define the shipped local path around `<script type="module">` and do not rely on post-build HTML rewriting to fix a generated module entry later. The runnable local artifact should be source-owned: a canonical file-launch HTML document, a dedicated loader entry, and focused checks that reject runtime ES module syntax in the emitted local bundle.
+
 Phase 1 and later milestones add substantive workbench behavior. They do not replace the need for a first runnable shell.
 
 Operationally, treat this as Phase 0.5: the first runnable shell sits between the repository pivot and Phase 1 workspace/surface skeleton work.
