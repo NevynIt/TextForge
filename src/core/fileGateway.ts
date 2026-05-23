@@ -1,6 +1,6 @@
 import type { WorkspaceFile, WorkspaceImportFile } from "./workspaceTypes";
 
-const TEXT_MEDIA_PREFIXES = ["text/", "application/json", "application/xml", "image/svg+xml"];
+const TEXT_MEDIA_PREFIXES = ["text/", "application/json", "application/xml"];
 
 export async function fileListToWorkspaceImports(files: FileList, inferLanguage: (fileName: string) => string): Promise<WorkspaceImportFile[]> {
   const imports: WorkspaceImportFile[] = [];
@@ -55,6 +55,6 @@ function looksLikeTextFile(file: File): boolean {
   }
   const lower = file.name.toLowerCase();
   return [
-    ".txt", ".md", ".markdown", ".itm", ".lua", ".json", ".xml", ".bpmn", ".csv", ".tsv", ".tab", ".mmd", ".mermaid", ".dot", ".gv", ".py", ".js", ".ts", ".html", ".svg"
+    ".txt", ".md", ".markdown", ".itm", ".lua", ".json", ".xml", ".bpmn", ".csv", ".tsv", ".tab", ".mmd", ".mermaid", ".dot", ".gv", ".py", ".js", ".ts", ".html"
   ].some((extension) => lower.endsWith(extension));
 }

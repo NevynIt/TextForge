@@ -669,6 +669,9 @@ function toolbarControlIds(result: NonNullable<PopupRecord["result"]>): string[]
   if (result.kind === "bpmn") {
     return [];
   }
+  if (result.kind === "media") {
+    return [];
+  }
   if (result.kind === "tree" || result.kind === "itm-tree") {
     return ["viewerBackground"];
   }
@@ -1028,7 +1031,7 @@ function exportPopup(popup: PopupRecord): void {
     return;
   }
   const payload = exportPayload(popup.result);
-  const blob = new Blob([payload.content], { type: payload.type });
+  const blob = payload.blob || new Blob([payload.content || ""], { type: payload.type });
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
@@ -1047,9 +1050,15 @@ function exportFileName(popup: PopupRecord, extensionOverride?: string): string 
   return `${title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "textforge-view"}.${extensionOverride || payload.extension}`;
 }
 
-function exportPayload(result: NonNullable<PopupRecord["result"]>): { content: string; extension: string; type: string } {
+function exportPayload(result: NonNullable<PopupRecord["result"]>): { content?: string; blob?: Blob; extension: string; type: string } {
   if (result.kind === "svg") {
     return { content: viewerSnapshotHtml(result), extension: "svg", type: "image/svg+xml" };
+  }
+  if (result.kind === "media") {
+    const extension = result.mediaKind === "pdf"
+      ? "pdf"
+      : result.mediaType.split("/")[1]?.replace("jpeg", "jpg") || "bin";
+    return { blob: result.blob, extension, type: result.mediaType };
   }
   if (result.kind === "bpmn") {
     return { content: result.xml, extension: "bpmn", type: "application/xml" };

@@ -20,7 +20,7 @@
 
 ## 1. Executive summary
 
-TextForge should be rebuilt as a **React-based, local-first, text-first structured-text workbench**. Its central promise is that plain text remains the canonical source while diagrams, graphs, rendered Markdown, BPMN views, SVGs, tables, reports, and transformed outputs remain derived, inspectable, and disposable artifacts.
+TextForge should be rebuilt as a **React-based, local-first, text-first structured-text workbench**. Its central promise is that plain text remains the canonical source while diagrams, graphs, rendered Markdown, BPMN views, SVGs, uploaded images, PDFs, tables, reports, and transformed outputs remain derived, inspectable, and disposable artifacts.
 
 The rebuild should not start as a generic web IDE. It should start as a deterministic local document workbench with four pillars:
 
@@ -44,6 +44,7 @@ The recommended rebuild should use React as the UI foundation and reuse proven l
 | Markdown/report AST pipeline | unified / remark / rehype |
 | Mermaid diagrams | Mermaid |
 | Graphviz rendering | Viz.js or equivalent local Graphviz WASM |
+| Image/PDF preview | browser-native image elements and PDF embedding |
 | Graph viewer | Cytoscape.js |
 | Large graph viewer | Sigma.js + Graphology |
 | Mind map viewer | jsMind |
@@ -757,7 +758,8 @@ Responsibilities:
 - choose renderer by `ViewerResult.kind`;
 - remove central `viewers.tsx` branching;
 - support viewer-specific toolbars;
-- provide common popup controls.
+- provide common popup controls;
+- support non-editable workspace image and PDF viewers.
 
 Interface:
 
@@ -838,7 +840,8 @@ Responsibilities:
 - support visual click to source;
 - support editor cursor to viewer selection;
 - support source-aware diagnostics;
-- support Markdown embedded diagram/code block mapping.
+- support Markdown embedded diagram/code block mapping;
+- support Markdown image references that resolve against workspace-relative paths.
 
 Core types:
 
@@ -918,7 +921,12 @@ Supports:
 - Graphviz/DOT fences;
 - KaTeX;
 - SVG popout/export;
-- source-aware embedded blocks.
+- source-aware embedded blocks;
+- workspace-relative image embedding for bundled and uploaded assets.
+
+Markdown preview should resolve image sources through the virtual workspace rather than the host filesystem. Standard Markdown image syntax such as `![Alt](./images/example.png)` or `![Overview](/docs/figures/overview.svg)` should therefore work for bundled resources and user-uploaded workspace assets while remaining offline-friendly.
+
+Uploaded images and PDFs should also be first-class workspace files in the rebuild. They should appear in the workspace tree, open into dedicated view-only viewers, remain exportable, and never acquire silent editing behavior unless a future explicit asset editor is added.
 
 #### Report path
 
@@ -1453,6 +1461,8 @@ Deliverables:
 - popup manager;
 - HTML viewer;
 - SVG viewer;
+- image viewer;
+- PDF viewer;
 - source viewer;
 - table viewer;
 - common toolbar controls.
@@ -1472,13 +1482,15 @@ Deliverables:
 - Mermaid fenced block rendering;
 - Graphviz/DOT fenced block rendering;
 - KaTeX;
-- SVG popout/export from embedded diagrams.
+- SVG popout/export from embedded diagrams;
+- workspace-relative Markdown image resolution.
 
 Acceptance criteria:
 
 - Markdown preview works offline;
 - embedded diagrams render without network;
-- diagram source blocks have source ranges captured.
+- diagram source blocks have source ranges captured;
+- workspace images referenced from Markdown render correctly.
 
 ### Phase 6 — ITM integration
 

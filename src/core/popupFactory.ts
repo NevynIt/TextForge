@@ -1,8 +1,10 @@
-import type { Diagnostic, PipelineTraceStep, PopupRecord, TextDocument, ViewerResult } from "../domain/types";
+import type { Diagnostic, DocumentIdentity, PipelineTraceStep, PopupRecord, TextDocument, ViewerResult } from "../domain/types";
 import { createId } from "./id";
 
+type ViewerPopupSource = Pick<TextDocument, "id" | "fileName" | "languageId" | "version"> & { identity: DocumentIdentity };
+
 export function createViewerPopup(
-  document: TextDocument,
+  document: ViewerPopupSource,
   result: ViewerResult,
   options: { pipelineId?: string; contributionId?: string; trace?: PipelineTraceStep[] } = {}
 ): PopupRecord {

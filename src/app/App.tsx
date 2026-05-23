@@ -12,8 +12,10 @@ import type { Diagnostic, PipelineTraceStep, PipelineValue, PopupRecord, SourceR
 import type { WorkspaceEntry } from "../core/workspaceTypes";
 import { exportWorkspaceFilesToZip, importZipToWorkspaceFiles } from "../core/zipGateway";
 import { serializeItmPipelineValue } from "../viewers/itm/itmSerialization";
+import { ViewerContent } from "../viewers/registry";
 import { buildLuaActionsPlugin, type RegisteredLuaAction } from "../lua/luaScriptRegistry";
 import type { LuaRunResult } from "../lua/types";
+import { viewerResultForWorkspaceFile } from "../core/mediaSupport";
 import { useAppServices } from "./useAppServices";
 
 export function App() {
@@ -41,6 +43,7 @@ export function App() {
   const activeDocument = services.workspace.getActiveDocument();
   const activeEntry = workspace.selectedEntryId ? services.workspace.getEntry(workspace.selectedEntryId) : undefined;
   const selectedBinaryFile = activeEntry?.kind === "file" && activeEntry.fileKind === "binary" ? activeEntry : undefined;
+  const selectedBinaryViewer = selectedBinaryFile ? viewerResultForWorkspaceFile(selectedBinaryFile) : undefined;
   const pipelines = activeDocument ? services.plugins.listPipelinesForLanguage(activeDocument.languageId) : [];
   const pluginStates = useMemo(() => services.plugins.listPluginStates(), [services, pluginRevision]);
   const registeredPipelines = useMemo(() => services.plugins.listRegisteredPipelines(), [services, pluginRevision]);
@@ -625,9 +628,18 @@ export function App() {
   }
 
   function handleViewEntry(id: string): void {
+    const file = services.workspace.getFile(id);
+    if (file) {
+      const result = viewerResultForWorkspaceFile(file);
+      if (result) {
+        setPopups((items) => [...items, createViewerPopup(viewerPopupSource(file), result)]);
+        setStatus(`Opened ${file.path}.`);
+        return;
+      }
+    }
     const document = services.workspace.getDocument(id);
     if (!document) {
-      setStatus("Only text workspace files can be viewed in this build.");
+      setStatus("No viewer is available for this workspace file.");
       return;
     }
     void runPipeline(defaultPipelineIdForDocument(document), document);
@@ -834,8 +846,22 @@ export function App() {
                   <dd>{new Date(selectedBinaryFile.updatedAt).toLocaleString()}</dd>
                 </div>
               </dl>
-              <p>Binary files are stored in the workspace and can be exported, but no editor is available for this type yet.</p>
+              <p>
+                {selectedBinaryViewer
+                  ? "This file is view-only. Supported images and PDFs can be previewed without opening an editor."
+                  : "Binary files are stored in the workspace and can be exported, but no built-in viewer is available for this type yet."}
+              </p>
+              {selectedBinaryViewer ? (
+                <div class="file-metadata-preview">
+                  <ViewerContent result={selectedBinaryViewer} query="" zoom={1} settings={{}} />
+                </div>
+              ) : null}
               <div class="file-metadata-actions">
+                {selectedBinaryViewer ? (
+                  <button type="button" onClick={() => handleViewEntry(selectedBinaryFile.id)}>
+                    Open Viewer
+                  </button>
+                ) : null}
                 <button type="button" onClick={() => void handleExportEntry(selectedBinaryFile.id)}>
                   Download
                 </button>
@@ -911,6 +937,16 @@ function documentInput(document: TextDocument): PipelineValue {
     text: document.text,
     fileName: document.path || document.fileName,
     documentId: document.id
+  };
+}
+
+function viewerPopupSource(file: Extract<WorkspaceEntry, { kind: "file" }>): Pick<TextDocument, "id" | "fileName" | "languageId" | "version" | "identity"> {
+  return {
+    id: file.id,
+    fileName: file.path,
+    languageId: file.languageId || file.mediaType || "application/octet-stream",
+    version: file.version,
+    identity: file.identity
   };
 }
 

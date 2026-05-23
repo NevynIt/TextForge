@@ -59,6 +59,25 @@ function renderSvgViewer() {
   );
 }
 
+function renderMediaViewer(kind: "image" | "pdf") {
+  const result: ViewerResult = {
+    kind: "media",
+    title: kind === "image" ? "Workspace image" : "Workspace PDF",
+    mediaKind: kind,
+    mediaType: kind === "image" ? "image/png" : "application/pdf",
+    blob: new Blob([kind === "image" ? "png-bytes" : "%PDF-1.4 demo"], { type: kind === "image" ? "image/png" : "application/pdf" })
+  };
+
+  return render(
+    <ViewerContent
+      result={result}
+      query=""
+      zoom={1}
+      settings={{}}
+    />
+  );
+}
+
 function renderItmTreeViewer() {
   const model = parseItmValue(`%metadata
 {
@@ -341,6 +360,18 @@ describe("App smoke", () => {
 
     expect(anchored.panX).toBeCloseTo(-90);
     expect(anchored.panY).toBeCloseTo(-65);
+  });
+
+  it("renders uploaded images through the shared media viewer", async () => {
+    const { container } = renderMediaViewer("image");
+
+    await waitFor(() => expect(container.querySelector("img.viewer-image")).toBeTruthy());
+  });
+
+  it("renders uploaded PDFs through the shared media viewer", async () => {
+    const { container } = renderMediaViewer("pdf");
+
+    await waitFor(() => expect(container.querySelector("object.viewer-pdf-frame")).toBeTruthy());
   });
 
   it("renders the ITM tree directly from resolved entities", () => {

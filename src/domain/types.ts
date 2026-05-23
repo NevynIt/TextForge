@@ -211,6 +211,7 @@ interface ViewerResultBase {
 export type ViewerResult =
   | (ViewerResultBase & { kind: "html"; html: string })
   | (ViewerResultBase & { kind: "svg"; svg: string })
+  | (ViewerResultBase & { kind: "media"; mediaKind: "image" | "pdf"; mediaType: string; blob: Blob })
   | (ViewerResultBase & { kind: "bpmn"; xml: string })
   | (ViewerResultBase & { kind: "itm-tree"; model: ItmPipelineValue })
   | (ViewerResultBase & { kind: "itm-mindmap"; model: ItmPipelineValue })

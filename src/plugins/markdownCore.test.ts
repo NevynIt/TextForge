@@ -154,4 +154,50 @@ describe("markdownCore", () => {
     expect(result.html).toContain('data-source-kind="code-block"');
     expect(result.html).toContain('class="hljs language-js tf-source-bridge"');
   });
+
+  it("resolves workspace-relative markdown images into embedded preview URLs", async () => {
+    renderMock.mockImplementation(async (_id, source) => ({ svg: `<svg data-rendered="${source}"></svg>` }));
+
+    const { default: plugin } = await import("./markdownCore");
+    const transformer = plugin.transformers?.find((item) => item.id === "markdown-to-html");
+
+    expect(transformer).toBeDefined();
+
+    const png = new Blob([new Uint8Array([137, 80, 78, 71])], { type: "image/png" });
+
+    const result = await transformer!.transform(
+      {
+        kind: "text",
+        languageId: "text.markdown",
+        documentId: "doc-1",
+        text: "![Workspace asset](./images/sample.png)"
+      },
+      {
+        ...emptyContext,
+        workspace: {
+          ...emptyContext.workspace,
+          findByPath: (path) => path === "/docs/images/sample.png"
+            ? {
+                id: "image-1",
+                path,
+                name: "sample.png",
+                kind: "file",
+                fileKind: "binary",
+                mediaType: "image/png"
+              }
+            : undefined,
+          resolvePath: (baseFileId, target) => (baseFileId === "doc-1" && target === "./images/sample.png" ? "/docs/images/sample.png" : target),
+          readBinary: (pathOrId) => (pathOrId === "image-1" || pathOrId === "/docs/images/sample.png" ? png : undefined)
+        }
+      }
+    );
+
+    expect(result.kind).toBe("html");
+    if (result.kind !== "html") {
+      throw new Error("Expected HTML result.");
+    }
+
+    expect(result.html).toContain('src="data:image/png;base64,');
+    expect(result.html).toContain('data-workspace-path="/docs/images/sample.png"');
+  });
 });

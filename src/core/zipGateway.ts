@@ -1,5 +1,6 @@
 import { normalizeImportPath } from "./workspacePaths";
 import type { WorkspaceImportFile, WorkspaceFile } from "./workspaceTypes";
+import { inferVisualMediaType } from "./mediaSupport";
 
 interface ZipEntryPayload {
   path: string;
@@ -48,8 +49,8 @@ export async function importZipToWorkspaceFiles(blob: Blob, inferLanguage: (file
     return {
       path: normalizedPath,
       fileKind: "binary",
-      mediaType: entry.mediaType || "application/octet-stream",
-      blob: new Blob([blobPart(entry.bytes)], { type: entry.mediaType || "application/octet-stream" }),
+      mediaType: inferVisualMediaType(normalizedPath, entry.mediaType) || entry.mediaType || "application/octet-stream",
+      blob: new Blob([blobPart(entry.bytes)], { type: inferVisualMediaType(normalizedPath, entry.mediaType) || entry.mediaType || "application/octet-stream" }),
       origin: "zip-imported"
     } satisfies WorkspaceImportFile;
   });
@@ -167,11 +168,11 @@ function escapeRegExp(value: string): string {
 }
 
 function looksLikeText(path: string, mediaType?: string): boolean {
-  if (mediaType && (mediaType.startsWith("text/") || mediaType === "application/json" || mediaType === "application/xml" || mediaType === "image/svg+xml")) {
+  if (mediaType && (mediaType.startsWith("text/") || mediaType === "application/json" || mediaType === "application/xml")) {
     return true;
   }
   const lower = path.toLowerCase();
-  return [".txt", ".md", ".markdown", ".itm", ".lua", ".json", ".xml", ".bpmn", ".csv", ".tsv", ".tab", ".mmd", ".mermaid", ".dot", ".gv", ".py", ".js", ".ts", ".html", ".svg"].some((extension) => lower.endsWith(extension));
+  return [".txt", ".md", ".markdown", ".itm", ".lua", ".json", ".xml", ".bpmn", ".csv", ".tsv", ".tab", ".mmd", ".mermaid", ".dot", ".gv", ".py", ".js", ".ts", ".html"].some((extension) => lower.endsWith(extension));
 }
 
 function crc32(bytes: Uint8Array): number {

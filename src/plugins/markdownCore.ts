@@ -7,9 +7,26 @@ import katex from "katex";
 import hljs from "highlight.js";
 import mermaid from "mermaid";
 import * as viz from "@viz-js/viz";
+import { resolveMarkdownImageSource } from "../core/mediaSupport";
 import { renderMermaidSvg } from "./renderMermaidSvg";
 import "katex/dist/katex.min.css";
 import "highlight.js/styles/github.css";
+
+interface MarkdownRuntime {
+  parse(source: string, env: object): MarkdownRuntimeToken[];
+  renderer: {
+    rules: Record<string, ((tokens: MarkdownItToken[], index: number) => string) | undefined>;
+    render(tokens: MarkdownRuntimeToken[], options: object, env: object): string;
+  };
+  options: object;
+}
+
+interface MarkdownRuntimeToken {
+  type: string;
+  attrGet(name: string): string | null;
+  attrSet(name: string, value: string): void;
+  children?: MarkdownRuntimeToken[];
+}
 
 interface MarkdownArtifact {
   id: string;
@@ -53,7 +70,7 @@ const plugin: TextForgePlugin = {
           html: false,
           linkify: true,
           typographer: true
-        });
+        }) as unknown as MarkdownRuntime;
         const offsets = lineOffsets(value.text);
         markdown.renderer.rules.fence = (tokens: MarkdownItToken[], index: number) => {
           const token = tokens[index];
@@ -64,7 +81,10 @@ const plugin: TextForgePlugin = {
           const className = languageName ? `hljs language-${escapeHtml(languageName)}` : "hljs";
           return `<pre class="${className} tf-source-bridge" data-source-kind="code-block" data-source-from="${sourceFrom}" data-source-to="${sourceTo}"><code>${code}</code></pre>`;
         };
-        const rendered = markdown.render(replaceInlineMath(prepared, inlineMath, katex, tokenNamespace));
+        const source = replaceInlineMath(prepared, inlineMath, katex, tokenNamespace);
+        const tokens = markdown.parse(source, {});
+        await resolveWorkspaceImageTokens(tokens, value.documentId, context);
+        const rendered = markdown.renderer.render(tokens, markdown.options, {});
         return {
           kind: "html",
           html: `<article class="rendered-markdown">${restoreMarkdownArtifacts(rendered, artifacts, inlineMath, tokenNamespace)}</article>`,
@@ -156,6 +176,32 @@ function restoreMarkdownArtifacts(rendered: string, artifacts: MarkdownArtifact[
     html = html.replaceAll(item.id, item.html);
   });
   return html;
+}
+
+async function resolveWorkspaceImageTokens(
+  tokens: MarkdownRuntimeToken[],
+  baseFileId: string | undefined,
+  context: Parameters<NonNullable<TextForgePlugin["transformers"]>[number]["transform"]>[1]
+): Promise<void> {
+  if (!baseFileId) {
+    return;
+  }
+  for (const token of tokens) {
+    if (token.type === "image") {
+      const source = token.attrGet("src");
+      if (source) {
+        const resolved = await resolveMarkdownImageSource(context.workspace, source, baseFileId);
+        if (resolved) {
+          token.attrSet("src", resolved.url);
+          token.attrSet("data-workspace-path", resolved.path);
+          token.attrSet("loading", "lazy");
+        }
+      }
+    }
+    if (token.children?.length) {
+      await resolveWorkspaceImageTokens(token.children, baseFileId, context);
+    }
+  }
 }
 
 async function renderDiagramArtifact(

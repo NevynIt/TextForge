@@ -7,6 +7,7 @@ import {
   HtmlView,
   ItmMindMapView,
   ItmTreeView,
+  MediaView,
   MindMapView,
   SvgView,
   TableView,
@@ -78,6 +79,24 @@ const defaultRenderers = [
       />
     ),
     snapshot: (result) => result.svg
+  })),
+  toRuntimeViewerRenderer(defineViewerRenderer({
+    kind: "media",
+    render: ({ result }) => (
+      <MediaView
+        blob={result.blob}
+        mediaType={result.mediaType}
+        mediaKind={result.mediaKind}
+        title={result.title}
+      />
+    ),
+    snapshot: (result) => {
+      const url = URL.createObjectURL(result.blob);
+      if (result.mediaKind === "pdf") {
+        return `<object data="${escapeHtml(url)}" type="${escapeHtml(result.mediaType)}" style="width:100%;min-height:80vh"><iframe src="${escapeHtml(url)}" title="${escapeHtml(result.title)}" style="width:100%;min-height:80vh"></iframe></object>`;
+      }
+      return `<img src="${escapeHtml(url)}" alt="${escapeHtml(result.title)}" style="max-width:100%;height:auto" />`;
+    }
   })),
   toRuntimeViewerRenderer(defineViewerRenderer({
     kind: "bpmn",

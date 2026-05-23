@@ -25,4 +25,16 @@ describe("zipGateway", () => {
 
     await expect(importZipToWorkspaceFiles(new Blob([bytes], { type: "application/zip" }), () => "text.plain")).rejects.toThrow(/escape|relative/i);
   });
+
+  it("keeps uploaded SVG assets as binary files so they stay view-only", async () => {
+    const zip = await exportWorkspaceFilesToZip([
+      { path: "/docs/diagram.svg", fileKind: "binary", blob: new Blob(["<svg></svg>"], { type: "image/svg+xml" }), mediaType: "image/svg+xml" }
+    ]);
+
+    const imported = await importZipToWorkspaceFiles(zip, () => "text.plain");
+
+    expect(imported).toHaveLength(1);
+    expect(imported[0].fileKind).toBe("binary");
+    expect(imported[0].mediaType).toBe("image/svg+xml");
+  });
 });

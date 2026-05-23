@@ -203,6 +203,89 @@ export function BpmnView({
   );
 }
 
+export function MediaView({
+  blob,
+  mediaType,
+  mediaKind,
+  title
+}: {
+  blob: Blob;
+  mediaType: string;
+  mediaKind: "image" | "pdf";
+  title: string;
+}) {
+  const [url, setUrl] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    let nextUrl = "";
+
+    async function loadUrl(): Promise<void> {
+      if (typeof URL.createObjectURL === "function") {
+        nextUrl = URL.createObjectURL(blob);
+      } else {
+        nextUrl = await blobToMediaUrl(blob, mediaType);
+      }
+      if (!cancelled) {
+        setUrl(nextUrl);
+      }
+    }
+
+    void loadUrl();
+
+    return () => {
+      cancelled = true;
+      if (nextUrl && nextUrl.startsWith("blob:") && typeof URL.revokeObjectURL === "function") {
+        URL.revokeObjectURL(nextUrl);
+      }
+      setUrl("");
+    };
+  }, [blob, mediaType]);
+
+  if (!url) {
+    return <section class="viewer-content viewer-media"><p>Loading preview.</p></section>;
+  }
+
+  if (mediaKind === "pdf") {
+    return (
+      <section class="viewer-content viewer-media viewer-pdf-shell">
+        <object data={url} type={mediaType} class="viewer-pdf-frame" aria-label={title}>
+          <iframe src={url} title={title} class="viewer-pdf-frame" />
+        </object>
+      </section>
+    );
+  }
+
+  return (
+    <section class="viewer-content viewer-media viewer-image-shell">
+      <div class="viewer-image-stage">
+        <img src={url} alt={title} class="viewer-image" />
+      </div>
+    </section>
+  );
+}
+
+async function blobToMediaUrl(blob: Blob, mediaType: string): Promise<string> {
+  if (typeof FileReader === "function") {
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error || new Error("Failed to read media blob."));
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.readAsDataURL(blob);
+    });
+  }
+  if (typeof blob.arrayBuffer === "function") {
+    const bytes = new Uint8Array(await blob.arrayBuffer());
+    let binary = "";
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    return `data:${mediaType};base64,${btoa(binary)}`;
+  }
+  throw new Error(`Unable to create a preview URL for ${mediaType}.`);
+}
+
 export function HtmlView({
   html,
   query,
