@@ -243,7 +243,7 @@ pnpm --filter <changed-package> typecheck
 pnpm verify
 ```
 
-for local confidence, and CI should run affected plus full release checks as appropriate.
+for local confidence, and should do so progressively as implementation advances rather than waiting until the end of a large milestone. Before a milestone commit, the agent should run the relevant changed-package checks and the broader root verification when shared contracts or cross-package wiring changed. CI should run affected plus full release checks as appropriate.
 
 ---
 

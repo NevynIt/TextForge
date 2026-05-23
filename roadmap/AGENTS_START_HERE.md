@@ -85,6 +85,8 @@ pnpm typecheck
 
 If one of these commands does not exist yet, record that fact in `roadmap/RAPID.md` and create the minimal package script only when it belongs to the current milestone.
 
+As implementation progresses, run the narrowest relevant verification repeatedly instead of waiting until the end of a large change. Prefer changed-package checks first, then broader workspace verification when the milestone slice is ready.
+
 ## Commit discipline
 
 Commit after every milestone.
@@ -105,6 +107,10 @@ package tests or placeholders
 roadmap/RAPID.md update
 roadmap updates, if the plan changed
 ```
+
+Before any milestone commit, run the relevant verification for the work that was just completed. At minimum, run the affected package build, test, lint, or typecheck commands when they exist, and run the root verification command when the milestone changes shared contracts, workspace wiring, or multiple packages.
+
+Do not treat a milestone as complete until the best available verification has passed or the remaining verification gap is explicitly recorded in `roadmap/RAPID.md`.
 
 The roadmap and RAPID log are part of the implementation evidence. Do not leave them uncommitted when the code changes depend on them.
 
@@ -199,6 +205,7 @@ Use this order:
 4. Check package-specific guides under `roadmap/packages/` if they exist in the repo.
 5. Run the existing verification command if available.
 6. Continue with the next smallest coherent task that advances the current milestone.
+7. Re-run the narrowest relevant verification after each coherent slice and before any milestone commit.
 
 ## Package-boundary rules
 
