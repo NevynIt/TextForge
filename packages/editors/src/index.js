@@ -1,3 +1,6 @@
+import { EditorSelection, EditorState } from '@codemirror/state';
+import { EditorView, lineNumbers } from '@codemirror/view';
+
 export function createTextEditorSelection(anchor, head = anchor) {
   return { anchor, head };
 }
@@ -24,12 +27,40 @@ export function sourceRangeToSelection(range) {
   };
 }
 
-export function selectionToSourceRange(selection) {
+function offsetToSourcePosition(text, offset) {
+  const normalizedText = normalizeLineEndings(text);
+  const clampedOffset = Math.min(Math.max(0, offset), normalizedText.length);
+  if (normalizedText.length === 0 && offset > 0) {
+    return {
+      line: 1,
+      column: offset + 1,
+      offset,
+    };
+  }
+
+  let line = 1;
+  let lineStart = 0;
+
+  for (let index = 0; index < clampedOffset; index += 1) {
+    if (normalizedText[index] === '\n') {
+      line += 1;
+      lineStart = index + 1;
+    }
+  }
+
+  return {
+    line,
+    column: clampedOffset - lineStart + 1,
+    offset: clampedOffset,
+  };
+}
+
+export function selectionToSourceRange(selection, text = '') {
   const start = Math.min(selection.anchor, selection.head);
   const end = Math.max(selection.anchor, selection.head);
   return {
-    start: { line: 1, column: start + 1, offset: start },
-    end: { line: 1, column: end + 1, offset: end },
+    start: offsetToSourcePosition(text, start),
+    end: offsetToSourcePosition(text, end),
   };
 }
 
@@ -143,28 +174,13 @@ function formatSelectionLabel(selection, text) {
   const normalized = normalizeTextSelection(selection);
   const start = Math.min(normalized.anchor, normalized.head);
   const end = Math.max(normalized.anchor, normalized.head);
-  const lines = splitLines(text);
-
-  let line = 1;
-  let column = start + 1;
-  let cursor = 0;
-  for (const currentLine of lines) {
-    const nextCursor = cursor + currentLine.length;
-    if (start <= nextCursor) {
-      column = start - cursor + 1;
-      break;
-    }
-    cursor = nextCursor + 1;
-    line += 1;
-  }
-
+  const position = offsetToSourcePosition(text, start);
   const span = end - start;
-  return `L${line}:C${column}${span > 0 ? `, ${span} selected` : ''}`;
+  return `L${position.line}:C${position.column}${span > 0 ? `, ${span} selected` : ''}`;
 }
 
 function createEditorSurfaceMarkup(model) {
   const diagnosticsCount = model.diagnostics.length;
-  const lineNumbers = Array.from({ length: model.lineCount }, (_, index) => `<span>${index + 1}</span>`).join('');
   return `
     <section class="editor-frame editor-frame--${model.state}">
       <header class="editor-frame__header">
@@ -178,17 +194,11 @@ function createEditorSurfaceMarkup(model) {
         </div>
       </header>
       <div class="editor-frame__body">
-        <aside class="editor-frame__gutter" aria-hidden="true">${lineNumbers}</aside>
         <div
-          class="editor-frame__surface"
-          data-editor-input
-          contenteditable="${model.readOnly ? 'false' : 'plaintext-only'}"
-          role="textbox"
+          class="editor-frame__codemirror"
+          data-codemirror-host
           aria-label="${escapeHtml(model.title)}"
-          aria-multiline="true"
-          spellcheck="false"
-          tabindex="0"
-        >${escapeHtml(model.text)}</div>
+        ></div>
       </div>
       <div class="editor-frame__diagnostics" aria-live="polite">
         <span>${diagnosticsCount} diagnostics</span>
@@ -202,71 +212,13 @@ function createEditorSurfaceMarkup(model) {
   `;
 }
 
-function getTextOffset(root, node, offset) {
-  if (!root || !node) {
-    return 0;
-  }
-
-  const doc = root.ownerDocument ?? globalThis.document;
-  if (!doc || typeof doc.createTreeWalker !== 'function') {
-    return 0;
-  }
-
-  const textNodes = [];
-  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let current = walker.nextNode();
-  while (current) {
-    textNodes.push(current);
-    current = walker.nextNode();
-  }
-
-  let position = 0;
-  for (const textNode of textNodes) {
-    if (textNode === node) {
-      return position + Math.min(offset, textNode.data.length);
-    }
-
-    position += textNode.data.length;
-  }
-
-  if (node.nodeType === Node.ELEMENT_NODE) {
-    const child = node.childNodes?.[offset] ?? null;
-    if (child) {
-      return position + getTextOffset(root, child, 0);
-    }
-  }
-
-  return position;
-}
-
-function getSelectionFromEditor(editor) {
-  const ownerDocument = editor.ownerDocument;
-  if (!ownerDocument || typeof ownerDocument.getSelection !== 'function') {
-    return createTextEditorSelection(0);
-  }
-
-  const selection = ownerDocument.getSelection();
-  if (!selection || selection.rangeCount === 0) {
-    return createTextEditorSelection(0);
-  }
-
-  const range = selection.getRangeAt(0);
-  if (!editor.contains(range.startContainer) || !editor.contains(range.endContainer)) {
-    return createTextEditorSelection(0);
-  }
-
-  const anchor = getTextOffset(editor, range.startContainer, range.startOffset);
-  const head = getTextOffset(editor, range.endContainer, range.endOffset);
-  return createTextEditorSelection(anchor, head);
-}
-
 export function createTextEditorSurfaceModel(document, diagnostics = []) {
   const title = document.resource.path ?? document.resource.resourceId;
   const selection = document.selection ?? createTextEditorSelection(0);
-  const range = document.sourceRange ?? selectionToSourceRange(selection);
+  const text = normalizeLineEndings(document.text);
+  const range = document.sourceRange ?? selectionToSourceRange(selection, text);
   const state = document.readOnly ? 'read-only' : 'editable';
   const languageLabel = document.languageId ?? document.resource.languageId ?? 'plain text';
-  const text = normalizeLineEndings(document.text);
 
   return {
     id: `text-editor:${document.resource.resourceId}`,
@@ -282,7 +234,62 @@ export function createTextEditorSurfaceModel(document, diagnostics = []) {
     lineCount: countLines(text),
     characterCount: text.length,
     readOnly: Boolean(document.readOnly),
+    engine: 'codemirror-6',
   };
+}
+
+function createCodeMirrorSelection(selection, text) {
+  const clamped = clampTextSelection(selection, text);
+  return EditorSelection.range(clamped.anchor, clamped.head);
+}
+
+function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
+  return [
+    lineNumbers(),
+    EditorState.readOnly.of(model.readOnly),
+    EditorView.editable.of(!model.readOnly),
+    EditorView.lineWrapping,
+    EditorView.domEventHandlers({
+      blur() {
+        return false;
+      },
+    }),
+    EditorView.updateListener.of(handleUpdate),
+    EditorView.theme({
+      '&': {
+        minHeight: '100%',
+        width: '100%',
+        backgroundColor: 'rgba(2, 6, 23, 0.7)',
+        color: '#e2e8f0',
+        border: '1px solid rgba(148, 163, 184, 0.14)',
+        borderRadius: '14px',
+        overflow: 'hidden',
+      },
+      '&.cm-focused': {
+        outline: '2px solid rgba(72, 182, 168, 0.48)',
+        outlineOffset: '2px',
+      },
+      '.cm-scroller': {
+        fontFamily: '"SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace',
+        lineHeight: '1.6',
+        minHeight: '280px',
+      },
+      '.cm-content': {
+        padding: '16px',
+      },
+      '.cm-line': {
+        padding: '0',
+      },
+      '.cm-gutters': {
+        backgroundColor: 'rgba(2, 6, 23, 0.56)',
+        color: '#94a3b8',
+        borderRight: '1px solid rgba(148, 163, 184, 0.14)',
+      },
+      '.cm-lineNumbers .cm-gutterElement': {
+        padding: '0 10px',
+      },
+    }),
+  ];
 }
 
 export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], onChange } = {}) {
@@ -301,30 +308,29 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
     mount(container, handlers = {}) {
       container.innerHTML = createEditorSurfaceMarkup(model);
 
-      const editor = container.querySelector('[data-editor-input]');
-      const gutter = container.querySelector('.editor-frame__gutter');
+      const editorHost = container.querySelector('[data-codemirror-host]');
       const selectionLabel = container.querySelector('.editor-frame__diagnostics span:last-child');
       const diagnosticsLabel = container.querySelector('.editor-frame__diagnostics span:first-child');
       const rangeLabel = container.querySelector('.editor-frame__footer span:first-child');
       const characterLabel = container.querySelector('.editor-frame__footer span:last-child');
-      if (!editor || !gutter || !selectionLabel || !diagnosticsLabel || !rangeLabel || !characterLabel) {
+      if (!editorHost || !selectionLabel || !diagnosticsLabel || !rangeLabel || !characterLabel) {
         return () => {};
       }
 
       const update = typeof handlers.onChange === 'function' ? handlers.onChange : onChange;
       let currentDocument = baseDocument;
 
-      const refreshSurfaceState = () => {
-        const text = normalizeLineEndings(editor.textContent ?? '');
-        const nextSelection = getSelectionFromEditor(editor);
+      const syncSurfaceState = (viewUpdate) => {
+        const text = viewUpdate.state.doc.toString();
+        const mainSelection = viewUpdate.state.selection.main;
+        const nextSelection = createTextEditorSelection(mainSelection.anchor, mainSelection.head);
         const nextModel = createTextEditorSurfaceModel({
           ...currentDocument,
           text,
           selection: nextSelection,
-          sourceRange: selectionToSourceRange(nextSelection),
+          sourceRange: selectionToSourceRange(nextSelection, text),
         }, diagnostics);
 
-        gutter.innerHTML = Array.from({ length: nextModel.lineCount }, (_, index) => `<span>${index + 1}</span>`).join('');
         selectionLabel.textContent = nextModel.selectionLabel;
         diagnosticsLabel.textContent = `${diagnostics.length} diagnostics`;
         rangeLabel.textContent = `Range ${nextModel.range.start.line}:${nextModel.range.start.column} to ${nextModel.range.end.line}:${nextModel.range.end.column}`;
@@ -332,75 +338,39 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
         currentDocument = {
           ...currentDocument,
           text: nextModel.text,
-          version: currentDocument.version + 1,
+          version: viewUpdate.docChanged ? currentDocument.version + 1 : currentDocument.version,
           selection: nextSelection,
-          sourceRange: selectionToSourceRange(nextSelection),
+          sourceRange: selectionToSourceRange(nextSelection, text),
         };
 
         return currentDocument;
       };
 
-      const onInput = () => {
-        if (currentDocument.readOnly) {
+      const handleUpdate = (viewUpdate) => {
+        if (!viewUpdate.docChanged && !viewUpdate.selectionSet) {
           return;
         }
 
-        const nextDocument = refreshSurfaceState();
-        if (typeof update === 'function') {
+        const nextDocument = syncSurfaceState(viewUpdate);
+        if (viewUpdate.docChanged && typeof update === 'function') {
           update(nextDocument);
         }
       };
 
-      const onSelectionChange = () => {
-        const selection = getSelectionFromEditor(editor);
-        const nextModel = createTextEditorSurfaceModel({
-          ...currentDocument,
-          selection,
-          sourceRange: selectionToSourceRange(selection),
-        }, diagnostics);
-        selectionLabel.textContent = nextModel.selectionLabel;
-        rangeLabel.textContent = `Range ${nextModel.range.start.line}:${nextModel.range.start.column} to ${nextModel.range.end.line}:${nextModel.range.end.column}`;
-      };
+      const state = EditorState.create({
+        doc: model.text,
+        selection: createCodeMirrorSelection(model.selection, model.text),
+        extensions: createCodeMirrorExtensions({ model, diagnostics, handleUpdate }),
+      });
 
-      editor.addEventListener('input', onInput);
-      editor.addEventListener('keyup', onSelectionChange);
-      editor.addEventListener('mouseup', onSelectionChange);
-      editor.addEventListener('blur', onSelectionChange);
-
-      const ownerDocument = editor.ownerDocument;
-      if (ownerDocument && typeof ownerDocument.addEventListener === 'function') {
-        const handleSelectionChange = () => {
-          if (!editor.isConnected) {
-            return;
-          }
-
-          const selection = ownerDocument.getSelection?.();
-          if (!selection || selection.rangeCount === 0) {
-            return;
-          }
-
-          if (!editor.contains(selection.anchorNode) && !editor.contains(selection.focusNode)) {
-            return;
-          }
-
-          onSelectionChange();
-        };
-
-        ownerDocument.addEventListener('selectionchange', handleSelectionChange);
-        return () => {
-          editor.removeEventListener('input', onInput);
-          editor.removeEventListener('keyup', onSelectionChange);
-          editor.removeEventListener('mouseup', onSelectionChange);
-          editor.removeEventListener('blur', onSelectionChange);
-          ownerDocument.removeEventListener('selectionchange', handleSelectionChange);
-        };
-      }
-
+      const view = new EditorView({
+        state,
+        parent: editorHost,
+      });
+      editorHost.dataset.editorEngine = 'codemirror-6';
+      editorHost.textforgeCodeMirrorView = view;
       return () => {
-        editor.removeEventListener('input', onInput);
-        editor.removeEventListener('keyup', onSelectionChange);
-        editor.removeEventListener('mouseup', onSelectionChange);
-        editor.removeEventListener('blur', onSelectionChange);
+        view.destroy();
       };
     },
   };

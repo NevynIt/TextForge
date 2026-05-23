@@ -34,6 +34,35 @@ export interface TextEditorSurfaceState {
   readonly diagnostics: ReadonlyArray<Diagnostic>;
 }
 
+export interface TextEditorSurfaceModel {
+  readonly id: string;
+  readonly title: string;
+  readonly summary: string;
+  readonly state: 'editable' | 'read-only';
+  readonly languageLabel: string;
+  readonly selection: TextEditorSelection;
+  readonly selectionLabel: string;
+  readonly range: SourceRange;
+  readonly diagnostics: ReadonlyArray<Diagnostic>;
+  readonly text: string;
+  readonly lineCount: number;
+  readonly characterCount: number;
+  readonly readOnly: boolean;
+  readonly engine: 'codemirror-6';
+}
+
+export interface CodeMirrorTextEditorSurface {
+  readonly id: string;
+  readonly contribution: TextEditorSurfaceContribution;
+  readonly document: TextEditorDocument;
+  readonly diagnostics: ReadonlyArray<Diagnostic>;
+  readonly model: TextEditorSurfaceModel;
+  mount(
+    container: HTMLElement,
+    handlers?: { readonly onChange?: (document: TextEditorDocument) => void },
+  ): () => void;
+}
+
 export interface TextEditorNavigationTarget {
   readonly resource: ResourceRef;
   readonly range?: SourceRange;
@@ -93,7 +122,7 @@ export function sourceRangeToSelection(range: SourceRange): TextEditorSelection 
   };
 }
 
-export function selectionToSourceRange(selection: TextEditorSelection): SourceRange {
+export function selectionToSourceRange(selection: TextEditorSelection, text = ''): SourceRange {
   const start = Math.min(selection.anchor, selection.head);
   const end = Math.max(selection.anchor, selection.head);
   return {
@@ -188,3 +217,14 @@ export function createTextEditorOpenRequest(
     sourceSessionId: overrides.sourceSessionId,
   };
 }
+
+export declare function createTextEditorSurfaceModel(
+  document: TextEditorDocument,
+  diagnostics?: ReadonlyArray<Diagnostic>,
+): TextEditorSurfaceModel;
+
+export declare function createCodeMirrorTextEditorSurface(props?: {
+  readonly document?: TextEditorDocument;
+  readonly diagnostics?: ReadonlyArray<Diagnostic>;
+  readonly onChange?: (document: TextEditorDocument) => void;
+}): CodeMirrorTextEditorSurface;

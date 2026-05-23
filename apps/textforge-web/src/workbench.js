@@ -1,10 +1,10 @@
-import { contributions as coreContributions } from '../../packages/core/src/index.js';
+import { contributions as coreContributions } from '@textforge/core';
 import {
   createWorkspaceService,
   createWorkspaceTreeItems,
   workspaceContribution as workspaceContributionPack,
   workspaceEntryToResourceRef,
-} from '../../packages/workspace/src/index.js';
+} from '@textforge/workspace';
 import {
   contributions as surfaceContributionPack,
   createMainSurfaceHost,
@@ -12,13 +12,13 @@ import {
   createSequentialSessionIdFactory,
   createSurfaceRegistry,
   createSurfaceSessionTab,
-} from '../../packages/surfaces/src/index.js';
+} from '@textforge/surfaces';
 import {
   codeMirrorTextEditorSurfaceContribution,
   createCodeMirrorTextEditorSurface,
   createTextEditorDocument,
   contributions as editorContributionPack,
-} from '../../packages/editors/src/index.js';
+} from '@textforge/editors';
 import {
   assetSurfaceContributions,
   createAssetViewerSurface,
@@ -26,7 +26,7 @@ import {
   createWorkspaceAssetBinding,
   contributions as assetContributionPack,
   markAssetBindingReady,
-} from '../../packages/assets/src/index.js';
+} from '@textforge/assets';
 import {
   contributions as uiContributionPack,
   createStatusBadge,
@@ -34,7 +34,7 @@ import {
   createToolbarSlot,
   createWorkbenchChromeModel,
   createWorkspaceTreeFrameModel,
-} from '../../packages/ui/src/index.js';
+} from '@textforge/ui';
 
 const textEncoder = new TextEncoder();
 

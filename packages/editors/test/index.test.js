@@ -21,5 +21,6 @@ test('text editor selection and edit helpers preserve document metadata', () => 
   assert.equal(nextDocument.text, 'Hello TextForge');
   assert.equal(surface.model.lineCount, 1);
   assert.equal(surface.model.characterCount, 11);
+  assert.equal(surface.model.engine, 'codemirror-6');
   assert.equal(typeof surface.mount, 'function');
 });

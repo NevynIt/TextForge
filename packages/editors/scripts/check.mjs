@@ -26,6 +26,7 @@ assert.equal(createTextEditorState(document).diagnostics.length, 0);
 const surface = createCodeMirrorTextEditorSurface({ document });
 assert.equal(surface.model.title, '/docs/notes.md');
 assert.equal(surface.model.lineCount, 2);
+assert.equal(surface.model.engine, 'codemirror-6');
 assert.equal(typeof surface.mount, 'function');
 
 console.info('editors package checks passed');
