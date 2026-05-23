@@ -25,7 +25,7 @@ Current branch: rewrite/v2-monorepo
 Current phase: Phase 3 - ZIP workspace import/export
 Current package focus: packages/workspace
 Last known good command: corepack pnpm verify
-Next recommended step: begin Phase 3 by adding an fflate-backed workspace archive manifest plus full-workspace ZIP export/import in @textforge/workspace, then extend selected-folder export and conflict policy handling
+Next recommended step: extend Phase 3 by adding selected-folder ZIP export and explicit import conflict policy handling on top of the new archive manifest/full-workspace import-export helpers in @textforge/workspace
 Open questions: none
 ```
 
@@ -145,3 +145,6 @@ Append every new historical row to the end of this table. Do not reorder existin
 | P-030 | Progress | M2 | Done | Finished the Phase 2 language-foundation slice by making surface routing MIME-aware, wiring shell open-with and language controls to package/workspace state, persisting language selection on workspace resources, and adding parser-backed CodeMirror integrations with direct `file://` browser validation of the built shell. | agent | 2026-05-23 | `packages/surfaces/src/index.js`, `packages/editors/src/index.js`, `packages/workspace/src/index.js`, `apps/textforge-web/src/workbench.js`, `corepack pnpm verify` |
 | A-007 | Action | M3 | Open | Begin Phase 3 in `@textforge/workspace` with an fflate-backed archive manifest plus full-workspace ZIP export/import, then extend selected-folder export and conflict policy handling. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/workspace.md` |
 | P-031 | Progress | M2 | Done | Closed the remaining visible syntax-highlighting gap in the Phase 2 editor slice by replacing CodeMirror's generic default highlight style with a package-owned dark palette and validating distinct token colors in the built `file://` shell for YAML and Markdown resources. | agent | 2026-05-23 | `packages/editors/src/index.js`, `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/editors.md` |
+| D-032 | Decision | M3 | Accepted | Phase 3 lands in two coherent workspace slices: first a package-owned archive manifest plus full-workspace ZIP export/import, then selected-folder export and explicit import conflict policy handling. | agent | 2026-05-23 | `roadmap/packages/workspace.md`, `packages/workspace/src/index.js` |
+| P-032 | Progress | M3 | Done | Began Phase 3 by adding an `fflate`-backed workspace archive manifest plus full-workspace ZIP export/import helpers in `@textforge/workspace`, with focused text and binary round-trip validation. | agent | 2026-05-23 | `packages/workspace/src/index.js`, `packages/workspace/test/index.test.js`, `packages/workspace/scripts/check.mjs` |
+| A-008 | Action | M3 | Open | Extend the Phase 3 archive helpers with selected-folder ZIP export and explicit import conflict policy handling. | agent | 2026-05-23 | `roadmap/packages/workspace.md`, `packages/workspace/src/index.js` |

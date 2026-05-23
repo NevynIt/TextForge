@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 
 import {
   basenameWorkspacePath,
+  createWorkspaceArchiveManifest,
   createSequentialIdFactory,
   createWorkspaceService,
   createWorkspaceTreeItems,
   dirnameWorkspacePath,
+  exportWorkspaceToZip,
+  importWorkspaceFromZip,
   joinWorkspacePath,
   normalizeWorkspacePath,
   workspaceContribution,
@@ -62,5 +65,21 @@ assert.equal(moved?.path, '/docs/guide.md');
 
 const ref = workspaceEntryToResourceRef(binary);
 assert.equal(ref.kind, 'binary');
+
+const archiveManifest = createWorkspaceArchiveManifest(workspace, { exportedAt: '2026-05-23T00:00:00.000Z' });
+const archiveBytes = exportWorkspaceToZip(workspace, { exportedAt: '2026-05-23T00:00:00.000Z' });
+const imported = importWorkspaceFromZip(archiveBytes);
+const restoredWorkspace = createWorkspaceService({
+  state: imported.state,
+  idFactory: createSequentialIdFactory('restored'),
+  now: () => '2026-05-23T00:00:00.000Z',
+});
+
+assert.equal(archiveManifest.format, 'textforge-workspace-archive');
+assert.equal(archiveManifest.resources.find((resource) => resource.path === '/docs/system.svg')?.encoding, 'binary');
+assert.equal(imported.state.manifest.workspaceId, 'workspace-check');
+assert.equal(restoredWorkspace.getEntryByPath('/docs/guide.md')?.kind, 'text');
+assert.equal(restoredWorkspace.getEntryByPath('/docs/guide.md')?.text, 'hello: world');
+assert.equal(restoredWorkspace.getEntryByPath('/docs/system.svg')?.mimeType, 'image/svg+xml');
 
 console.info('workspace package checks passed');

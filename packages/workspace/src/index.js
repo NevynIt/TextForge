@@ -1,4 +1,12 @@
+import { unzipSync, zipSync } from 'fflate';
+
 import { createResourceRef } from '../../core/src/index.js';
+
+const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
+const workspaceArchiveFormat = 'textforge-workspace-archive';
+const workspaceArchiveVersion = 1;
+const workspaceArchiveManifestPath = 'textforge-workspace.json';
 
 export const workspaceDexieSchema = {
   folders: 'id, path, parentId, metadata.createdAt, metadata.updatedAt',
@@ -85,6 +93,86 @@ export function createWorkspaceManifest(options = {}) {
     updatedAt: timestamp,
     selectedResourceId: options.selectedResourceId,
   };
+}
+
+function cloneMetadata(metadata) {
+  return {
+    ...metadata,
+    tags: metadata.tags ? [...metadata.tags] : undefined,
+  };
+}
+
+function cloneWorkspaceManifestRecord(manifest) {
+  return {
+    ...manifest,
+  };
+}
+
+function snapshotWorkspaceState(input) {
+  return typeof input?.snapshot === 'function' ? input.snapshot() : input;
+}
+
+function toArchiveResourcePath(path) {
+  const normalizedPath = normalizeWorkspacePath(path);
+  const relativePath = normalizedPath.split('/').filter(Boolean).join('/');
+  if (relativePath.length === 0) {
+    throw new Error(`Cannot archive workspace resource without a path: ${path}`);
+  }
+
+  return `resources/${relativePath}`;
+}
+
+function normalizeArchiveEntryPath(path) {
+  const segments = String(path ?? '')
+    .replaceAll('\\', '/')
+    .split('/')
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+  if (segments.length === 0 || segments.some((segment) => segment === '.' || segment === '..')) {
+    throw new Error(`Invalid workspace archive entry path: ${path}`);
+  }
+
+  return segments.join('/');
+}
+
+function createWorkspaceArchiveFolderRecord(folder) {
+  return {
+    id: folder.id,
+    path: normalizeWorkspacePath(folder.path),
+    parentId: folder.parentId,
+    metadata: cloneMetadata(folder.metadata),
+  };
+}
+
+function createWorkspaceArchiveResourceRecord(resource) {
+  return {
+    id: resource.id,
+    kind: resource.kind,
+    path: normalizeWorkspacePath(resource.path),
+    parentId: resource.parentId,
+    metadata: cloneMetadata(resource.metadata),
+    archivePath: toArchiveResourcePath(resource.path),
+    encoding: resource.kind === 'text' ? 'utf8' : 'binary',
+    languageId: resource.kind === 'text' ? resource.languageId : undefined,
+    mimeType: resource.mimeType,
+  };
+}
+
+function parseWorkspaceArchiveManifest(bytes) {
+  const parsed = JSON.parse(textDecoder.decode(bytes));
+  if (parsed?.format !== workspaceArchiveFormat) {
+    throw new Error(`Unsupported workspace archive format: ${parsed?.format ?? 'unknown'}`);
+  }
+
+  if (parsed.version !== workspaceArchiveVersion) {
+    throw new Error(`Unsupported workspace archive version: ${parsed?.version ?? 'unknown'}`);
+  }
+
+  if (!parsed.workspace || !Array.isArray(parsed.folders) || !Array.isArray(parsed.resources)) {
+    throw new Error('Invalid workspace archive manifest payload');
+  }
+
+  return parsed;
 }
 
 function cloneBytes(bytes) {
@@ -228,6 +316,134 @@ function toResourceRef(entry) {
 
 export function workspaceEntryToResourceRef(entry) {
   return toResourceRef(entry);
+}
+
+export function createWorkspaceArchiveManifest(input, options = {}) {
+  const state = snapshotWorkspaceState(input);
+  const exportedAt = options.exportedAt ?? new Date().toISOString();
+  return {
+    format: workspaceArchiveFormat,
+    version: workspaceArchiveVersion,
+    exportedAt,
+    workspace: cloneWorkspaceManifestRecord(state.manifest),
+    folders: state.folders.map((folder) => createWorkspaceArchiveFolderRecord(folder)),
+    resources: state.resources.map((resource) => createWorkspaceArchiveResourceRecord(resource)),
+  };
+}
+
+export function exportWorkspaceToZip(input, options = {}) {
+  const state = snapshotWorkspaceState(input);
+  const manifest = createWorkspaceArchiveManifest(state, options);
+  const archiveEntries = {
+    [workspaceArchiveManifestPath]: textEncoder.encode(JSON.stringify(manifest, null, 2)),
+  };
+
+  for (const resource of state.resources) {
+    archiveEntries[toArchiveResourcePath(resource.path)] = resource.kind === 'text'
+      ? textEncoder.encode(resource.text)
+      : cloneBytes(resource.bytes);
+  }
+
+  return zipSync(archiveEntries);
+}
+
+export function importWorkspaceFromZip(bytes) {
+  const archiveEntries = unzipSync(bytes);
+  const manifestBytes = archiveEntries[workspaceArchiveManifestPath];
+  if (!manifestBytes) {
+    throw new Error(`Workspace archive is missing ${workspaceArchiveManifestPath}`);
+  }
+
+  const manifest = parseWorkspaceArchiveManifest(manifestBytes);
+  const resources = manifest.resources.map((resourceRecord) => {
+    const archivePath = normalizeArchiveEntryPath(resourceRecord.archivePath);
+    const resourceBytes = archiveEntries[archivePath];
+    if (!resourceBytes) {
+      throw new Error(`Workspace archive is missing ${archivePath}`);
+    }
+
+    const metadata = cloneMetadata(resourceRecord.metadata);
+    const normalizedPath = normalizeWorkspacePath(resourceRecord.path);
+    if (resourceRecord.kind === 'text') {
+      return {
+        kind: 'text',
+        id: resourceRecord.id,
+        path: normalizedPath,
+        parentId: resourceRecord.parentId,
+        metadata,
+        text: textDecoder.decode(resourceBytes),
+        languageId: resourceRecord.languageId,
+        mimeType: resourceRecord.mimeType,
+      };
+    }
+
+    if (resourceRecord.kind === 'binary') {
+      return {
+        kind: 'binary',
+        id: resourceRecord.id,
+        path: normalizedPath,
+        parentId: resourceRecord.parentId,
+        metadata,
+        bytes: cloneBytes(resourceBytes),
+        mimeType: resourceRecord.mimeType,
+      };
+    }
+
+    throw new Error(`Unsupported workspace resource kind in archive: ${resourceRecord.kind}`);
+  });
+
+  const folders = manifest.folders.map((folderRecord) => ({
+    kind: 'folder',
+    id: folderRecord.id,
+    path: normalizeWorkspacePath(folderRecord.path),
+    parentId: folderRecord.parentId,
+    metadata: cloneMetadata(folderRecord.metadata),
+    childIds: [],
+  }));
+  if (!folders.some((folder) => folder.id === 'root')) {
+    folders.unshift({
+      kind: 'folder',
+      id: 'root',
+      path: normalizeWorkspacePath(manifest.workspace.rootPath),
+      parentId: undefined,
+      metadata: {
+        title: manifest.workspace.name,
+        createdAt: manifest.workspace.createdAt,
+        updatedAt: manifest.workspace.updatedAt,
+      },
+      childIds: [],
+    });
+  }
+
+  const state = {
+    manifest: {
+      ...cloneWorkspaceManifestRecord(manifest.workspace),
+      rootPath: normalizeWorkspacePath(manifest.workspace.rootPath),
+    },
+    folders: rebuildFolderChildren(folders, resources),
+    resources,
+  };
+
+  return {
+    manifest: {
+      format: manifest.format,
+      version: manifest.version,
+      exportedAt: manifest.exportedAt,
+      workspace: state.manifest,
+      folders: manifest.folders.map((folderRecord) => ({
+        ...folderRecord,
+        path: normalizeWorkspacePath(folderRecord.path),
+        metadata: cloneMetadata(folderRecord.metadata),
+      })),
+      resources: manifest.resources.map((resourceRecord) => ({
+        ...resourceRecord,
+        path: normalizeWorkspacePath(resourceRecord.path),
+        metadata: cloneMetadata(resourceRecord.metadata),
+        archivePath: normalizeArchiveEntryPath(resourceRecord.archivePath),
+      })),
+    },
+    state,
+  };
 }
 
 export function createWorkspaceTreeItems(state) {
