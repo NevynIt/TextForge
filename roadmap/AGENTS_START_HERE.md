@@ -4,7 +4,7 @@
 
 This is the first document a coding agent must read before working on the TextForge rebuild repository.
 
-The goal is to let any agent understand the architecture, locate the current milestone, continue the next useful work, and leave the repository more understandable than it found it.
+The goal is to let any agent understand the architecture, locate the current phase, continue the next useful work, and leave the repository more understandable than it found it.
 
 TextForge is being rebuilt as a React-based, local-first, text-first workbench with a pnpm-workspace monorepo, package-level contribution boundaries, ITM as the canonical structural model, a virtual workspace, Surface-based editors/viewers, restricted Lua automation, Markdown/report generation, BPMN and enterprise architecture support, and a reusable browser-envelope security profile.
 
@@ -50,19 +50,19 @@ Before changing code, do the following:
 2. Read `roadmap/RAPID.md`.
 3. Read `roadmap/00_package_aware_roadmap.md`.
 4. Inspect `git status`, current branch, recent commits, and package structure.
-5. Determine the current milestone and the next incomplete step.
+5. Determine the current phase and the next incomplete step.
 6. Check whether the roadmap still matches the repository reality.
-7. Proceed only within the next coherent milestone or sub-milestone.
+7. Proceed only within the next coherent phase or phase slice.
 
 Do not start by guessing from file names alone. The RAPID log and roadmap are the authoritative operational context.
 
 ## Required phase plan shape
 
-Every agent plan for a milestone or sub-milestone must include these five checkpoints:
+Every agent plan for a phase or phase slice must include these five checkpoints:
 
 1. Understand the target phase, current repository reality, acceptance criteria, and any instruction drift.
-2. Implement the next smallest coherent slice that advances the active milestone without skipping package boundaries.
-3. Verify with the narrowest relevant checks first, then broader checks when shared wiring or milestone boundaries are touched.
+2. Implement the next smallest coherent slice that advances the active phase without skipping package boundaries.
+3. Verify with the narrowest relevant checks first, then broader checks when shared wiring or phase boundaries are touched.
 4. Document the outcome by updating package docs, roadmap notes, and `roadmap/RAPID.md` when implementation reality, expectations, or verification evidence changed.
 5. Finalize the slice by reviewing the next roadmap step, recording remaining gaps or decisions, and leaving the repository at a clear handoff point.
 
@@ -94,15 +94,15 @@ pnpm lint
 pnpm typecheck
 ```
 
-If one of these commands does not exist yet, record that fact in `roadmap/RAPID.md` and create the minimal package script only when it belongs to the current milestone.
+If one of these commands does not exist yet, record that fact in `roadmap/RAPID.md` and create the minimal package script only when it belongs to the current phase.
 
-As implementation progresses, run the narrowest relevant verification repeatedly instead of waiting until the end of a large change. Prefer changed-package checks first, then broader workspace verification when the milestone slice is ready.
+As implementation progresses, run the narrowest relevant verification repeatedly instead of waiting until the end of a large change. Prefer changed-package checks first, then broader workspace verification when the phase slice is ready.
 
-Treat the first runnable shell as a separate milestone boundary from later feature work. The shell is stable enough for first use when it launches without a blank placeholder screen, exposes the frame, workspace/navigation chrome, main surface region, toolbar or command entry points, status feedback, and registered contribution routing, and the built `dist/index.html` works as a direct local/static artifact instead of requiring only a preview server.
+Treat the first runnable shell as a separate phase boundary from later feature work. The shell is stable enough for first use when it launches without a blank placeholder screen, exposes the frame, workspace/navigation chrome, main surface region, toolbar or command entry points, status feedback, and registered contribution routing, and the built `dist/index.html` works as a direct local/static artifact instead of requiring only a preview server.
 
 ## Commit discipline
 
-Commit after every milestone.
+Commit after every coherent phase slice.
 
 Commit more frequently when:
 
@@ -112,7 +112,7 @@ Commit more frequently when:
 - the repo reaches a buildable/testable checkpoint;
 - work must pause for clarification.
 
-Milestone commits should normally include:
+Phase-slice commits should normally include:
 
 ```text
 implementation changes
@@ -121,9 +121,9 @@ roadmap/RAPID.md update
 roadmap updates, if the plan changed
 ```
 
-Before any milestone commit, run the relevant verification for the work that was just completed. At minimum, run the affected package build, test, lint, or typecheck commands when they exist, and run the root verification command when the milestone changes shared contracts, workspace wiring, or multiple packages.
+Before any phase-slice commit, run the relevant verification for the work that was just completed. At minimum, run the affected package build, test, lint, or typecheck commands when they exist, and run the root verification command when the phase slice changes shared contracts, workspace wiring, or multiple packages.
 
-Do not treat a milestone as complete until the best available verification has passed or the remaining verification gap is explicitly recorded in `roadmap/RAPID.md`.
+Do not treat a phase slice as complete until the best available verification has passed or the remaining verification gap is explicitly recorded in `roadmap/RAPID.md`.
 
 The roadmap and RAPID log are part of the implementation evidence. Do not leave them uncommitted when the code changes depend on them.
 
@@ -140,7 +140,7 @@ The only editable part of `RAPID.md` is the current-status block at the top, bec
 Use this table shape consistently:
 
 ```markdown
-| ID | Type | Milestone | Status | Entry | Owner | Updated | Links |
+| ID | Type | Phase | Status | Entry | Owner | Updated | Links |
 |---|---|---|---|---|---|---|---|
 ```
 
@@ -167,11 +167,11 @@ Superseded
 
 Update the RAPID log:
 
-- before starting a milestone, by reviewing open risks, actions, issues, and decisions;
+- before starting a phase or phase slice, by reviewing open risks, actions, issues, and decisions;
 - during work, when choices, risks, blockers, or deviations appear;
 - before committing, with a progress entry summarizing what changed;
 - after clarification, by recording the answer as a decision or issue update;
-- after each milestone, by recording the roadmap review and next recommended step.
+- after each phase or phase slice, by recording the roadmap review and next recommended step.
 
 If a user or maintainer answers a question, record the answer in the RAPID log before continuing.
 
@@ -195,16 +195,16 @@ Low-risk assumptions include naming cleanup, small file organization choices, ob
 
 High-impact assumptions include architecture, security posture, licensing, package boundaries, canonical file formats, public APIs, dependency choices, migration strategy, visual editor write-back behavior, and anything that would be expensive to reverse.
 
-## Roadmap review after each milestone
+## Roadmap review after each phase slice
 
-At the end of every milestone:
+At the end of every phase slice:
 
-1. Review the roadmap section for the next milestone.
+1. Review the roadmap section for the next phase.
 2. Review affected package guides.
 3. Check whether the implementation revealed that the next steps should change.
 4. Update roadmap documents if needed.
 5. Record the review in the RAPID log.
-6. Include the roadmap/RAPID.md updates in the milestone commit.
+6. Include the roadmap/RAPID.md updates in the phase-slice commit.
 
 The plan is expected to evolve. Changes to the plan must be traceable and auditable.
 
@@ -214,11 +214,11 @@ Use this order:
 
 1. Check the active branch.
 2. Read the latest entries in `roadmap/RAPID.md`.
-3. Identify the current milestone from `roadmap/00_package_aware_roadmap.md`.
+3. Identify the current phase from `roadmap/00_package_aware_roadmap.md`.
 4. Check package-specific guides under `roadmap/packages/` if they exist in the repo.
 5. Run the existing verification command if available.
-6. Continue with the next smallest coherent task that advances the current milestone.
-7. Re-run the narrowest relevant verification after each coherent slice and before any milestone commit.
+6. Continue with the next smallest coherent task that advances the current phase.
+7. Re-run the narrowest relevant verification after each coherent slice and before any phase-slice commit.
 
 ## Package-boundary rules
 

@@ -12,10 +12,10 @@ Authority split:
 ## Contents
 
 - `AGENTS_START_HERE.md` — first document for any coding agent unleashed on the repository.
-- `00_package_aware_roadmap.md` — milestone roadmap showing which packages are created or updated at each step.
+- `00_package_aware_roadmap.md` — phase roadmap showing which packages are created or updated at each step.
 - `01_repository_and_package_strategy.md` — monorepo, pnpm workspace, package versioning, scoped commits, and package-boundary strategy.
 - `RAPID.md` — repository-local append-only RAPID log.
-- `textforge_rebuild_whitepaper_main.md` — main standalone architecture body; it deliberately does not own milestone sequencing.
+- `textforge_rebuild_whitepaper_main.md` — main standalone architecture body; it deliberately does not own phase sequencing.
 - `packages/*.md` — one implementation guide per package.
 
 ## How to use
@@ -23,7 +23,7 @@ Authority split:
 1. Copy or merge the entire `roadmap/` folder into the repository root.
 2. Start with `roadmap/AGENTS_START_HERE.md`.
 3. If the repository has not yet been pivoted, use Phase -1 in `roadmap/00_package_aware_roadmap.md` together with `roadmap/01_repository_and_package_strategy.md`.
-4. Use `roadmap/00_package_aware_roadmap.md` to determine the current milestone.
+4. Use `roadmap/00_package_aware_roadmap.md` to determine the current phase.
 5. Maintain `roadmap/RAPID.md` continuously. Historical RAPID rows are append-only and must always be appended at the end of the file; add superseding or correction rows instead of editing old entries or regrouping rows by type.
 6. Commit roadmap/RAPID updates together with implementation changes.
 

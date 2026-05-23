@@ -259,7 +259,7 @@ pnpm --filter <changed-package> typecheck
 pnpm verify
 ```
 
-for local confidence, and should do so progressively as implementation advances rather than waiting until the end of a large milestone. Before a milestone commit, the agent should run the relevant changed-package checks and the broader root verification when shared contracts or cross-package wiring changed. CI should run affected plus full release checks as appropriate.
+for local confidence, and should do so progressively as implementation advances rather than waiting until the end of a large phase slice. Before a phase-slice commit, the agent should run the relevant changed-package checks and the broader root verification when shared contracts or cross-package wiring changed. CI should run affected plus full release checks as appropriate.
 
 ---
 
@@ -326,9 +326,9 @@ This keeps the app shell thin and prevents each feature from editing central app
 
 ---
 
-## Milestone implication
+## Phase implication
 
-Every roadmap milestone should say which packages are created or updated. A phase is not only a feature phase; it is also a package-boundary validation phase.
+Every roadmap phase should say which packages are created or updated. A phase is not only a feature phase; it is also a package-boundary validation phase.
 
 Example:
 

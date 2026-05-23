@@ -41,18 +41,18 @@ Every agent run must:
 ```text
 1. Read AGENTS_START_HERE.md.
 2. Read RAPID.md.
-3. Determine the current milestone.
-4. Implement the next coherent milestone or sub-milestone.
-5. Commit after the milestone, or more frequently if a task is risky or logically complete.
+3. Determine the current phase.
+4. Implement the next coherent phase or phase slice.
+5. Commit after the phase slice, or more frequently if a task is risky or logically complete.
 6. Update RAPID.md with choices, assumptions, deviations, and clarifications.
 7. Review the next roadmap step and update instructions if implementation reality has changed.
 ```
 
-During implementation, the agent should build, test, lint, or typecheck progressively using the narrowest relevant commands that exist for the changed slice. Before any milestone commit, the agent should run the best available verification for that milestone scope and record any remaining verification gap in `RAPID.md`.
+During implementation, the agent should build, test, lint, or typecheck progressively using the narrowest relevant commands that exist for the changed slice. Before any phase-slice commit, the agent should run the best available verification for that phase scope and record any remaining verification gap in `RAPID.md`.
 
 Low-risk assumptions may be made explicitly and recorded. High-impact assumptions about architecture, security, licensing, package boundaries, canonical formats, public APIs, or visual-editor write-back must stop the work and trigger a clarification request.
 
-Instruction updates are part of the work product. If a milestone changes the plan, include the roadmap update in the same commit so the evolution of the plan is traceable.
+Instruction updates are part of the work product. If a phase changes the plan, include the roadmap update in the same commit so the evolution of the plan is traceable.
 
 ## Milestones
 

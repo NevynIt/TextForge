@@ -1,6 +1,6 @@
 # TextForge Rebuild RAPID Log
 
-This file is maintained in the repository-local `roadmap/` folder. It is part of the implementation record and must be committed with milestone changes.
+This file is maintained in the repository-local `roadmap/` folder. It is part of the implementation record and must be committed with phase-slice changes.
 
 RAPID means **Risks, Actions, Progress, Issues, and Decisions**. Use this single table instead of separate progress and decision logs.
 
@@ -10,7 +10,7 @@ This log is append-only.
 
 Do not edit or delete previous entries. If an entry becomes obsolete, add a new entry with `Status` set to `Superseded` and link it to the previous entry. If a mistake must be corrected, add a new correction entry and link it to the mistaken entry.
 
-Historical entries must always be appended at the end of the file. Do not insert new rows beside similar types, under earlier milestone clusters, or into an older section for convenience.
+Historical entries must always be appended at the end of the file. Do not insert new rows beside similar types, under earlier phase clusters, or into an older section for convenience.
 
 Keep the historical table in event order so decisions, risks, actions, progress, and issues remain in the sequence they happened rather than being regrouped by type.
 
@@ -22,7 +22,7 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current milestone: M2 Source-editor coverage and language foundation
+Current phase: Phase 2 - Source-editor coverage and language foundation
 Current package focus: apps/textforge-web, core, workspace, surfaces, ui, editors
 Last known good command: corepack pnpm --filter @textforge/textforge-web test
 Next recommended step: add language mode registration and source editor fallback selection
@@ -66,7 +66,7 @@ Typical use:
 
 Append every new historical row to the end of this table. Do not reorder existing rows or insert a new row above older history just to keep types together.
 
-| ID | Type | Milestone | Status | Entry | Owner | Updated | Links |
+| ID | Type | Phase | Status | Entry | Owner | Updated | Links |
 |---|---|---|---|---|---|---|---|
 | D-001 | Decision | M-1 | Accepted | Use one Git repository with pnpm workspaces, not Git submodules. | Jill | 2026-05-23 |  |
 | D-002 | Decision | M-1 | Accepted | Preserve the previous implementation with an archival tag and branch before the rebuild pivot. | Jill | 2026-05-23 | `textforge-v1-final`, `archive/v1-current` |
@@ -103,3 +103,5 @@ Append every new historical row to the end of this table. Do not reorder existin
 | P-012 | Progress | Docs | Done | Updated the rebuild whitepaper from V13 to V15 alignment, removed its obsolete milestone summary, and clarified the roadmap authority split in the roadmap index. | agent | 2026-05-23 | `roadmap/textforge_rebuild_whitepaper_main.md`, `roadmap/README.md`, `roadmap/RAPID.md` |
 | D-018 | Decision | Docs | Accepted | The one-time repository pivot runbook is obsolete after the completed pivot. Keep the pivot policy in the package-aware roadmap and repository strategy, and remove the standalone pivot instruction from the live roadmap set. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/AGENTS_START_HERE.md`, `roadmap/README.md` |
 | P-013 | Progress | Docs | Done | Removed the obsolete pivot instruction, updated roadmap references to Phase -1 and repository strategy, and trimmed remaining whitepaper operational language that duplicated live agent instructions. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/AGENTS_START_HERE.md`, `roadmap/README.md`, `roadmap/textforge_rebuild_whitepaper_main.md` |
+| D-019 | Decision | Docs | Accepted | Progress-tracking instructions and RAPID should use the phase model from the package-aware roadmap as the primary execution unit. Use "phase" or "phase slice" for active work tracking rather than standalone milestone terminology. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/README.md`, `roadmap/RAPID.md` |
+| P-014 | Progress | Docs | Done | Updated the live progress-tracking instructions and RAPID terminology to refer to current phase and phase slices, while leaving historical RAPID entries intact. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/README.md`, `roadmap/RAPID.md` |

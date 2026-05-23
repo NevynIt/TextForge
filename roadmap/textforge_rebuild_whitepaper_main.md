@@ -3,7 +3,7 @@
 **Version:** 15  
 **Purpose:** Standalone architecture blueprint for rebuilding TextForge from scratch as a React-based, local-first, text-first, secure browser workbench. The design centers on an application-private virtual workspace, ITM as the canonical structural model, explicit pipelines, restricted Lua automation, binary workspace resources, Markdown/report generation, enterprise architecture and ArchiMate support, browser-envelope accreditation, and a Surface-based UI where editors, rich editors, structured editors, viewers, consoles, inspectors, and generated previews are peers.
 
-This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, milestone scopes, or current execution status; those live in the companion V15 roadmap documents under `roadmap/`.
+This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15 roadmap documents under `roadmap/`.
 
 ---
 
@@ -2173,7 +2173,7 @@ This avoids a separate `TextForge2` repository while avoiding a confusing side-b
 
 ## 10. Companion roadmap set and authority split
 
-The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15 roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current milestone state.
+The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15 roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
 
 Use the roadmap set as follows:
 
@@ -2182,7 +2182,7 @@ roadmap/AGENTS_START_HERE.md
   First operational instructions for every coding agent run.
 
 roadmap/00_package_aware_roadmap.md
-  Authoritative phase order, including the runnable-shell checkpoint and package-by-package milestone flow.
+  Authoritative phase order, including the runnable-shell checkpoint and package-by-package phase flow.
 
 roadmap/01_repository_and_package_strategy.md
   Authoritative repository, package-boundary, and versioning strategy.
@@ -2402,7 +2402,7 @@ When maintaining this rebuild document, preserve the distinction from the secure
 
 ## 13. Coding-agent implementation guidance
 
-This section records architecture-level guardrails for implementation work. Operational run instructions, current milestone control, and repository-state handling belong to the roadmap set and RAPID log, not to this whitepaper.
+This section records architecture-level guardrails for implementation work. Operational run instructions, current phase control, and repository-state handling belong to the roadmap set and RAPID log, not to this whitepaper.
 
 ### 13.1 General rules for the coding agent
 
@@ -2445,23 +2445,23 @@ src/
 
 ### 13.3 Implementation sequencing authority
 
-This whitepaper must not maintain its own milestone summary, phase-number mapping, or package rollout checklist. Those details change more frequently than the architectural doctrine in this paper and are therefore owned by the companion roadmap set.
+This whitepaper must not maintain its own phase summary, phase-number mapping, or package rollout checklist. Those details change more frequently than the architectural doctrine in this paper and are therefore owned by the companion roadmap set.
 
 For implementation sequencing, always use:
 
 - `roadmap/00_package_aware_roadmap.md` for the authoritative phase order.
 - `roadmap/01_repository_and_package_strategy.md` for runnable-shell and repository-boundary rules.
 - `roadmap/packages/*.md` for package-specific phase participation.
-- `roadmap/RAPID.md` for the current active milestone and execution state.
+- `roadmap/RAPID.md` for the current active phase and execution state.
 
-When updating this whitepaper, keep only the architecture-level statements that remain valid across multiple roadmap revisions. If a change affects milestone order, package creation timing, or current work sequencing, update the roadmap documents instead of adding another implementation summary here.
+When updating this whitepaper, keep only the architecture-level statements that remain valid across multiple roadmap revisions. If a change affects phase order, package creation timing, or current work sequencing, update the roadmap documents instead of adding another implementation summary here.
 
 ### 13.4 Cross-document maintenance rule
 
 If the whitepaper and the roadmap set ever diverge again, treat that as documentation drift:
 
 1. keep the architectural target state here;
-2. keep implementation order and current milestone control in the roadmap set;
+2. keep implementation order and current phase control in the roadmap set;
 3. remove or shorten duplicated implementation guidance in this whitepaper;
 4. record the correction in `roadmap/RAPID.md`.
 
