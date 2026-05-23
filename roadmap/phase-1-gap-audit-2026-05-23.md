@@ -1,0 +1,75 @@
+# Phase 1 Gap Audit — 2026-05-23
+
+## Conclusion
+
+The repository is not cleanly at the Phase 2 starting point described in `roadmap/RAPID.md`.
+
+Phase 1 is partially implemented, and the remaining closure gaps must be finished before the roadmap advances to Phase 2.
+
+## What is present
+
+- `@textforge/workspace` defines the virtual workspace model, path helpers, manifest types, and in-memory mutation APIs.
+- `@textforge/surfaces` defines contribution/registry contracts and in-memory main/popup host helpers.
+- `@textforge/ui` defines workbench chrome models for workspace tree, surface frame, toolbar slots, and status badges.
+- `@textforge/editors` defines text-editor document helpers, selection/source-range helpers, and a surface contribution contract.
+- `@textforge/assets` defines asset-viewer contribution metadata, asset binding helpers, and blob URL lease tracking.
+
+## Phase 1 closure gaps
+
+### 1. The runnable shell is not wired to the Phase 1 packages
+
+`apps/textforge-web/src/main.js` renders a static browser-native shell with hard-coded workspace items, tabs, and contribution cards.
+
+It does not import or compose:
+
+- `@textforge/workspace`
+- `@textforge/surfaces`
+- `@textforge/editors`
+- `@textforge/assets`
+- `@textforge/ui`
+
+That means the repo does not yet demonstrate that the Phase 1 package skeletons actually drive the visible workbench state.
+
+### 2. The editor package does not yet provide a CodeMirror surface implementation
+
+The Phase 1 roadmap says `@textforge/editors` should create `CodeMirrorTextEditorSurface` with generic text editing and source-range hooks.
+
+`packages/editors/src/index.ts` currently exports types, document helpers, edit helpers, and contribution metadata, but no concrete CodeMirror-backed surface implementation and no CodeMirror dependency is present in `packages/editors/package.json`.
+
+### 3. The assets package does not yet provide concrete viewer surfaces
+
+The Phase 1 roadmap says `@textforge/assets` should create image, SVG, PDF, and generic binary read-only surfaces.
+
+`packages/assets/src/index.ts` currently exports viewer contribution metadata plus binding/blob helpers, but not concrete viewer surface implementations.
+
+### 4. Phase 1 package validation is still placeholder-level
+
+`packages/workspace/package.json`, `packages/surfaces/package.json`, `packages/editors/package.json`, and `packages/assets/package.json` all use placeholder `build`, `test`, `lint`, and `typecheck` scripts.
+
+There are currently no package tests under `packages/**` for the claimed Phase 1 behaviours.
+
+As a result, RAPID entry `P-008` overstates the evidence behind `corepack pnpm verify`; that command validates the workspace command graph, but not the Phase 1 package behaviours described in the roadmap.
+
+### 5. The current package skeleton still has compile-level issues
+
+Workspace diagnostics currently report type errors in:
+
+- `packages/workspace/src/index.ts`
+- `packages/surfaces/src/index.ts`
+- `packages/assets/src/index.ts`
+
+That is further evidence that Phase 1 should not yet be treated as fully closed.
+
+## Required closure criteria before entering Phase 2
+
+Phase 1 should stay open until the missing slice is completed.
+
+That closure work should include:
+
+1. Wiring the runnable shell to the Phase 1 package APIs so the visible workbench state is package-driven rather than hard-coded.
+2. Adding a real text-editor surface implementation in `@textforge/editors` rather than only contract/helper exports.
+3. Adding concrete asset-viewer surfaces in `@textforge/assets` rather than only contribution metadata and binding helpers.
+4. Replacing placeholder package validation with focused checks that cover the claimed Phase 1 behaviour.
+5. Fixing the current compile-level issues in the workspace, surfaces, and assets slice.
+
+Until that work is done, the current phase should remain a Phase 1 closure/gap-remediation slice rather than Phase 2.

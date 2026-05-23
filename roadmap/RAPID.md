@@ -22,11 +22,11 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current phase: Phase 2 - Source-editor coverage and language foundation
-Current package focus: apps/textforge-web, core, workspace, surfaces, ui, editors
+Current phase: Phase 1 - Workspace and Stage 1 surface skeleton closure
+Current package focus: apps/textforge-web, workspace, surfaces, editors, assets, ui
 Last known good command: corepack pnpm --filter @textforge/textforge-web test
-Next recommended step: add language mode registration and source editor fallback selection
-Open questions: none recorded at document-set creation
+Next recommended step: finish the remaining Phase 1 work documented in `roadmap/phase-1-gap-audit-2026-05-23.md` before resuming Phase 2 work
+Open questions: none
 ```
 
 ## ID convention
@@ -105,3 +105,10 @@ Append every new historical row to the end of this table. Do not reorder existin
 | P-013 | Progress | Docs | Done | Removed the obsolete pivot instruction, updated roadmap references to Phase -1 and repository strategy, and trimmed remaining whitepaper operational language that duplicated live agent instructions. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/AGENTS_START_HERE.md`, `roadmap/README.md`, `roadmap/textforge_rebuild_whitepaper_main.md` |
 | D-019 | Decision | Docs | Accepted | Progress-tracking instructions and RAPID should use the phase model from the package-aware roadmap as the primary execution unit. Use "phase" or "phase slice" for active work tracking rather than standalone milestone terminology. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/README.md`, `roadmap/RAPID.md` |
 | P-014 | Progress | Docs | Done | Updated the live progress-tracking instructions and RAPID terminology to refer to current phase and phase slices, while leaving historical RAPID entries intact. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/README.md`, `roadmap/RAPID.md` |
+| I-001 | Issue | M1 | Open | Phase 1 is not cleanly closed: the runnable shell is still hard-coded instead of being composed from the Phase 1 packages, `@textforge/editors` and `@textforge/assets` stop at contract/helper level rather than concrete surface skeletons, package validation remains placeholder-level, and current diagnostics still report TypeScript errors in the workspace/surfaces/assets slice. | agent | 2026-05-23 | `roadmap/phase-1-gap-audit-2026-05-23.md`, `apps/textforge-web/src/main.js`, `packages/editors/src/index.ts`, `packages/assets/src/index.ts`, `packages/workspace/src/index.ts`, `packages/surfaces/src/index.ts` |
+| A-003 | Action | M1 | Open | Close the Phase 1 gap by either reducing the roadmap claim to contract-only skeleton status or by finishing the missing shell integration, concrete editor/asset surfaces, and focused validation needed for an honest Phase 1 completion. | agent | 2026-05-23 | `roadmap/phase-1-gap-audit-2026-05-23.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/RAPID.md` |
+| P-015 | Progress | Docs | Done | Audited RAPID against the repository state, corrected the live current-phase block back to a Phase 1 closure slice, and recorded the concrete Phase 1 closure gaps in a dedicated roadmap note. | agent | 2026-05-23 | `roadmap/RAPID.md`, `roadmap/phase-1-gap-audit-2026-05-23.md` |
+| D-020 | Decision | M1 | Accepted | Phase closure is completion-only. Do not reclassify unfinished roadmap scope downward to exit a phase; Phase 1 remains open until its missing work is implemented and validated. | agent | 2026-05-23 | `roadmap/RAPID.md`, `roadmap/phase-1-gap-audit-2026-05-23.md`, `roadmap/00_package_aware_roadmap.md` |
+| A-004 | Action | M1 | Open | Finish the missing Phase 1 work: wire the shell to the Phase 1 package APIs, add concrete editor and asset surface implementations, replace placeholder package validation with focused checks, and fix the current workspace/surfaces/assets compile errors before moving to Phase 2. | agent | 2026-05-23 | `roadmap/phase-1-gap-audit-2026-05-23.md`, `apps/textforge-web/src/main.js`, `packages/editors/src/index.ts`, `packages/assets/src/index.ts`, `packages/workspace/src/index.ts`, `packages/surfaces/src/index.ts` |
+| P-016 | Progress | Docs | Done | Removed the descoping closure option from the Phase 1 audit note, updated the live RAPID status block to require completion, and appended a completion-only Phase 1 closure decision and replacement follow-up action. | agent | 2026-05-23 | `roadmap/RAPID.md`, `roadmap/phase-1-gap-audit-2026-05-23.md` |
+| D-021 | Decision | M1 | Accepted | A-004 supersedes the descoping branch in A-003. Treat A-003 as historical only; the active closure path is to finish the missing Phase 1 work. | agent | 2026-05-23 | `roadmap/RAPID.md`, `roadmap/phase-1-gap-audit-2026-05-23.md` |
