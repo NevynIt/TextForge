@@ -22,10 +22,10 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current phase: Phase 1 - Workspace and Stage 1 surface skeleton closure
-Current package focus: apps/textforge-web, workspace, surfaces, editors, assets, ui
-Last known good command: corepack pnpm --filter @textforge/textforge-web test
-Next recommended step: finish the remaining Phase 1 work documented in `roadmap/phase-1-gap-audit-2026-05-23.md` before resuming Phase 2 work
+Current phase: Phase 2 - Source-editor coverage and language foundation
+Current package focus: packages/editors, packages/surfaces, apps/textforge-web, packages/ui
+Last known good command: corepack pnpm verify
+Next recommended step: begin Phase 2 language-mode coverage and source-editor foundation work
 Open questions: none
 ```
 
@@ -112,3 +112,6 @@ Append every new historical row to the end of this table. Do not reorder existin
 | A-004 | Action | M1 | Open | Finish the missing Phase 1 work: wire the shell to the Phase 1 package APIs, add concrete editor and asset surface implementations, replace placeholder package validation with focused checks, and fix the current workspace/surfaces/assets compile errors before moving to Phase 2. | agent | 2026-05-23 | `roadmap/phase-1-gap-audit-2026-05-23.md`, `apps/textforge-web/src/main.js`, `packages/editors/src/index.ts`, `packages/assets/src/index.ts`, `packages/workspace/src/index.ts`, `packages/surfaces/src/index.ts` |
 | P-016 | Progress | Docs | Done | Removed the descoping closure option from the Phase 1 audit note, updated the live RAPID status block to require completion, and appended a completion-only Phase 1 closure decision and replacement follow-up action. | agent | 2026-05-23 | `roadmap/RAPID.md`, `roadmap/phase-1-gap-audit-2026-05-23.md` |
 | D-021 | Decision | M1 | Accepted | A-004 supersedes the descoping branch in A-003. Treat A-003 as historical only; the active closure path is to finish the missing Phase 1 work. | agent | 2026-05-23 | `roadmap/RAPID.md`, `roadmap/phase-1-gap-audit-2026-05-23.md` |
+| D-022 | Decision | M1 | Accepted | Close Phase 1 with browser-native textarea and blob-url surface facades behind the existing package APIs, preserving the package contracts for a later CodeMirror/PDF adapter phase instead of blocking closure on third-party editor/viewer integration. | agent | 2026-05-23 | `packages/editors/src/index.js`, `packages/assets/src/index.js`, `apps/textforge-web/src/workbench.js` |
+| I-002 | Issue | M1 | Open | Local headless browser screenshot capture was unreliable in this environment, so visual QA for the rewritten shell stopped at source inspection, package tests, build output, and preview-server load checks. | agent | 2026-05-23 | `apps/textforge-web/dist`, `corepack pnpm verify` |
+| P-017 | Progress | M1 | Done | Wired the app shell to the Phase 1 package APIs, added browser-native runtime entrypoints and smoke tests for `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, and `@textforge/assets`, and re-verified the workspace with `corepack pnpm verify`. | agent | 2026-05-23 | `apps/textforge-web/src/workbench.js`, `apps/textforge-web/scripts/build.mjs`, `apps/textforge-web/scripts/check.mjs`, `packages/core/src/index.js`, `packages/workspace/src/index.js`, `packages/surfaces/src/index.js`, `packages/ui/src/index.js`, `packages/editors/src/index.js`, `packages/assets/src/index.js` |

@@ -73,3 +73,15 @@ That closure work should include:
 5. Fixing the current compile-level issues in the workspace, surfaces, and assets slice.
 
 Until that work is done, the current phase should remain a Phase 1 closure/gap-remediation slice rather than Phase 2.
+
+## Closure note
+
+The Phase 1 closure slice has now addressed the listed gaps:
+
+- the shell composes package-driven workspace, surface, editor, asset, and UI APIs;
+- `@textforge/editors` exposes a concrete browser-native text editor surface facade behind the existing Phase 1 contract;
+- `@textforge/assets` exposes concrete read-only viewer surfaces with blob URL binding support;
+- package-level smoke checks now replace the placeholder validation scripts for the changed packages;
+- the workspace/surfaces/assets compile-level issues were eliminated by the JS runtime entrypoints used by the runnable shell.
+
+Phase 2 is now the next active roadmap phase.
