@@ -18,10 +18,10 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current milestone: M-1 Repository pivot and preservation
-Current package focus: roadmap, repository skeleton, package strategy
+Current milestone: M1 Workspace and Stage 1 surface skeleton
+Current package focus: workspace, surfaces, editors, assets
 Last known good command: corepack pnpm verify
-Next recommended step: install and verify the workspace skeleton
+Next recommended step: implement the workspace virtual file model and surface host skeletons
 Open questions: none recorded at document-set creation
 ```
 
@@ -70,6 +70,8 @@ Typical use:
 | D-006 | Decision | M0 | Accepted | Editors and viewers are both Surface contributions with capabilities and placement options. | Jill | 2026-05-23 |  |
 | D-007 | Decision | M0 | Accepted | Visual and rich editors require explicit write-back contracts before they can become authoritative editing surfaces. | Jill | 2026-05-23 |  |
 | D-008 | Decision | M0 | Accepted | Use a single append-only RAPID log for risks, actions, progress, issues, and decisions. | Jill | 2026-05-23 |  |
+| D-009 | Decision | M0 | Accepted | Implement Phase 0 package contracts as dependency-light TypeScript types and pure helper functions, keeping runtime dependencies at zero for now. | agent | 2026-05-23 |  |
+| D-010 | Decision | M0 | Accepted | Keep the Phase 0 UI package dependency-light for now by exposing theme, frame, and chrome contracts until a React workspace dependency is available. | agent | 2026-05-23 | `packages/ui/src/index.ts`, `roadmap/packages/ui.md` |
 | A-001 | Action | M-1 | Open | Create archival tag and branch for the current implementation. | agent | 2026-05-23 |  |
 | A-002 | Action | M-1 | Open | Create rewrite branch and add roadmap folder with stable filenames. | agent | 2026-05-23 |  |
 | R-001 | Risk | M1 | Open | Surface abstraction may grow too complex before the workspace foundation is stable. | agent | 2026-05-23 |  |
@@ -77,3 +79,4 @@ Typical use:
 | P-002 | Progress | M-1 | Done | Created archival preservation points, switched to `rewrite/v2-monorepo`, and relocated selected legacy docs, plans, guides, specs, and examples into `docs/legacy`, `docs/design`, `docs/specs`, and `fixtures/legacy`. | agent | 2026-05-23 | `textforge-v1-final`, `archive/v1-current`, `docs/legacy/README_v1.md` |
 | P-003 | Progress | M-1 | Done | Removed the old app tree, build artifacts, legacy root configs, and the `external/ITM` submodule from the rewrite branch, then added the pnpm workspace skeleton and placeholder package boundaries. | agent | 2026-05-23 | `apps/textforge-web`, `packages/core`, `pnpm-workspace.yaml` |
 | P-004 | Progress | M-1 | Done | Installed the pnpm workspace through Corepack and verified the placeholder workspace scripts with `corepack pnpm verify`. | agent | 2026-05-23 | `pnpm-lock.yaml`, `package.json` |
+| P-005 | Progress | M0 | Done | Implemented the Phase 0 package contract block for `@textforge/core`, `@textforge/security-profile`, `@textforge/examples-docs`, and `@textforge/ui`, then re-verified the workspace with `corepack pnpm verify`. | agent | 2026-05-23 | `packages/core/src/index.ts`, `packages/security-profile/src/index.ts`, `packages/security-profile/package.json`, `packages/examples-docs/src/index.ts`, `packages/ui/src/index.ts` |

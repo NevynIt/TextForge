@@ -28,7 +28,7 @@ React components and primitives with no feature ownership.
 
 ### Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy
 
-Create. Minimal React primitives, theming tokens, icon conventions, app frame placeholders.
+Create. Dependency-light theming tokens, icon conventions, app frame placeholders, and chrome contracts until the React workspace dependency is introduced.
 
 ### Phase 1 — Workspace and Stage 1 surface skeleton
 
