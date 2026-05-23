@@ -64,8 +64,7 @@ Instruction updates are part of the work product. If a milestone changes the pla
 | Legacy material | Preserve selectively | Move useful docs, specs, examples, fixtures, whitepapers, test notes, and attribution material into `docs/legacy`, `docs/specs`, `docs/design`, and `fixtures/legacy`. Do not bulk-copy the old implementation into the new tree. |
 | Rewrite branch | Clean | Remove old implementation files on the rewrite branch after preservation. Keep the project name and Git history. |
 | Monorepo skeleton | Create | Add pnpm workspace root, `apps/textforge-web`, package folders, package placeholder manifests, README, and pivot log. |
-| Roadmap folder | Create | Add `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, `roadmap/02_repository_pivot_instruction.md`, and `roadmap/RAPID.md`. |
-| Pivot instruction | Follow | Execute `roadmap/02_repository_pivot_instruction.md` before feature implementation begins. |
+| Roadmap folder | Create | Add `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md`, and `roadmap/RAPID.md`. |
 
 ### Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy
 

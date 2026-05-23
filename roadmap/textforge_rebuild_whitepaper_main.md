@@ -1,9 +1,9 @@
 # TextForge Rebuild Whitepaper
 
-**Version:** 13  
+**Version:** 15  
 **Purpose:** Standalone architecture blueprint for rebuilding TextForge from scratch as a React-based, local-first, text-first, secure browser workbench. The design centers on an application-private virtual workspace, ITM as the canonical structural model, explicit pipelines, restricted Lua automation, binary workspace resources, Markdown/report generation, enterprise architecture and ArchiMate support, browser-envelope accreditation, and a Surface-based UI where editors, rich editors, structured editors, viewers, consoles, inspectors, and generated previews are peers.
 
-This document is self-contained and states the target architecture directly.
+This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, milestone scopes, or current execution status; those live in the companion V15 roadmap documents under `roadmap/`.
 
 ---
 
@@ -2171,113 +2171,30 @@ The recommended approach is:
 
 This avoids a separate `TextForge2` repository while avoiding a confusing side-by-side codebase. The old implementation remains available through normal Git history, the archival branch, and the final tag. The new implementation receives a clean workspace, clean dependency tree, and clean package boundaries.
 
-The detailed coding-agent procedure is maintained as a separate instruction in the document set: `roadmap/02_repository_pivot_instruction.md`.
+## 10. Companion roadmap set and authority split
 
-## 10. Package-oriented implementation roadmap
+The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15 roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current milestone state.
 
-The implementation roadmap is deliberately separated from this main architecture paper. The architecture should remain stable while the implementation plan can be refined package by package.
-
-TextForge should be implemented as a **single Git repository using pnpm workspaces**, with a small number of independently extensible npm packages. The package split exists to avoid locking the whole codebase every time a feature changes while still allowing one coding agent to perform cross-package changes in one branch. Stable contracts are placed in the center; feature packages contribute surfaces, pipelines, diagnostics, editor capabilities, and examples through explicit manifests. Git submodules are not part of the initial rebuild strategy.
-
-The repository model is:
-
-```text
-one Git repository
-pnpm workspaces
-one npm package per major capability
-package-scoped commits
-Changesets for package-level versioning
-TypeScript project references for build boundaries
-Turborepo or Nx for task orchestration
-```
-
-The package families are:
-
-| Package | Role |
-|---|---|
-| `@textforge/core` | Shared contracts, diagnostics, capabilities, manifests, ranges, resource references, commands, and value types. |
-| `@textforge/workspace` | Virtual workspace, text/binary resources, folders, persistence, ZIP import/export, provenance, and reference resolution. |
-| `@textforge/surfaces` | Surface registry, sessions, placement, main/popup hosts, open-with behaviour, source binding, and stale state. |
-| `@textforge/pipeline` | Pipeline registry, runner, trace, intermediate values, generated resources, diagnostics, and controlled write-back contracts. |
-| `@textforge/itm` | ITM parser, serializer, resolver, selectors, styles, views, profiles, validation, projections, and report/model integration. |
-| `@textforge/security-profile` | Reusable browser-envelope accreditation profile, CSP/manifest/service-worker checks, remote asset checks, privileged browser API checks, and license policy. |
-| `@textforge/ui` | Shared React UI primitives, surface chrome, dialogs, commands, menus, status badges, and accessibility wrappers. |
-| `@textforge/editors` | CodeMirror source editors, language modes, lint bridge, source navigation hooks, and low-risk authoring helpers. |
-| `@textforge/assets` | Read-only image/SVG/PDF/binary surfaces, blob URLs, asset picker, provenance display, and export helpers. |
-| `@textforge/markdown` | Markdown preview, report pipeline, local image resolution, embedded diagrams, embedded ITM blocks, and print-oriented HTML. |
-| `@textforge/diagrams` | Mermaid, Graphviz, SVG generation, SVG-to-PNG rasterization, generated diagram resources, and later React Flow adapters. |
-| `@textforge/lua` | Fengari worker, sandbox, `tf.*` bridge, Lua editor/console surfaces, action discovery, and Lua pipeline steps. |
-| `@textforge/bpmn` | BPMN XML support, bpmn-js viewer/modeler surfaces, controlled XML write-back, diagnostics, and optional ITM mapping. |
-| `@textforge/tables` | TanStack Table surfaces, CSV/TSV grid editing, catalogues, matrices, and validation issue tables. |
-| `@textforge/archimate` | ArchiMate ITM profile, exchange XML import/export, validation, viewpoints, EA catalogues, matrices, and report blocks. |
-| `@textforge/examples-docs` | Bundled docs, examples, sample workspaces, fixtures, tutorials, and resource-browser content. |
-
-The full package-aware roadmap and repository strategy are provided as companion implementation documents:
+Use the roadmap set as follows:
 
 ```text
 roadmap/AGENTS_START_HERE.md
+  First operational instructions for every coding agent run.
+
 roadmap/00_package_aware_roadmap.md
+  Authoritative phase order, including the runnable-shell checkpoint and package-by-package milestone flow.
+
 roadmap/01_repository_and_package_strategy.md
-roadmap/02_repository_pivot_instruction.md
+  Authoritative repository, package-boundary, and versioning strategy.
+
 roadmap/RAPID.md
+  Authoritative current-status pointer and append-only execution log.
+
+roadmap/packages/*.md
+  Authoritative package-level phase ownership, dependency rules, and definition-of-done guidance.
 ```
 
-Each package also has its own companion document describing when it is created, when it is updated, which interfaces it owns, which dependencies it may take, which tests it must provide, and which milestones affect it.
-
-The roadmap rule is:
-
-```text
-Every milestone updates only the packages that own the relevant contracts or features.
-Feature packages contribute through manifests; they should not require changes to unrelated packages.
-Breaking changes in core, workspace, surfaces, or pipeline must be treated as architecture-level events.
-```
-
-
-### 10.1 Agent execution governance and roadmap folder
-
-The repository must contain a `roadmap/` folder that acts as the operational control room for coding agents. The folder is not archival documentation only; it is working implementation guidance that must evolve with the repository.
-
-The initial roadmap folder should contain at least:
-
-```text
-roadmap/
-  AGENTS_START_HERE.md
-  00_package_aware_roadmap.md
-  01_repository_and_package_strategy.md
-  02_repository_pivot_instruction.md
-  RAPID.md
-```
-
-The document set provides versioned source copies of these files. During repository setup, the agent should copy or adapt them into the repository using stable non-versioned names so future agents can find them quickly.
-
-Every agent run must start by reading:
-
-```text
-roadmap/AGENTS_START_HERE.md
-roadmap/RAPID.md
-roadmap/00_package_aware_roadmap.md
-```
-
-The agent must then determine the current milestone, inspect the repository state, and continue with the next useful step. It should not assume that the roadmap is still fully correct merely because it exists. After each milestone, the agent must review the roadmap and package instructions, update them if the implementation has revealed a better path, and include those instruction updates in the same commit as the implementation work.
-
-The minimum agent discipline is:
-
-```text
-Commit after every milestone.
-Commit more frequently when a change is logically complete or risky.
-Include roadmap/RAPID.md updates in milestone commits.
-Record key choices, assumptions, deviations, blockers, and clarifications.
-Make explicit low-risk assumptions and continue.
-Stop and ask for clarification when the assumption would materially change architecture, security, licensing, package boundaries, or canonical source formats.
-```
-
-`roadmap/RAPID.md` is the single log for risks, actions, progress, issues, and decisions. Its historical entries are append-only. Agents must not edit or delete previous entries; corrections, supersessions, and changed decisions must be added as new rows linked to the earlier row. The only editable part is the current-status block at the top of the file. The table columns are always:
-
-```text
-ID | Type | Milestone | Status | Entry | Owner | Updated | Links
-```
-
-This makes the plan itself auditable. A future agent should be able to inspect Git history, read the roadmap folder, and understand what was done, why it was done, what was deferred, and what should happen next.
+When this whitepaper and the roadmap set overlap, the roadmap set is authoritative for implementation sequencing and package rollout. The correct fix for drift is to update or reduce the duplicate implementation text here, not to maintain a second phase plan inside the whitepaper.
 
 
 ## 11. Testing strategy
@@ -2485,7 +2402,7 @@ When maintaining this rebuild document, preserve the distinction from the secure
 
 ## 13. Coding-agent implementation guidance
 
-Coding agents must treat the `roadmap/` folder as the authoritative working instruction area. Before making changes, an agent must read `roadmap/AGENTS_START_HERE.md`, the RAPID log, and the current roadmap. After each milestone, it must update the RAPID log and any roadmap documents that no longer match implementation reality.
+This section records architecture-level guardrails for implementation work. Operational run instructions, current milestone control, and repository-state handling belong to the roadmap set and RAPID log, not to this whitepaper.
 
 ### 13.1 General rules for the coding agent
 
@@ -2526,90 +2443,27 @@ src/
   tests/
 ```
 
-### 13.3 First implementation milestone
+### 13.3 Implementation sequencing authority
 
-A useful first coding-agent milestone is:
+This whitepaper must not maintain its own milestone summary, phase-number mapping, or package rollout checklist. Those details change more frequently than the architectural doctrine in this paper and are therefore owned by the companion roadmap set.
 
-```text
-Milestone 1: Local workspace editor skeleton
+For implementation sequencing, always use:
 
-Scope:
-- App shell
-- CodeMirror editor
-- React Arborist workspace explorer
-- Dexie persistence
-- create/rename/delete/move documents and folders
-- document versions
-- manual file import/download
-- no-network/no-filesystem-access scan
+- `roadmap/00_package_aware_roadmap.md` for the authoritative phase order.
+- `roadmap/01_repository_and_package_strategy.md` for runnable-shell and repository-boundary rules.
+- `roadmap/packages/*.md` for package-specific phase participation.
+- `roadmap/RAPID.md` for the current active milestone and execution state.
 
-Out of scope:
-- ITM parser
-- Lua
-- Markdown diagrams
-- graph viewers
-- BPMN
-```
+When updating this whitepaper, keep only the architecture-level statements that remain valid across multiple roadmap revisions. If a change affects milestone order, package creation timing, or current work sequencing, update the roadmap documents instead of adding another implementation summary here.
 
-This provides the base on which all model and viewer work can be added.
+### 13.4 Cross-document maintenance rule
 
-### 13.4 Second implementation milestone
+If the whitepaper and the roadmap set ever diverge again, treat that as documentation drift:
 
-```text
-Milestone 2: Pipeline and viewer foundation
-
-Scope:
-- Plugin registry
-- Pipeline runner
-- Pipeline trace
-- Viewer registry
-- Popup host
-- HTML/SVG/source/table viewers
-- diagnostics service
-- plugin conflict handling
-```
-
-### 13.5 Third implementation milestone
-
-```text
-Milestone 3: ITM and Markdown foundation
-
-Scope:
-- @textforge/itm integration
-- workspace include resolver
-- ITM diagnostics
-- ITM inspector/tree views
-- markdown-it preview
-- Mermaid/Graphviz/KaTeX fenced blocks
-```
-
-### 13.6 Fourth implementation milestone
-
-```text
-Milestone 4: Advanced structured workflows
-
-Scope:
-- ITM graph/mindmap viewers
-- source/view bridge
-- Lua runtime
-- Markdown + ITM report generation
-- BPMN viewer
-- enterprise architecture / ArchiMate profile foundation
-```
-
-### 13.7 Fifth implementation milestone
-
-```text
-Milestone 5: Accreditation hardening
-
-Scope:
-- exhaustive Lua security tests
-- browser no-network smoke
-- extension CSP verification
-- build artifact scan
-- zip import/export hardening
-- manual accreditation package
-```
+1. keep the architectural target state here;
+2. keep implementation order and current milestone control in the roadmap set;
+3. remove or shorten duplicated implementation guidance in this whitepaper;
+4. record the correction in `roadmap/RAPID.md`.
 
 ---
 

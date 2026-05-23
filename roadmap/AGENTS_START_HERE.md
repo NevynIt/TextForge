@@ -19,7 +19,6 @@ roadmap/
   AGENTS_START_HERE.md
   00_package_aware_roadmap.md
   01_repository_and_package_strategy.md
-  02_repository_pivot_instruction.md
   RAPID.md
   textforge_rebuild_whitepaper_main.md
   packages/
@@ -83,7 +82,7 @@ cat roadmap/RAPID.md 2>/dev/null || true
 cat roadmap/00_package_aware_roadmap.md 2>/dev/null || true
 ```
 
-If `roadmap/` does not exist yet, copy or merge the V15a `roadmap/` folder into the repository root, then follow `roadmap/02_repository_pivot_instruction.md` to create the archival tag/branch, rewrite branch, roadmap folder, and pnpm workspace skeleton.
+If `roadmap/` does not exist yet, copy or merge the V15a `roadmap/` folder into the repository root. If the repository has not yet been pivoted, follow the Phase -1 instructions in `roadmap/00_package_aware_roadmap.md`, using Git history and the preserved RAPID record as the operational source.
 
 After the repository is initialized, use the available verification commands instead of inventing new ones. Typical commands will eventually be:
 

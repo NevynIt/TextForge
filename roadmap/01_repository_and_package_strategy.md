@@ -25,8 +25,6 @@ The recommended pivot is:
 7. Merge the rewrite branch back to the default branch only when the new shell is minimally runnable.
 ```
 
-The detailed agent procedure is in `02_repository_pivot_instruction.md`.
-
 This pivot strategy is part of the repository architecture. It gives the rewrite a clean working tree while keeping the old implementation recoverable through normal Git history, tag, and archival branch.
 
 ## Stable runnable baseline
