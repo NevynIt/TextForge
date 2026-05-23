@@ -87,3 +87,15 @@ The Phase 1 closure slice has now addressed the listed gaps:
 ## Validation correction
 
 The validation review of the delivered implementation shows that the shell is package-driven, but the Phase 1 value promise is not fully met yet because the editor and asset packages still expose browser-native facades rather than the promised CodeMirror-backed surface and concrete viewer surfaces. Phase 1 therefore remains open until that value exists, or the roadmap is revised to describe the delivered facade level honestly.
+
+## CodeMirror correction
+
+The editor gap has been corrected. `@textforge/editors` now depends on CodeMirror 6 and `createCodeMirrorTextEditorSurface` mounts a real `EditorView` backed by `EditorState`, not a textarea or contenteditable facade.
+
+The web shell is again packaged by Vite, so CodeMirror and workspace package dependencies are bundled through the application build instead of browser import-map/vendor shims. Validation covered:
+
+- `corepack pnpm verify`
+- `corepack pnpm --filter @textforge/textforge-web build`
+- Vite preview at `http://127.0.0.1:4174`
+- CDP evaluation proving `.cm-editor`, `.cm-content`, `data-editor-engine="codemirror-6"`, and an attached `textforgeCodeMirrorView`
+- a dispatched CodeMirror edit that updated the rendered document and character footer

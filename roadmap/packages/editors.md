@@ -62,4 +62,4 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 
 ## Phase 1 closure note
 
-The current runnable shell uses a browser-native textarea-backed surface facade behind the `createCodeMirrorTextEditorSurface` API. That keeps the public contract stable while deferring the actual CodeMirror adapter to the next editor-language phase.
+The current runnable shell uses `@codemirror/state` and `@codemirror/view` through `createCodeMirrorTextEditorSurface`. The surface mounts a real CodeMirror 6 `EditorView`, exposes the mounted engine marker for validation, and keeps source-range/selection state synchronized from CodeMirror updates.

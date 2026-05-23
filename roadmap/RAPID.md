@@ -22,10 +22,10 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current phase: Phase 1 - Workspace and Stage 1 surface skeleton validation
-Current package focus: roadmap instructions, packages/editors, packages/assets, apps/textforge-web
-Last known good command: corepack pnpm verify
-Next recommended step: complete and validate the promised Phase 1 editor/viewer surfaces; phase claims must not be revised downward to disguise incomplete work
+Current phase: Phase 1 - Workspace and Stage 1 surface validation
+Current package focus: packages/editors, packages/assets, apps/textforge-web
+Last known good command: corepack pnpm verify; node apps/textforge-web/scripts/validate-codemirror-cdp.mjs 9222 http://127.0.0.1:4174
+Next recommended step: perform a final Phase 1 closure audit against workspace, surface routing, CodeMirror editor, and asset viewer promises before advancing to Phase 2
 Open questions: none
 ```
 
@@ -122,3 +122,6 @@ Append every new historical row to the end of this table. Do not reorder existin
 | P-019 | Progress | Docs | Done | Tightened the agent instructions and roadmap operating model so future phase claims require validation of the promised behavior and explicitly reject facade-only closures. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/RAPID.md` |
 | D-025 | Decision | Docs | Accepted | Phase claims must not be revised downward to mask incomplete work. If the promised phase value is not implemented and validated, the phase stays open until it is or the roadmap itself is explicitly changed by a documented decision. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/RAPID.md` |
 | P-020 | Progress | Docs | Done | Clarified the closure rule to forbid downward phase revisions and require validation of the promised value before any closure claim. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/RAPID.md` |
+| D-026 | Decision | M1 | Accepted | Supersede the dependency-light browser-native shell packaging decision for the Phase 1 editor slice: the web shell should use Vite again so real CodeMirror dependencies are bundled rather than resolved through import-map or vendor shims. | agent | 2026-05-23 | `apps/textforge-web/package.json`, `apps/textforge-web/index.html`, `packages/editors/package.json` |
+| P-021 | Progress | M1 | Done | Replaced the editor facade with a real CodeMirror 6 `EditorView`/`EditorState` implementation, switched the web app back to Vite package imports, and validated the running Vite preview through CDP by proving `.cm-editor`, `.cm-content`, an attached `textforgeCodeMirrorView`, and a successful CodeMirror-dispatched edit. | agent | 2026-05-23 | `packages/editors/src/index.js`, `packages/editors/src/index.ts`, `apps/textforge-web/src/workbench.js`, `apps/textforge-web/scripts/validate-codemirror-cdp.mjs` |
+| I-004 | Issue | M1 | Done | The previous editor implementation was still a facade and did not satisfy Phase 1. It is now closed by the real CodeMirror implementation and browser-level CDP validation. | agent | 2026-05-23 | `I-003`, `P-021`, `packages/editors/src/index.js` |
