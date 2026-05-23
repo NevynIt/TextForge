@@ -87,6 +87,8 @@ If one of these commands does not exist yet, record that fact in `roadmap/RAPID.
 
 As implementation progresses, run the narrowest relevant verification repeatedly instead of waiting until the end of a large change. Prefer changed-package checks first, then broader workspace verification when the milestone slice is ready.
 
+Treat the first runnable shell as a separate milestone boundary from later feature work. The shell is stable enough for first use when it launches without a blank placeholder screen and exposes the frame, workspace/navigation chrome, main surface region, toolbar or command entry points, status feedback, and registered contribution routing.
+
 ## Commit discipline
 
 Commit after every milestone.

@@ -14,6 +14,21 @@ Feature packages contribute through manifests.
 The application shell composes packages; it should not own feature logic.
 ```
 
+## Runnable-shell rule
+
+The roadmap distinguishes between a minimally runnable shell and a feature milestone.
+
+The first stable user-facing checkpoint is the one where the app shell can launch without a blank placeholder screen and can present the core chrome that orients the user:
+
+- app branding and frame
+- workspace tree or sidebar
+- main surface host area
+- toolbar or command entry points
+- status badges or equivalent shell feedback
+- contribution registration and open-with routing for the registered surfaces
+
+Phase 1 and later milestones add substantive workbench behavior. They do not replace the need for a first runnable shell.
+
 
 ## Agent operating model
 
@@ -213,4 +228,3 @@ Instruction updates are part of the work product. If a milestone changes the pla
 |---|---|---|
 | `@textforge/security-profile` | Update | Update. Finalize reusable browser-envelope checks for static/extension/PWA targets and generate evidence artifacts. |
 | `@textforge/examples-docs` | Update | Update. Add release checklist, example accreditation output, sample build artifacts, and end-to-end tutorial workspace. |
-

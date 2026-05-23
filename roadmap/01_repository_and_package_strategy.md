@@ -29,6 +29,24 @@ The detailed agent procedure is in `02_repository_pivot_instruction.md`.
 
 This pivot strategy is part of the repository architecture. It gives the rewrite a clean working tree while keeping the old implementation recoverable through normal Git history, tag, and archival branch.
 
+## Stable runnable baseline
+
+TextForge should not be treated as "ready" merely because the workspace exists or the packages compile as placeholders.
+
+The first stable user-facing checkpoint is the first runnable shell. At that point the app must:
+
+```text
+launch without a blank placeholder screen
+render the app frame and brand
+show workspace/navigation chrome
+show the main surface region
+expose toolbar or command entry points
+show status badges or equivalent shell feedback
+route registered contributions through the shell
+```
+
+That checkpoint is the boundary between repository plumbing and a usable first-run experience. Phase 1 and later milestones extend that shell with real workspace, surface, editor, and asset behavior.
+
 ## Recommended model
 
 ```text
