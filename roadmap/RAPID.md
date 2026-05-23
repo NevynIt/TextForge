@@ -22,10 +22,10 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current milestone: M1 Workspace and Stage 1 surface skeleton
-Current package focus: workspace, surfaces, editors, assets
+Current milestone: M2 Source-editor coverage and language foundation
+Current package focus: core, surfaces, editors
 Last known good command: corepack pnpm verify
-Next recommended step: implement the workspace virtual file model and surface host skeletons
+Next recommended step: add language mode registration and source editor fallback selection
 Open questions: none recorded at document-set creation
 ```
 
@@ -91,4 +91,5 @@ Append every new historical row to the end of this table. Do not reorder existin
 | P-006 | Progress | M1 | Done | Implemented the workspace virtual entry model, path helpers, workspace Dexie schema placeholder, and in-memory create/open/save/rename/move/delete service skeleton. | agent | 2026-05-23 | `packages/workspace/src/index.ts`, `packages/workspace/package.json`, `packages/core/package.json` |
 | D-013 | Decision | M1 | Accepted | Use source-level package exports (`./src/index.ts`) for the source-only workspace skeleton until a real build pipeline exists. | agent | 2026-05-23 | `packages/core/package.json`, `packages/workspace/package.json`, `packages/surfaces/package.json`, `packages/editors/package.json`, `packages/assets/package.json`, `packages/ui/package.json` |
 | P-007 | Progress | M1 | Done | Implemented the surface registry and host skeleton, generic text editor contracts, asset viewer bindings and blob URL ledger, and the chrome model helpers for workspace tree, surface frame, toolbar, and status badges. | agent | 2026-05-23 | `packages/surfaces/src/index.ts`, `packages/editors/src/index.ts`, `packages/assets/src/index.ts`, `packages/ui/src/index.ts` |
+| P-008 | Progress | M1 | Done | Completed Phase 1 package skeletons and verified the workspace with `corepack pnpm verify`; the repository is ready to move into Phase 2 language-mode and source-editor coverage. | agent | 2026-05-23 | `roadmap/RAPID.md`, `packages/workspace/src/index.ts`, `packages/surfaces/src/index.ts`, `packages/editors/src/index.ts`, `packages/assets/src/index.ts`, `packages/ui/src/index.ts` |
 | D-012 | Decision | M1 | Accepted | Agents must validate progressively during implementation and run the best available milestone-scoped verification before any milestone commit, logging any remaining verification gap in RAPID. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/01_repository_and_package_strategy.md` |
