@@ -1,0 +1,43 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .: {}
+
+  apps/textforge-web: {}
+
+  packages/archimate: {}
+
+  packages/assets: {}
+
+  packages/bpmn: {}
+
+  packages/core: {}
+
+  packages/diagrams: {}
+
+  packages/editors: {}
+
+  packages/examples-docs: {}
+
+  packages/itm: {}
+
+  packages/lua: {}
+
+  packages/markdown: {}
+
+  packages/pipeline: {}
+
+  packages/security-profile: {}
+
+  packages/surfaces: {}
+
+  packages/tables: {}
+
+  packages/ui: {}
+
+  packages/workspace: {}
