@@ -70,6 +70,54 @@ function chooseBestContribution(contributionsList, request) {
   return contributionsList[0];
 }
 
+export function createOpenWithSelection(registry, request) {
+  const placement = request.placement ?? 'main';
+  const candidates = registry.list()
+    .filter((contribution) => matchesOpenRequest(contribution, request))
+    .sort((left, right) => (right.openWithPriority ?? 0) - (left.openWithPriority ?? 0))
+    .map((contribution, index) => ({
+      surfaceId: contribution.id,
+      label: contribution.label ?? contribution.id,
+      description: contribution.description,
+      placement,
+      priority: contribution.openWithPriority ?? 0,
+      selected: index === 0,
+    }));
+
+  return {
+    resource: request.resource,
+    placement,
+    candidates,
+    selectedSurfaceId: candidates.find((candidate) => candidate.selected)?.surfaceId,
+  };
+}
+
+export function createSourceEditorFallback(resource, sourceSurfaceId, reason) {
+  return {
+    resource,
+    sourceSurfaceId,
+    reason,
+  };
+}
+
+export function markSurfaceSessionStale(session, updatedAt) {
+  return {
+    ...session,
+    state: 'stale',
+    freshness: 'stale',
+    updatedAt,
+  };
+}
+
+export function markSurfaceSessionCurrent(session, updatedAt) {
+  return {
+    ...session,
+    state: session.state === 'closed' ? 'closed' : 'open',
+    freshness: 'current',
+    updatedAt,
+  };
+}
+
 export function createSurfaceRegistry(initialContributions = []) {
   const items = [...initialContributions];
   const registry = {
@@ -121,10 +169,12 @@ export function createSurfaceHost(props) {
       title: request.title ?? request.resource.path ?? request.resource.resourceId,
       placement: request.placement ?? props.placement,
       state: 'open',
+      freshness: 'current',
       createdAt: timestamp,
       updatedAt: timestamp,
       capabilityIds: contribution.capabilities ?? [],
       sourceSessionId: request.sourceSessionId,
+      fallbackSurfaceId: request.fallbackSurfaceId,
     };
 
     sessions.push(session);
@@ -186,6 +236,26 @@ export function createSurfaceHost(props) {
     return true;
   }
 
+  function replaceSession(sessionId, nextSessionFactory) {
+    const current = get(sessionId);
+    if (!current) {
+      return undefined;
+    }
+
+    const nextSession = nextSessionFactory(current);
+    const index = sessions.findIndex((session) => session.id === sessionId);
+    sessions.splice(index, 1, nextSession);
+    return nextSession;
+  }
+
+  function markStale(sessionId) {
+    return replaceSession(sessionId, (current) => markSurfaceSessionStale(current, now()));
+  }
+
+  function markCurrent(sessionId) {
+    return replaceSession(sessionId, (current) => markSurfaceSessionCurrent(current, now()));
+  }
+
   function snapshot() {
     return {
       hostId: props.hostId,
@@ -203,6 +273,8 @@ export function createSurfaceHost(props) {
     focus,
     move,
     close,
+    markStale,
+    markCurrent,
     snapshot,
   };
 }

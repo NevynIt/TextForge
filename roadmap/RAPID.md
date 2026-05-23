@@ -24,8 +24,8 @@ Keep this block current. It may be edited because it is an operational pointer, 
 Current branch: rewrite/v2-monorepo
 Current phase: Phase 2 - Source-editor coverage and language foundation
 Current package focus: packages/core, packages/surfaces, packages/editors
-Last known good command: corepack pnpm verify; node apps/textforge-web/scripts/validate-codemirror-cdp.mjs 9222 http://127.0.0.1:4174
-Next recommended step: start Phase 2 by adding stable language IDs/editor capability contracts, open-with/source fallback state, and CodeMirror language-mode configuration
+Last known good command: corepack pnpm verify
+Next recommended step: continue Phase 2 by adding parser-backed CodeMirror language packages/configuration for the registered language IDs and exposing the language selection in shell open-with/editor chrome
 Open questions: none
 ```
 
@@ -131,3 +131,7 @@ Append every new historical row to the end of this table. Do not reorder existin
 | P-024 | Progress | M1 | Done | Closed Phase 1 with validation evidence: `corepack pnpm verify` passed, the Vite dist file check passed, and CDP validation proved the package-driven shell mounts CodeMirror 6, dispatches an editor change, opens the SVG asset viewer, binds asset media to a blob URL, and routes it through the `SVG viewer` contribution. | agent | 2026-05-23 | `A-004`, `I-003`, `I-004`, `apps/textforge-web/scripts/validate-codemirror-cdp.mjs` |
 | I-005 | Issue | M1 | Done | The Phase 1 asset viewer implementation previously lacked explicit typed image/SVG/PDF/binary surface exports. It is closed by concrete factory exports, smoke checks, and browser-level SVG viewer validation. | agent | 2026-05-23 | `D-027`, `P-022`, `P-024`, `packages/assets/src/index.ts` |
 | A-005 | Action | M2 | Open | Begin Phase 2 by stabilizing language IDs and editor capability contracts in `@textforge/core`, adding open-with/source editor fallback state in `@textforge/surfaces`, and configuring CodeMirror language modes in `@textforge/editors`. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/editors.md` |
+| P-025 | Progress | M2 | Done | Started Phase 2 by adding stable language definitions and editor capability IDs in `@textforge/core`, open-with/source-fallback/freshness helpers in `@textforge/surfaces`, and CodeMirror-facing language-mode metadata in `@textforge/editors`. Focused lint and test checks passed for all three packages. | agent | 2026-05-23 | `packages/core/src/index.js`, `packages/surfaces/src/index.js`, `packages/editors/src/index.js` |
+| D-028 | Decision | Docs | Accepted | Browser-served preview is the authoritative runnable-path validation for the web shell. Treat relative `dist/index.html` asset paths as a packaging check only, not as a cross-browser `file://` compatibility guarantee. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/RAPID.md`, `roadmap/phase-1-gap-audit-2026-05-23.md` |
+| P-026 | Progress | Docs | Done | Updated the live agent instructions to stop treating direct `file://` launch as a portable validation requirement and to prefer preview-server or equivalent browser-served validation when judging the runnable shell. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/RAPID.md` |
+| A-006 | Action | M2 | Open | Add parser-backed CodeMirror language integrations for the registered language IDs where suitable, keeping unsupported/projection-only formats explicit and preserving source-editor fallback semantics. | agent | 2026-05-23 | `roadmap/packages/editors.md`, `packages/editors/src/index.js` |

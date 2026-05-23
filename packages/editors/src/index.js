@@ -1,5 +1,6 @@
 import { EditorSelection, EditorState } from '@codemirror/state';
 import { EditorView, lineNumbers } from '@codemirror/view';
+import { getLanguageDefinition, inferLanguageId, languageDefinitions } from '@textforge/core';
 
 export function createTextEditorSelection(anchor, head = anchor) {
   return { anchor, head };
@@ -150,6 +151,33 @@ export const contributions = {
   pipelines: [],
 };
 
+export function createTextEditorLanguageModeConfig(languageId, resource) {
+  const resolvedLanguageId = getLanguageDefinition(languageId)
+    ? languageId
+    : inferLanguageId({
+      path: resource?.path,
+      mimeType: resource?.mimeType,
+      fallback: 'plaintext',
+    });
+  const definition = getLanguageDefinition(resolvedLanguageId) ?? getLanguageDefinition('plaintext');
+  return {
+    languageId: definition.id,
+    label: definition.label,
+    mimeTypes: definition.mimeTypes,
+    extensions: definition.extensions,
+    parserBacked: false,
+    sourceEditor: true,
+  };
+}
+
+export function listTextEditorLanguageModes() {
+  return languageDefinitions.map((definition) => createTextEditorLanguageModeConfig(definition.id));
+}
+
+export function resolveTextEditorLanguageMode(document) {
+  return createTextEditorLanguageModeConfig(document.languageId ?? document.resource.languageId, document.resource);
+}
+
 function escapeHtml(text) {
   return text
     .replaceAll('&', '&amp;')
@@ -218,7 +246,8 @@ export function createTextEditorSurfaceModel(document, diagnostics = []) {
   const text = normalizeLineEndings(document.text);
   const range = document.sourceRange ?? selectionToSourceRange(selection, text);
   const state = document.readOnly ? 'read-only' : 'editable';
-  const languageLabel = document.languageId ?? document.resource.languageId ?? 'plain text';
+  const languageMode = resolveTextEditorLanguageMode(document);
+  const languageLabel = languageMode.label;
 
   return {
     id: `text-editor:${document.resource.resourceId}`,
@@ -235,6 +264,7 @@ export function createTextEditorSurfaceModel(document, diagnostics = []) {
     characterCount: text.length,
     readOnly: Boolean(document.readOnly),
     engine: 'codemirror-6',
+    languageMode,
   };
 }
 

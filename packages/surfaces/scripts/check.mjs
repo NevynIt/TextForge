@@ -3,9 +3,11 @@ import assert from 'node:assert/strict';
 import {
   contributions,
   createMainSurfaceHost,
+  createOpenWithSelection,
   createOpenWithSurfaceCommand,
   createPopupSurfaceHost,
   createSequentialSessionIdFactory,
+  createSourceEditorFallback,
   createSurfaceRegistry,
   createSurfaceSessionTab,
 } from '../src/index.js';
@@ -55,7 +57,17 @@ const assetSession = popupHost.open({
 });
 
 assert.equal(textSession.contributionId, 'surface.editor');
+assert.equal(textSession.freshness, 'current');
+assert.equal(mainHost.markStale(textSession.id)?.state, 'stale');
+assert.equal(mainHost.markCurrent(textSession.id)?.freshness, 'current');
 assert.equal(assetSession.placement, 'popup');
 assert.equal(createSurfaceSessionTab(textSession).resourceId, 'resource-1');
+assert.equal(createOpenWithSelection(registry, {
+  resource: { resourceId: 'resource-3', kind: 'binary', path: '/docs/system.svg' },
+}).selectedSurfaceId, 'surface.asset');
+assert.equal(
+  createSourceEditorFallback(textSession.resource, 'surface.editor', 'explicit-source-open').sourceSurfaceId,
+  'surface.editor',
+);
 
 console.info('surfaces package checks passed');

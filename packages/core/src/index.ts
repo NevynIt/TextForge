@@ -12,13 +12,35 @@ export interface SourceRange {
 }
 
 export type ResourceKind = 'text' | 'binary' | 'generated' | 'virtual';
+export type LanguageId =
+  | 'plaintext'
+  | 'markdown'
+  | 'itm'
+  | 'lua'
+  | 'json'
+  | 'xml'
+  | 'bpmn-xml'
+  | 'archimate-exchange-xml'
+  | 'csv'
+  | 'tsv'
+  | 'mermaid'
+  | 'dot'
+  | 'svg'
+  | 'yaml';
+
+export type EditorCapabilityId =
+  | 'editor.source'
+  | 'editor.source-range'
+  | 'editor.diagnostics'
+  | 'editor.language-mode'
+  | 'editor.source-fallback';
 
 export interface ResourceRef {
   readonly resourceId: string;
   readonly path?: string;
   readonly kind?: ResourceKind;
   readonly mimeType?: string;
-  readonly languageId?: string;
+  readonly languageId?: LanguageId | string;
   readonly parentResourceId?: string;
 }
 
@@ -35,6 +57,20 @@ export interface Diagnostic {
   readonly source?: SourceRange;
   readonly resource?: ResourceRef;
   readonly related?: ReadonlyArray<DiagnosticRelatedInformation>;
+}
+
+export interface LanguageDefinition {
+  readonly id: LanguageId;
+  readonly label: string;
+  readonly mimeTypes: ReadonlyArray<string>;
+  readonly extensions: ReadonlyArray<string>;
+  readonly sourceEditor: true;
+}
+
+export interface EditorDiagnosticBridge {
+  readonly id: string;
+  readonly languageIds: ReadonlyArray<LanguageId>;
+  lint(resource: ResourceRef, text: string): ReadonlyArray<Diagnostic>;
 }
 
 export interface Capability {
@@ -103,6 +139,38 @@ export const contributionKinds = {
   surfaces: 'surfaces',
   pipelines: 'pipelines',
 } as const;
+
+export const languageDefinitions: ReadonlyArray<LanguageDefinition> = [
+  { id: 'plaintext', label: 'Plain text', mimeTypes: ['text/plain'], extensions: ['txt', 'text'], sourceEditor: true },
+  { id: 'markdown', label: 'Markdown', mimeTypes: ['text/markdown', 'text/x-markdown'], extensions: ['md', 'markdown'], sourceEditor: true },
+  { id: 'itm', label: 'ITM', mimeTypes: ['text/x-itm'], extensions: ['itm'], sourceEditor: true },
+  { id: 'lua', label: 'Lua', mimeTypes: ['text/x-lua', 'application/x-lua'], extensions: ['lua'], sourceEditor: true },
+  { id: 'json', label: 'JSON', mimeTypes: ['application/json', 'text/json'], extensions: ['json'], sourceEditor: true },
+  { id: 'xml', label: 'XML', mimeTypes: ['application/xml', 'text/xml'], extensions: ['xml'], sourceEditor: true },
+  { id: 'bpmn-xml', label: 'BPMN XML', mimeTypes: ['application/bpmn+xml'], extensions: ['bpmn'], sourceEditor: true },
+  { id: 'archimate-exchange-xml', label: 'ArchiMate exchange XML', mimeTypes: ['application/vnd.opengroup.archimate+xml'], extensions: ['archimate', 'xml'], sourceEditor: true },
+  { id: 'csv', label: 'CSV', mimeTypes: ['text/csv'], extensions: ['csv'], sourceEditor: true },
+  { id: 'tsv', label: 'TSV', mimeTypes: ['text/tab-separated-values'], extensions: ['tsv'], sourceEditor: true },
+  { id: 'mermaid', label: 'Mermaid', mimeTypes: ['text/x-mermaid'], extensions: ['mmd', 'mermaid'], sourceEditor: true },
+  { id: 'dot', label: 'DOT', mimeTypes: ['text/vnd.graphviz'], extensions: ['dot', 'gv'], sourceEditor: true },
+  { id: 'svg', label: 'SVG', mimeTypes: ['image/svg+xml'], extensions: ['svg'], sourceEditor: true },
+  { id: 'yaml', label: 'YAML', mimeTypes: ['application/yaml', 'text/yaml', 'text/x-yaml'], extensions: ['yaml', 'yml'], sourceEditor: true },
+];
+
+export const editorCapabilityIds = {
+  source: 'editor.source',
+  sourceRange: 'editor.source-range',
+  diagnostics: 'editor.diagnostics',
+  languageMode: 'editor.language-mode',
+  sourceFallback: 'editor.source-fallback',
+} as const;
+
+export declare function getLanguageDefinition(languageId: LanguageId | string | undefined): LanguageDefinition | undefined;
+export declare function inferLanguageId(input: {
+  readonly path?: string;
+  readonly mimeType?: string;
+  readonly fallback?: LanguageId;
+}): LanguageId;
 
 export const contributions = {
   id: '@textforge/core',

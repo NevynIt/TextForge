@@ -7,6 +7,7 @@ import {
   createResourceRef,
   createSourcePosition,
   createSourceRange,
+  inferLanguageId,
 } from '../src/index.js';
 
 test('core constructors build stable value objects', () => {
@@ -17,5 +18,6 @@ test('core constructors build stable value objects', () => {
 
   assert.equal(ref.resourceId, 'resource-1');
   assert.equal(diagnostic.source?.end.offset, 3);
+  assert.equal(inferLanguageId({ path: '/docs/notes.md' }), 'markdown');
   assert.equal(manifest.packageId, '@textforge/core');
 });

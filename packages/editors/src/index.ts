@@ -1,4 +1,4 @@
-import type { Diagnostic, ResourceRef, SourceRange } from '@textforge/core';
+import type { Diagnostic, LanguageId, ResourceRef, SourceRange } from '@textforge/core';
 import type { SurfaceContribution, SurfacePlacement, SurfaceOpenRequest } from '@textforge/surfaces';
 
 export type TextEditOperation =
@@ -49,6 +49,16 @@ export interface TextEditorSurfaceModel {
   readonly characterCount: number;
   readonly readOnly: boolean;
   readonly engine: 'codemirror-6';
+  readonly languageMode: TextEditorLanguageModeConfig;
+}
+
+export interface TextEditorLanguageModeConfig {
+  readonly languageId: LanguageId;
+  readonly label: string;
+  readonly mimeTypes: ReadonlyArray<string>;
+  readonly extensions: ReadonlyArray<string>;
+  readonly parserBacked: boolean;
+  readonly sourceEditor: true;
 }
 
 export interface CodeMirrorTextEditorSurface {
@@ -217,6 +227,15 @@ export function createTextEditorOpenRequest(
     sourceSessionId: overrides.sourceSessionId,
   };
 }
+
+export declare function createTextEditorLanguageModeConfig(
+  languageId: LanguageId | string | undefined,
+  resource?: ResourceRef,
+): TextEditorLanguageModeConfig;
+
+export declare function listTextEditorLanguageModes(): ReadonlyArray<TextEditorLanguageModeConfig>;
+
+export declare function resolveTextEditorLanguageMode(document: TextEditorDocument): TextEditorLanguageModeConfig;
 
 export declare function createTextEditorSurfaceModel(
   document: TextEditorDocument,

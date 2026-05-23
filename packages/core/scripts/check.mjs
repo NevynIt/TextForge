@@ -8,6 +8,10 @@ import {
   createCommand,
   createContributionManifest,
   createDiagnostic,
+  editorCapabilityIds,
+  getLanguageDefinition,
+  inferLanguageId,
+  languageDefinitions,
   createPipelineValue,
   createResourceRef,
   createSourcePosition,
@@ -19,6 +23,11 @@ import {
 
 assert.deepEqual(severityLevels, ['hint', 'info', 'warning', 'error']);
 assert.deepEqual(resourceKinds, ['text', 'binary', 'generated', 'virtual']);
+assert.equal(languageDefinitions.length, 14);
+assert.equal(getLanguageDefinition('markdown')?.label, 'Markdown');
+assert.equal(inferLanguageId({ path: '/docs/process.bpmn', mimeType: 'application/bpmn+xml' }), 'bpmn-xml');
+assert.equal(inferLanguageId({ path: '/docs/model.yaml' }), 'yaml');
+assert.equal(editorCapabilityIds.languageMode, 'editor.language-mode');
 assert.equal(contributionKinds.surfaces, 'surfaces');
 assert.equal(contributions.id, '@textforge/core');
 

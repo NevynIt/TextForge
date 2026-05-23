@@ -6,6 +6,8 @@ import {
   createCodeMirrorTextEditorSurface,
   createTextEditorDocument,
   createTextEditorSelection,
+  listTextEditorLanguageModes,
+  resolveTextEditorLanguageMode,
 } from '../src/index.js';
 
 test('text editor selection and edit helpers preserve document metadata', () => {
@@ -22,5 +24,7 @@ test('text editor selection and edit helpers preserve document metadata', () => 
   assert.equal(surface.model.lineCount, 1);
   assert.equal(surface.model.characterCount, 11);
   assert.equal(surface.model.engine, 'codemirror-6');
+  assert.equal(resolveTextEditorLanguageMode(document).languageId, 'markdown');
+  assert.equal(listTextEditorLanguageModes().some((mode) => mode.languageId === 'bpmn-xml'), true);
   assert.equal(typeof surface.mount, 'function');
 });

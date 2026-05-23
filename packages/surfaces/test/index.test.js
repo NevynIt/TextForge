@@ -3,7 +3,9 @@ import test from 'node:test';
 
 import {
   createMainSurfaceHost,
+  createOpenWithSelection,
   createSequentialSessionIdFactory,
+  createSourceEditorFallback,
   createSurfaceRegistry,
 } from '../src/index.js';
 
@@ -37,4 +39,17 @@ test('surface registry picks the highest-priority compatible contribution', () =
   });
 
   assert.equal(session.contributionId, 'surface.preview');
+  assert.equal(session.freshness, 'current');
+
+  const selection = createOpenWithSelection(registry, {
+    resource: { resourceId: 'resource-2', kind: 'text', path: '/docs/notes.md' },
+  });
+  assert.equal(selection.selectedSurfaceId, 'surface.editor');
+
+  const stale = host.markStale(session.id);
+  assert.equal(stale?.freshness, 'stale');
+  assert.equal(host.markCurrent(session.id)?.freshness, 'current');
+
+  const fallback = createSourceEditorFallback(session.resource, 'surface.editor', 'explicit-source-open');
+  assert.equal(fallback.reason, 'explicit-source-open');
 });

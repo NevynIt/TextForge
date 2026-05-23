@@ -7,6 +7,7 @@ import type {
 
 export type SurfacePlacement = 'main' | 'popup' | 'auxiliary';
 export type SurfaceHostState = 'open' | 'stale' | 'closed';
+export type SurfaceFreshness = 'current' | 'stale';
 
 export interface SurfaceContribution extends CoreSurfaceContribution {
   readonly label?: string;
@@ -24,6 +25,7 @@ export interface SurfaceOpenRequest {
   readonly placement?: SurfacePlacement;
   readonly allowPopup?: boolean;
   readonly sourceSessionId?: string;
+  readonly fallbackSurfaceId?: string;
 }
 
 export interface SurfaceSession {
@@ -33,10 +35,34 @@ export interface SurfaceSession {
   readonly title: string;
   readonly placement: SurfacePlacement;
   readonly state: SurfaceHostState;
+  readonly freshness: SurfaceFreshness;
   readonly createdAt: string;
   readonly updatedAt: string;
   readonly capabilityIds: ReadonlyArray<Capability['id']>;
   readonly sourceSessionId?: string;
+  readonly fallbackSurfaceId?: string;
+}
+
+export interface OpenWithCandidate {
+  readonly surfaceId: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly placement: SurfacePlacement;
+  readonly priority: number;
+  readonly selected: boolean;
+}
+
+export interface OpenWithSelection {
+  readonly resource: ResourceRef;
+  readonly placement: SurfacePlacement;
+  readonly candidates: ReadonlyArray<OpenWithCandidate>;
+  readonly selectedSurfaceId?: string;
+}
+
+export interface SourceEditorFallback {
+  readonly resource: ResourceRef;
+  readonly sourceSurfaceId: string;
+  readonly reason: 'unsupported-visual-edit' | 'unsupported-language' | 'stale-generated-view' | 'explicit-source-open';
 }
 
 export interface SurfaceHostSnapshot {
@@ -71,6 +97,8 @@ export interface SurfaceHost {
   focus(sessionId: string): SurfaceSession | undefined;
   move(sessionId: string, placement: SurfacePlacement): SurfaceSession | undefined;
   close(sessionId: string): boolean;
+  markStale(sessionId: string): SurfaceSession | undefined;
+  markCurrent(sessionId: string): SurfaceSession | undefined;
   snapshot(): SurfaceHostSnapshot;
 }
 
@@ -300,3 +328,17 @@ export function createOpenWithSurfaceCommand(surfaceId: string, label: string, p
     placement,
   } as const;
 }
+
+export declare function createOpenWithSelection(
+  registry: SurfaceRegistry,
+  request: SurfaceOpenRequest,
+): OpenWithSelection;
+
+export declare function createSourceEditorFallback(
+  resource: ResourceRef,
+  sourceSurfaceId: string,
+  reason: SourceEditorFallback['reason'],
+): SourceEditorFallback;
+
+export declare function markSurfaceSessionStale(session: SurfaceSession, updatedAt: string): SurfaceSession;
+export declare function markSurfaceSessionCurrent(session: SurfaceSession, updatedAt: string): SurfaceSession;

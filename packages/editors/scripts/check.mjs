@@ -7,6 +7,8 @@ import {
   createTextEditorDocument,
   createTextEditorSelection,
   createTextEditorState,
+  listTextEditorLanguageModes,
+  resolveTextEditorLanguageMode,
   selectionToSourceRange,
 } from '../src/index.js';
 
@@ -27,6 +29,9 @@ const surface = createCodeMirrorTextEditorSurface({ document });
 assert.equal(surface.model.title, '/docs/notes.md');
 assert.equal(surface.model.lineCount, 2);
 assert.equal(surface.model.engine, 'codemirror-6');
+assert.equal(surface.model.languageMode.languageId, 'markdown');
+assert.equal(resolveTextEditorLanguageMode(document).label, 'Markdown');
+assert.equal(listTextEditorLanguageModes().length, 14);
 assert.equal(typeof surface.mount, 'function');
 
 console.info('editors package checks passed');

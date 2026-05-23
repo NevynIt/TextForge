@@ -63,3 +63,7 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Phase 1 closure note
 
 The current runnable shell uses `@codemirror/state` and `@codemirror/view` through `createCodeMirrorTextEditorSurface`. The surface mounts a real CodeMirror 6 `EditorView`, exposes the mounted engine marker for validation, and keeps source-range/selection state synchronized from CodeMirror updates.
+
+## Phase 2 progress note
+
+The package now consumes the shared language definitions from `@textforge/core` and exposes CodeMirror-facing language-mode metadata for the Phase 2 language IDs. Parser-backed language support remains the next Phase 2 slice and should be added without claiming unsupported formats are fully parsed.
