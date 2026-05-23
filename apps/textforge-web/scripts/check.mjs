@@ -6,6 +6,7 @@ const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const indexHtml = await readFile(resolve(rootDir, 'index.html'), 'utf8');
 const mainJs = await readFile(resolve(rootDir, 'src/main.js'), 'utf8');
 const workbenchJs = await readFile(resolve(rootDir, 'src/workbench.js'), 'utf8');
+const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
 
 if (!indexHtml.includes('./src/main.js')) {
   throw new Error('index.html must load ./src/main.js as the Vite application entrypoint');
@@ -17,6 +18,10 @@ if (!indexHtml.includes('./src/styles.css')) {
 
 if (!mainJs.includes('./workbench.js') || !mainJs.includes('bootTextForgeShell')) {
   throw new Error('main.js must bootstrap the package-driven workbench module');
+}
+
+if (!viteConfig.includes("base: './'")) {
+  throw new Error('vite.config.mjs must use base ./ so the built shell works from file://');
 }
 
 for (const requiredImport of [

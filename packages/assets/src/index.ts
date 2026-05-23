@@ -59,6 +59,34 @@ export interface AssetViewerRequest {
   readonly provenance?: string;
 }
 
+export interface AssetViewerSurfaceModel {
+  readonly id: string;
+  readonly title: string;
+  readonly summary: string;
+  readonly viewerKind: AssetViewerKind;
+  readonly state: AssetBindingState;
+  readonly mimeType: string;
+  readonly binding: WorkspaceAssetBinding;
+  readonly lease?: BlobUrlLease;
+  readonly blobUrl?: string;
+  readonly resourceText: string;
+  readonly provenance: string;
+}
+
+export interface AssetViewerSurfaceOptions {
+  readonly binding?: WorkspaceAssetBinding;
+  readonly lease?: BlobUrlLease;
+}
+
+export interface AssetViewerSurface {
+  readonly id: string;
+  readonly contribution: AssetSurfaceContribution;
+  readonly binding: WorkspaceAssetBinding;
+  readonly lease?: BlobUrlLease;
+  readonly model: AssetViewerSurfaceModel;
+  mount(container: HTMLElement): () => void;
+}
+
 export const assetSurfaceContributions: ReadonlyArray<AssetSurfaceContribution> = [
   {
     id: '@textforge/assets/image',
@@ -212,3 +240,34 @@ export function markAssetBindingReleased(binding: WorkspaceAssetBinding): Worksp
     state: 'released',
   };
 }
+
+export declare function createAssetViewerSurfaceModel(
+  request: AssetViewerRequest,
+  binding?: WorkspaceAssetBinding,
+  lease?: BlobUrlLease,
+): AssetViewerSurfaceModel;
+
+export declare function createAssetViewerSurface(
+  request: AssetViewerRequest,
+  options?: AssetViewerSurfaceOptions,
+): AssetViewerSurface;
+
+export declare function createImageAssetViewerSurface(
+  request: AssetViewerRequest,
+  options?: AssetViewerSurfaceOptions,
+): AssetViewerSurface;
+
+export declare function createSvgAssetViewerSurface(
+  request: AssetViewerRequest,
+  options?: AssetViewerSurfaceOptions,
+): AssetViewerSurface;
+
+export declare function createPdfAssetViewerSurface(
+  request: AssetViewerRequest,
+  options?: AssetViewerSurfaceOptions,
+): AssetViewerSurface;
+
+export declare function createBinaryAssetViewerSurface(
+  request: AssetViewerRequest,
+  options?: AssetViewerSurfaceOptions,
+): AssetViewerSurface;

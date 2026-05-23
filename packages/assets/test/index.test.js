@@ -2,7 +2,11 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createBinaryAssetViewerSurface,
+  createImageAssetViewerSurface,
+  createPdfAssetViewerSurface,
   createAssetViewerSurface,
+  createSvgAssetViewerSurface,
   createBlobUrlLedger,
   createWorkspaceAssetBinding,
   markAssetBindingReleased,
@@ -33,5 +37,9 @@ test('asset viewer helpers select and bind viewer kinds', () => {
   assert.equal(surface.model.viewerKind, 'svg');
   assert.equal(surface.model.blobUrl, 'blob:asset-test');
   assert.equal(typeof surface.mount, 'function');
+  assert.equal(createImageAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'image');
+  assert.equal(createSvgAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'svg');
+  assert.equal(createPdfAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'pdf');
+  assert.equal(createBinaryAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'binary');
   assert.equal(markAssetBindingReleased(binding).state, 'released');
 });

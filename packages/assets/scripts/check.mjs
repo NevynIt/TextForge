@@ -2,9 +2,13 @@ import assert from 'node:assert/strict';
 
 import {
   assetSurfaceContributions,
+  createBinaryAssetViewerSurface,
+  createImageAssetViewerSurface,
   createAssetViewerSurface,
   createAssetViewerSurfaceModel,
   createBlobUrlLedger,
+  createPdfAssetViewerSurface,
+  createSvgAssetViewerSurface,
   createWorkspaceAssetBinding,
   markAssetBindingReady,
   selectAssetViewerKind,
@@ -38,5 +42,9 @@ assert.equal(surface.model.viewerKind, 'svg');
 assert.equal(surface.model.blobUrl, 'blob:asset-check');
 assert.equal(typeof surface.mount, 'function');
 assert.equal(createAssetViewerSurfaceModel(request, readyBinding, lease).mimeType, 'image/svg+xml');
+assert.equal(createImageAssetViewerSurface(request, { binding: readyBinding, lease }).model.viewerKind, 'image');
+assert.equal(createSvgAssetViewerSurface(request, { binding: readyBinding, lease }).model.viewerKind, 'svg');
+assert.equal(createPdfAssetViewerSurface(request, { binding: readyBinding, lease }).model.viewerKind, 'pdf');
+assert.equal(createBinaryAssetViewerSurface(request, { binding: readyBinding, lease }).model.viewerKind, 'binary');
 
 console.info('assets package checks passed');

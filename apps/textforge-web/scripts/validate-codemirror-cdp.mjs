@@ -36,6 +36,14 @@ await send('Page.enable');
 await send('Page.bringToFront');
 
 const expression = `(() => {
+  const svgTab = [...document.querySelectorAll('.tab')].find((node) => node.textContent.includes('system.svg'));
+  svgTab?.click();
+  const assetViewer = document.querySelector('.asset-viewer--svg');
+  const assetMedia = document.querySelector('.asset-viewer__media');
+  const assetDownload = document.querySelector('[data-download-link]');
+  const assetOpenWith = document.querySelector('#surface-openwith')?.textContent ?? '';
+  const notesTab = [...document.querySelectorAll('.tab')].find((node) => node.textContent.includes('notes.md'));
+  notesTab?.click();
   const host = document.querySelector('[data-codemirror-host]');
   const editor = document.querySelector('.cm-editor');
   const content = document.querySelector('.cm-content');
@@ -49,6 +57,10 @@ const expression = `(() => {
     hasEditor: Boolean(editor),
     hasContent: Boolean(content),
     viewAttached: Boolean(view),
+    hasSvgAssetViewer: Boolean(assetViewer),
+    hasAssetMedia: Boolean(assetMedia),
+    assetDownloadBound: assetDownload?.getAttribute('href')?.startsWith('blob:') ?? false,
+    assetOpenWith,
     beforeLength: before.length,
     afterIncludesValidation: after.includes('CDP validation line'),
     characterLabel: [...document.querySelectorAll('.editor-frame__footer span')].map((node) => node.textContent).join(' | '),
@@ -73,9 +85,13 @@ if (
   !result.hasEditor ||
   !result.hasContent ||
   !result.viewAttached ||
+  !result.hasSvgAssetViewer ||
+  !result.hasAssetMedia ||
+  !result.assetDownloadBound ||
+  result.assetOpenWith !== 'SVG viewer' ||
   !result.afterIncludesValidation
 ) {
-  throw new Error(`CodeMirror validation failed: ${JSON.stringify(result)}`);
+  throw new Error(`Surface validation failed: ${JSON.stringify(result)}`);
 }
 
 console.info(JSON.stringify(result, null, 2));

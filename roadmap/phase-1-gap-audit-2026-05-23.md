@@ -99,3 +99,14 @@ The web shell is again packaged by Vite, so CodeMirror and workspace package dep
 - Vite preview at `http://127.0.0.1:4174`
 - CDP evaluation proving `.cm-editor`, `.cm-content`, `data-editor-engine="codemirror-6"`, and an attached `textforgeCodeMirrorView`
 - a dispatched CodeMirror edit that updated the rendered document and character footer
+
+## Final closure validation
+
+The remaining Phase 1 closure gaps are now closed.
+
+- `@textforge/assets` exposes typed, package-owned image, SVG, PDF, and generic binary viewer surface factories rather than only a generic blob-preview facade.
+- The Vite build emits relative `./assets/...` links and the web package build runs a dist check so `apps/textforge-web/dist/index.html` remains suitable for direct `file://` launch.
+- CDP validation against the running preview proved the shell mounts CodeMirror 6, dispatches an editor edit, opens the SVG asset viewer, binds media/download paths to a blob URL, and routes through the `SVG viewer` contribution.
+- Workspace verification passed with `corepack pnpm verify`.
+
+Phase 1 is closed on implementation and validation evidence. The next roadmap step is Phase 2 source-editor coverage and language foundation.

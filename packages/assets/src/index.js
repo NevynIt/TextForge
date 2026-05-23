@@ -312,3 +312,30 @@ export function createAssetViewerSurface(request, options = {}) {
     },
   };
 }
+
+function createAssetViewerSurfaceForKind(viewerKind, request, options = {}) {
+  const baseBinding = options.binding ?? createWorkspaceAssetBinding(request);
+  return createAssetViewerSurface(request, {
+    ...options,
+    binding: {
+      ...baseBinding,
+      viewerKind,
+    },
+  });
+}
+
+export function createImageAssetViewerSurface(request, options = {}) {
+  return createAssetViewerSurfaceForKind('image', request, options);
+}
+
+export function createSvgAssetViewerSurface(request, options = {}) {
+  return createAssetViewerSurfaceForKind('svg', request, options);
+}
+
+export function createPdfAssetViewerSurface(request, options = {}) {
+  return createAssetViewerSurfaceForKind('pdf', request, options);
+}
+
+export function createBinaryAssetViewerSurface(request, options = {}) {
+  return createAssetViewerSurfaceForKind('binary', request, options);
+}
