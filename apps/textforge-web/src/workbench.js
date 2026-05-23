@@ -69,6 +69,10 @@ function escapeHtml(text) {
     .replaceAll('"', '&quot;');
 }
 
+function clearElement(element) {
+  element.replaceChildren();
+}
+
 function createInitialWorkspace() {
   const now = createTimestampFactory();
   const workspace = createWorkspaceService({
@@ -228,8 +232,10 @@ export function bootTextForgeShell(rootElement) {
       openWith: 'Shell routing',
       state: 'open',
       placement: 'main',
-      previewHtml: `
-        <div class="welcome-card">
+      mount(container) {
+        const card = document.createElement('div');
+        card.className = 'welcome-card';
+        card.innerHTML = `
           <p>This checkpoint proves the shell is not hard-coded anymore. It now renders workspace state and package-driven surfaces from the Phase 1 package APIs.</p>
           <ul>
             <li>Workspace tree from @textforge/workspace</li>
@@ -237,9 +243,9 @@ export function bootTextForgeShell(rootElement) {
             <li>Text editor surface from @textforge/editors</li>
             <li>Asset viewers from @textforge/assets</li>
           </ul>
-        </div>
-      `,
-      bind() {},
+        `;
+        container.replaceChildren(card);
+      },
     };
   }
 
@@ -253,14 +259,16 @@ export function bootTextForgeShell(rootElement) {
       openWith: 'Workspace navigator',
       state: 'active',
       placement: 'sidebar',
-      previewHtml: `
-        <div class="folder-card">
+      mount(container) {
+        const card = document.createElement('div');
+        card.className = 'folder-card';
+        card.innerHTML = `
           <span class="folder-card__title">${escapeHtml(selectedItem?.label ?? selected.metadata.title ?? selected.path)}</span>
-          <span class="folder-card__meta">${escapeHtml(selected.path)} • ${escapeHtml(selected.kind)}</span>
+          <span class="folder-card__meta">${escapeHtml(selected.path)} - ${escapeHtml(selected.kind)}</span>
           <p class="folder-card__body">Tree items are built from the workspace service snapshot and selected resource state.</p>
-        </div>
-      `,
-      bind() {},
+        `;
+        container.replaceChildren(card);
+      },
     };
   }
 
@@ -290,7 +298,6 @@ export function bootTextForgeShell(rootElement) {
             text: nextDocument.text,
           });
           activeTextDocuments.set(resource.id, nextDocument);
-          render();
         },
       });
       return {
@@ -299,9 +306,8 @@ export function bootTextForgeShell(rootElement) {
         openWith,
         state: session.state,
         placement: session.placement,
-        previewHtml: surface.html,
-        bind(container) {
-          surface.bind(container);
+        mount(container) {
+          surface.mount(container);
         },
       };
     }
@@ -333,8 +339,9 @@ export function bootTextForgeShell(rootElement) {
       openWith,
       state: session.state,
       placement: session.placement,
-      previewHtml: surface.html,
-      bind() {},
+      mount(container) {
+        surface.mount(container);
+      },
     };
   }
 
@@ -434,7 +441,7 @@ export function bootTextForgeShell(rootElement) {
       { id: 'workspace', title: 'Workspace', surfaceId: 'workspace', active: state.activeTabId === 'workspace' },
       ...openSessions.map((session) => ({
         ...createSurfaceSessionTab(session),
-        title: `${session.title} · ${session.placement}`,
+        title: `${session.title} - ${session.placement}`,
         active: session.id === state.activeTabId,
       })),
     ];
@@ -488,10 +495,6 @@ export function bootTextForgeShell(rootElement) {
     );
 
     rootElement.append(shell);
-    const previewElement = rootElement.querySelector('.surface-preview');
-    if (previewElement) {
-      activeView.bind(previewElement);
-    }
   }
 
   function createShellHeader(chromeModel) {
@@ -604,7 +607,8 @@ export function bootTextForgeShell(rootElement) {
     surfacePlacement.textContent = activeView.placement === 'popup' ? 'popup' : 'main';
     surfaceOpenWith.textContent = activeView.openWith;
     surfaceState.textContent = activeView.state;
-    surfacePreview.innerHTML = activeView.previewHtml;
+    clearElement(surfacePreview);
+    activeView.mount(surfacePreview);
   }
 
   function createInspectorPanel() {
@@ -651,8 +655,8 @@ export function bootTextForgeShell(rootElement) {
       <ul>
         <li>Workspace tree reflects the live workspace snapshot</li>
         <li>Surface tabs come from live host sessions</li>
-        <li>Text resources open in a concrete editable surface</li>
-        <li>Binary resources open in a concrete viewer surface</li>
+        <li>Text resources open in a mounted editable surface</li>
+        <li>Binary resources open in a mounted viewer surface</li>
       </ul>
     `;
 
@@ -664,8 +668,8 @@ export function bootTextForgeShell(rootElement) {
     const footer = document.createElement('footer');
     footer.className = 'shell-footer';
     footer.innerHTML = `
-      <span>Phase 1 closure shell</span>
-      <span>Local-first bootstrap with package-driven workspace and surface routing</span>
+      <span>Phase 1 validation shell</span>
+      <span>Local-first bootstrap with package-driven workspace and mounted surface routing</span>
     `;
     return footer;
   }
