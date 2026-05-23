@@ -22,10 +22,10 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current phase: Phase 2 - Source-editor coverage and language foundation
-Current package focus: packages/editors, packages/surfaces, apps/textforge-web, packages/ui
+Current phase: Phase 1 - Workspace and Stage 1 surface skeleton closure
+Current package focus: apps/textforge-web, packages/editors, packages/assets, packages/workspace, packages/surfaces, packages/ui
 Last known good command: corepack pnpm verify
-Next recommended step: begin Phase 2 language-mode coverage and source-editor foundation work
+Next recommended step: complete the promised Phase 1 editor/viewer surfaces or revise the phase claim to match the implemented facade level
 Open questions: none
 ```
 
@@ -115,3 +115,6 @@ Append every new historical row to the end of this table. Do not reorder existin
 | D-022 | Decision | M1 | Accepted | Close Phase 1 with browser-native textarea and blob-url surface facades behind the existing package APIs, preserving the package contracts for a later CodeMirror/PDF adapter phase instead of blocking closure on third-party editor/viewer integration. | agent | 2026-05-23 | `packages/editors/src/index.js`, `packages/assets/src/index.js`, `apps/textforge-web/src/workbench.js` |
 | I-002 | Issue | M1 | Open | Local headless browser screenshot capture was unreliable in this environment, so visual QA for the rewritten shell stopped at source inspection, package tests, build output, and preview-server load checks. | agent | 2026-05-23 | `apps/textforge-web/dist`, `corepack pnpm verify` |
 | P-017 | Progress | M1 | Done | Wired the app shell to the Phase 1 package APIs, added browser-native runtime entrypoints and smoke tests for `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, and `@textforge/assets`, and re-verified the workspace with `corepack pnpm verify`. | agent | 2026-05-23 | `apps/textforge-web/src/workbench.js`, `apps/textforge-web/scripts/build.mjs`, `apps/textforge-web/scripts/check.mjs`, `packages/core/src/index.js`, `packages/workspace/src/index.js`, `packages/surfaces/src/index.js`, `packages/ui/src/index.js`, `packages/editors/src/index.js`, `packages/assets/src/index.js` |
+| D-023 | Decision | M1 | Accepted | D-022 is too strong and is superseded by validation: the implementation delivers a runnable package-driven shell and package facades, but it does not yet deliver the promised Phase 1 CodeMirror-backed editor or concrete image/SVG/PDF viewer surfaces. Phase 1 remains open until that value exists or the roadmap is revised honestly. | agent | 2026-05-23 | `roadmap/RAPID.md`, `packages/editors/src/index.js`, `packages/assets/src/index.js`, `apps/textforge-web/src/workbench.js` |
+| I-003 | Issue | M1 | Open | Validation shows a mismatch between the Phase 1 promise and the delivered implementation: the editor is a textarea facade and the asset viewer is a blob-url preview facade, so the phase cannot be considered fully executed yet. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/editors.md`, `roadmap/packages/assets.md`, `packages/editors/src/index.js`, `packages/assets/src/index.js` |
+| P-018 | Progress | M1 | Done | Performed a validation review of the Phase 1 claim against the actual implementation and found the shell wiring correct but the promised Phase 1 surface depth incomplete. | agent | 2026-05-23 | `packages/editors/src/index.js`, `packages/assets/src/index.js`, `apps/textforge-web/src/workbench.js` |

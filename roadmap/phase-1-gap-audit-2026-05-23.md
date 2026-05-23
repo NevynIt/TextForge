@@ -84,4 +84,6 @@ The Phase 1 closure slice has now addressed the listed gaps:
 - package-level smoke checks now replace the placeholder validation scripts for the changed packages;
 - the workspace/surfaces/assets compile-level issues were eliminated by the JS runtime entrypoints used by the runnable shell.
 
-Phase 2 is now the next active roadmap phase.
+## Validation correction
+
+The validation review of the delivered implementation shows that the shell is package-driven, but the Phase 1 value promise is not fully met yet because the editor and asset packages still expose browser-native facades rather than the promised CodeMirror-backed surface and concrete viewer surfaces. Phase 1 therefore remains open until that value exists, or the roadmap is revised to describe the delivered facade level honestly.
