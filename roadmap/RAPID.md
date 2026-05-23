@@ -25,7 +25,7 @@ Current branch: rewrite/v2-monorepo
 Current phase: Phase 1 - Workspace and Stage 1 surface skeleton validation
 Current package focus: roadmap instructions, packages/editors, packages/assets, apps/textforge-web
 Last known good command: corepack pnpm verify
-Next recommended step: complete the promised Phase 1 editor/viewer surfaces or revise the phase claim to match the implemented facade level
+Next recommended step: complete and validate the promised Phase 1 editor/viewer surfaces; phase claims must not be revised downward to disguise incomplete work
 Open questions: none
 ```
 
@@ -120,3 +120,5 @@ Append every new historical row to the end of this table. Do not reorder existin
 | P-018 | Progress | M1 | Done | Performed a validation review of the Phase 1 claim against the actual implementation and found the shell wiring correct but the promised Phase 1 surface depth incomplete. | agent | 2026-05-23 | `packages/editors/src/index.js`, `packages/assets/src/index.js`, `apps/textforge-web/src/workbench.js` |
 | D-024 | Decision | Docs | Accepted | Facade closures are not accepted. A phase may only be claimed closed after validation demonstrates the promised user-facing behavior, not merely API preservation, browser-native shims, or build/test success. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md` |
 | P-019 | Progress | Docs | Done | Tightened the agent instructions and roadmap operating model so future phase claims require validation of the promised behavior and explicitly reject facade-only closures. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/RAPID.md` |
+| D-025 | Decision | Docs | Accepted | Phase claims must not be revised downward to mask incomplete work. If the promised phase value is not implemented and validated, the phase stays open until it is or the roadmap itself is explicitly changed by a documented decision. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/RAPID.md` |
+| P-020 | Progress | Docs | Done | Clarified the closure rule to forbid downward phase revisions and require validation of the promised value before any closure claim. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/RAPID.md` |

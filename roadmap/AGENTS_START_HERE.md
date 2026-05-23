@@ -72,7 +72,11 @@ If a plan does not include understanding, implementation, verification, document
 
 Facade closures are not accepted.
 
-A package, shell, editor, viewer, or other surface does not count as closed just because it preserves an API, renders a placeholder, or exposes a browser-native shim behind the promised contract. A closure claim must be backed by validation that exercises the promised user-facing value of the phase.
+A package, shell, editor, viewer, or other surface does not count as closed just because it preserves an API, renders a placeholder, or exposes a browser-native shim behind the promised contract.
+
+Do not revise a phase claim downward to escape incomplete work. If the promised phase value is not implemented, the phase stays open.
+
+A closure claim must be backed by validation that exercises the promised user-facing value of the phase.
 
 Before claiming phase closure or phase-slice closure, validate the delivered behavior against the roadmap promise itself, not only against build, lint, typecheck, or smoke-test success.
 
