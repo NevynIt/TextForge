@@ -1,4 +1,4 @@
-# TextForge V15 Repository and Package Strategy
+# TextForge V15b Repository and Package Strategy
 
 ## Purpose
 
@@ -329,6 +329,18 @@ This keeps the app shell thin and prevents each feature from editing central app
 ---
 
 ## Phase implication
+
+### Phase 3 recovery implication
+
+Phase 3.1, Phase 3.2, and Phase 3.3 are inserted between ZIP import/export and Markdown/diagram work. They are still package-boundary validation phases:
+
+```text
+Phase 3.1: React shell/UI recovery across apps/textforge-web, @textforge/ui, @textforge/surfaces, @textforge/editors, @textforge/assets, and @textforge/security-profile.
+Phase 3.2: Dexie persistence recovery across @textforge/workspace, apps/textforge-web, @textforge/ui, @textforge/assets, and @textforge/security-profile.
+Phase 3.3: shell-command and palette composition across @textforge/core, @textforge/ui, @textforge/workspace, @textforge/surfaces, @textforge/editors, @textforge/assets, and apps/textforge-web.
+```
+
+Phase 3.3 creates the shell command substrate only. Phase 5 remains responsible for the full contribution-pack system, pipeline contribution loading, diagnostics aggregation, and broad package composition.
 
 Every roadmap phase should say which packages are created or updated. A phase is not only a feature phase; it is also a package-boundary validation phase.
 

@@ -94,7 +94,7 @@ cat roadmap/RAPID.md 2>/dev/null || true
 cat roadmap/00_package_aware_roadmap.md 2>/dev/null || true
 ```
 
-If `roadmap/` does not exist yet, copy or merge the V15a `roadmap/` folder into the repository root. If the repository has not yet been pivoted, follow the Phase -1 instructions in `roadmap/00_package_aware_roadmap.md`, using Git history and the preserved RAPID record as the operational source.
+If `roadmap/` does not exist yet, copy or merge the V15b `roadmap/` folder into the repository root. If the repository has not yet been pivoted, follow the Phase -1 instructions in `roadmap/00_package_aware_roadmap.md`, using Git history and the preserved RAPID record as the operational source.
 
 After the repository is initialized, use the available verification commands instead of inventing new ones. Typical commands will eventually be:
 
@@ -237,6 +237,22 @@ Use this order:
 5. Run the existing verification command if available.
 6. Continue with the next smallest coherent task that advances the current phase.
 7. Re-run the narrowest relevant verification after each coherent slice and before any phase-slice commit.
+
+## Phase 3 recovery sequence
+
+After Phase 3 ZIP import/export closes, do not jump directly to Phase 4. The roadmap now inserts three explicit phases:
+
+```text
+Phase 3.1 — React workbench shell and UI recovery
+Phase 3.2 — Dexie workspace persistence recovery
+Phase 3.3 — Command palette and contribution-driven shell commands
+```
+
+Treat Phase 3.1 and Phase 3.2 as recovery phases for promised work that was previously deferred. Treat Phase 3.3 as a deliberate pull-forward of only the shell-facing command palette and menu/toolbar slice from Phase 5.
+
+Phase 3.3 is not permission to pull the whole Phase 5 contribution system forward. Do not implement pipeline contribution loading, diagnostics aggregation UI, plugin management, deep context-menu proliferation, or later domain package work in Phase 3.3.
+
+Each of these phases must update the central roadmap, the affected package guide, and `RAPID.md` in the same commit as the implementation slice.
 
 ## Package-boundary rules
 

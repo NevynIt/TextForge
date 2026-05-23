@@ -28,15 +28,25 @@ WorkspaceService, WorkspaceResource, WorkspaceFolder, WorkspaceMutation, Workspa
 
 ### Phase 1 — Workspace and Stage 1 surface skeleton
 
-Create. Virtual files/folders, resource IDs, text/binary resource metadata, Dexie schema, basic create/open/save/delete/rename/move APIs.
+Create. Virtual files/folders, resource IDs, text/binary resource metadata, Dexie schema, basic create/open/save/delete/rename/move APIs. The schema may exist before the real Dexie runtime is wired.
 
 ### Phase 3 — ZIP workspace import/export
 
 Update. Add fflate ZIP import/export, selected-folder export, full-workspace export, workspace manifest, path normalization, conflict policy.
 
+### Phase 3.2 — Dexie workspace persistence recovery
+
+Update. Add Dexie as a real runtime dependency and implement versioned IndexedDB-backed persistence for folders, text resources, binary resources, resource metadata, language IDs, workspace manifests, and schema versioning. Hydrate the workspace on startup, persist all core mutation flows, and make ZIP import/export operate against the persisted workspace state.
+
+Include explicit reset/recovery behaviour for corrupted or incompatible local browser storage. Exclude remote sync, filesystem mirroring, directory handles, session-layout restore, and open-tab restore.
+
+### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Update. Expose existing workspace actions as shell command contributions where applicable, including import/export, selected-folder ZIP export, new folder/resource, rename, delete, and storage reset/recovery actions. Do not add new workspace behaviours solely to populate the palette.
+
 ## Tests and definition of done
 
-Persistence tests, ZIP import/export tests, path normalization tests, binary resource round-trip tests, workspace manifest tests.
+Persistence tests, Dexie schema/version tests after Phase 3.2, ZIP import/export tests, path normalization tests, binary resource round-trip tests, workspace manifest tests, and command contribution tests after Phase 3.3.
 
 ## Non-goals
 

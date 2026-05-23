@@ -34,6 +34,18 @@ Create. Define profile files, open-source license gate, CSP/manifest/service-wor
 
 Update. Add generic checks for forbidden privileged filesystem APIs and archive boundary documentation. Do not inspect TextForge internal gateway discipline.
 
+### Phase 3.1 — React workbench shell and UI recovery
+
+Update. Re-run and extend dependency/license and browser-envelope checks for React, React DOM, and any adopted shell layout dependencies. Preserve the no-network, no privileged filesystem API, and source-owned runnable-artifact constraints.
+
+### Phase 3.2 — Dexie workspace persistence recovery
+
+Update. Document and check the browser-managed storage boundary. Confirm the implementation does not use File System Access API, directory handles, background sync, remote sync, or silent local file access.
+
+### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Update only if command registration introduces new dependency or browser-envelope implications. The palette is a local command dispatcher, not an external plugin permission system.
+
 ### Phase 16 — ArchiMate visual editing investigation
 
 Update. Add dependency/license review notes for any adopted ArchiMate visual library.
@@ -44,7 +56,7 @@ Update. Finalize reusable browser-envelope checks for static/extension/PWA targe
 
 ## Tests and definition of done
 
-Browser-envelope checks for CSP, manifests, service workers, remote assets, forbidden privileged APIs, and dependency licenses.
+Browser-envelope checks for CSP, manifests, service workers, remote assets, forbidden privileged APIs, browser-managed storage boundaries, command-palette local execution assumptions, and dependency licenses.
 
 ## Non-goals
 

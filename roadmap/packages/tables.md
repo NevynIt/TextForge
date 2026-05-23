@@ -30,6 +30,10 @@ Table surface contributions, catalogue/matrix abstractions, CSV/TSV editing, iss
 
 ## Milestone plan
 
+### Phase 3.1–3.3 — Recovery-phase compatibility
+
+No direct table feature work. These phases establish React shell usability, Dexie persistence, and shell-command composition. This package should not be started early, but later work must consume the resulting workspace, surface, and command contracts through public interfaces.
+
 ### Phase 11 — Tables, catalogues, and matrices
 
 Create. TanStack Table semantic table surfaces, CSV/TSV grid editor, catalogue/matrix abstractions, validation issue table.

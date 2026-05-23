@@ -36,6 +36,14 @@ Create. CodeMirrorTextEditorSurface with generic text editing and source range h
 
 Update. Add CodeMirror language modes, syntax highlighting, and editor configuration for Markdown, ITM, Lua, JSON, XML, BPMN XML, ArchiMate exchange XML, CSV/TSV, Mermaid, DOT, SVG, YAML.
 
+### Phase 3.1 — React workbench shell and UI recovery
+
+Update only as needed to ensure existing CodeMirror source-editor surfaces mount correctly through the React shell and preserve source selection/range hooks. Do not add rich editing, new language features, or domain authoring helpers here.
+
+### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Update only to expose existing source-editor actions as command descriptors where they already exist. Do not add new editor behaviour simply to populate the command palette.
+
 ### Phase 6 — ITM integration and model/report foundation
 
 Update. Add ITM source assistance and diagnostics integration.
@@ -50,7 +58,7 @@ Update. Define rich-editor capability and unsupported-construct warning conventi
 
 ## Tests and definition of done
 
-Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests.
+Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests, React-shell mounting smoke tests after Phase 3.1, and command descriptor tests after Phase 3.3 where applicable.
 
 ## Non-goals
 

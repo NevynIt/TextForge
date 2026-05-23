@@ -30,6 +30,10 @@ Resource-browser content, sample workspaces, fixtures, tutorials, package docs.
 
 Create. Project docs index, sample workspace conventions, package documentation template.
 
+### Phase 3.1–3.3 — Recovery-phase documentation alignment
+
+Update only if the recovery phases change user-facing onboarding, workspace storage wording, shell screenshots, or package contribution examples. Keep examples aligned with the React shell, Dexie persistence boundary, and command-palette flow once those phases land.
+
 ### Phase 19 — Release-envelope verification and accreditation evidence
 
 Update. Add release checklist, example accreditation output, sample build artifacts, and end-to-end tutorial workspace.

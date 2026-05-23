@@ -37,6 +37,18 @@ Create. Image/SVG/PDF/generic binary read-only surfaces; blob URL lifecycle; wor
 
 Update. Ensure binary files round-trip through workspace ZIP.
 
+### Phase 3.1 — React workbench shell and UI recovery
+
+Update only as needed to ensure existing image/SVG/PDF/generic binary viewer surfaces mount through the React shell without changing asset semantics.
+
+### Phase 3.2 — Dexie workspace persistence recovery
+
+Update. Ensure binary resources persist and rehydrate correctly through the workspace Dexie backend, and that blob URL lifecycle remains package-owned after hydration.
+
+### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Update only to expose existing asset viewer actions as command descriptors where they already exist. Do not add generated asset workflows early.
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 Update. Add generated asset provenance, stale-state display, SVG/PNG export actions.
@@ -51,7 +63,7 @@ Update. Optional PDF annotation layer over PDF.js; store annotations as separate
 
 ## Tests and definition of done
 
-Image/SVG/PDF viewing tests, blob URL lifecycle tests, generated asset provenance tests.
+Image/SVG/PDF viewing tests, blob URL lifecycle tests, React-shell mounting smoke tests after Phase 3.1, persisted binary rehydration tests after Phase 3.2, command descriptor tests after Phase 3.3 where applicable, and generated asset provenance tests.
 
 ## Non-goals
 

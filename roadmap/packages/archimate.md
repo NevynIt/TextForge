@@ -32,6 +32,10 @@ ArchiMate profile package, validation, import/export, catalogues, matrices, EA r
 
 ## Milestone plan
 
+### Phase 3.1–3.3 — Recovery-phase compatibility
+
+No direct ArchiMate feature work. These phases establish React shell usability, Dexie persistence, and shell-command composition. This package should not be started early, but later work must consume the resulting workspace, surface, and command contracts through public interfaces.
+
 ### Phase 12 — Enterprise architecture and ArchiMate foundation
 
 Create. ArchiMate ITM profile, element/relationship definitions, validation rules, viewpoints, style rules, exchange XML import/export, EA catalogues and matrices.

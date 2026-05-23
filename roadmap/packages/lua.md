@@ -30,6 +30,10 @@ Lua worker service, sandbox configuration, tf.* bridge, Lua console/editor surfa
 
 ## Milestone plan
 
+### Phase 3.1–3.3 — Recovery-phase compatibility
+
+No direct Lua feature work. These phases establish React shell usability, Dexie persistence, and shell-command composition. This package should not be started early, but later work must consume the resulting workspace, surface, and command contracts through public interfaces.
+
 ### Phase 8 — Lua automation
 
 Create. Fengari worker, sandbox, tf.* capability bridge, Lua editor/console surfaces, action discovery, pipeline action adapter.

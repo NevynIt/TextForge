@@ -3,7 +3,7 @@
 **Version:** 15  
 **Purpose:** Standalone architecture blueprint for rebuilding TextForge from scratch as a React-based, local-first, text-first, secure browser workbench. The design centers on an application-private virtual workspace, ITM as the canonical structural model, explicit pipelines, restricted Lua automation, binary workspace resources, Markdown/report generation, enterprise architecture and ArchiMate support, browser-envelope accreditation, and a Surface-based UI where editors, rich editors, structured editors, viewers, consoles, inspectors, and generated previews are peers.
 
-This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15 roadmap documents under `roadmap/`.
+This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15b roadmap documents under `roadmap/`.
 
 ---
 
@@ -197,8 +197,12 @@ Stage 1 target:
   one main surface area
   optional popup placement for any surface that supports it
 
+Phase 3.1 usability recovery:
+  narrow main-session document tab strip
+  cleaner React shell
+
 Stage 2 target, later:
-  tabbed main surface group
+  advanced tabbed main surface groups
   editors and viewers as peer tabs
 
 Future after Stage 2:
@@ -364,7 +368,8 @@ Recommended initial target:
 
 ```text
 Stage 1: one main surface + optional popup placement
-Stage 2: tabbed main surface group, added later in the roadmap
+Phase 3.1 usability recovery: narrow main-session document tab strip and cleaner React shell
+Stage 2: advanced tabbed main surface groups, added later in the roadmap
 Future: split panes, saved layouts, detached windows
 ```
 
@@ -1919,9 +1924,9 @@ A surface can be moved between main and popup if supported.
 The main surface is not synonymous with CodeMirror.
 ```
 
-### 7.3 Stage 2 target: tabbed main surfaces
+### 7.3 Stage 2 target: advanced tabbed main surfaces
 
-Stage 2 is the target workbench model, but it should be implemented later in the roadmap after the basic surface abstraction is stable.
+Stage 2 is the target advanced workbench model, but it should be implemented later in the roadmap after the basic surface abstraction is stable. The roadmap may introduce a narrow Phase 3.1 main-session tab strip earlier for usability; that earlier strip is not the full Stage 2 tab-group model.
 
 Stage 2 adds a tabbed main surface group where editors and viewers are peers:
 
@@ -2173,7 +2178,7 @@ This avoids a separate `TextForge2` repository while avoiding a confusing side-b
 
 ## 10. Companion roadmap set and authority split
 
-The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15 roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
+The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15b roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
 
 Use the roadmap set as follows:
 

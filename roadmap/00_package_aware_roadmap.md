@@ -1,4 +1,4 @@
-# TextForge V15 Package-Aware Roadmap
+# TextForge V15b Package-Aware Roadmap
 
 This roadmap interweaves the architecture milestones with the package split. It is intentionally package-oriented: every phase states which packages are created or updated and what each package receives.
 
@@ -16,7 +16,7 @@ The application shell composes packages; it should not own feature logic.
 
 ## Runnable-shell rule
 
-The roadmap distinguishes between a minimally runnable shell and a feature milestone.
+The roadmap distinguishes between a minimally runnable shell, recovery phases that repay deferred roadmap promises, and feature milestones.
 
 The first stable user-facing checkpoint is the one where the app shell can launch without a blank placeholder screen and can present the core chrome that orients the user:
 
@@ -31,7 +31,7 @@ When that checkpoint must also remain runnable as a direct local `file://` artif
 
 Phase 1 and later milestones add substantive workbench behavior. They do not replace the need for a first runnable shell.
 
-Operationally, treat this as Phase 0.5: the first runnable shell sits between the repository pivot and Phase 1 workspace/surface skeleton work.
+Operationally, treat this as Phase 0.5: the first runnable shell sits between the repository pivot and Phase 1 workspace/surface skeleton work. Recovery phases may be inserted later when implementation deliberately deferred promised value; those phases must be explicit, package-scoped, and must not silently pull unrelated later milestones forward.
 
 
 ## Agent operating model
@@ -106,6 +106,51 @@ Instruction updates are part of the work product. If a phase changes the plan, i
 | `@textforge/security-profile` | Update | Update. Add generic checks for forbidden privileged filesystem APIs and archive boundary documentation. Do not inspect TextForge internal gateway discipline. |
 | `@textforge/assets` | Update | Update. Ensure binary files round-trip through workspace ZIP. |
 
+### Phase 3.1 — React workbench shell and UI recovery
+
+Recovery phase. This repays the deferred React workbench and still-model-only `@textforge/ui` promise. It is a usability and shell-foundation phase, not a domain-feature phase.
+
+| Package | Action | Content |
+|---|---|---|
+| `apps/textforge-web` | Update | Introduce `react` and `react-dom`; replace the imperative browser-native workbench bootstrap with a React-rendered shell while preserving the supported local/static or extension-hosted runnable path. |
+| `@textforge/ui` | Update | Convert chrome contracts into real React primitives: app frame, top bar, collapsible workspace tree region, dominant main surface frame, compact status rail, main-session tab strip, and utility/debug pane hidden by default. Add baseline accessibility and keyboard behaviour. |
+| `@textforge/surfaces` | Update | Preserve the current registry/session/host contracts while adapting host props and state to React. Expose the narrow main-session tab model needed by the refreshed shell and keep popup sessions out of the main document strip. |
+| `@textforge/editors` | Update | Validate that existing CodeMirror editor surfaces mount through the React shell without changing source-editor behaviour or pulling rich-editor work forward. |
+| `@textforge/assets` | Update | Validate that existing image/SVG/PDF/generic binary viewer surfaces mount through the React shell without changing asset semantics. |
+| `@textforge/security-profile` | Update | Re-check dependency/license and runnable-artifact constraints after React adoption; preserve the no-network and no privileged filesystem API posture. |
+
+Scope boundary: no command palette or contribution-driven menus yet; no Dexie persistence; no advanced Phase 13 tab groups, drag-reorder, split panes, saved layout state, or domain feature work.
+
+### Phase 3.2 — Dexie workspace persistence recovery
+
+Recovery phase. This repays the workspace persistence promise that was represented as schema/model surface earlier but not yet delivered as a real browser persistence backend.
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/workspace` | Update | Add Dexie as a real runtime dependency. Implement versioned IndexedDB stores for folders, text resources, binary resources, metadata, language IDs, workspace manifest data, and schema versioning. Hydrate workspace state on startup and persist create/save/rename/move/delete/import/export flows. |
+| `apps/textforge-web` | Update | Wire the shell to the persisted workspace service, including startup hydration, explicit reset/recovery affordances, and clear handling of storage initialization failures. |
+| `@textforge/ui` | Update | Add any small storage-boundary cues needed by the shell, such as browser-managed workspace wording and reset/clear-storage confirmation chrome. |
+| `@textforge/assets` | Update | Ensure binary resources persist and rehydrate correctly, with blob URL lifecycle still owned by the asset layer after Dexie hydration. |
+| `@textforge/security-profile` | Update | Document and check the browser-managed storage boundary. Confirm that persistence still does not use File System Access API, directory handles, background sync, remote sync, or silent local file access. |
+
+Scope boundary: no session-layout restore, no open-tab restore, no remote sync, no filesystem mirroring, and no command palette/menu work.
+
+### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Deliberate pull-forward. This moves the shell-facing command palette and menu/toolbar composition slice from Phase 5 so the React shell stops depending on hard-coded toolbar/menu behaviour. It does not pull the full Phase 5 contribution system forward.
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/core` | Update | Finalize the minimal command manifest, command registry, command context, command handler, and command contribution contracts needed for shell commands. |
+| `@textforge/ui` | Update | Add command palette UI, command search/filter/execute behaviour, and contribution-driven toolbar/menu slot rendering. |
+| `@textforge/workspace` | Update | Expose existing workspace actions such as import/export, new folder/resource, rename, delete, and selected-folder ZIP export as shell command contributions where applicable. |
+| `@textforge/surfaces` | Update | Expose existing surface actions such as open-with, close, refresh/current-state display, and move main/popup as shell command contributions where applicable. |
+| `@textforge/editors` | Update | Expose only existing editor actions that are already part of the source-editor surface as command descriptors; do not add rich editing or new domain authoring features. |
+| `@textforge/assets` | Update | Expose only existing asset viewer actions that already exist as command descriptors; do not add generated asset workflows early. |
+| `apps/textforge-web` | Update | Replace hard-coded primary toolbar/menu conditionals with registry-driven command composition and palette invocation. |
+
+Scope boundary: no full pipeline contribution loading, no diagnostics aggregation UI, no plugin manager, no deep context-menu proliferation, no advanced permissions model, and no later domain packages. Phase 5 remains responsible for the broader contribution-pack system.
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 | Package | Action | Content |
@@ -117,12 +162,14 @@ Instruction updates are part of the work product. If a phase changes the plan, i
 
 ### Phase 5 — Contribution registries and package composition
 
+Phase 5 extends the Phase 3.3 shell-command substrate into the broader package contribution system. Do not reimplement the command palette here; use Phase 5 to add the remaining contribution kinds and package-composition rules.
+
 | Package | Action | Content |
 |---|---|---|
-| `@textforge/core` | Update | Update. Finalize contribution pack manifest shape and dependency declarations. |
-| `@textforge/surfaces` | Update | Update. Add package-provided surface registration and capability-filtered commands. |
+| `@textforge/core` | Update | Update. Extend the Phase 3.3 command contracts into the full contribution pack manifest shape, dependency declarations, capability declarations, and package composition rules. |
+| `@textforge/surfaces` | Update | Update. Add package-provided surface registration and capability-filtered commands beyond the base shell actions delivered in Phase 3.3. |
 | `@textforge/pipeline` | Update | Update. Add step contribution loading, diagnostics aggregation, intermediate value reopening. |
-| `@textforge/ui` | Update | Update. Add command palette and contribution-driven menu/toolbar slots. |
+| `@textforge/ui` | Update | Update. Extend contribution-driven menu/toolbar slots for feature packages, diagnostics, and package-composition feedback without broadening Phase 3.3 retroactively. |
 
 ### Phase 6 — ITM integration and model/report foundation
 
@@ -183,13 +230,15 @@ Instruction updates are part of the work product. If a phase changes the plan, i
 | `@textforge/tables` | Update | Update. Reusable EA catalogue/matrix editors. |
 | `@textforge/archimate` | Create | Create. ArchiMate ITM profile, element/relationship definitions, validation rules, viewpoints, style rules, exchange XML import/export, EA catalogues and matrices. |
 
-### Phase 13 — Stage 2 tabbed main surfaces
+### Phase 13 — Stage 2 advanced tabbed main surfaces
+
+Phase 3.1 may already provide a narrow main-session document tab strip for usability. Phase 13 is the later advanced tabbed-surface milestone.
 
 | Package | Action | Content |
 |---|---|---|
 | `@textforge/core` | Update | Update. Add stable session persistence types if needed. |
-| `@textforge/surfaces` | Update | Update. Add tabbed main surface groups, tab movement, open-to-main/open-as-popup transitions. Splits remain future. |
-| `@textforge/ui` | Update | Update. Add tab chrome and keyboard navigation. |
+| `@textforge/surfaces` | Update | Update. Add tab groups, tab movement, richer open-to-main/open-as-popup transitions, optional pinned state, and advanced session semantics. Splits remain future. |
+| `@textforge/ui` | Update | Update. Add advanced tab chrome, movement affordances, group-aware keyboard navigation, and richer tab-state indicators. |
 
 ### Phase 14 — Rich Markdown editing, optional and round-trip gated
 

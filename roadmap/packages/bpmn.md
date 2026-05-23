@@ -31,6 +31,10 @@ BPMN XML surfaces, modeler write-back contract, BPMN diagnostics, BPMN import/ex
 
 ## Milestone plan
 
+### Phase 3.1–3.3 — Recovery-phase compatibility
+
+No direct BPMN feature work. These phases establish React shell usability, Dexie persistence, and shell-command composition. This package should not be started early, but later work must consume the resulting workspace, surface, and command contracts through public interfaces.
+
 ### Phase 10 — BPMN support and first mature visual editor
 
 Create. BPMN XML language integration, bpmn-js viewer/modeler surfaces, controlled edit mode, XML patch preview/apply/discard, diagnostics refresh.

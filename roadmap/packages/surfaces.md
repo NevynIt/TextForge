@@ -35,9 +35,19 @@ Create. SurfaceContribution, SurfaceSession, SurfaceRegistry, one main SurfaceHo
 
 Update. Add open-with selection, source editor fallback, basic stale/current indicators.
 
+### Phase 3.1 — React workbench shell and UI recovery
+
+Update. Keep the registry, session, placement, and host contracts stable while making them easy for the React shell to consume. Support the narrow main-session tab model required by the refreshed shell, with popup sessions kept out of the main document strip.
+
+Do not add Phase 13 tab groups, drag movement, saved layout state, splits, or richer session persistence here.
+
+### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Update. Expose existing surface actions as shell command contributions where applicable: open-with, close, refresh/current-state handling, move main/popup, and active-surface focus actions. Preserve capability filtering through public contracts.
+
 ### Phase 5 — Contribution registries and package composition
 
-Update. Add package-provided surface registration and capability-filtered commands.
+Update. Add package-provided surface registration and capability-filtered commands beyond the base shell actions delivered in Phase 3.3.
 
 ### Phase 7 — ITM visual projections
 
@@ -47,13 +57,13 @@ Update. Add ITM projection surface registrations.
 
 Update. Ensure controlled-write-back capability is represented in surface chrome.
 
-### Phase 13 — Stage 2 tabbed main surfaces
+### Phase 13 — Stage 2 advanced tabbed main surfaces
 
-Update. Add tabbed main surface groups, tab movement, open-to-main/open-as-popup transitions. Splits remain future.
+Update. Add tabbed main surface groups, tab movement, richer open-to-main/open-as-popup transitions, optional pinned state, and advanced session semantics. Splits remain future.
 
 ## Tests and definition of done
 
-Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests.
+Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests, React-shell host compatibility tests after Phase 3.1, and command contribution tests after Phase 3.3.
 
 ## Non-goals
 

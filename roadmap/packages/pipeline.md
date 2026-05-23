@@ -27,13 +27,17 @@ PipelineContribution, PipelineStep, PipelineRunner, PipelineTrace, PipelineResul
 
 ## Milestone plan
 
+### Phase 3.3 — Command palette and contribution-driven shell commands
+
+No direct package work. This phase must not pull pipeline contribution loading, diagnostics aggregation, or intermediate reopening forward. It only creates the shell-command substrate that later pipeline actions may use.
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 Create. Minimal pipeline contribution registry, pipeline runner, trace, generated resource output type.
 
 ### Phase 5 — Contribution registries and package composition
 
-Update. Add step contribution loading, diagnostics aggregation, intermediate value reopening.
+Update. Add step contribution loading, diagnostics aggregation, intermediate value reopening using the broader contribution-pack system that extends Phase 3.3.
 
 ### Phase 6 — ITM integration and model/report foundation
 

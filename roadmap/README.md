@@ -1,8 +1,8 @@
-# TextForge Rebuild Roadmap Package V15a
+# TextForge Rebuild Roadmap Package V15b
 
 This package is arranged as a single drop-in `roadmap/` folder for the TextForge repository. Copy or merge this folder into the repository root. After that, every coding agent should start from `roadmap/AGENTS_START_HERE.md`.
 
-The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, and the append-only RAPID log for risks, actions, progress, issues, and decisions.
+The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15b adds the Phase 3.1 React/UI recovery, Phase 3.2 Dexie persistence recovery, and Phase 3.3 shell command/palette pull-forward sequence before Phase 4.
 
 For runnable local artifacts, the live instruction set now assumes a source-owned bootstrap path: a canonical file-launch HTML document plus a deterministic classic loader bundle, not a shipped module-script HTML entry repaired by post-build rewriting.
 
@@ -18,7 +18,7 @@ Authority split:
 - `01_repository_and_package_strategy.md` — monorepo, pnpm workspace, package versioning, scoped commits, and package-boundary strategy.
 - `RAPID.md` — repository-local append-only RAPID log.
 - `textforge_rebuild_whitepaper_main.md` — main standalone architecture body; it deliberately does not own phase sequencing.
-- `packages/*.md` — one implementation guide per package.
+- `packages/*.md` — one implementation guide per package, including Phase 3.1/3.2/3.3 recovery/pull-forward responsibilities or compatibility notes.
 
 ## How to use
 

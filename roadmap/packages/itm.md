@@ -28,6 +28,10 @@ parse/serialize/resolve/validate/project APIs, selector/style/viewpoint/profile 
 
 ## Milestone plan
 
+### Phase 3.1–3.3 — Recovery-phase compatibility
+
+No direct ITM feature work. These phases establish React shell usability, Dexie persistence, and shell-command composition. This package should not be started early, but later work must consume the resulting workspace, surface, and command contracts through public interfaces.
+
 ### Phase 6 — ITM integration and model/report foundation
 
 Create. Parser/serializer/resolver interfaces, selectors, styles, views/viewpoints, validation diagnostics, profile package loading, workspace include resolver contract.

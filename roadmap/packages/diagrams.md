@@ -30,6 +30,10 @@ Diagram render pipelines, generated SVG/PNG output APIs, diagram source editors,
 
 ## Milestone plan
 
+### Phase 3.1–3.3 — Recovery-phase compatibility
+
+No direct diagram feature work. These phases establish React shell usability, Dexie persistence, and shell-command composition. This package should not be started early, but later work must consume the resulting workspace, surface, and command contracts through public interfaces.
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 Create. Mermaid and Graphviz rendering pipelines, generated SVG resource creation, SVG-to-PNG rasterization pipeline.

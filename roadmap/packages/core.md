@@ -32,17 +32,23 @@ Create. Define stable types: Diagnostic, Severity, SourceRange, ResourceRef, Con
 
 Update. Stabilize language IDs, editor capabilities, lint/diagnostic bridge types.
 
+### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Update. Add the minimal shell-command substrate: CommandManifest, CommandRegistry, CommandContext, CommandHandler, command contribution descriptors, command categories, and capability/context filtering needed for toolbar/menu/palette composition.
+
+This phase is deliberately narrower than the full Phase 5 contribution system. It should support shell commands from existing packages without pulling pipeline steps, diagnostics aggregation, plugin management, or external package loading forward.
+
 ### Phase 5 — Contribution registries and package composition
 
-Update. Finalize contribution pack manifest shape and dependency declarations.
+Update. Extend the Phase 3.3 shell-command substrate into the full contribution pack manifest shape, dependency declarations, capability declarations, and package composition rules for all contribution kinds.
 
-### Phase 13 — Stage 2 tabbed main surfaces
+### Phase 13 — Stage 2 advanced tabbed main surfaces
 
-Update. Add stable session persistence types if needed.
+Update. Add stable session persistence types if needed for advanced tab groups and richer session semantics.
 
 ## Tests and definition of done
 
-Type-level tests, compatibility tests for public contracts, no feature dependency leakage.
+Type-level tests, compatibility tests for public contracts, command registry tests after Phase 3.3, no feature dependency leakage.
 
 ## Non-goals
 

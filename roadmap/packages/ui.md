@@ -18,7 +18,7 @@ Internal dependencies:
 
 - `@textforge/core`
 
-Third-party candidates: Radix UI/Floating UI where useful. All third-party dependencies must pass the open-source license gate.
+Third-party candidates: React, React DOM, React Arborist, react-resizable-panels, Radix UI/Floating UI where useful. All third-party dependencies must pass the open-source license gate.
 
 ## Public surface
 
@@ -34,21 +34,37 @@ Create. Dependency-light theming tokens, icon conventions, app frame placeholder
 
 Update. Workspace tree frame, surface frame, toolbar slots, status badges.
 
+### Phase 3.1 — React workbench shell and UI recovery
+
+Update. Convert the model-only chrome contracts into actual React components and primitives: app frame, top bar, collapsible workspace tree region, main surface frame, compact status rail, main-session tab strip, and utility/debug pane hidden by default.
+
+This phase should make the shell materially more usable for testing while avoiding later feature work. Do not add command palette/menu composition, Dexie persistence, tab groups, drag-reorder, split panes, saved layouts, or domain-specific UI here.
+
+### Phase 3.2 — Dexie workspace persistence recovery
+
+Update only as needed for user-facing browser-managed workspace cues, storage reset/clear confirmations, and storage initialization/recovery messages. Do not make `@textforge/ui` own persistence.
+
+### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Update. Add the command palette, command search/filter/execute behaviour, and contribution-driven toolbar/menu slot rendering for shell commands provided by existing packages.
+
+This phase pulls forward only the shell-facing command UI from Phase 5. It must not add plugin management, diagnostics dashboards, deep context-menu proliferation, or full feature-package contribution UX.
+
 ### Phase 5 — Contribution registries and package composition
 
-Update. Add command palette and contribution-driven menu/toolbar slots.
+Update. Extend the Phase 3.3 menu/toolbar composition for broader package contributions, feature package feedback, and diagnostics/package-composition status. Do not duplicate the basic command palette already delivered in Phase 3.3.
 
 ### Phase 11 — Tables, catalogues, and matrices
 
 Update. Common table toolbar/filter/sort components.
 
-### Phase 13 — Stage 2 tabbed main surfaces
+### Phase 13 — Stage 2 advanced tabbed main surfaces
 
-Update. Add tab chrome and keyboard navigation.
+Update. Add advanced tab chrome, group-aware keyboard navigation, movement affordances, pinned/dirty/stale indicators, and richer tab state beyond the narrow Phase 3.1 main-session strip.
 
 ## Tests and definition of done
 
-Component tests, accessibility checks, keyboard navigation tests where applicable.
+Component tests, accessibility checks, keyboard navigation tests, command palette tests after Phase 3.3, and shell-layout usability smoke tests where applicable.
 
 ## Non-goals
 

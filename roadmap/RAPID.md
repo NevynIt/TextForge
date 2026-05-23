@@ -25,7 +25,7 @@ Current branch: rewrite/v2-monorepo
 Current phase: Phase 3 - ZIP workspace import/export
 Current package focus: packages/workspace
 Last known good command: corepack pnpm verify
-Next recommended step: extend Phase 3 by adding selected-folder ZIP export and explicit import conflict policy handling on top of the new archive manifest/full-workspace import-export helpers in @textforge/workspace
+Next recommended step: finish Phase 3 selected-folder ZIP export and explicit import conflict policy handling, then enter Phase 3.1 React workbench shell and UI recovery before Phase 4
 Open questions: none
 ```
 
@@ -148,3 +148,5 @@ Append every new historical row to the end of this table. Do not reorder existin
 | D-032 | Decision | M3 | Accepted | Phase 3 lands in two coherent workspace slices: first a package-owned archive manifest plus full-workspace ZIP export/import, then selected-folder export and explicit import conflict policy handling. | agent | 2026-05-23 | `roadmap/packages/workspace.md`, `packages/workspace/src/index.js` |
 | P-032 | Progress | M3 | Done | Began Phase 3 by adding an `fflate`-backed workspace archive manifest plus full-workspace ZIP export/import helpers in `@textforge/workspace`, with focused text and binary round-trip validation. | agent | 2026-05-23 | `packages/workspace/src/index.js`, `packages/workspace/test/index.test.js`, `packages/workspace/scripts/check.mjs` |
 | A-008 | Action | M3 | Open | Extend the Phase 3 archive helpers with selected-folder ZIP export and explicit import conflict policy handling. | agent | 2026-05-23 | `roadmap/packages/workspace.md`, `packages/workspace/src/index.js` |
+| D-033 | Decision | M3.x | Accepted | Insert Phase 3.1 React workbench shell and UI recovery, Phase 3.2 Dexie workspace persistence recovery, and Phase 3.3 command palette/contribution-driven shell commands between Phase 3 and Phase 4. Phase 3.1 and 3.2 repay deferred roadmap promises; Phase 3.3 deliberately pulls forward only the shell-facing command slice from Phase 5. | Jill | 2026-05-23 | `chat.md`, `roadmap/00_package_aware_roadmap.md` |
+| P-033 | Progress | Docs | Done | Updated the V15b roadmap package so the central roadmap, agent instructions, repository strategy, and package guides all reflect the new Phase 3.1/3.2/3.3 sequence and its scope boundaries. | agent | 2026-05-23 | `roadmap/packages`, `roadmap/AGENTS_START_HERE.md`, `roadmap/01_repository_and_package_strategy.md` |
