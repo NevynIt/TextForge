@@ -110,7 +110,11 @@ If one of these commands does not exist yet, record that fact in `roadmap/RAPID.
 
 As implementation progresses, run the narrowest relevant verification repeatedly instead of waiting until the end of a large change. Prefer changed-package checks first, then broader workspace verification when the phase slice is ready.
 
-Treat the first runnable shell as a separate phase boundary from later feature work. The shell is stable enough for first use when it launches without a blank placeholder screen, exposes the frame, workspace/navigation chrome, main surface region, toolbar or command entry points, status feedback, and registered contribution routing, and the built `dist/index.html` works as a direct local/static artifact instead of requiring only a preview server.
+Treat the first runnable shell as a separate phase boundary from later feature work. The shell is stable enough for first use when it launches without a blank placeholder screen, exposes the frame, workspace/navigation chrome, main surface region, toolbar or command entry points, status feedback, and registered contribution routing, and remains runnable as a direct local `file://` artifact where that behavior previously existed or through the supported extension-hosted path.
+
+Do not let preview-server success weaken the local runnable-artifact requirement. Preview/browser-served validation is useful additional evidence, but it does not replace the requirement to preserve direct local `file://` launchability or extension-hosted execution when those are part of the product behavior.
+
+Treat relative built asset paths in `dist/index.html` as necessary but not sufficient evidence. Agents must preserve the runtime behavior needed for the shell to execute as a local artifact or extension surface, not just the packaging shape of the built output.
 
 ## Commit discipline
 
