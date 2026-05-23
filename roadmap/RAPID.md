@@ -22,8 +22,8 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current phase: Phase 1 - Workspace and Stage 1 surface skeleton closure
-Current package focus: apps/textforge-web, packages/editors, packages/assets, packages/workspace, packages/surfaces, packages/ui
+Current phase: Phase 1 - Workspace and Stage 1 surface skeleton validation
+Current package focus: roadmap instructions, packages/editors, packages/assets, apps/textforge-web
 Last known good command: corepack pnpm verify
 Next recommended step: complete the promised Phase 1 editor/viewer surfaces or revise the phase claim to match the implemented facade level
 Open questions: none
@@ -118,3 +118,5 @@ Append every new historical row to the end of this table. Do not reorder existin
 | D-023 | Decision | M1 | Accepted | D-022 is too strong and is superseded by validation: the implementation delivers a runnable package-driven shell and package facades, but it does not yet deliver the promised Phase 1 CodeMirror-backed editor or concrete image/SVG/PDF viewer surfaces. Phase 1 remains open until that value exists or the roadmap is revised honestly. | agent | 2026-05-23 | `roadmap/RAPID.md`, `packages/editors/src/index.js`, `packages/assets/src/index.js`, `apps/textforge-web/src/workbench.js` |
 | I-003 | Issue | M1 | Open | Validation shows a mismatch between the Phase 1 promise and the delivered implementation: the editor is a textarea facade and the asset viewer is a blob-url preview facade, so the phase cannot be considered fully executed yet. | agent | 2026-05-23 | `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/editors.md`, `roadmap/packages/assets.md`, `packages/editors/src/index.js`, `packages/assets/src/index.js` |
 | P-018 | Progress | M1 | Done | Performed a validation review of the Phase 1 claim against the actual implementation and found the shell wiring correct but the promised Phase 1 surface depth incomplete. | agent | 2026-05-23 | `packages/editors/src/index.js`, `packages/assets/src/index.js`, `apps/textforge-web/src/workbench.js` |
+| D-024 | Decision | Docs | Accepted | Facade closures are not accepted. A phase may only be claimed closed after validation demonstrates the promised user-facing behavior, not merely API preservation, browser-native shims, or build/test success. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md` |
+| P-019 | Progress | Docs | Done | Tightened the agent instructions and roadmap operating model so future phase claims require validation of the promised behavior and explicitly reject facade-only closures. | agent | 2026-05-23 | `roadmap/AGENTS_START_HERE.md`, `roadmap/00_package_aware_roadmap.md`, `roadmap/RAPID.md` |
