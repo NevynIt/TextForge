@@ -83,7 +83,7 @@ Implementation anchors:
 - Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
 - pnpm packages: Phase 3.4: No new package install.
 
-Update. Extend security-profile guidance/checks only as needed to keep the badge and readability pass local and deterministic: no remote badge images, no external icon fetches, no File System Access API identity, no directory handles, no background sync, no remote sync, and no silent local-file probing. Badges are UI/resource metadata, not proof of external file identity.
+Update. Extend security-profile guidance/checks only as needed to keep the badge and readability pass local and deterministic: allow bundled `lucide-react` only for generic shell icons, but reject remote badge images, remote icon fetches, File System Access API identity, directory handles, background sync, remote sync, and silent local-file probing. Badges are UI/resource metadata, not proof of external file identity.
 
 
 ### Phase 16 — ArchiMate visual editing investigation

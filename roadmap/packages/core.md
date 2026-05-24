@@ -63,7 +63,7 @@ Implementation anchors:
 - Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
 - pnpm packages: Phase 3.4: No new package install.
 
-Update only if a shared cross-package badge/resource identity contract is needed. Keep the contract minimal, such as a `DocumentBadgeToken` or resource badge metadata shape. Do not put visual badge-generation policy, persistence, shell rendering, panel layout, or readability styling in core.
+Update only if a shared cross-package badge/resource identity contract is needed. Keep the contract minimal, such as a `DocumentBadgeToken` or resource badge metadata shape with `shape`, `accent`, `mark`, `placement`, `variant`, and labels. Rotation is not part of the Phase 3.4 token. Do not put visual badge-generation policy, persistence, shell rendering, panel layout, or readability styling in core.
 
 
 ### Phase 5 — Contribution registries and package composition

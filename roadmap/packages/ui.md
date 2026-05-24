@@ -85,11 +85,11 @@ This phase pulls forward only the shell-facing command UI from Phase 5. It must 
 Implementation anchors:
 
 - Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
-- pnpm packages: Phase 3.4: No new package install.
+- pnpm packages: Phase 3.4: `pnpm --filter @textforge/ui add lucide-react`.
 
-Update. Implement the UI side of the single Phase 3.4 pass: compact Shapez.io-style geometric badge primitives, overflow-safe shell layout primitives, compact header/status treatments, grouped command/menu presentation that uses the Phase 3.3 command system, stable utility drawer chrome, clearer active-resource states, scannable inspector/card components, and small empty/error/help-state components.
+Update. Implement the UI side of the single Phase 3.4 pass: compact Shapez.io-style geometric badge primitives, overflow-safe shell layout primitives, compact header/status treatments, grouped command/menu presentation that uses the Phase 3.3 command system, stable utility drawer chrome, clearer active-resource states, scannable inspector/card components, small empty/error/help-state components, and bundled `lucide-react` affordances for generic folder/file/search/import/export/panel/warning/state controls.
 
-The priority is readability and orientation. Do not add arbitrary icon pickers, semantic meaning encoded only by color, a heavy icon library, saved layout/session restore, split panes, drag/drop tab management, or Phase 13 advanced tab-management behavior.
+The priority is readability and orientation. Keep resource identity in the deterministic placement-based badge token rather than a per-file icon taxonomy. Do not add arbitrary icon pickers, semantic meaning encoded only by color, another icon library, saved layout/session restore, split panes, drag/drop tab management, or Phase 13 advanced tab-management behavior.
 
 
 ### Phase 5 — Contribution registries and package composition

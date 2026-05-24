@@ -108,11 +108,11 @@ Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `A
 |---|---|---|
 | `@textforge/core` | Shared badge/resource identity contracts only if required. | No new package install. |
 | `@textforge/workspace` | Deterministic badge identity, collision repair, persisted badge metadata, and import/restore uniqueness validation. | No new package install. |
-| `@textforge/ui` | Badge primitives plus overflow-safe layout, compact chrome, grouped command/menu, utility drawer, inspector, active-state, and empty-state components. | No new package install. |
+| `@textforge/ui` | Badge primitives plus overflow-safe layout, compact chrome, grouped command/menu, utility drawer, inspector, active-state, empty-state components, and bundled `lucide-react` shell icons. | `pnpm --filter @textforge/ui add lucide-react` |
 | `@textforge/surfaces` | Badge metadata projection into surface sessions and tab/header chrome; common chrome state display. | No new package install. |
 | `@textforge/editors` | Text-editor fit/readability validation after shell layout cleanup. | No new package install. |
 | `@textforge/assets` | Asset-viewer fit/readability validation after shell layout cleanup. | No new package install. |
-| `apps/textforge-web` | Integrated readability pass: no global horizontal scroll, compact header/status area, calmer command surface, stable utility drawer, clearer tree/tabs/editor/inspector, badges, active-resource highlighting, and small empty/error/help states. | No new package install. |
+| `apps/textforge-web` | Integrated readability pass: no global horizontal scroll, compact header/status area, calmer command surface, stable utility drawer, clearer tree/tabs/editor/inspector, badges, active-resource highlighting, and small empty/error/help states. Use `@textforge/ui` icon-bearing components rather than adding a second icon library. | No new package install. |
 | `@textforge/security-profile` | Local deterministic rendering and browser-boundary checks; no remote icon/image loading or filesystem identity. | No new package install. |
 | `@textforge/examples-docs` | Badge/readability style note, fixtures, and collision-repair examples. | No new package install. |
 
@@ -267,4 +267,3 @@ Architecture paragraphs: `ARCH-3.1-P01..P03`, `ARCH-3.2-P01..P03`, `ARCH-3.3-P01
 |---|---|---|
 | `@textforge/security-profile` | Finalize reusable browser-envelope checks and evidence artifacts. | No new package install by default; any additional scanner must pass the license gate and be recorded in RAPID. |
 | `@textforge/examples-docs` | Release checklist, sample artifacts, tutorial workspace. | No new package install. |
-

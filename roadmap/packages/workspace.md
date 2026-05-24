@@ -75,7 +75,7 @@ Implementation anchors:
 - Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
 - pnpm packages: Phase 3.4: No new package install.
 
-Update. Generate and persist stable document badge seeds/assignments from resource identity, path/name, resource kind, and language ID. Preserve badges across reload and ZIP export/import where possible. Repair collisions deterministically after restore, duplication, batch upload, or ZIP import, and expose diagnostics when repair changes a badge.
+Update. Generate and persist stable document badge seeds/assignments from resource identity, path/name, resource kind, and language ID. Use the placement-based `8 × 8 × 8 × 5 = 2560` badge space across shape, accent, mark, and placement. Preserve badges across reload and ZIP export/import where possible. Repair collisions deterministically after restore, duplication, batch upload, or ZIP import, and expose diagnostics when repair changes a badge.
 
 The workspace package does not own the readability pass, but it must provide clean resource metadata so the UI can make the active resource obvious without deriving identity from local filesystem handles, remote sync identity, or arbitrary icon assets.
 

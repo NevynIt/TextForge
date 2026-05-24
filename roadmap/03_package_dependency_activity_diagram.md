@@ -106,10 +106,11 @@ sequenceDiagram
 
   rect rgb(250,250,235)
     Note over WS,UI: Phase 3.4 — resource identity badges and workbench readability pass
-    WS->>Core: expose shared badge token type only if cross-package contract is needed
+    WS->>Core: expose minimal placement-based badge token contract only where the cross-package shape is shared
     WS->>UI: provide persisted badge assignments and collision-repair diagnostics
     Surf->>WS: carry source-resource badge metadata into session/tab models
     UI->>Surf: render badges and compact identity/state chrome in tabs and surfaces
+    UI->>UI: use bundled lucide-react only for generic shell icon affordances
     UI->>Core: consume Phase 3.3 command contracts to calm toolbar/menu presentation
     App->>UI: apply overflow-safe layout, compact header, stable utility drawer, inspector, active-resource states, and empty/error states
     App->>WS: display stable badges across workspace tree, active resource header, and main tabs

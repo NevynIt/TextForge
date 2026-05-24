@@ -76,7 +76,7 @@ Implementation anchors:
 - Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
 - pnpm packages: Phase 3.4: No new package install.
 
-Update. Carry source-resource badge metadata into surface sessions, tab models, and surface headers without owning badge generation or persistence. Ensure the common surface chrome can expose compact identity/state indicators, active-resource highlighting, and readable surface metadata while preserving the Phase 3.1 rule that popup sessions stay out of the main document strip.
+Update. Carry source-resource badge metadata into surface sessions, tab models, and surface headers without owning badge generation or persistence. Project the shared placement-based badge token through tabs and headers so the common surface chrome can expose compact identity/state indicators, active-resource highlighting, and readable surface metadata while preserving the Phase 3.1 rule that popup sessions stay out of the main document strip.
 
 Do not pull Phase 13 advanced tab grouping, tab persistence, split panes, or drag/drop tab behavior forward.
 

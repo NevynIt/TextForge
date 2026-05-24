@@ -2923,7 +2923,7 @@ These are intentionally future expansions. The rebuild should design the Surface
 
 Use React Arborist for:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 - folders/files;
@@ -2938,12 +2938,12 @@ Use React Arborist for:
 - language/resource icons;
 - document badges.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 Required context menu actions:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 ```text
@@ -2963,7 +2963,7 @@ Open as Popup
 Copy Path
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 ### 7.6 Binary resource UI
@@ -3505,7 +3505,7 @@ Even in a full rewrite, preserve these conceptual assets:
 | pipeline trace | inspectable intermediate values |
 | Lua runtime | restricted Fengari-based user automation |
 | resource browser | bundled local documentation and examples |
-| Shapez-style document badges | deterministic document identity, with tests and uniqueness repair |
+| Shapez-style document badges | deterministic document identity through shared placement-based badge tokens, with tests and uniqueness repair |
 | Enterprise architecture and ArchiMate profile assets | ArchiMate profile, validation, viewpoints, styles, import/export mappings |
 | ITM viewers | tree, mindmap, Cytoscape, Sigma, inspector |
 | Markdown embedded artifact rendering | Mermaid, Graphviz, KaTeX, code highlighting, local image resolution, SVG popout/export, PNG storage |
@@ -3735,4 +3735,3 @@ That claim is compatible with powerful local authoring, binary workspace resourc
 The result is not just an editor. It is a local, inspectable, accreditation-friendly workbench for text-based digital engineering artifacts, including enterprise architecture and process-modelling assets, where richer editors exist to forge canonical text and model resources rather than replace them.
 
 **Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
-
