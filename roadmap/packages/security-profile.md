@@ -69,3 +69,7 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Phase 3 closure note
 
 The package now includes executable runtime/check/test entrypoints in addition to the TypeScript contract mirror, and the default profile covers forbidden privileged filesystem APIs plus archive-boundary documentation. Focused `lint` and `test` checks pass for the package, and the broader workspace verification passes through `corepack pnpm verify`.
+
+## Phase 3.1 closure note
+
+React and React DOM are now part of the delivered shell dependency set, and the Phase 3.1 shell checks re-run the open-source license gate against both packages. The shell-level verification also continues to reject privileged browser and filesystem APIs and preserves the source-owned classic loader path for the local runnable artifact.

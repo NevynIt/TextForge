@@ -73,3 +73,9 @@ Do not import app-shell internals. Do not bypass contribution registries. Do not
 ## Repository and workspace workflow
 
 This package lives inside the main TextForge Git repository as an npm workspace package. It should remain independently buildable and testable, but it should not be managed as a Git submodule. Cross-package changes may be made in one branch by one agent, with commits scoped by package where practical. Package dependencies should use `workspace:*` references, and public integration should happen through contribution manifests or stable exported contracts rather than direct app-shell coupling.
+
+## Phase 3.1 closure note
+
+The package now exports real React workbench primitives instead of model-only chrome helpers. `TextForgeAppFrame`, `TextForgeTopBar`, `TextForgeWorkspaceSidebar`, `TextForgeSessionTabStrip`, `TextForgeUtilityPane`, `TextForgeStatusRail`, and `TextForgeSelectField` render the recovered shell frame while preserving the existing package-owned shell models.
+
+The delivered shell chrome includes the collapsible workspace tree region, narrow main-session tab strip, compact status rail, and a utility pane that stays closed by default. Baseline keyboard and accessibility behaviour now includes semantic tree/tab roles, roving focus for the workspace tree and tab strips, and visible focus treatment, without pulling command palette, layout persistence, or advanced tab management forward.

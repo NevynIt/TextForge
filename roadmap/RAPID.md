@@ -22,10 +22,10 @@ Keep this block current. It may be edited because it is an operational pointer, 
 
 ```text
 Current branch: rewrite/v2-monorepo
-Current phase: Phase 3.1 - React workbench shell and UI recovery
-Current package focus: apps/textforge-web, packages/ui, packages/surfaces
+Current phase: Phase 3.2 - Dexie workspace persistence recovery
+Current package focus: apps/textforge-web, packages/workspace, packages/assets, packages/security-profile
 Last known good command: corepack pnpm verify
-Next recommended step: begin Phase 3.1 by replacing the imperative shell bootstrap with a React-rendered workbench and real @textforge/ui primitives while preserving local runnable behavior and existing editor/asset surface mounting
+Next recommended step: begin Phase 3.2 by replacing the workspace Dexie schema placeholder with real browser-managed persistence, then wire startup hydration/reset flows through the React shell without pulling session restore or command palette work forward
 Open questions: none
 ```
 
@@ -152,3 +152,5 @@ Append every new historical row to the end of this table. Do not reorder existin
 | P-033 | Progress | Docs | Done | Updated the V15b roadmap package so the central roadmap, agent instructions, repository strategy, and package guides all reflect the new Phase 3.1/3.2/3.3 sequence and its scope boundaries. | agent | 2026-05-23 | `roadmap/packages`, `roadmap/AGENTS_START_HERE.md`, `roadmap/01_repository_and_package_strategy.md` |
 | P-034 | Progress | M3 | Done | Closed the second Phase 3 slice by validating selected-folder ZIP export, explicit import conflict handling, binary asset ZIP round-trip coverage, and executable security-profile filesystem/archive-boundary checks with focused package checks plus `corepack pnpm verify`. | agent | 2026-05-24 | `A-008`, `packages/workspace/src/index.js`, `packages/assets/test/index.test.js`, `packages/security-profile/src/index.js`, `corepack pnpm verify` |
 | A-009 | Action | M3.1 | Open | Begin Phase 3.1 React workbench shell and UI recovery in `apps/textforge-web`, `@textforge/ui`, and `@textforge/surfaces`, preserving local runnable-artifact behavior and existing editor/asset surface mounting. | agent | 2026-05-24 | `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/ui.md`, `roadmap/packages/surfaces.md` |
+| P-035 | Progress | M3.1 | Done | Closed Phase 3.1 by replacing the imperative shell bootstrap with a React-rendered workbench, converting `@textforge/ui` chrome helpers into accessible React primitives, adding main-session tab-strip helpers in `@textforge/surfaces`, preserving the package-owned CodeMirror and asset surface mounts, and re-validating runnable-artifact and license/security constraints. Focused package checks, app build checks, browser shell validation, and `corepack pnpm verify` passed. | agent | 2026-05-24 | `A-009`, `apps/textforge-web/src/workbench.js`, `packages/ui/src/index.js`, `packages/surfaces/src/index.js`, `apps/textforge-web/scripts/check.mjs`, `corepack pnpm verify` |
+| A-010 | Action | M3.2 | Open | Begin Phase 3.2 by turning the workspace Dexie schema placeholder into real browser-managed persistence, wiring shell hydration/reset flows, preserving binary resource rehydration, and extending the security-profile checks for the browser storage boundary without adding session restore or command palette work. | agent | 2026-05-24 | `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/workspace.md`, `roadmap/packages/security-profile.md` |

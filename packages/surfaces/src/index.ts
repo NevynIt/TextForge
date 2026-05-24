@@ -103,6 +103,15 @@ export interface SurfaceHost {
   snapshot(): SurfaceHostSnapshot;
 }
 
+export interface SurfaceSessionTabStrip {
+  readonly id: string;
+  readonly title: string;
+  readonly placement: 'main';
+  readonly layout: 'tabs';
+  readonly tabs: ReadonlyArray<import('@textforge/ui').SurfaceTab>;
+  readonly activeTabId?: string;
+}
+
 export type SurfaceSessionManager = SurfaceHost;
 
 export const contributions = {
@@ -379,3 +388,11 @@ export declare function createSourceEditorFallback(
 
 export declare function markSurfaceSessionStale(session: SurfaceSession, updatedAt: string): SurfaceSession;
 export declare function markSurfaceSessionCurrent(session: SurfaceSession, updatedAt: string): SurfaceSession;
+export declare function listOpenSurfaceSessions(
+  sessions: ReadonlyArray<SurfaceSession>,
+  placement?: SurfacePlacement,
+): ReadonlyArray<SurfaceSession>;
+export declare function createMainSessionTabStrip(
+  sessions: ReadonlyArray<SurfaceSession>,
+  options?: { readonly id?: string; readonly title?: string; readonly activeTabId?: string },
+): SurfaceSessionTabStrip;

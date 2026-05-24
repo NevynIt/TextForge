@@ -1,6 +1,12 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import {
+  createForbiddenBrowserApiCheck,
+  createForbiddenFilesystemApiCheck,
+  createOpenSourceLicenseGate,
+  defaultSecurityProfile,
+} from '@textforge/security-profile';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const indexHtml = await readFile(resolve(rootDir, 'index.html'), 'utf8');
@@ -9,6 +15,7 @@ const mainJs = await readFile(resolve(rootDir, 'src/main.js'), 'utf8');
 const scriptLoaderJs = await readFile(resolve(rootDir, 'src/scriptLoader.js'), 'utf8');
 const workbenchJs = await readFile(resolve(rootDir, 'src/workbench.js'), 'utf8');
 const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
+const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
 
 if (!indexHtml.includes('./src/scriptLoader.js')) {
   throw new Error('index.html must load ./src/scriptLoader.js as the development entrypoint');
@@ -52,18 +59,76 @@ for (const requiredImport of [
   '@textforge/editors',
   '@textforge/assets',
   '@textforge/ui',
+  '@textforge/security-profile',
 ]) {
-  if (!workbenchJs.includes(requiredImport)) {
+  if (requiredImport !== '@textforge/security-profile' && !workbenchJs.includes(requiredImport)) {
     throw new Error(`workbench.js must import ${requiredImport}`);
   }
 }
 
-if (!workbenchJs.includes('createOpenWithSelection') || !workbenchJs.includes('listTextEditorLanguageModes')) {
-  throw new Error('workbench.js must expose package-backed open-with and language selection chrome');
+for (const requiredReactSignal of [
+  "from 'react'",
+  "from 'react-dom/client'",
+  'useSyncExternalStore',
+  'TextForgeAppFrame',
+  'TextForgeTopBar',
+  'TextForgeWorkspaceSidebar',
+  'TextForgeUtilityPane',
+  'createMainSessionTabStrip',
+]) {
+  if (!workbenchJs.includes(requiredReactSignal)) {
+    throw new Error(`workbench.js must include ${requiredReactSignal} for the React shell`);
+  }
 }
 
-if (!workbenchJs.includes('surface-controls') || !workbenchJs.includes('updateTextResourceLanguage')) {
-  throw new Error('workbench.js must wire the surface control chrome to workspace and editor package state');
+if (!workbenchJs.includes('createOpenWithSelection') || !workbenchJs.includes('listTextEditorLanguageModes') || !workbenchJs.includes('TextForgeSelectField')) {
+  throw new Error('workbench.js must preserve package-backed open-with and language control chrome');
 }
+
+if (!workbenchJs.includes("utilityPaneOpen: false") || !workbenchJs.includes("workspaceTreeCollapsed: false")) {
+  throw new Error('workbench.js must initialize the utility pane hidden and the workspace tree expanded');
+}
+
+for (const requiredDependency of ['"react"', '"react-dom"', '"@textforge/security-profile"']) {
+  if (!packageJson.includes(requiredDependency)) {
+    throw new Error(`package.json must declare ${requiredDependency} for the Phase 3.1 shell`);
+  }
+}
+
+for (const forbiddenApi of ['showOpenFilePicker', 'showDirectoryPicker', 'showSaveFilePicker', 'navigator.serviceWorker.register']) {
+  if (workbenchJs.includes(forbiddenApi)) {
+    throw new Error(`workbench.js must not introduce ${forbiddenApi}`);
+  }
+}
+
+assertSecurityEnvelope();
 
 console.info('TextForge web shell checks passed.');
+
+function assertSecurityEnvelope() {
+  const dependencies = [
+    { name: 'react', license: 'MIT' },
+    { name: 'react-dom', license: 'MIT' },
+  ];
+
+  if (!createOpenSourceLicenseGate().run({
+    profile: defaultSecurityProfile,
+    dependencies,
+  }).passed) {
+    throw new Error('React dependencies must satisfy the security profile license gate');
+  }
+
+  if (createForbiddenBrowserApiCheck().run({
+    profile: defaultSecurityProfile,
+    privilegedApis: [],
+  }).passed !== true) {
+    throw new Error('The shell should not require privileged browser APIs');
+  }
+
+  if (createForbiddenFilesystemApiCheck().run({
+    profile: defaultSecurityProfile,
+    filesystemApis: [],
+  }).passed !== true) {
+    throw new Error('The shell should not require privileged filesystem APIs');
+  }
+}

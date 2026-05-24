@@ -76,3 +76,9 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Phase 2 progress note
 
 The package now exposes open-with selection models, source-editor fallback records, and current/stale freshness helpers on surface sessions. The host can mark sessions stale or current without replacing the registry contract.
+
+## Phase 3.1 closure note
+
+The React shell still consumes the existing public registry and host contracts. The package now adds `listOpenSurfaceSessions(...)` and `createMainSessionTabStrip(...)` so the shell can derive a narrow main document strip from main sessions only while keeping popup sessions out of that strip.
+
+Focused `lint` and `test` checks pass for the package, and browser-level shell validation confirms that the React frame still mounts the package-owned editor and asset surfaces through the unchanged surface registry/open-with path.

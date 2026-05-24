@@ -1,20 +1,70 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import * as React from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 
 import {
-  createAppFrameModel,
+  TextForgeAppFrame,
+  TextForgeSessionTabStrip,
+  TextForgeTopBar,
+  TextForgeUtilityPane,
+  TextForgeWorkspaceSidebar,
   createWorkbenchChromeModel,
   createWorkspaceTreeFrameModel,
 } from '../src/index.js';
 
-test('ui chrome models preserve workspace and surface models', () => {
+test('ui package renders react shell primitives from chrome models', () => {
   const chrome = createWorkbenchChromeModel({
     workspaceTree: createWorkspaceTreeFrameModel({
       items: [{ id: 'resource-1', label: 'notes.md', path: '/docs/notes.md', kind: 'text', depth: 1 }],
+      selectedResourceId: 'resource-1',
     }),
+    surfaceFrame: {
+      id: 'main-tabs',
+      title: 'Documents',
+      placement: 'main',
+      layout: 'tabs',
+      activeTabId: 'tab-1',
+      tabs: [{ id: 'tab-1', surfaceId: 'surface-1', resourceId: 'resource-1', title: 'notes.md' }],
+    },
   });
 
-  assert.equal(chrome.brandTitle, 'TextForge');
-  assert.equal(chrome.workspaceTree.items[0].label, 'notes.md');
-  assert.equal(createAppFrameModel().statusBadges.length, 2);
+  const html = renderToStaticMarkup(
+    React.createElement(
+      TextForgeAppFrame,
+      {
+        header: React.createElement(TextForgeTopBar, {
+          brandTitle: chrome.brandTitle,
+          sidebarCollapsed: false,
+          statusBadges: chrome.statusBadges,
+          subtitle: chrome.subtitle,
+          toolbarSlots: chrome.toolbarSlots,
+          utilityOpen: true,
+        }),
+        sidebar: React.createElement(TextForgeWorkspaceSidebar, {
+          collapsed: false,
+          workspaceTree: chrome.workspaceTree,
+        }),
+        utility: React.createElement(TextForgeUtilityPane, {
+          activeSectionId: 'registry',
+          sections: [{ id: 'registry', label: 'Contribution Packs' }],
+          title: 'Utility',
+        }, React.createElement('div', null, 'Registry content')),
+        utilityOpen: true,
+      },
+      React.createElement(TextForgeSessionTabStrip, {
+        frameModel: chrome.surfaceFrame,
+      }),
+    ),
+  );
+
+  assert.match(html, /TextForge/);
+  assert.match(html, /notes\.md/);
+  assert.match(html, /Contribution Packs/);
+  assert.match(html, /role="tablist"/);
+  assert.match(html, /role="tree"/);
+  assert.match(html, /role="treeitem"/);
+  assert.match(html, /aria-selected="true"/);
+  assert.match(html, /tabindex="0"/);
+  assert.match(html, /data-pane="workspace"/);
 });

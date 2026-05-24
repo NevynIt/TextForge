@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createMainSessionTabStrip,
   createMainSurfaceHost,
   createOpenWithSelection,
   createSequentialSessionIdFactory,
   createSourceEditorFallback,
   createSurfaceRegistry,
+  listOpenSurfaceSessions,
 } from '../src/index.js';
 
 test('surface registry picks the highest-priority compatible contribution', () => {
@@ -67,6 +69,8 @@ test('surface registry picks the highest-priority compatible contribution', () =
   const stale = host.markStale(session.id);
   assert.equal(stale?.freshness, 'stale');
   assert.equal(host.markCurrent(session.id)?.freshness, 'current');
+  assert.equal(listOpenSurfaceSessions(host.list(), 'main').length, 2);
+  assert.equal(createMainSessionTabStrip(host.list(), { activeTabId: svgSession.id }).activeTabId, svgSession.id);
 
   const fallback = createSourceEditorFallback(session.resource, 'surface.editor', 'explicit-source-open');
   assert.equal(fallback.reason, 'explicit-source-open');

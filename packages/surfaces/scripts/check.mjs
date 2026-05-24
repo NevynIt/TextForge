@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 
 import {
+  createMainSessionTabStrip,
   contributions,
   createMainSurfaceHost,
   createOpenWithSelection,
@@ -10,6 +11,7 @@ import {
   createSourceEditorFallback,
   createSurfaceRegistry,
   createSurfaceSessionTab,
+  listOpenSurfaceSessions,
 } from '../src/index.js';
 
 const registry = createSurfaceRegistry([
@@ -71,6 +73,8 @@ assert.equal(mainHost.markStale(textSession.id)?.state, 'stale');
 assert.equal(mainHost.markCurrent(textSession.id)?.freshness, 'current');
 assert.equal(assetSession.placement, 'popup');
 assert.equal(createSurfaceSessionTab(textSession).resourceId, 'resource-1');
+assert.equal(createMainSessionTabStrip(mainHost.list(), { activeTabId: textSession.id }).tabs.length, 1);
+assert.equal(listOpenSurfaceSessions([...mainHost.list(), ...popupHost.list()], 'popup').length, 1);
 assert.equal(createOpenWithSelection(registry, {
   resource: { resourceId: 'resource-3', kind: 'binary', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
 }).selectedSurfaceId, 'surface.svg');

@@ -1,3 +1,5 @@
+import * as React from 'react';
+import { createRoot } from 'react-dom/client';
 import { contributions as coreContributions } from '@textforge/core';
 import {
   createWorkspaceService,
@@ -7,12 +9,14 @@ import {
 } from '@textforge/workspace';
 import {
   contributions as surfaceContributionPack,
+  createMainSessionTabStrip,
   createMainSurfaceHost,
   createOpenWithSelection,
   createPopupSurfaceHost,
   createSequentialSessionIdFactory,
   createSurfaceRegistry,
   createSurfaceSessionTab,
+  listOpenSurfaceSessions,
 } from '@textforge/surfaces';
 import {
   codeMirrorTextEditorSurfaceContribution,
@@ -23,8 +27,8 @@ import {
 } from '@textforge/editors';
 import {
   assetSurfaceContributions,
-  createBinaryAssetViewerSurface,
   createAssetViewerSurface,
+  createBinaryAssetViewerSurface,
   createBlobUrlLedger,
   createImageAssetViewerSurface,
   createPdfAssetViewerSurface,
@@ -34,15 +38,32 @@ import {
   markAssetBindingReady,
 } from '@textforge/assets';
 import {
+  TextForgeAppFrame,
+  TextForgeSelectField,
+  TextForgeSessionTabStrip,
+  TextForgeTopBar,
+  TextForgeUtilityPane,
+  TextForgeWorkspaceSidebar,
   contributions as uiContributionPack,
   createStatusBadge,
-  createSurfaceFrameModel,
   createToolbarSlot,
   createWorkbenchChromeModel,
   createWorkspaceTreeFrameModel,
 } from '@textforge/ui';
 
+const element = React.createElement;
 const textEncoder = new TextEncoder();
+const utilitySections = [
+  { id: 'popups', label: 'Popup Sessions' },
+  { id: 'registry', label: 'Contribution Packs' },
+];
+
+const assetSurfaceFactoryByContributionId = {
+  '@textforge/assets/image': createImageAssetViewerSurface,
+  '@textforge/assets/svg': createSvgAssetViewerSurface,
+  '@textforge/assets/pdf': createPdfAssetViewerSurface,
+  '@textforge/assets/binary': createBinaryAssetViewerSurface,
+};
 
 function createTimestampFactory() {
   return () => new Date().toISOString();
@@ -51,32 +72,14 @@ function createTimestampFactory() {
 function createBinarySvgBytes() {
   return textEncoder.encode(`
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
-      <defs>
-        <linearGradient id="g" x1="0%" x2="100%" y1="0%" y2="100%">
-          <stop offset="0%" stop-color="#48b6a8" />
-          <stop offset="100%" stop-color="#f4b860" />
-        </linearGradient>
-      </defs>
-      <rect width="320" height="200" rx="26" fill="#08111f" />
-      <rect x="18" y="18" width="284" height="164" rx="22" fill="url(#g)" opacity="0.16" />
-      <circle cx="82" cy="100" r="28" fill="none" stroke="#baf3ec" stroke-width="8" />
-      <path d="M150 124 L202 72 L246 124" fill="none" stroke="#f8fafc" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="M82 132 L105 100 L120 116 L140 88" fill="none" stroke="#f4b860" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
-      <text x="24" y="38" fill="#dbeafe" font-family="sans-serif" font-size="18">TextForge system.svg</text>
+      <rect width="320" height="200" rx="20" fill="#0b1020" />
+      <rect x="24" y="24" width="272" height="152" rx="14" fill="#1b2740" />
+      <circle cx="92" cy="104" r="26" fill="none" stroke="#55c6bb" stroke-width="8" />
+      <path d="M150 124 L198 74 L244 124" fill="none" stroke="#f4b860" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M92 134 L116 102 L132 118 L150 92" fill="none" stroke="#e6edf7" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
+      <text x="24" y="44" fill="#d7e3f4" font-family="sans-serif" font-size="18">TextForge system.svg</text>
     </svg>
   `);
-}
-
-function escapeHtml(text) {
-  return text
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
-}
-
-function clearElement(element) {
-  element.replaceChildren();
 }
 
 function createInitialWorkspace() {
@@ -93,27 +96,27 @@ function createInitialWorkspace() {
   const notes = workspace.createTextResource({
     path: '/docs/notes.md',
     title: 'notes.md',
-    text: '# TextForge\n\nThe shell is wired to package-driven workspace, surface, editor, and asset APIs.',
+    text: '# TextForge\n\nPhase 3.1 moves the workbench shell into React while keeping the package-owned editor and asset surfaces intact.',
     languageId: 'markdown',
     mimeType: 'text/markdown',
   });
   const architecture = workspace.createTextResource({
     path: '/docs/architecture.txt',
     title: 'architecture.txt',
-    text: 'The first runnable shell composes package contracts instead of hard-coded view state.',
+    text: 'The React shell consumes workspace, surface, editor, asset, and UI package contracts without moving feature logic into the app.',
     mimeType: 'text/plain',
   });
   const settings = workspace.createTextResource({
     path: '/docs/settings.yaml',
     title: 'settings.yaml',
-    text: 'workspace: textforge\nmode: local-first\n',
+    text: 'workspace: textforge\nshell: react\nstorage: local-first\n',
     languageId: 'yaml',
     mimeType: 'text/yaml',
   });
   const roadmap = workspace.createTextResource({
-    path: '/roadmap/phase-1-gap-audit-2026-05-23.md',
-    title: 'phase-1-gap-audit-2026-05-23.md',
-    text: 'Phase 1 closure requires package-backed shells, concrete editor surfaces, and concrete asset viewers.',
+    path: '/roadmap/phase-3-1-react-shell.md',
+    title: 'phase-3-1-react-shell.md',
+    text: 'React shell recovery keeps the current surface registry and mounts the existing editor and asset surfaces inside a real workbench frame.',
     languageId: 'markdown',
     mimeType: 'text/markdown',
   });
@@ -148,14 +151,32 @@ function createBlobUrlDriver() {
   };
 }
 
-const assetSurfaceFactoryByContributionId = {
-  '@textforge/assets/image': createImageAssetViewerSurface,
-  '@textforge/assets/svg': createSvgAssetViewerSurface,
-  '@textforge/assets/pdf': createPdfAssetViewerSurface,
-  '@textforge/assets/binary': createBinaryAssetViewerSurface,
-};
+function createContributionPacks() {
+  return [
+    coreContributions,
+    workspaceContributionPack,
+    surfaceContributionPack,
+    editorContributionPack,
+    assetContributionPack,
+    uiContributionPack,
+  ];
+}
 
-export function bootTextForgeShell(rootElement) {
+function createWelcomeView() {
+  return {
+    id: 'welcome',
+    kind: 'welcome',
+    mountId: 'welcome',
+    title: 'React workbench shell',
+    summary: 'The shell frame, workspace tree, main tab strip, and utility pane are now rendered through @textforge/ui React primitives.',
+    openWith: 'Shell chrome',
+    state: 'open',
+    placement: 'main',
+    controls: [],
+  };
+}
+
+function createTextForgeWorkbenchController() {
   const { workspace, resources } = createInitialWorkspace();
   const blobLedger = createBlobUrlLedger(createBlobUrlDriver());
   const languageModes = listTextEditorLanguageModes();
@@ -174,20 +195,55 @@ export function bootTextForgeShell(rootElement) {
     registry: surfaceRegistry,
     idFactory: createSequentialSessionIdFactory('popup'),
   });
-
   const activeTextDocuments = new Map();
   const assetLeaseByResourceId = new Map();
+  const listeners = new Set();
+  let cachedSnapshot;
   const state = {
-    activeTabId: 'welcome',
+    activeMainSessionId: undefined,
+    activePopupSessionId: undefined,
     selectedWorkspaceItemId: resources.notes.id,
+    utilityPaneOpen: false,
+    utilitySectionId: 'registry',
+    workspaceTreeCollapsed: false,
   };
+
+  function emit() {
+    cachedSnapshot = undefined;
+    for (const listener of listeners) {
+      listener();
+    }
+  }
+
+  function subscribe(listener) {
+    listeners.add(listener);
+    return () => {
+      listeners.delete(listener);
+    };
+  }
 
   function getEntry(resourceId) {
     return workspace.getEntry(resourceId);
   }
 
-  function listActiveSessions() {
-    return [...mainHost.list(), ...popupHost.list()].filter((session) => session.state !== 'closed');
+  function listMainSessions() {
+    return listOpenSurfaceSessions(mainHost.list(), 'main');
+  }
+
+  function listPopupSessions() {
+    return listOpenSurfaceSessions(popupHost.list(), 'popup');
+  }
+
+  function getOpenSessions() {
+    return [...listMainSessions(), ...listPopupSessions()];
+  }
+
+  function findSessionById(sessionId) {
+    return getOpenSessions().find((session) => session.id === sessionId);
+  }
+
+  function findSessionForResource(resourceId) {
+    return getOpenSessions().find((session) => session.resource.resourceId === resourceId);
   }
 
   function getHostForPlacement(placement) {
@@ -206,12 +262,36 @@ export function bootTextForgeShell(rootElement) {
     };
   }
 
-  function getSession(sessionId) {
-    return listActiveSessions().find((session) => session.id === sessionId);
+  function releaseAssetLeaseIfUnused(resourceId) {
+    const stillMounted = getOpenSessions().some((session) => session.resource.resourceId === resourceId);
+    if (stillMounted) {
+      return;
+    }
+
+    const lease = assetLeaseByResourceId.get(resourceId);
+    if (!lease) {
+      return;
+    }
+
+    blobLedger.release(lease.id);
+    assetLeaseByResourceId.delete(resourceId);
   }
 
-  function findSessionForResource(resourceId) {
-    return listActiveSessions().find((session) => session.resource.resourceId === resourceId);
+  function normalizeActiveSessions() {
+    const mainSessions = listMainSessions();
+    const popupSessions = listPopupSessions();
+
+    if (!mainSessions.some((session) => session.id === state.activeMainSessionId)) {
+      state.activeMainSessionId = mainSessions[0]?.id;
+    }
+
+    if (!popupSessions.some((session) => session.id === state.activePopupSessionId)) {
+      state.activePopupSessionId = popupSessions[0]?.id;
+    }
+
+    if (popupSessions.length === 0 && state.utilitySectionId === 'popups') {
+      state.utilitySectionId = 'registry';
+    }
   }
 
   function openResourceEntry(entry, options = {}) {
@@ -224,9 +304,15 @@ export function bootTextForgeShell(rootElement) {
       (!preferredSurfaceId || existingSession.contributionId === preferredSurfaceId)
     ) {
       getHostForPlacement(existingSession.placement).focus(existingSession.id);
-      state.activeTabId = existingSession.id;
+      if (requestedPlacement === 'popup') {
+        state.activePopupSessionId = existingSession.id;
+        state.utilityPaneOpen = true;
+        state.utilitySectionId = 'popups';
+      } else {
+        state.activeMainSessionId = existingSession.id;
+      }
       state.selectedWorkspaceItemId = entry.id;
-      render();
+      emit();
       return existingSession;
     }
 
@@ -239,12 +325,99 @@ export function bootTextForgeShell(rootElement) {
 
     if (existingSession) {
       getHostForPlacement(existingSession.placement).close(existingSession.id);
+      releaseAssetLeaseIfUnused(existingSession.resource.resourceId);
     }
 
-    state.activeTabId = session.id;
+    if (request.placement === 'popup') {
+      state.activePopupSessionId = session.id;
+      state.utilityPaneOpen = true;
+      state.utilitySectionId = 'popups';
+    } else {
+      state.activeMainSessionId = session.id;
+    }
+
     state.selectedWorkspaceItemId = entry.id;
-    render();
+    normalizeActiveSessions();
+    emit();
     return session;
+  }
+
+  function focusMainSession(sessionId) {
+    const session = mainHost.focus(sessionId) ?? findSessionById(sessionId);
+    if (!session) {
+      return;
+    }
+
+    state.activeMainSessionId = session.id;
+    state.selectedWorkspaceItemId = session.resource.resourceId;
+    emit();
+  }
+
+  function focusPopupSession(sessionId) {
+    const session = popupHost.focus(sessionId) ?? findSessionById(sessionId);
+    if (!session) {
+      return;
+    }
+
+    state.activePopupSessionId = session.id;
+    state.selectedWorkspaceItemId = session.resource.resourceId;
+    state.utilityPaneOpen = true;
+    state.utilitySectionId = 'popups';
+    emit();
+  }
+
+  function closeSession(sessionId) {
+    const mainSession = mainHost.get(sessionId);
+    if (mainSession && mainSession.state !== 'closed') {
+      mainHost.close(sessionId);
+      releaseAssetLeaseIfUnused(mainSession.resource.resourceId);
+      normalizeActiveSessions();
+      emit();
+      return;
+    }
+
+    const popupSession = popupHost.get(sessionId);
+    if (popupSession && popupSession.state !== 'closed') {
+      popupHost.close(sessionId);
+      releaseAssetLeaseIfUnused(popupSession.resource.resourceId);
+      normalizeActiveSessions();
+      emit();
+    }
+  }
+
+  function selectWorkspaceItem(itemId) {
+    state.selectedWorkspaceItemId = itemId;
+    const entry = getEntry(itemId);
+    if (!entry) {
+      emit();
+      return;
+    }
+
+    if (entry.kind === 'folder') {
+      emit();
+      return;
+    }
+
+    openResourceEntry(entry);
+  }
+
+  function toggleWorkspaceTree() {
+    state.workspaceTreeCollapsed = !state.workspaceTreeCollapsed;
+    emit();
+  }
+
+  function toggleUtilityPane() {
+    state.utilityPaneOpen = !state.utilityPaneOpen;
+    if (state.utilityPaneOpen && listPopupSessions().length > 0) {
+      state.utilitySectionId = 'popups';
+    }
+    emit();
+  }
+
+  function setUtilitySection(sectionId) {
+    state.utilityPaneOpen = true;
+    state.utilitySectionId = sectionId;
+    emit();
   }
 
   function updateTextResourceLanguage(resourceId, languageId) {
@@ -274,7 +447,26 @@ export function bootTextForgeShell(rootElement) {
       resource: workspaceEntryToResourceRef(nextResource),
     });
     state.selectedWorkspaceItemId = resourceId;
-    render();
+    emit();
+  }
+
+  function handleToolbarAction(slotId) {
+    const entryBySlotId = {
+      'open-notes': resources.notes,
+      'open-architecture': resources.architecture,
+      'open-roadmap': resources.roadmap,
+    };
+    const entry = entryBySlotId[slotId];
+    if (entry) {
+      openResourceEntry(entry);
+      return;
+    }
+
+    if (slotId === 'open-registry') {
+      state.utilityPaneOpen = true;
+      state.utilitySectionId = 'registry';
+      emit();
+    }
   }
 
   function createOpenWithControl(session, resource) {
@@ -301,7 +493,7 @@ export function bootTextForgeShell(rootElement) {
           preferredSurfaceId: surfaceId,
           placement: session.placement,
         });
-      }
+      },
     };
   }
 
@@ -347,58 +539,10 @@ export function bootTextForgeShell(rootElement) {
     return lease;
   }
 
-  function describeWelcomeSurface() {
-    return {
-      title: 'Welcome to TextForge',
-      summary: 'The package-driven shell is live, with workspace, surface, editor, asset, open-with, and language-mode chrome composing the view.',
-      openWith: 'Shell routing',
-      state: 'open',
-      placement: 'main',
-      mount(container) {
-        const card = document.createElement('div');
-        card.className = 'welcome-card';
-        card.innerHTML = `
-          <p>This checkpoint proves the shell is not hard-coded anymore. It now renders workspace state and package-driven surfaces from the Phase 1 package APIs.</p>
-          <ul>
-            <li>Workspace tree from @textforge/workspace</li>
-            <li>Surface routing from @textforge/surfaces</li>
-            <li>Text editor surface from @textforge/editors</li>
-            <li>Asset viewers from @textforge/assets</li>
-            <li>Open-with and language selection chrome from package models</li>
-          </ul>
-        `;
-        container.replaceChildren(card);
-      },
-    };
-  }
-
-  function describeWorkspaceSurface() {
-    const selected = getEntry(state.selectedWorkspaceItemId) ?? resources.notes;
-    const treeItems = createWorkspaceTreeItems(workspace.snapshot());
-    const selectedItem = treeItems.find((item) => item.id === selected.id) ?? treeItems[0];
-    return {
-      title: 'Workspace',
-      summary: 'The workspace tree is now derived from the package service snapshot rather than hard-coded rows.',
-      openWith: 'Workspace navigator',
-      state: 'active',
-      placement: 'sidebar',
-      mount(container) {
-        const card = document.createElement('div');
-        card.className = 'folder-card';
-        card.innerHTML = `
-          <span class="folder-card__title">${escapeHtml(selectedItem?.label ?? selected.metadata.title ?? selected.path)}</span>
-          <span class="folder-card__meta">${escapeHtml(selected.path)} - ${escapeHtml(selected.kind)}</span>
-          <p class="folder-card__body">Tree items are built from the workspace service snapshot and selected resource state.</p>
-        `;
-        container.replaceChildren(card);
-      },
-    };
-  }
-
-  function describeSessionSurface(session) {
+  function createSurfaceView(session) {
     const resource = getEntry(session.resource.resourceId);
     if (!resource) {
-      return describeWelcomeSurface();
+      return createWelcomeView();
     }
 
     const openWith = surfaceRegistry.get(session.contributionId)?.label ?? 'Surface';
@@ -422,18 +566,20 @@ export function bootTextForgeShell(rootElement) {
             text: nextDocument.text,
           });
           activeTextDocuments.set(resource.id, nextDocument);
+          getHostForPlacement(session.placement).markCurrent(session.id);
         },
       });
       return {
+        id: session.id,
+        kind: 'surface',
+        mountId: `${session.id}:${surface.model.languageMode.languageId}:${session.contributionId}`,
         title: surface.model.title,
         summary: surface.model.summary,
         openWith,
         state: session.state,
         placement: session.placement,
         controls: [...controls, createLanguageControl(resource, surface.model)],
-        mount(container) {
-          surface.mount(container);
-        },
+        surface,
       };
     }
 
@@ -460,418 +606,390 @@ export function bootTextForgeShell(rootElement) {
       },
     );
     return {
+      id: session.id,
+      kind: 'surface',
+      mountId: `${session.id}:${session.contributionId}`,
       title: surface.model.title,
       summary: surface.model.summary,
       openWith,
       state: session.state,
       placement: session.placement,
       controls,
-      mount(container) {
-        surface.mount(container);
+      surface,
+    };
+  }
+
+  function describeSelectedEntry() {
+    const entry = getEntry(state.selectedWorkspaceItemId) ?? resources.notes;
+    return {
+      title: entry.metadata.title ?? entry.path,
+      path: entry.path,
+      kind: entry.kind,
+      detail: entry.kind === 'folder'
+        ? 'Folder selection drives the workspace context without opening a surface.'
+        : entry.kind === 'text'
+          ? 'Text resources open in the main workbench session strip.'
+          : 'Binary resources open in popup sessions that live in the utility pane.',
+    };
+  }
+
+  function getActiveMainView() {
+    const session = state.activeMainSessionId ? mainHost.get(state.activeMainSessionId) : undefined;
+    if (!session || session.state === 'closed') {
+      return createWelcomeView();
+    }
+
+    return createSurfaceView(session);
+  }
+
+  function getActivePopupView() {
+    const session = state.activePopupSessionId ? popupHost.get(state.activePopupSessionId) : undefined;
+    if (!session || session.state === 'closed') {
+      return undefined;
+    }
+
+    return createSurfaceView(session);
+  }
+
+  function buildSnapshot() {
+    normalizeActiveSessions();
+    const treeItems = createWorkspaceTreeItems(workspace.snapshot());
+    const mainSessions = listMainSessions();
+    const popupSessions = listPopupSessions();
+    const mainFrame = createMainSessionTabStrip(mainHost.list(), {
+      activeTabId: state.activeMainSessionId,
+    });
+    const popupFrame = {
+      id: 'popup-session-tab-strip',
+      title: 'Popup sessions',
+      placement: 'popup',
+      layout: 'tabs',
+      tabs: popupSessions.map((session) => createSurfaceSessionTab(session)),
+      activeTabId: state.activePopupSessionId,
+    };
+    const chromeModel = createWorkbenchChromeModel({
+      subtitle: 'React workbench recovery with package-owned surfaces',
+      workspaceTree: createWorkspaceTreeFrameModel({
+        items: treeItems,
+        rootLabel: workspace.snapshot().manifest.name ?? 'Workspace root',
+        selectedResourceId: state.selectedWorkspaceItemId,
+      }),
+      surfaceFrame: mainFrame,
+      toolbarSlots: [
+        createToolbarSlot({ id: 'open-notes', label: 'Open notes', kind: 'workspace', pinned: true }),
+        createToolbarSlot({ id: 'open-architecture', label: 'Architecture note', kind: 'workspace' }),
+        createToolbarSlot({ id: 'open-roadmap', label: 'Roadmap note', kind: 'workspace' }),
+        createToolbarSlot({ id: 'open-registry', label: 'Registry', kind: 'navigation' }),
+      ],
+      statusBadges: [
+        createStatusBadge({
+          id: 'workspace-status',
+          label: `${treeItems.length} items`,
+          tone: 'success',
+        }),
+        createStatusBadge({
+          id: 'document-status',
+          label: `${mainSessions.length} documents`,
+          tone: mainSessions.length > 0 ? 'info' : 'neutral',
+        }),
+        createStatusBadge({
+          id: 'popup-status',
+          label: `${popupSessions.length} popups`,
+          tone: popupSessions.length > 0 ? 'warning' : 'neutral',
+        }),
+        createStatusBadge({
+          id: 'language-status',
+          label: `${parserBackedLanguageCount} parser-backed modes`,
+          tone: 'info',
+        }),
+      ],
+    });
+
+    return {
+      chromeModel,
+      contributionPacks: createContributionPacks(),
+      popupFrame,
+      selectedEntry: describeSelectedEntry(),
+      activeMainView: getActiveMainView(),
+      activePopupView: getActivePopupView(),
+      utilitySections,
+      state: {
+        ...state,
       },
     };
   }
 
-  const initialNotesSession = openResourceEntry(resources.notes);
-  openResourceEntry(resources.svg);
-  state.activeTabId = initialNotesSession.id;
-
-  function getActiveView() {
-    if (state.activeTabId === 'welcome') {
-      return describeWelcomeSurface();
+  function snapshot() {
+    if (!cachedSnapshot) {
+      cachedSnapshot = buildSnapshot();
     }
 
-    if (state.activeTabId === 'workspace') {
-      return describeWorkspaceSurface();
+    return cachedSnapshot;
+  }
+
+  function dispose() {
+    for (const lease of assetLeaseByResourceId.values()) {
+      blobLedger.release(lease.id);
     }
-
-    const session = getSession(state.activeTabId);
-    if (session) {
-      return describeSessionSurface(session);
-    }
-
-    return describeWelcomeSurface();
+    assetLeaseByResourceId.clear();
+    activeTextDocuments.clear();
+    listeners.clear();
   }
 
-  function createToolbarAction(slot) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = 'action-button';
-    button.textContent = slot.label;
-
-    if (slot.id === 'open-workspace') {
-      button.addEventListener('click', () => {
-        state.activeTabId = 'workspace';
-        render();
-      });
-    } else if (slot.id === 'insert-item') {
-      button.addEventListener('click', () => {
-        openResourceEntry(resources.architecture);
-      });
-    } else {
-      button.addEventListener('click', () => {
-        state.activeTabId = 'welcome';
-        render();
-      });
-    }
-
-    return button;
-  }
-
-  function createTreeRow(item) {
-    const row = document.createElement('button');
-    row.type = 'button';
-    row.className = `tree-row${item.id === state.selectedWorkspaceItemId ? ' is-active' : ''}`;
-    row.style.setProperty('--depth', String(item.depth));
-    row.dataset.itemId = item.id;
-    row.innerHTML = `
-      <span class="tree-label">
-        <span class="tree-kind">${escapeHtml(item.kind)}</span>
-        <span>${escapeHtml(item.label)}</span>
-      </span>
-      <span class="tree-badge">${escapeHtml(item.badge ?? '')}</span>
-    `;
-    row.addEventListener('click', () => {
-      state.selectedWorkspaceItemId = item.id;
-      const entry = getEntry(item.id);
-      if (entry?.kind === 'folder') {
-        state.activeTabId = 'workspace';
-        render();
-      } else if (entry) {
-        openResourceEntry(entry);
-      }
-    });
-    return row;
-  }
-
-  function createTabButton(tab) {
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.className = `tab${tab.id === state.activeTabId ? ' is-active' : ''}`;
-    button.textContent = tab.title;
-    button.dataset.tabId = tab.id;
-    button.addEventListener('click', () => {
-      state.activeTabId = tab.id;
-      if (tab.id === 'workspace') {
-        state.selectedWorkspaceItemId = state.selectedWorkspaceItemId ?? resources.notes.id;
-      }
-      render();
-    });
-    return button;
-  }
-
-  function createSelectControl(config) {
-    const field = document.createElement('label');
-    field.className = 'surface-control';
-
-    const label = document.createElement('span');
-    label.className = 'surface-control__label';
-    label.textContent = config.label;
-
-    const input = document.createElement('select');
-    input.className = 'surface-control__input';
-    input.value = config.value;
-    input.disabled = Boolean(config.disabled);
-    for (const optionConfig of config.options) {
-      const option = document.createElement('option');
-      option.value = optionConfig.value;
-      option.textContent = optionConfig.label;
-      if (optionConfig.description) {
-        option.title = optionConfig.description;
-      }
-      input.append(option);
-    }
-
-    input.value = config.value;
-    input.addEventListener('change', (event) => {
-      config.onChange(event.currentTarget.value);
-    });
-
-    field.append(label, input);
-
-    if (config.description) {
-      const description = document.createElement('span');
-      description.className = 'surface-control__description';
-      description.textContent = config.description;
-      field.append(description);
-    }
-
-    return field;
-  }
-
-  function syncSurfaceControls(container, activeView) {
-    clearElement(container);
-    const controls = activeView.controls ?? [];
-    container.hidden = controls.length === 0;
-    if (controls.length === 0) {
-      return;
-    }
-
-    container.append(...controls.map((control) => createSelectControl(control)));
-  }
-
-  function renderShell() {
-    const treeItems = createWorkspaceTreeItems(workspace.snapshot());
-    const openSessions = listActiveSessions();
-    const tabs = [
-      { id: 'welcome', title: 'Welcome', surfaceId: 'welcome', active: state.activeTabId === 'welcome' },
-      { id: 'workspace', title: 'Workspace', surfaceId: 'workspace', active: state.activeTabId === 'workspace' },
-      ...openSessions.map((session) => ({
-        ...createSurfaceSessionTab(session),
-        title: `${session.title} - ${session.placement}`,
-        active: session.id === state.activeTabId,
-      })),
-    ];
-    const activeView = getActiveView();
-    const statusBadges = [
-      createStatusBadge({
-        id: 'workspace-status',
-        label: `${treeItems.length} tree items`,
-        tone: 'success',
-      }),
-      createStatusBadge({
-        id: 'surface-status',
-        label: `${openSessions.length} routed surfaces`,
-        tone: activeView.state === 'open' ? 'success' : 'info',
-      }),
-      createStatusBadge({
-        id: 'package-status',
-        label: 'Package APIs wired',
-        tone: 'neutral',
-      }),
-      createStatusBadge({
-        id: 'language-status',
-        label: `${parserBackedLanguageCount} parser-backed modes`,
-        tone: 'info',
-      }),
-    ];
-    const chromeModel = createWorkbenchChromeModel({
-      workspaceTree: createWorkspaceTreeFrameModel({
-        items: treeItems,
-        selectedResourceId: state.selectedWorkspaceItemId,
-      }),
-      surfaceFrame: createSurfaceFrameModel({
-        placement: activeView.placement === 'popup' ? 'popup' : 'main',
-        tabs,
-        activeTabId: state.activeTabId,
-      }),
-      toolbarSlots: [
-        createToolbarSlot({ id: 'open-workspace', label: 'Open workspace', kind: 'workspace', pinned: true }),
-        createToolbarSlot({ id: 'insert-item', label: 'Open architecture note', kind: 'command' }),
-        createToolbarSlot({ id: 'focus-surface', label: 'Welcome', kind: 'navigation' }),
-      ],
-      statusBadges,
-    });
-
-    rootElement.innerHTML = '';
-
-    const shell = document.createElement('div');
-    shell.className = 'shell';
-
-    shell.append(
-      createShellHeader(chromeModel),
-      createWorkspacePanel(chromeModel.workspaceTree),
-      createSurfacePanel(chromeModel.surfaceFrame, activeView),
-      createInspectorPanel(),
-      createFooter(),
-    );
-
-    rootElement.append(shell);
-  }
-
-  function createShellHeader(chromeModel) {
-    const header = document.createElement('header');
-    header.className = 'shell-header';
-
-    const brand = document.createElement('div');
-    brand.className = 'brand';
-    const brandMark = document.createElement('div');
-    brandMark.className = 'brand-mark';
-    brandMark.textContent = 'TF';
-    const brandText = document.createElement('div');
-    brandText.className = 'brand-text';
-    brandText.innerHTML = `
-      <strong>${escapeHtml(chromeModel.brandTitle)}</strong>
-      <span>${escapeHtml(chromeModel.subtitle ?? 'Package-driven workbench shell')}</span>
-    `;
-    brand.append(brandMark, brandText);
-
-    const statusRail = document.createElement('div');
-    statusRail.className = 'status-rail';
-    statusRail.append(...chromeModel.statusBadges.map((badge) => {
-      const el = document.createElement('span');
-      el.className = `badge badge--${badge.tone}`;
-      el.textContent = badge.label;
-      return el;
-    }));
-
-    const actionRail = document.createElement('div');
-    actionRail.className = 'action-rail';
-    actionRail.append(...chromeModel.toolbarSlots.map((slot) => createToolbarAction(slot)));
-
-    header.append(brand, statusRail, actionRail);
-    return header;
-  }
-
-  function createWorkspacePanel(workspaceTree) {
-    const panel = document.createElement('section');
-    panel.className = 'panel workspace-panel';
-
-    const titleBar = document.createElement('div');
-    titleBar.className = 'panel-titlebar';
-    titleBar.innerHTML = `
-      <h2>${escapeHtml(workspaceTree.title)}</h2>
-      <span class="panel-subtitle">${escapeHtml(workspaceTree.rootLabel)}</span>
-    `;
-
-    const tree = document.createElement('div');
-    tree.className = 'workspace-tree';
-    tree.append(...workspaceTree.items.map((item) => createTreeRow(item)));
-
-    const treeFooter = document.createElement('div');
-    treeFooter.className = 'panel-footer';
-    treeFooter.textContent = 'Open-with routing maps source items to their default surfaces.';
-
-    panel.append(titleBar, tree, treeFooter);
-    return panel;
-  }
-
-  function createSurfacePanel(surfaceFrame, activeView) {
-    const panel = document.createElement('section');
-    panel.className = 'panel surface-panel';
-
-    const titleBar = document.createElement('div');
-    titleBar.className = 'panel-titlebar';
-    titleBar.innerHTML = `
-      <h2>${escapeHtml(surfaceFrame.title)}</h2>
-      <span class="panel-subtitle">${escapeHtml(activeView.openWith ?? 'Package-driven routing')}</span>
-    `;
-
-    const tabBar = document.createElement('div');
-    tabBar.className = 'tab-bar';
-    tabBar.append(...surfaceFrame.tabs.map((tab) => createTabButton(tab)));
-
-    const surfaceBody = document.createElement('div');
-    surfaceBody.className = 'surface-body';
-    surfaceBody.innerHTML = `
-      <div class="surface-card">
-        <div class="surface-card__eyebrow">Current surface</div>
-        <h3 id="surface-title"></h3>
-        <p id="surface-summary"></p>
-        <div class="surface-stats">
-          <div><span>Placement</span><strong id="surface-placement"></strong></div>
-          <div><span>Open-with</span><strong id="surface-openwith"></strong></div>
-          <div><span>State</span><strong id="surface-state"></strong></div>
-        </div>
-        <div class="surface-controls" id="surface-controls"></div>
-      </div>
-      <div class="surface-preview" id="surface-preview"></div>
-    `;
-
-    panel.append(titleBar, tabBar, surfaceBody);
-    syncSurfaceCard(surfaceBody, activeView);
-    return panel;
-  }
-
-  function syncSurfaceCard(surfaceBody, activeView) {
-    const surfaceTitle = surfaceBody.querySelector('#surface-title');
-    const surfaceSummary = surfaceBody.querySelector('#surface-summary');
-    const surfacePlacement = surfaceBody.querySelector('#surface-placement');
-    const surfaceOpenWith = surfaceBody.querySelector('#surface-openwith');
-    const surfaceState = surfaceBody.querySelector('#surface-state');
-    const surfaceControls = surfaceBody.querySelector('#surface-controls');
-    const surfacePreview = surfaceBody.querySelector('#surface-preview');
-
-    if (!surfaceTitle || !surfaceSummary || !surfacePlacement || !surfaceOpenWith || !surfaceState || !surfaceControls || !surfacePreview) {
-      return;
-    }
-
-    surfaceTitle.textContent = activeView.title;
-    surfaceSummary.textContent = activeView.summary;
-    surfacePlacement.textContent = activeView.placement === 'popup' ? 'popup' : 'main';
-    surfaceOpenWith.textContent = activeView.openWith;
-    surfaceState.textContent = activeView.state;
-    syncSurfaceControls(surfaceControls, activeView);
-    clearElement(surfacePreview);
-    activeView.mount(surfacePreview);
-  }
-
-  function createInspectorPanel() {
-    const panel = document.createElement('section');
-    panel.className = 'panel inspector-panel';
-
-    const titleBar = document.createElement('div');
-    titleBar.className = 'panel-titlebar';
-    titleBar.innerHTML = `
-      <h2>Contribution packs</h2>
-      <span class="panel-subtitle">Shell composition registry</span>
-    `;
-
-    const grid = document.createElement('div');
-    grid.className = 'contribution-grid';
-
-    const packs = [
-      coreContributions,
-      workspaceContributionPack,
-      surfaceContributionPack,
-      editorContributionPack,
-      assetContributionPack,
-      uiContributionPack,
-    ];
-
-    for (const pack of packs) {
-      const card = document.createElement('article');
-      card.className = 'contribution-card';
-      card.innerHTML = `
-        <div class="contribution-card__top">
-          <strong>${escapeHtml(pack.id)}</strong>
-          <span class="contribution-status">${escapeHtml(pack.surfaces.length.toString())} surfaces</span>
-        </div>
-        <code>${escapeHtml(pack.id)}</code>
-        <p>Package contribution pack wired into the shell.</p>
-      `;
-      grid.append(card);
-    }
-
-    const notes = document.createElement('div');
-    notes.className = 'inspector-notes';
-    notes.innerHTML = `
-      <p>The shell now composes package exports instead of a static array of mock cards.</p>
-      <ul>
-        <li>Workspace tree reflects the live workspace snapshot</li>
-        <li>Surface tabs come from live host sessions</li>
-        <li>Text resources open in a mounted editable surface</li>
-        <li>Binary resources open in a mounted viewer surface</li>
-        <li>Open-with and language chrome reflect package-owned models</li>
-      </ul>
-    `;
-
-    panel.append(titleBar, grid, notes);
-    return panel;
-  }
-
-  function createFooter() {
-    const footer = document.createElement('footer');
-    footer.className = 'shell-footer';
-    footer.innerHTML = `
-      <span>Phase 2 language-foundation shell</span>
-      <span>Local-first bootstrap with package-driven workspace, mounted surface routing, and editor language chrome</span>
-    `;
-    return footer;
-  }
-
-  function render() {
-    renderShell();
-  }
-
-  render();
+  openResourceEntry(resources.notes, { placement: 'main' });
 
   return {
-    workspace,
-    openResourceEntry,
-    render,
-    state,
-    mainHost,
-    popupHost,
+    subscribe,
+    snapshot,
+    dispose,
+    actions: {
+      closeSession,
+      focusMainSession,
+      focusPopupSession,
+      handleToolbarAction,
+      selectWorkspaceItem,
+      setUtilitySection,
+      toggleUtilityPane,
+      toggleWorkspaceTree,
+    },
   };
+}
+
+function useWorkbenchSnapshot(controller) {
+  return React.useSyncExternalStore(controller.subscribe, controller.snapshot, controller.snapshot);
+}
+
+function SurfaceMount({ view }) {
+  const mountRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!view?.surface || !mountRef.current) {
+      return undefined;
+    }
+
+    const dispose = view.surface.mount(mountRef.current);
+    return () => {
+      if (typeof dispose === 'function') {
+        dispose();
+      }
+      if (mountRef.current) {
+        mountRef.current.replaceChildren();
+      }
+    };
+  }, [view?.mountId]);
+
+  return element('div', {
+    ref: mountRef,
+    className: 'tf-surface-mount',
+    'data-surface-id': view?.id,
+  });
+}
+
+function WelcomeState() {
+  return element(
+    'section',
+    { className: 'tf-welcome', 'data-view-kind': 'welcome' },
+    element('span', { className: 'tf-welcome__eyebrow' }, 'Phase 3.1'),
+    element('h3', null, 'React workbench shell'),
+    element(
+      'p',
+      null,
+      'This shell is now rendered through React while the text editor and asset viewers still come from their package-owned surface factories.',
+    ),
+    element(
+      'ul',
+      { className: 'tf-welcome__list' },
+      element('li', null, 'Collapsible workspace tree region'),
+      element('li', null, 'Main-session tab strip for document surfaces'),
+      element('li', null, 'Utility/debug pane for popup sessions and registry visibility'),
+      element('li', null, 'Open-with and language controls preserved from package models'),
+    ),
+  );
+}
+
+function SurfaceDetails({ view }) {
+  return element(
+    'aside',
+    { className: 'tf-surface-details' },
+    element(
+      'div',
+      { className: 'tf-surface-details__section' },
+      element('span', { className: 'tf-surface-details__label' }, 'Current surface'),
+      element('h3', { className: 'tf-surface-details__title' }, view.title),
+      element('p', { className: 'tf-surface-details__summary' }, view.summary),
+    ),
+    element(
+      'dl',
+      { className: 'tf-meta-list' },
+      element('div', null, element('dt', null, 'Placement'), element('dd', null, view.placement)),
+      element('div', null, element('dt', null, 'Open with'), element('dd', null, view.openWith)),
+      element('div', null, element('dt', null, 'State'), element('dd', null, view.state)),
+    ),
+    view.controls.length > 0
+      ? element(
+          'div',
+          { className: 'tf-surface-details__controls' },
+          ...view.controls.map((control) =>
+            element(TextForgeSelectField, { key: control.id, control })),
+        )
+      : null,
+  );
+}
+
+function WorkspaceSelectionFooter({ selectedEntry }) {
+  return element(
+    'div',
+    { className: 'tf-selection' },
+    element('span', { className: 'tf-selection__title' }, selectedEntry.title),
+    element('span', { className: 'tf-selection__path' }, selectedEntry.path),
+    element('p', { className: 'tf-selection__detail' }, selectedEntry.detail),
+  );
+}
+
+function ContributionRegistryView({ packs }) {
+  return element(
+    'div',
+    { className: 'tf-registry' },
+    ...packs.map((pack) =>
+      element(
+        'article',
+        { key: pack.id, className: 'tf-registry__card' },
+        element(
+          'div',
+          { className: 'tf-registry__header' },
+          element('strong', null, pack.id),
+          element('span', null, `${pack.surfaces.length} surfaces`),
+        ),
+        element('p', null, 'Package contribution pack available to the workbench shell.'),
+      )),
+  );
+}
+
+function PopupSessionsView({ controller, popupFrame, popupView }) {
+  if (popupFrame.tabs.length === 0) {
+    return element(
+      'div',
+      { className: 'tf-empty' },
+      'No popup sessions are open. Open a binary resource from the workspace tree to mount it here.',
+    );
+  }
+
+  return element(
+    React.Fragment,
+    null,
+    element(TextForgeSessionTabStrip, {
+      emptyLabel: 'No popup sessions',
+      frameModel: popupFrame,
+      onCloseTab: controller.actions.closeSession,
+      onSelectTab: controller.actions.focusPopupSession,
+    }),
+    popupView
+      ? element(
+          'div',
+          { className: 'tf-popup-surface' },
+          element('div', { className: 'tf-popup-surface__viewport' }, element(SurfaceMount, { view: popupView })),
+          element('div', { className: 'tf-popup-surface__details' }, element(SurfaceDetails, { view: popupView })),
+        )
+      : null,
+  );
+}
+
+function TextForgeWorkbenchApp({ controller }) {
+  const snapshot = useWorkbenchSnapshot(controller);
+  const mainView = snapshot.activeMainView;
+  const utilityOpen = snapshot.state.utilityPaneOpen;
+  const showPopupSessions = snapshot.state.utilitySectionId === 'popups';
+
+  return element(
+    TextForgeAppFrame,
+    {
+      footer: [
+        element('span', { key: 'phase' }, 'Phase 3.1 React workbench shell'),
+        element('span', { key: 'detail' }, 'Local runnable artifact preserved through the classic Vite loader bundle'),
+      ],
+      header: element(TextForgeTopBar, {
+        brandTitle: snapshot.chromeModel.brandTitle,
+        onToggleSidebar: controller.actions.toggleWorkspaceTree,
+        onToggleUtility: controller.actions.toggleUtilityPane,
+        onToolbarAction: controller.actions.handleToolbarAction,
+        sidebarCollapsed: snapshot.state.workspaceTreeCollapsed,
+        statusBadges: snapshot.chromeModel.statusBadges,
+        subtitle: snapshot.chromeModel.subtitle,
+        toolbarSlots: snapshot.chromeModel.toolbarSlots,
+        utilityOpen,
+      }),
+      sidebar: element(TextForgeWorkspaceSidebar, {
+        collapsed: snapshot.state.workspaceTreeCollapsed,
+        footer: element(WorkspaceSelectionFooter, { selectedEntry: snapshot.selectedEntry }),
+        onSelectItem: controller.actions.selectWorkspaceItem,
+        onToggleCollapsed: controller.actions.toggleWorkspaceTree,
+        workspaceTree: snapshot.chromeModel.workspaceTree,
+      }),
+      sidebarCollapsed: snapshot.state.workspaceTreeCollapsed,
+      utility: element(
+        TextForgeUtilityPane,
+        {
+          activeSectionId: snapshot.state.utilitySectionId,
+          onClose: controller.actions.toggleUtilityPane,
+          onSelectSection: controller.actions.setUtilitySection,
+          sections: snapshot.utilitySections,
+          subtitle: 'Popup surfaces and registry visibility stay out of the main document strip.',
+          title: 'Utility',
+        },
+        showPopupSessions
+          ? element(PopupSessionsView, {
+              controller,
+              popupFrame: snapshot.popupFrame,
+              popupView: snapshot.activePopupView,
+            })
+          : element(ContributionRegistryView, { packs: snapshot.contributionPacks }),
+      ),
+      utilityOpen,
+    },
+    element(
+      'section',
+      { className: 'tf-surface-frame' },
+      element(
+        'div',
+        { className: 'tf-pane__header' },
+        element(
+          'div',
+          null,
+          element('h2', { className: 'tf-pane__title' }, snapshot.chromeModel.surfaceFrame.title),
+          element('p', { className: 'tf-pane__subtitle' }, 'Narrow main-session tab strip for document surfaces'),
+        ),
+      ),
+      element(TextForgeSessionTabStrip, {
+        emptyLabel: 'No documents are open',
+        frameModel: snapshot.chromeModel.surfaceFrame,
+        onCloseTab: controller.actions.closeSession,
+        onSelectTab: controller.actions.focusMainSession,
+      }),
+      element(
+        'div',
+        { className: 'tf-surface-frame__body' },
+        element(
+          'div',
+          { className: 'tf-surface-frame__viewport', 'data-view-kind': mainView.kind },
+          mainView.kind === 'welcome' ? element(WelcomeState) : element(SurfaceMount, { view: mainView }),
+        ),
+        element(SurfaceDetails, { view: mainView }),
+      ),
+    ),
+  );
+}
+
+let mountedShell;
+
+export function bootTextForgeShell(rootElement) {
+  if (mountedShell) {
+    mountedShell.root.unmount();
+    mountedShell.controller.dispose();
+  }
+
+  const controller = createTextForgeWorkbenchController();
+  const root = createRoot(rootElement);
+  root.render(element(TextForgeWorkbenchApp, { controller }));
+  mountedShell = { controller, root };
+  return mountedShell;
 }

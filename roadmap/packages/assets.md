@@ -80,3 +80,9 @@ The package now exposes concrete image, SVG, PDF, and generic binary viewer surf
 ## Phase 3 closure note
 
 Binary workspace assets now round-trip through the workspace ZIP helpers with byte preservation and correct restored viewer-kind selection/binding. Focused `lint` and `test` checks pass for the package, and the coverage is included in `corepack pnpm verify`.
+
+## Phase 3.1 closure note
+
+The React shell mounts the existing package-owned asset viewers without changing asset semantics. Popup asset sessions stay out of the main document strip and render through the utility pane, while the asset package still owns blob URL binding, viewer-kind selection, and read-only surface behaviour.
+
+Browser validation of the React shell opened the sample `system.svg` asset into the popup utility pane and confirmed that the mounted asset viewer still renders through the existing surface contribution path.

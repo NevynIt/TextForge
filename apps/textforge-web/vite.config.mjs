@@ -7,6 +7,9 @@ const loaderEntry = resolve(rootDir, 'src/scriptLoader.js');
 
 export default defineConfig(({ command }) => ({
   base: './',
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(command === 'build' ? 'production' : 'development'),
+  },
   build: command === 'build'
     ? {
         cssCodeSplit: false,

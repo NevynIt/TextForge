@@ -75,3 +75,9 @@ The current runnable shell uses `@codemirror/state` and `@codemirror/view` throu
 ## Phase 2 progress note
 
 The package now consumes the shared language definitions from `@textforge/core`, exposes the Phase 2 language-mode metadata for every registered source language, mounts parser-backed CodeMirror integrations for Markdown, Lua, JSON, XML-family formats, SVG, and YAML, and applies a package-owned dark syntax highlighting palette in the shell. ITM, CSV/TSV, Mermaid, and DOT remain explicit metadata-only/source-fallback modes until a suitable parser-backed integration is adopted.
+
+## Phase 3.1 closure note
+
+No new editor behaviour was pulled forward for this phase. The existing CodeMirror surface still mounts through `createCodeMirrorTextEditorSurface(...)`, and the React shell continues to drive package-owned language-mode and open-with controls instead of duplicating editor logic in the app.
+
+Browser validation of the recovered shell confirmed that the CodeMirror editor still mounts, remains editable inside the React frame, and preserves the established source-editor workflow without broadening the package scope.

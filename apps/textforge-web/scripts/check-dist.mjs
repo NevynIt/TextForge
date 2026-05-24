@@ -49,7 +49,102 @@ if (!distStyleCss.trim()) {
 console.info('TextForge dist file:// checks passed.');
 
 function hasEsModuleSyntax(source) {
-  return /(^|[;\n])\s*import\s+[\w*{]/m.test(source)
-    || /(^|[^\w$.}])import\s*\(/.test(source)
-    || /(^|[;\n])\s*export\s+(?:\{|\*|default|const|function|class|let|var)/m.test(source);
+  const sanitized = stripStringsAndComments(source);
+  return /(^|[;\n])\s*import\s+[\w*{]/m.test(sanitized)
+    || /(^|[^\w$.}])import\s*\(/.test(sanitized)
+    || /(^|[;\n])\s*export\s+(?:\{|\*|default|const|function|class|let|var)/m.test(sanitized);
+}
+
+function stripStringsAndComments(source) {
+  let result = '';
+  let state = 'code';
+
+  for (let index = 0; index < source.length; index += 1) {
+    const current = source[index];
+    const next = source[index + 1];
+    const previous = source[index - 1];
+
+    if (state === 'code') {
+      if (current === '/' && next === '/') {
+        state = 'line-comment';
+        result += '  ';
+        index += 1;
+        continue;
+      }
+
+      if (current === '/' && next === '*') {
+        state = 'block-comment';
+        result += '  ';
+        index += 1;
+        continue;
+      }
+
+      if (current === '\'') {
+        state = 'single-quote';
+        result += ' ';
+        continue;
+      }
+
+      if (current === '"') {
+        state = 'double-quote';
+        result += ' ';
+        continue;
+      }
+
+      if (current === '`') {
+        state = 'template';
+        result += ' ';
+        continue;
+      }
+
+      result += current;
+      continue;
+    }
+
+    if (state === 'line-comment') {
+      if (current === '\n') {
+        state = 'code';
+        result += '\n';
+      } else {
+        result += ' ';
+      }
+      continue;
+    }
+
+    if (state === 'block-comment') {
+      if (current === '*' && next === '/') {
+        state = 'code';
+        result += '  ';
+        index += 1;
+      } else {
+        result += current === '\n' ? '\n' : ' ';
+      }
+      continue;
+    }
+
+    if (state === 'single-quote') {
+      if (current === '\'' && previous !== '\\') {
+        state = 'code';
+      }
+      result += current === '\n' ? '\n' : ' ';
+      continue;
+    }
+
+    if (state === 'double-quote') {
+      if (current === '"' && previous !== '\\') {
+        state = 'code';
+      }
+      result += current === '\n' ? '\n' : ' ';
+      continue;
+    }
+
+    if (state === 'template') {
+      if (current === '`' && previous !== '\\') {
+        state = 'code';
+      }
+      result += current === '\n' ? '\n' : ' ';
+    }
+  }
+
+  return result;
 }

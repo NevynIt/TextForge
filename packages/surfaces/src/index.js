@@ -322,3 +322,20 @@ export function createSurfaceSessionTab(session) {
     stale: session.state === 'stale',
   };
 }
+
+export function listOpenSurfaceSessions(sessions, placement) {
+  return sessions.filter((session) =>
+    session.state !== 'closed' && (placement ? session.placement === placement : true));
+}
+
+export function createMainSessionTabStrip(sessions, options = {}) {
+  const openMainSessions = listOpenSurfaceSessions(sessions, 'main');
+  return {
+    id: options.id ?? 'main-session-tab-strip',
+    title: options.title ?? 'Documents',
+    placement: 'main',
+    layout: 'tabs',
+    tabs: openMainSessions.map((session) => createSurfaceSessionTab(session)),
+    activeTabId: options.activeTabId ?? openMainSessions[0]?.id,
+  };
+}
