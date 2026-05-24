@@ -105,7 +105,7 @@ Implementation anchors:
 - pnpm packages: Phase 14: No new package install.
 
 
-Update. Define rich-editor capability and unsupported-construct warning conventions.
+Update. Define rich-editor capability and unsupported-construct warning conventions for TF-MD constructs, including control blocks, includes/repositories, requirements, fenced model/diagram blocks, and local asset references.
 
 
 ## Tests and definition of done

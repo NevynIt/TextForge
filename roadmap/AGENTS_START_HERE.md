@@ -6,7 +6,7 @@ This is the first document a coding agent must read before working on the TextFo
 
 The goal is to let any agent understand the architecture, locate the current phase, continue the next useful work, and leave the repository more understandable than it found it.
 
-TextForge is being rebuilt as a React-based, local-first, text-first workbench with a pnpm-workspace monorepo, package-level contribution boundaries, ITM as the canonical structural model, a virtual workspace, stable document identity badges, a readable overflow-safe workbench shell, Surface-based editors/viewers, restricted Lua automation, Markdown/report generation, BPMN and enterprise architecture support, and a reusable browser-envelope security profile.
+TextForge is being rebuilt as a React-based, local-first, text-first workbench with a pnpm-workspace monorepo, package-level contribution boundaries, ITM as the canonical structural model, a virtual workspace, stable document identity badges, a readable overflow-safe workbench shell, Surface-based editors/viewers, restricted Lua automation, progressively implemented TF-MD Markdown/report generation, BPMN and enterprise architecture support, and a reusable browser-envelope security profile.
 
 ## Repository-local roadmap folder
 
@@ -24,6 +24,8 @@ roadmap/
   03_package_dependency_activity_diagram.md
   RAPID.md
   textforge_rebuild_whitepaper_main.md
+  specs/
+    textforge_markdown_profile.md
   packages/
     core.md
     workspace.md
@@ -54,10 +56,11 @@ Before changing code, do the following:
 3. Read `roadmap/00_package_aware_roadmap.md`.
 4. Read `roadmap/02_phase_architecture_pnpm_matrix.md` for the active phase's architecture anchors and pnpm dependency commands.
 5. Read `roadmap/03_package_dependency_activity_diagram.md` for cross-package phase sequencing context.
-6. Inspect `git status`, current branch, recent commits, and package structure.
-7. Determine the current phase and the next incomplete step.
-8. Check whether the roadmap still matches the repository reality.
-9. Proceed only within the next coherent phase or phase slice.
+6. For Markdown work, read `roadmap/specs/textforge_markdown_profile.md` before implementing any TF-MD parsing, directive, include, block-registry, or rich-editor behavior.
+7. Inspect `git status`, current branch, recent commits, and package structure.
+8. Determine the current phase and the next incomplete step.
+9. Check whether the roadmap still matches the repository reality.
+10. Proceed only within the next coherent phase or phase slice.
 
 Do not start by guessing from file names alone. The RAPID log and roadmap are the authoritative operational context.
 

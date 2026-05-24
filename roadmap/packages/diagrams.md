@@ -48,7 +48,7 @@ Implementation anchors:
 - pnpm packages: Phase 4: `pnpm --filter @textforge/diagrams add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* mermaid @viz-js/viz`
 
 
-Create. Mermaid and Graphviz rendering pipelines, generated SVG resource creation, SVG-to-PNG rasterization pipeline.
+Create. Mermaid and Graphviz rendering pipelines, generated SVG resource creation, SVG-to-PNG rasterization pipeline, and Markdown-callable handlers for `mermaid`, `dot`, and `graphviz` fenced blocks.
 
 ### Phase 7 — ITM visual projections
 
@@ -82,7 +82,7 @@ Update. Add React Flow adapter for controlled graph/flowchart/layout-delta editi
 
 ## Tests and definition of done
 
-Mermaid/DOT render tests, SVG storage tests, SVG-to-PNG rasterization tests, generated asset stale-state tests.
+Mermaid/DOT render tests, Markdown fenced-block handler tests, SVG storage tests, SVG-to-PNG rasterization tests, generated asset stale-state tests.
 
 ## Non-goals
 

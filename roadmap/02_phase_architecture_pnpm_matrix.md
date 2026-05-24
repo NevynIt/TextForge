@@ -138,7 +138,7 @@ Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
 | `@textforge/pipeline` | Minimal pipeline contribution registry/runner. | `pnpm --filter @textforge/pipeline add @textforge/core@workspace:* @textforge/workspace@workspace:*` |
-| `@textforge/markdown` | markdown-it preview and local asset resolution. | `pnpm --filter @textforge/markdown add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* markdown-it markdown-it-anchor markdown-it-footnote markdown-it-katex katex` |
+| `@textforge/markdown` | TF-MD Level 1/2 baseline, markdown-it preview, diagnostics, and local asset resolution. | `pnpm --filter @textforge/markdown add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* markdown-it markdown-it-anchor markdown-it-footnote markdown-it-katex katex` |
 | `@textforge/diagrams` | Mermaid and Graphviz rendering pipelines. | `pnpm --filter @textforge/diagrams add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* mermaid @viz-js/viz` |
 | `@textforge/assets` | Generated asset provenance/stale display. | No new package install. |
 
@@ -152,6 +152,7 @@ Architecture paragraphs: `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P0
 | `@textforge/surfaces` | Package-provided surface registration. | No new package install. |
 | `@textforge/pipeline` | Step contribution loading, diagnostics aggregation, intermediate reopening. | No new package install. |
 | `@textforge/ui` | Feature package status and diagnostics/package-composition feedback. | No new package install. |
+| `@textforge/markdown` | TF-MD `%require` and fenced-block handler composition through package capabilities. | No new package install. |
 
 ## Phase 6 — ITM integration and model/report foundation
 
@@ -161,7 +162,7 @@ Architecture paragraphs: `ARCH-6.6-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.9-P01
 |---|---|---|
 | `@textforge/itm` | Parser/serializer/resolver/selectors/styles/views/rules. | `pnpm --filter @textforge/itm add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/pipeline@workspace:* yaml` |
 | `@textforge/pipeline` | ITM model value and transformation step contracts. | No new package install. |
-| `@textforge/markdown` | Embedded ITM publication/report fragments. | `pnpm --filter @textforge/markdown add @textforge/itm@workspace:*` |
+| `@textforge/markdown` | TF-MD model-aware `itm` and `itm-pub` fenced blocks. | `pnpm --filter @textforge/markdown add @textforge/itm@workspace:*` |
 
 ## Phase 7 — ITM visual projections
 
@@ -187,7 +188,7 @@ Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-11.5-
 
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
-| `@textforge/markdown` | AST-level report pipeline. | `pnpm --filter @textforge/markdown add unified remark-parse remark-rehype rehype-stringify rehype-sanitize rehype-slug rehype-autolink-headings unist-util-visit` |
+| `@textforge/markdown` | TF-MD include/repository resolver and AST-level report pipeline. | `pnpm --filter @textforge/markdown add unified remark-parse remark-rehype rehype-stringify rehype-sanitize rehype-slug rehype-autolink-headings unist-util-visit` |
 | `@textforge/itm` | Report fragment model integration. | No new package install. |
 | `@textforge/diagrams` | Report asset embedding integration. | No new package install. |
 
@@ -234,7 +235,7 @@ Architecture paragraphs: `ARCH-5.3-P01..P08`, `ARCH-5.4-P01..P03`, `ARCH-6.12-P0
 
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
-| `@textforge/editors` | Rich-editor capability conventions and unsupported-construct diagnostics. | No new package install. |
+| `@textforge/editors` | Rich-editor capability conventions and unsupported-construct diagnostics for TF-MD. | No new package install. |
 | `@textforge/markdown` | Milkdown rich Markdown surface behind feature flag. | `pnpm --filter @textforge/markdown add @milkdown/kit @milkdown/react` |
 
 ## Phase 15 — Controlled graph, diagram, and pipeline editors

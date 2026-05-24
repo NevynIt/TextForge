@@ -1,4 +1,4 @@
-# TextForge V15g Package-Aware Roadmap
+# TextForge V15h Package-Aware Roadmap
 
 This roadmap interweaves the architecture milestones with the package split. It is intentionally package-oriented: every phase states which packages are created or updated and what each package receives.
 
@@ -19,6 +19,21 @@ Stable contracts in the center.
 Feature packages contribute through manifests.
 The application shell composes packages; it should not own feature logic.
 ```
+
+## TF-MD phase implementation rule
+
+The TextForge Markdown Profile source specification lives at `roadmap/specs/textforge_markdown_profile.md`. Implement it through existing phases rather than by adding a separate Markdown-profile milestone. The phase mapping is intentionally progressive:
+
+| Phase | TF-MD implementation responsibility | Conformance posture |
+|---|---|---|
+| Phase 2 | Markdown remains a source-editor language mode only. No TF-MD semantic claim. | Pre-profile editing support. |
+| Phase 4 | Establish the TF-MD baseline in `@textforge/markdown`: Markdown-compatible reading, explicit heading anchors, style references, `tf-md` control block scanning, `%metadata`, `%style`, initial diagnostics, local images, and a provisional fenced-block dispatcher for Mermaid, DOT/Graphviz, SVG, JSON, and YAML. | Claims Level 1 and Level 2; preserves unknown fenced blocks. |
+| Phase 5 | Replace provisional block dispatch with contribution/capability-aware registration and `%require` diagnostics using package manifests. | Adds Level 4 machinery, but cumulative conformance is not claimed past Level 2 until Phase 9 completes composition. |
+| Phase 6 | Add model-aware Markdown by connecting `itm` and `itm-pub` fenced blocks to the ITM parser, diagnostics, model fragments, and publication views. | Adds Level 5 local model-aware capability, while cumulative conformance still waits for Phase 9 Level 3 composition. |
+| Phase 9 | Add `%include`, `%repository`, repository-qualified references, circular-include diagnostics, resolved Markdown output, and report-generation behavior. | Completes Level 3 and makes resolved Markdown/report output a first-class pipeline value. |
+| Phase 14 | Add optional rich Markdown editing only behind a feature flag, with source fallback and round-trip tests for every TF-MD construct already implemented. | Rich editor must not become the canonical TF-MD parser. |
+
+Do not add a separate phase called "Markdown profile". If implementation details need to move, update the phase rows above and the package guides in the same commit, and append a RAPID decision/progress row.
 
 ## Runnable-shell rule
 
@@ -375,7 +390,7 @@ Package dependency actions for this phase:
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
 | `@textforge/pipeline` | Minimal pipeline contribution registry/runner. | `pnpm --filter @textforge/pipeline add @textforge/core@workspace:* @textforge/workspace@workspace:*` |
-| `@textforge/markdown` | markdown-it preview and local asset resolution. | `pnpm --filter @textforge/markdown add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* markdown-it markdown-it-anchor markdown-it-footnote markdown-it-katex katex` |
+| `@textforge/markdown` | TF-MD Level 1/2 baseline, markdown-it preview, diagnostics, and local asset resolution. | `pnpm --filter @textforge/markdown add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* markdown-it markdown-it-anchor markdown-it-footnote markdown-it-katex katex` |
 | `@textforge/diagrams` | Mermaid and Graphviz rendering pipelines. | `pnpm --filter @textforge/diagrams add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* mermaid @viz-js/viz` |
 | `@textforge/assets` | Generated asset provenance/stale display. | No new package install. |
 
@@ -384,8 +399,10 @@ Package dependency actions for this phase:
 |---|---|---|
 | `@textforge/pipeline` | Create | Create. Minimal pipeline contribution registry, pipeline runner, trace, generated resource output type. |
 | `@textforge/assets` | Update | Update. Add generated asset provenance, stale-state display, SVG/PNG export actions. |
-| `@textforge/markdown` | Create | Create. markdown-it preview surface, workspace-relative image resolver, Markdown toolbar for inserting workspace images/diagram blocks, print-optimized HTML baseline. |
-| `@textforge/diagrams` | Create | Create. Mermaid and Graphviz rendering pipelines, generated SVG resource creation, SVG-to-PNG rasterization pipeline. |
+| `@textforge/markdown` | Create | Create. TF-MD baseline processor and preview surface: Markdown-compatible reader, explicit heading anchors, heading/paragraph/inline style references, `tf-md` control block scanner, `%metadata`, `%style`, diagnostics, workspace-relative image resolver, Markdown toolbar for inserting workspace images/diagram blocks, print-optimized HTML baseline, and provisional fenced-block dispatch for known local block types. |
+| `@textforge/diagrams` | Create | Create. Mermaid and Graphviz rendering pipelines, generated SVG resource creation, SVG-to-PNG rasterization pipeline, and Markdown-callable handlers for `mermaid`, `dot`, and `graphviz` fenced blocks. |
+
+Phase 4 scope boundary: do not implement `%include`, `%repository`, full `%require` capability resolution, `itm`/`itm-pub` model-aware rendering, or rich Markdown editing here. Phase 4 should preserve unknown fenced blocks as code, emit diagnostics for unsupported known blocks when the selected output needs them, and keep TF-MD runtime/security policy outside the Markdown profile implementation.
 
 ### Phase 5 — Contribution registries and package composition
 
@@ -401,6 +418,7 @@ Package dependency actions for this phase:
 | `@textforge/surfaces` | Package-provided surface registration. | No new package install. |
 | `@textforge/pipeline` | Step contribution loading, diagnostics aggregation, intermediate reopening. | No new package install. |
 | `@textforge/ui` | Feature package status and diagnostics/package-composition feedback. | No new package install. |
+| `@textforge/markdown` | TF-MD `%require` and fenced-block handler composition through package capabilities. | No new package install. |
 
 
 Phase 5 extends the Phase 3.3 shell-command substrate into the broader package contribution system. Do not reimplement the command palette here; use Phase 5 to add the remaining contribution kinds and package-composition rules.
@@ -411,6 +429,7 @@ Phase 5 extends the Phase 3.3 shell-command substrate into the broader package c
 | `@textforge/surfaces` | Update | Update. Add package-provided surface registration and capability-filtered commands beyond the base shell actions delivered in Phase 3.3. |
 | `@textforge/pipeline` | Update | Update. Add step contribution loading, diagnostics aggregation, intermediate value reopening. |
 | `@textforge/ui` | Update | Update. Extend contribution-driven menu/toolbar slots for feature packages, diagnostics, and package-composition feedback without broadening Phase 3.3 retroactively. |
+| `@textforge/markdown` | Update | Update. Replace the Phase 4 provisional fenced-block dispatcher with contribution/capability-aware block-handler registration and `%require` diagnostics for missing Markdown processors/renderers, without implementing includes or ITM publication yet. |
 
 ### Phase 6 — ITM integration and model/report foundation
 
@@ -424,7 +443,7 @@ Package dependency actions for this phase:
 |---|---|---|
 | `@textforge/itm` | Parser/serializer/resolver/selectors/styles/views/rules. | `pnpm --filter @textforge/itm add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/pipeline@workspace:* yaml` |
 | `@textforge/pipeline` | ITM model value and transformation step contracts. | No new package install. |
-| `@textforge/markdown` | Embedded ITM publication/report fragments. | `pnpm --filter @textforge/markdown add @textforge/itm@workspace:*` |
+| `@textforge/markdown` | TF-MD model-aware `itm` and `itm-pub` fenced blocks. | `pnpm --filter @textforge/markdown add @textforge/itm@workspace:*` |
 
 
 | Package | Action | Content |
@@ -432,7 +451,7 @@ Package dependency actions for this phase:
 | `@textforge/pipeline` | Update | Update. Add ITM model value type and ITM-based transformation step contracts. |
 | `@textforge/itm` | Create | Create. Parser/serializer/resolver interfaces, selectors, styles, views/viewpoints, validation diagnostics, profile package loading, workspace include resolver contract. |
 | `@textforge/editors` | Update | Update. Add ITM source assistance and diagnostics integration. |
-| `@textforge/markdown` | Update | Update. Add embedded ITM publication blocks and ITM-driven report fragments. |
+| `@textforge/markdown` | Update | Update. Add TF-MD model-aware `itm` and `itm-pub` fenced blocks, ITM diagnostics projection into Markdown source ranges, local embedded model selection, and ITM-driven report fragments. |
 
 ### Phase 7 — ITM visual projections
 
@@ -484,7 +503,7 @@ Package dependency actions for this phase:
 
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
-| `@textforge/markdown` | AST-level report pipeline. | `pnpm --filter @textforge/markdown add unified remark-parse remark-rehype rehype-stringify rehype-sanitize rehype-slug rehype-autolink-headings unist-util-visit` |
+| `@textforge/markdown` | TF-MD include/repository resolver and AST-level report pipeline. | `pnpm --filter @textforge/markdown add unified remark-parse remark-rehype rehype-stringify rehype-sanitize rehype-slug rehype-autolink-headings unist-util-visit` |
 | `@textforge/itm` | Report fragment model integration. | No new package install. |
 | `@textforge/diagrams` | Report asset embedding integration. | No new package install. |
 
@@ -492,7 +511,7 @@ Package dependency actions for this phase:
 | Package | Action | Content |
 |---|---|---|
 | `@textforge/itm` | Update | Update. Add report-oriented view extraction and model fragment export APIs. |
-| `@textforge/markdown` | Update | Update. unified/remark/rehype report pipeline, section generation, local asset embedding/resolution, report preview surface. |
+| `@textforge/markdown` | Update | Update. Add TF-MD `%include` and `%repository` resolution, repository-qualified references, circular include diagnostics, resolved Markdown output, unified/remark/rehype report pipeline, section generation, local asset embedding/resolution, and report preview surface. |
 | `@textforge/diagrams` | Update | Update. Ensure generated SVG/PNG assets can be stored and referenced in reports. |
 
 ### Phase 10 — BPMN support and first mature visual editor
@@ -590,14 +609,14 @@ Package dependency actions for this phase:
 
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
-| `@textforge/editors` | Rich-editor capability conventions and unsupported-construct diagnostics. | No new package install. |
+| `@textforge/editors` | Rich-editor capability conventions and unsupported-construct diagnostics for TF-MD. | No new package install. |
 | `@textforge/markdown` | Milkdown rich Markdown surface behind feature flag. | `pnpm --filter @textforge/markdown add @milkdown/kit @milkdown/react` |
 
 
 | Package | Action | Content |
 |---|---|---|
-| `@textforge/editors` | Update | Update. Define rich-editor capability and unsupported-construct warning conventions. |
-| `@textforge/markdown` | Update | Update. Add Milkdown rich Markdown surface behind feature flag; preserve source editor fallback; implement round-trip tests for fenced ITM/Mermaid/DOT/KaTeX/front matter/local images. |
+| `@textforge/editors` | Update | Update. Define rich-editor capability and unsupported-construct warning conventions for TF-MD constructs. |
+| `@textforge/markdown` | Update | Update. Add Milkdown rich Markdown surface behind feature flag; preserve source editor fallback; implement round-trip tests for TF-MD control blocks, anchors, styles, includes/repositories, requirements, fenced ITM/Mermaid/DOT/SVG/KaTeX blocks, front matter, and local images. |
 
 ### Phase 15 — Controlled graph, diagram, and pipeline editors
 

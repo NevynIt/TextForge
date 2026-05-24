@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Markdown preview, report pipeline, workspace image resolution, embedded diagrams, embedded ITM publication blocks, and print-optimized HTML.
+Markdown preview, TF-MD profile processing, report pipeline, workspace image resolution, embedded diagrams, embedded ITM publication blocks, resolved Markdown output, and print-optimized HTML.
 
 ## Ownership rule
 
@@ -28,7 +28,7 @@ Third-party candidates: markdown-it, unified/remark/rehype, KaTeX integration ho
 
 ## Public surface
 
-Markdown preview/report surfaces, Markdown pipelines, local asset resolver integration, report block contribution APIs.
+Markdown preview/report surfaces, TF-MD parser/diagnostics interfaces, Markdown pipelines, local asset resolver integration, fenced-block handler integration, resolved Markdown output, and report block contribution APIs.
 
 ## Milestone plan
 
@@ -44,13 +44,25 @@ No direct Markdown feature work. These phases establish React shell usability, D
 
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
+TF-MD responsibility: implement the baseline profile slice from `roadmap/specs/textforge_markdown_profile.md`, including Level 1 anchors/style references and Level 2 `tf-md` control blocks with `%metadata`, `%style`, and diagnostics. This is a Markdown-profile baseline phase, not a complete composition/report phase.
+
 Implementation anchors:
 
 - Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P01..P06`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-11.5-P01..P03`, `ARCH-13.8-P01..P03`.
 - pnpm packages: Phase 4: `pnpm --filter @textforge/markdown add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* markdown-it markdown-it-anchor markdown-it-footnote markdown-it-katex katex`
 
 
-Create. markdown-it preview surface, workspace-relative image resolver, Markdown toolbar for inserting workspace images/diagram blocks, print-optimized HTML baseline.
+Create. TF-MD baseline processor and markdown-it preview surface: Markdown-compatible reader, explicit heading anchors, heading/paragraph/inline style references, `tf-md` control block scanner, `%metadata`, `%style`, diagnostics, workspace-relative image resolver, Markdown toolbar for inserting workspace images/diagram blocks, print-optimized HTML baseline, and provisional fenced-block dispatch for known local block types. Preserve unknown fenced blocks as code.
+
+### Phase 5 — Contribution registries and package composition
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`.
+- pnpm packages: Phase 5: No new package install.
+
+
+Update. Replace the Phase 4 provisional fenced-block dispatcher with contribution/capability-aware block-handler registration. Add `%require` parsing/diagnostics for missing Markdown processors, renderers, profiles, or block handlers. Do not implement `%include`, `%repository`, or ITM publication in this phase.
 
 ### Phase 6 — ITM integration and model/report foundation
 
@@ -60,7 +72,7 @@ Implementation anchors:
 - pnpm packages: Phase 6: `pnpm --filter @textforge/markdown add @textforge/itm@workspace:*`
 
 
-Update. Add embedded ITM publication blocks and ITM-driven report fragments.
+Update. Add TF-MD model-aware `itm` and `itm-pub` fenced blocks, ITM diagnostics projected into Markdown source ranges, local embedded model selection, and ITM-driven report fragments.
 
 ### Phase 9 — Markdown + ITM report generation
 
@@ -70,7 +82,7 @@ Implementation anchors:
 - pnpm packages: Phase 9: `pnpm --filter @textforge/markdown add unified remark-parse remark-rehype rehype-stringify rehype-sanitize rehype-slug rehype-autolink-headings unist-util-visit`
 
 
-Update. unified/remark/rehype report pipeline, section generation, local asset embedding/resolution, report preview surface.
+Update. Add TF-MD `%include` and `%repository` resolution, repository-qualified references, circular include diagnostics, resolved Markdown output, unified/remark/rehype report pipeline, section generation, local asset embedding/resolution, and report preview surface.
 
 ### Phase 12 — Enterprise architecture and ArchiMate foundation
 
@@ -90,7 +102,7 @@ Implementation anchors:
 - pnpm packages: Phase 14: `pnpm --filter @textforge/markdown add @milkdown/kit @milkdown/react`
 
 
-Update. Add Milkdown rich Markdown surface behind feature flag; preserve source editor fallback; implement round-trip tests for fenced ITM/Mermaid/DOT/KaTeX/front matter/local images.
+Update. Add Milkdown rich Markdown surface behind feature flag; preserve source editor fallback; implement round-trip tests for TF-MD control blocks, anchors, styles, includes/repositories, requirements, fenced ITM/Mermaid/DOT/SVG/KaTeX blocks, front matter, and local images.
 
 ### Phase 17 — Sketch and annotation resources
 
@@ -114,7 +126,7 @@ Update. Evaluate local Markdown/HTML-to-PDF pipeline after print HTML stabilizes
 
 ## Tests and definition of done
 
-Markdown rendering tests, workspace image resolution tests, report pipeline tests, fenced-block preservation tests.
+Markdown rendering tests, TF-MD profile fixture tests, `tf-md` directive diagnostics, workspace image resolution tests, fenced-block preservation tests, `%require` capability diagnostics after Phase 5, `itm`/`itm-pub` integration tests after Phase 6, include/resolved Markdown/report pipeline tests after Phase 9, and rich-editor round-trip tests after Phase 14.
 
 ## Non-goals
 

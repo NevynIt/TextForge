@@ -55,7 +55,7 @@ Implementation anchors:
 - pnpm packages: Phase 5: No new package install.
 
 
-Update. Add step contribution loading, diagnostics aggregation, intermediate value reopening using the broader contribution-pack system that extends Phase 3.3.
+Update. Add step contribution loading, diagnostics aggregation, intermediate value reopening using the broader contribution-pack system that extends Phase 3.3. Expose enough handler metadata for `@textforge/markdown` to replace its Phase 4 provisional fenced-block dispatcher with contribution-registered handlers and `%require` diagnostics.
 
 ### Phase 6 — ITM integration and model/report foundation
 

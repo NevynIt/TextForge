@@ -3,7 +3,7 @@
 **Version:** 15d  
 **Purpose:** Standalone architecture blueprint for rebuilding TextForge from scratch as a React-based, local-first, text-first, secure browser workbench. The design centers on an application-private virtual workspace, ITM as the canonical structural model, explicit pipelines, restricted Lua automation, binary workspace resources, Markdown/report generation, enterprise architecture and ArchiMate support, browser-envelope accreditation, and a Surface-based UI where editors, rich editors, structured editors, viewers, consoles, inspectors, and generated previews are peers.
 
-This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15g roadmap documents under `roadmap/`.
+This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15h roadmap documents under `roadmap/`.
 
 ---
 
@@ -3230,7 +3230,7 @@ This avoids a separate `TextForge2` repository while avoiding a confusing side-b
 
 ## 10. Companion roadmap set and authority split
 
-The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15g roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
+The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15h roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
 
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
 

@@ -134,14 +134,16 @@ sequenceDiagram
   end
 
   rect rgb(250,240,255)
-    Note over Pipe,Diag: Phase 4 — Markdown, local assets, generated diagram assets
+    Note over Pipe,Diag: Phase 4 — Markdown profile baseline, local assets, generated diagram assets
     Pipe->>Core: consume pipeline value, trace, diagnostics, generated resource contracts
-    MD->>Pipe: contribute Markdown preview/report pipelines
+    MD->>Pipe: contribute TF-MD baseline preview pipeline and diagnostics
     MD->>WS: resolve workspace-relative images
     MD->>Surf: contribute Markdown preview surface
+    MD->>MD: implement anchors, style references, tf-md blocks, metadata, and style directives
     Diag->>Pipe: contribute Mermaid and Graphviz rendering pipelines
     Diag->>WS: write generated SVG/PNG resources
     Diag->>Assets: reuse SVG/image viewer surfaces
+    MD->>Diag: use local handlers for mermaid, dot, and graphviz fenced blocks
     Assets->>Pipe: display generated asset provenance and stale state
   end
 
@@ -150,6 +152,8 @@ sequenceDiagram
     Surf->>Core: consume full contribution-pack manifests and dependency declarations
     Pipe->>Core: consume step contribution loading and diagnostics aggregation contracts
     UI->>Core: render feature-package menu/toolbar slots and package-composition feedback
+    MD->>Core: consume capability declarations for TF-MD %require diagnostics
+    MD->>Pipe: register fenced-block handlers through contribution manifests
     App->>Core: compose package contribution manifests instead of owning feature logic
   end
 
@@ -159,7 +163,7 @@ sequenceDiagram
     ITM->>WS: resolve workspace includes/packages
     ITM->>Pipe: contribute parse/validate/select/view pipelines
     Edit->>ITM: provide ITM source assistance and diagnostics integration
-    MD->>ITM: embed ITM publication blocks and report fragments
+    MD->>ITM: embed TF-MD itm and itm-pub blocks, diagnostics, publication views, and report fragments
   end
 
   rect rgb(235,245,255)
@@ -182,6 +186,7 @@ sequenceDiagram
     Note over MD,ITM: Phase 9 — Markdown + ITM report generation
     ITM->>Pipe: expose report-oriented model fragment export
     MD->>ITM: consume report-oriented view extraction
+    MD->>WS: resolve TF-MD includes and repository-qualified Markdown references
     MD->>Diag: consume generated SVG/PNG report assets
     Diag->>WS: store reportable generated diagram assets
   end
@@ -220,7 +225,7 @@ sequenceDiagram
 
   rect rgb(245,245,245)
     Note over MD,Diag: Phases 14–18 — optional rich/visual/annotation/PDF capabilities
-    MD->>Edit: add Milkdown rich Markdown surface behind feature flag
+    MD->>Edit: add Milkdown rich Markdown surface behind feature flag and preserve TF-MD source round trips
     Diag->>ITM: add React Flow controlled graph/layout-delta editing patches
     Diag->>Pipe: add visual pipeline editor schema
     Archi->>Sec: perform license/dependency review for ArchiMate visual library

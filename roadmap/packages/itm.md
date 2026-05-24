@@ -46,7 +46,7 @@ Implementation anchors:
 - pnpm packages: Phase 6: `pnpm --filter @textforge/itm add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/pipeline@workspace:* yaml`
 
 
-Create. Parser/serializer/resolver interfaces, selectors, styles, views/viewpoints, validation diagnostics, profile package loading, workspace include resolver contract.
+Create. Parser/serializer/resolver interfaces, selectors, styles, views/viewpoints, validation diagnostics, profile package loading, workspace include resolver contract, and public APIs needed by `@textforge/markdown` to parse `itm` blocks, validate them, and render `itm-pub` publication views.
 
 ### Phase 7 — ITM visual projections
 
@@ -66,7 +66,7 @@ Implementation anchors:
 - pnpm packages: Phase 9: No new package install.
 
 
-Update. Add report-oriented view extraction and model fragment export APIs.
+Update. Add report-oriented view extraction and model fragment export APIs that can be consumed from resolved TF-MD report pipelines.
 
 ### Phase 11 — Tables, catalogues, and matrices
 
