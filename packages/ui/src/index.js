@@ -259,6 +259,26 @@ export function TextForgeToolbarButton({
   );
 }
 
+export function TextForgeCallout({
+  actions,
+  children,
+  tone = 'info',
+  title,
+}) {
+  return element(
+    'section',
+    {
+      className: classNames('tf-callout', `tf-callout--${tone}`),
+      role: tone === 'warning' || tone === 'danger' ? 'alert' : 'status',
+    },
+    title ? element('h3', { className: 'tf-callout__title' }, title) : null,
+    children ? element('div', { className: 'tf-callout__body' }, children) : null,
+    actions?.length
+      ? element('div', { className: 'tf-callout__actions' }, ...actions)
+      : null,
+  );
+}
+
 export function TextForgeStatusRail({ badges = [] }) {
   return element(
     'div',

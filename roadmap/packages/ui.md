@@ -79,3 +79,7 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 The package now exports real React workbench primitives instead of model-only chrome helpers. `TextForgeAppFrame`, `TextForgeTopBar`, `TextForgeWorkspaceSidebar`, `TextForgeSessionTabStrip`, `TextForgeUtilityPane`, `TextForgeStatusRail`, and `TextForgeSelectField` render the recovered shell frame while preserving the existing package-owned shell models.
 
 The delivered shell chrome includes the collapsible workspace tree region, narrow main-session tab strip, compact status rail, and a utility pane that stays closed by default. Baseline keyboard and accessibility behaviour now includes semantic tree/tab roles, roving focus for the workspace tree and tab strips, and visible focus treatment, without pulling command palette, layout persistence, or advanced tab management forward.
+
+## Phase 3.2 closure note
+
+The package now also provides the lightweight storage/recovery chrome needed by the shell without taking ownership of persistence itself. `TextForgeCallout` and the existing top-bar, utility-pane, and badge primitives now carry the browser-managed workspace wording, reset confirmation flow, and storage initialization/recovery messaging used by the Phase 3.2 shell.

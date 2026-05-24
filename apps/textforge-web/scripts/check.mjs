@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
+  createBrowserStorageBoundaryCheck,
   createForbiddenBrowserApiCheck,
   createForbiddenFilesystemApiCheck,
   createOpenSourceLicenseGate,
@@ -16,6 +17,7 @@ const scriptLoaderJs = await readFile(resolve(rootDir, 'src/scriptLoader.js'), '
 const workbenchJs = await readFile(resolve(rootDir, 'src/workbench.js'), 'utf8');
 const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
 const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
+const storageBoundaryDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'browser-managed-workspace-storage.md'), 'utf8');
 
 if (!indexHtml.includes('./src/scriptLoader.js')) {
   throw new Error('index.html must load ./src/scriptLoader.js as the development entrypoint');
@@ -71,6 +73,7 @@ for (const requiredReactSignal of [
   "from 'react-dom/client'",
   'useSyncExternalStore',
   'TextForgeAppFrame',
+  'TextForgeCallout',
   'TextForgeTopBar',
   'TextForgeWorkspaceSidebar',
   'TextForgeUtilityPane',
@@ -85,19 +88,35 @@ if (!workbenchJs.includes('createOpenWithSelection') || !workbenchJs.includes('l
   throw new Error('workbench.js must preserve package-backed open-with and language control chrome');
 }
 
-if (!workbenchJs.includes("utilityPaneOpen: false") || !workbenchJs.includes("workspaceTreeCollapsed: false")) {
+if (!workbenchJs.includes('createPersistedWorkspaceService') || !workbenchJs.includes('resetWorkspaceDexieStorage')) {
+  throw new Error('workbench.js must hydrate the workspace through the persisted Dexie service and expose reset recovery flow');
+}
+
+if (!workbenchJs.includes("utilityPaneOpen: false") || !workbenchJs.includes("workspaceTreeCollapsed: false") || !workbenchJs.includes("utilitySectionId: 'storage'")) {
   throw new Error('workbench.js must initialize the utility pane hidden and the workspace tree expanded');
 }
 
-for (const requiredDependency of ['"react"', '"react-dom"', '"@textforge/security-profile"']) {
+for (const requiredDependency of ['"react"', '"react-dom"', '"@textforge/security-profile"', '"@textforge/workspace"']) {
   if (!packageJson.includes(requiredDependency)) {
     throw new Error(`package.json must declare ${requiredDependency} for the Phase 3.1 shell`);
   }
 }
 
-for (const forbiddenApi of ['showOpenFilePicker', 'showDirectoryPicker', 'showSaveFilePicker', 'navigator.serviceWorker.register']) {
+for (const forbiddenApi of ['showOpenFilePicker', 'showDirectoryPicker', 'showSaveFilePicker', 'navigator.serviceWorker.register', 'BackgroundSync']) {
   if (workbenchJs.includes(forbiddenApi)) {
     throw new Error(`workbench.js must not introduce ${forbiddenApi}`);
+  }
+}
+
+for (const requiredStorageSignal of ['IndexedDB', 'browser-managed', 'Reset Browser Workspace']) {
+  if (!workbenchJs.includes(requiredStorageSignal)) {
+    throw new Error(`workbench.js must surface ${requiredStorageSignal} storage-boundary wording`);
+  }
+}
+
+for (const requiredDocSignal of ['IndexedDB', 'File System Access API', 'background sync', 'remote sync']) {
+  if (!storageBoundaryDoc.includes(requiredDocSignal)) {
+    throw new Error(`browser-managed-workspace-storage.md must document ${requiredDocSignal}`);
   }
 }
 
@@ -130,5 +149,24 @@ function assertSecurityEnvelope() {
     filesystemApis: [],
   }).passed !== true) {
     throw new Error('The shell should not require privileged filesystem APIs');
+  }
+
+  if (createBrowserStorageBoundaryCheck().run({
+    profile: defaultSecurityProfile,
+    storageBoundary: {
+      documented: true,
+      browserManaged: true,
+      mechanism: 'indexeddb',
+      driver: 'dexie',
+      databaseName: 'textforge-workspace',
+      usesFilesystemAccess: false,
+      usesDirectoryHandles: false,
+      usesBackgroundSync: false,
+      usesRemoteSync: false,
+      usesSilentLocalFileAccess: false,
+      notesUri: 'docs/specs/browser-managed-workspace-storage.md',
+    },
+  }).passed !== true) {
+    throw new Error('The shell must keep the workspace inside the browser-managed storage boundary');
   }
 }

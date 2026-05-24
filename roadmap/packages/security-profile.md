@@ -73,3 +73,7 @@ The package now includes executable runtime/check/test entrypoints in addition t
 ## Phase 3.1 closure note
 
 React and React DOM are now part of the delivered shell dependency set, and the Phase 3.1 shell checks re-run the open-source license gate against both packages. The shell-level verification also continues to reject privileged browser and filesystem APIs and preserves the source-owned classic loader path for the local runnable artifact.
+
+## Phase 3.2 closure note
+
+The default profile now includes an explicit browser-managed storage-boundary check in addition to the earlier archive-boundary and forbidden-filesystem checks. Phase 3.2 validation covers the Dexie/IndexedDB workspace boundary, the dedicated storage-boundary notes document, and the continued absence of File System Access API, directory handles, background sync, remote sync, and silent local file access in the shipped shell.

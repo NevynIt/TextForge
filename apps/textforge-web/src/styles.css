@@ -164,6 +164,12 @@ select {
   background: rgba(244, 184, 96, 0.12);
 }
 
+.tf-badge--danger {
+  color: #ffc0c0;
+  border-color: rgba(239, 107, 107, 0.3);
+  background: rgba(239, 107, 107, 0.14);
+}
+
 .tf-badge--neutral {
   color: #d6deea;
   border-color: rgba(143, 160, 184, 0.28);
@@ -568,6 +574,62 @@ select {
 .tf-registry__card p {
   margin: 8px 0 0;
   line-height: 1.5;
+}
+
+.tf-callout {
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+
+.tf-callout--info {
+  border-color: rgba(47, 143, 136, 0.32);
+  background: linear-gradient(180deg, rgba(47, 143, 136, 0.16), rgba(19, 27, 45, 0.96));
+}
+
+.tf-callout--success {
+  border-color: rgba(62, 189, 119, 0.28);
+  background: linear-gradient(180deg, rgba(62, 189, 119, 0.14), rgba(19, 27, 45, 0.96));
+}
+
+.tf-callout--warning,
+.tf-callout--danger {
+  border-color: rgba(244, 184, 96, 0.28);
+  background: linear-gradient(180deg, rgba(244, 184, 96, 0.14), rgba(19, 27, 45, 0.96));
+}
+
+.tf-callout__title {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tf-callout__body {
+  display: grid;
+  gap: 10px;
+}
+
+.tf-callout__body p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.tf-callout__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tf-storage {
+  display: grid;
+  gap: 12px;
+}
+
+.tf-storage__meta {
+  gap: 12px;
 }
 
 .tf-empty {

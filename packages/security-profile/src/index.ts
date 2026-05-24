@@ -10,6 +10,7 @@ export type SecurityCheckKind =
   | 'privileged-api'
   | 'filesystem-api'
   | 'archive-boundary'
+  | 'storage-boundary'
   | 'license';
 
 export interface SecurityDependency {
@@ -41,6 +42,20 @@ export interface ArchiveBoundarySnapshot {
   readonly notesUri?: string;
 }
 
+export interface BrowserStorageBoundarySnapshot {
+  readonly documented: boolean;
+  readonly browserManaged: boolean;
+  readonly mechanism?: string;
+  readonly driver?: string;
+  readonly databaseName?: string;
+  readonly usesRemoteSync?: boolean;
+  readonly usesBackgroundSync?: boolean;
+  readonly usesFilesystemAccess?: boolean;
+  readonly usesDirectoryHandles?: boolean;
+  readonly usesSilentLocalFileAccess?: boolean;
+  readonly notesUri?: string;
+}
+
 export interface SecurityProfile {
   readonly id: string;
   readonly name: string;
@@ -68,6 +83,7 @@ export interface SecurityCheckContext {
   readonly privilegedApis?: ReadonlyArray<string>;
   readonly filesystemApis?: ReadonlyArray<string>;
   readonly archiveBoundary?: ArchiveBoundarySnapshot;
+  readonly storageBoundary?: BrowserStorageBoundarySnapshot;
 }
 
 export interface SecurityCheckResult {
@@ -370,6 +386,63 @@ export function createArchiveBoundaryDocumentationCheck(options: {
   };
 }
 
+export function createBrowserStorageBoundaryCheck(options: {
+  readonly id?: string;
+  readonly label?: string;
+} = {}): SecurityCheck {
+  return {
+    id: options.id ?? 'security.storageBoundary',
+    kind: 'storage-boundary',
+    label: options.label ?? 'Browser-managed storage boundary',
+    run(context) {
+      const diagnostics: Diagnostic[] = [];
+      const storageBoundary = context.storageBoundary;
+
+      if (!storageBoundary?.documented) {
+        diagnostics.push(createIssue('Browser-managed storage behavior must be documented.', 'warning', context.resource));
+      } else {
+        if (!storageBoundary.browserManaged) {
+          diagnostics.push(createIssue('Workspace storage must remain browser-managed.', 'error', context.resource));
+        }
+
+        if (!storageBoundary.mechanism) {
+          diagnostics.push(createIssue('Workspace storage should declare its browser storage mechanism.', 'warning', context.resource));
+        }
+
+        if (!storageBoundary.driver) {
+          diagnostics.push(createIssue('Workspace storage should declare its persistence driver.', 'warning', context.resource));
+        }
+
+        if (!storageBoundary.notesUri) {
+          diagnostics.push(createIssue('Workspace storage documentation should link to a storage-boundary note.', 'warning', context.resource));
+        }
+      }
+
+      if (storageBoundary?.usesFilesystemAccess) {
+        diagnostics.push(createIssue('Workspace storage must not use File System Access API.', 'error', context.resource));
+      }
+
+      if (storageBoundary?.usesDirectoryHandles) {
+        diagnostics.push(createIssue('Workspace storage must not use directory handles.', 'error', context.resource));
+      }
+
+      if (storageBoundary?.usesBackgroundSync) {
+        diagnostics.push(createIssue('Workspace storage must not use background sync.', 'error', context.resource));
+      }
+
+      if (storageBoundary?.usesRemoteSync) {
+        diagnostics.push(createIssue('Workspace storage must not use remote sync.', 'error', context.resource));
+      }
+
+      if (storageBoundary?.usesSilentLocalFileAccess) {
+        diagnostics.push(createIssue('Workspace storage must not use silent local file access.', 'error', context.resource));
+      }
+
+      return createResult('security.storageBoundary', 'storage-boundary', diagnostics, 'Browser-managed storage boundary inspected.');
+    },
+  };
+}
+
 export function runSecurityChecks(profile: SecurityProfile, context: Omit<SecurityCheckContext, 'profile'>): ReadonlyArray<SecurityCheckResult> {
   return profile.checks.map((check) => check.run({ ...context, profile }));
 }
@@ -393,6 +466,7 @@ export const defaultSecurityProfile = createSecurityProfile({
     createForbiddenBrowserApiCheck(),
     createForbiddenFilesystemApiCheck(),
     createArchiveBoundaryDocumentationCheck(),
+    createBrowserStorageBoundaryCheck(),
   ],
 });
 

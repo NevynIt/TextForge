@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 import {
   createArchiveBoundaryDocumentationCheck,
+  createBrowserStorageBoundaryCheck,
   createForbiddenFilesystemApiCheck,
   createOpenSourceLicenseGate,
   defaultSecurityProfile,
@@ -25,6 +26,21 @@ assert.equal(createArchiveBoundaryDocumentationCheck().run({
   profile: defaultSecurityProfile,
   archiveBoundary: { documented: true, format: 'textforge-workspace-archive', notesUri: 'docs/archive-boundary.md' },
 }).passed, true);
+assert.equal(createBrowserStorageBoundaryCheck().run({
+  profile: defaultSecurityProfile,
+  storageBoundary: {
+    documented: true,
+    browserManaged: true,
+    mechanism: 'indexeddb',
+    driver: 'dexie',
+    notesUri: 'docs/specs/browser-managed-workspace-storage.md',
+    usesFilesystemAccess: false,
+    usesDirectoryHandles: false,
+    usesBackgroundSync: false,
+    usesRemoteSync: false,
+    usesSilentLocalFileAccess: false,
+  },
+}).passed, true);
 
 const results = runSecurityChecks(defaultSecurityProfile, {
   manifest: {
@@ -37,9 +53,22 @@ const results = runSecurityChecks(defaultSecurityProfile, {
   artifacts: [{ uri: '/assets/textforge.css' }],
   filesystemApis: ['showDirectoryPicker'],
   archiveBoundary: { documented: false },
+  storageBoundary: {
+    documented: true,
+    browserManaged: true,
+    mechanism: 'indexeddb',
+    driver: 'dexie',
+    usesFilesystemAccess: false,
+    usesDirectoryHandles: false,
+    usesBackgroundSync: true,
+    usesRemoteSync: false,
+    usesSilentLocalFileAccess: false,
+    notesUri: 'docs/specs/browser-managed-workspace-storage.md',
+  },
 });
 
 assert.equal(results.some((result) => result.kind === 'filesystem-api' && result.passed === false), true);
 assert.equal(results.some((result) => result.kind === 'archive-boundary' && result.passed === false), true);
+assert.equal(results.some((result) => result.kind === 'storage-boundary' && result.passed === false), true);
 
 console.info('security-profile package checks passed');

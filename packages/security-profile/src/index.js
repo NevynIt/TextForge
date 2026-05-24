@@ -247,6 +247,60 @@ export function createArchiveBoundaryDocumentationCheck(options = {}) {
   };
 }
 
+export function createBrowserStorageBoundaryCheck(options = {}) {
+  return {
+    id: options.id ?? 'security.storageBoundary',
+    kind: 'storage-boundary',
+    label: options.label ?? 'Browser-managed storage boundary',
+    run(context) {
+      const diagnostics = [];
+      const storageBoundary = context.storageBoundary;
+
+      if (!storageBoundary?.documented) {
+        diagnostics.push(createIssue('Browser-managed storage behavior must be documented.', 'warning', context.resource));
+      } else {
+        if (!storageBoundary.browserManaged) {
+          diagnostics.push(createIssue('Workspace storage must remain browser-managed.', 'error', context.resource));
+        }
+
+        if (!storageBoundary.mechanism) {
+          diagnostics.push(createIssue('Workspace storage should declare its browser storage mechanism.', 'warning', context.resource));
+        }
+
+        if (!storageBoundary.driver) {
+          diagnostics.push(createIssue('Workspace storage should declare its persistence driver.', 'warning', context.resource));
+        }
+
+        if (!storageBoundary.notesUri) {
+          diagnostics.push(createIssue('Workspace storage documentation should link to a storage-boundary note.', 'warning', context.resource));
+        }
+      }
+
+      if (storageBoundary?.usesFilesystemAccess) {
+        diagnostics.push(createIssue('Workspace storage must not use File System Access API.', 'error', context.resource));
+      }
+
+      if (storageBoundary?.usesDirectoryHandles) {
+        diagnostics.push(createIssue('Workspace storage must not use directory handles.', 'error', context.resource));
+      }
+
+      if (storageBoundary?.usesBackgroundSync) {
+        diagnostics.push(createIssue('Workspace storage must not use background sync.', 'error', context.resource));
+      }
+
+      if (storageBoundary?.usesRemoteSync) {
+        diagnostics.push(createIssue('Workspace storage must not use remote sync.', 'error', context.resource));
+      }
+
+      if (storageBoundary?.usesSilentLocalFileAccess) {
+        diagnostics.push(createIssue('Workspace storage must not use silent local file access.', 'error', context.resource));
+      }
+
+      return createResult('security.storageBoundary', 'storage-boundary', diagnostics, 'Browser-managed storage boundary inspected.');
+    },
+  };
+}
+
 export function runSecurityChecks(profile, context) {
   return profile.checks.map((check) => check.run({ ...context, profile }));
 }
@@ -270,6 +324,7 @@ export const defaultSecurityProfile = createSecurityProfile({
     createForbiddenBrowserApiCheck(),
     createForbiddenFilesystemApiCheck(),
     createArchiveBoundaryDocumentationCheck(),
+    createBrowserStorageBoundaryCheck(),
   ],
 });
 

@@ -156,6 +156,13 @@ export interface TextForgeStatusRailProps {
   readonly badges?: ReadonlyArray<StatusBadge>;
 }
 
+export interface TextForgeCalloutProps {
+  readonly actions?: ReadonlyArray<ReactNode>;
+  readonly children?: ReactNode;
+  readonly tone?: BadgeTone;
+  readonly title?: string;
+}
+
 export interface TextForgeTopBarProps {
   readonly brandTitle: string;
   readonly onToggleSidebar?: () => void;
@@ -237,6 +244,7 @@ export declare function createAppFrameModel(overrides?: Partial<AppFrameModel>):
 export declare function createWorkbenchChromeModel(overrides?: Partial<WorkbenchChromeModel>): WorkbenchChromeModel;
 
 export declare function TextForgeToolbarButton(props: TextForgeToolbarButtonProps): unknown;
+export declare function TextForgeCallout(props: TextForgeCalloutProps): unknown;
 export declare function TextForgeStatusRail(props: TextForgeStatusRailProps): unknown;
 export declare function TextForgeTopBar(props: TextForgeTopBarProps): unknown;
 export declare function TextForgeWorkspaceSidebar(props: TextForgeWorkspaceSidebarProps): unknown;

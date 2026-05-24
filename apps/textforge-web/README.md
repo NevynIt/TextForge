@@ -6,7 +6,7 @@ The shell is packaged with Vite so package dependencies such as React, React DOM
 
 The source entry is a dedicated `src/scriptLoader.js` bootstrap. Development still runs through Vite, but the built local artifact is emitted as a classic script bundle plus a source-owned `public/index.html` so direct `file://` launch does not depend on `<script type="module">`.
 
-Phase 3.1 replaces the earlier imperative shell bootstrap with a React-rendered workbench frame while keeping editor and asset behaviour inside their package-owned surface factories. The current shell exposes the collapsible workspace tree, a narrow main-session tab strip, a utility pane for popup sessions and contribution visibility, and package-backed open-with/language controls.
+Phase 3.1 replaced the earlier imperative shell bootstrap with a React-rendered workbench frame while keeping editor and asset behaviour inside their package-owned surface factories. Phase 3.2 keeps that shell but hydrates it from a browser-managed Dexie workspace, adds explicit storage reset/recovery flow, and preserves the deliberate non-goals of no tab restore and no saved shell layout.
 
 ## Commands
 
@@ -19,4 +19,4 @@ Phase 3.1 replaces the earlier imperative shell bootstrap with a React-rendered 
 
 - Build the package and open `dist/index.html` directly when checking the local artifact path.
 - Run the Vite preview server for the browser-served path.
-- Run `pnpm --filter @textforge/textforge-web test` to catch shell entrypoint regressions.
+- Run `pnpm --filter @textforge/textforge-web test` to catch shell entrypoint regressions and storage-boundary regressions.

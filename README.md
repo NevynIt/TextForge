@@ -14,4 +14,10 @@ This repository keeps the TextForge name and history while replacing the impleme
 
 ## Rebuild status
 
-The rewrite branch is currently in the repository pivot stage. The next step is to finish the pnpm workspace skeleton and remove the old app implementation from this branch.
+The rewrite branch has completed Phase 3.2 of the modular rebuild:
+
+- ZIP workspace import/export is implemented.
+- The React workbench shell is restored.
+- The workspace now persists through browser-managed IndexedDB via Dexie.
+
+Current next step: Phase 3.3 command palette and contribution-driven shell commands.

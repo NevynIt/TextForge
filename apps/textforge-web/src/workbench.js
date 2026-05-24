@@ -2,10 +2,14 @@ import * as React from 'react';
 import { createRoot } from 'react-dom/client';
 import { contributions as coreContributions } from '@textforge/core';
 import {
+  createPersistedWorkspaceService,
+  createSequentialIdFactory,
   createWorkspaceService,
   createWorkspaceTreeItems,
+  resetWorkspaceDexieStorage,
   workspaceContribution as workspaceContributionPack,
   workspaceEntryToResourceRef,
+  workspaceStorageErrorCodes,
 } from '@textforge/workspace';
 import {
   contributions as surfaceContributionPack,
@@ -39,8 +43,10 @@ import {
 } from '@textforge/assets';
 import {
   TextForgeAppFrame,
+  TextForgeCallout,
   TextForgeSelectField,
   TextForgeSessionTabStrip,
+  TextForgeToolbarButton,
   TextForgeTopBar,
   TextForgeUtilityPane,
   TextForgeWorkspaceSidebar,
@@ -53,8 +59,17 @@ import {
 
 const element = React.createElement;
 const textEncoder = new TextEncoder();
+const workspaceDatabaseName = 'textforge-workspace';
+const sampleResourcePaths = {
+  notes: '/docs/notes.md',
+  architecture: '/docs/architecture.txt',
+  settings: '/docs/settings.yaml',
+  roadmap: '/roadmap/phase-3-2-dexie-workspace.md',
+  svg: '/docs/system.svg',
+};
 const utilitySections = [
   { id: 'popups', label: 'Popup Sessions' },
+  { id: 'storage', label: 'Browser Storage' },
   { id: 'registry', label: 'Contribution Packs' },
 ];
 
@@ -82,61 +97,52 @@ function createBinarySvgBytes() {
   `);
 }
 
-function createInitialWorkspace() {
+function createSeedWorkspaceState() {
   const now = createTimestampFactory();
   const workspace = createWorkspaceService({
     workspaceId: 'textforge-shell',
     name: 'TextForge Workspace',
     now,
-    idFactory: createSequentialSessionIdFactory('workspace'),
+    idFactory: createSequentialIdFactory('workspace'),
   });
 
   workspace.createFolder({ path: '/docs', title: 'docs' });
   workspace.createFolder({ path: '/roadmap', title: 'roadmap' });
-  const notes = workspace.createTextResource({
-    path: '/docs/notes.md',
+  workspace.createTextResource({
+    path: sampleResourcePaths.notes,
     title: 'notes.md',
-    text: '# TextForge\n\nPhase 3.1 moves the workbench shell into React while keeping the package-owned editor and asset surfaces intact.',
+    text: '# TextForge\n\nPhase 3.2 recovers browser-managed Dexie workspace persistence without restoring document tabs or shell layout.',
     languageId: 'markdown',
     mimeType: 'text/markdown',
   });
-  const architecture = workspace.createTextResource({
-    path: '/docs/architecture.txt',
+  workspace.createTextResource({
+    path: sampleResourcePaths.architecture,
     title: 'architecture.txt',
-    text: 'The React shell consumes workspace, surface, editor, asset, and UI package contracts without moving feature logic into the app.',
+    text: 'The React shell now hydrates a browser-managed workspace through @textforge/workspace without moving persistence logic into the app shell.',
     mimeType: 'text/plain',
   });
-  const settings = workspace.createTextResource({
-    path: '/docs/settings.yaml',
+  workspace.createTextResource({
+    path: sampleResourcePaths.settings,
     title: 'settings.yaml',
-    text: 'workspace: textforge\nshell: react\nstorage: local-first\n',
+    text: 'workspace: textforge\nshell: react\nstorage: dexie-indexeddb\n',
     languageId: 'yaml',
     mimeType: 'text/yaml',
   });
-  const roadmap = workspace.createTextResource({
-    path: '/roadmap/phase-3-1-react-shell.md',
-    title: 'phase-3-1-react-shell.md',
-    text: 'React shell recovery keeps the current surface registry and mounts the existing editor and asset surfaces inside a real workbench frame.',
+  workspace.createTextResource({
+    path: sampleResourcePaths.roadmap,
+    title: 'phase-3-2-dexie-workspace.md',
+    text: 'Dexie persistence recovery hydrates the workspace from browser-managed IndexedDB, preserves binary resources, and adds explicit reset/recovery flow without restoring tabs.',
     languageId: 'markdown',
     mimeType: 'text/markdown',
   });
-  const svg = workspace.createBinaryResource({
-    path: '/docs/system.svg',
+  workspace.createBinaryResource({
+    path: sampleResourcePaths.svg,
     title: 'system.svg',
     bytes: createBinarySvgBytes(),
     mimeType: 'image/svg+xml',
   });
 
-  return {
-    workspace,
-    resources: {
-      notes,
-      architecture,
-      settings,
-      roadmap,
-      svg,
-    },
-  };
+  return workspace.snapshot();
 }
 
 function createBlobUrlDriver() {
@@ -167,8 +173,8 @@ function createWelcomeView() {
     id: 'welcome',
     kind: 'welcome',
     mountId: 'welcome',
-    title: 'React workbench shell',
-    summary: 'The shell frame, workspace tree, main tab strip, and utility pane are now rendered through @textforge/ui React primitives.',
+    title: 'Browser-managed workspace',
+    summary: 'The React shell now hydrates a Dexie-backed IndexedDB workspace while keeping editor and asset surfaces inside their package-owned factories.',
     openWith: 'Shell chrome',
     state: 'open',
     placement: 'main',
@@ -176,8 +182,51 @@ function createWelcomeView() {
   };
 }
 
+function createLoadingView() {
+  return {
+    id: 'workspace-loading',
+    kind: 'loading',
+    mountId: 'workspace-loading',
+    title: 'Hydrating browser workspace',
+    summary: 'TextForge is opening the browser-managed IndexedDB workspace before any document surfaces are mounted.',
+    openWith: 'Workspace storage',
+    state: 'pending',
+    placement: 'main',
+    controls: [],
+  };
+}
+
+function createStorageFailure(error) {
+  const code = error?.code ?? workspaceStorageErrorCodes.loadFailed;
+  if (
+    code === workspaceStorageErrorCodes.corruptedState
+    || code === workspaceStorageErrorCodes.incompatibleState
+  ) {
+    return {
+      code,
+      title: 'Workspace reset required',
+      detail: 'The browser-managed workspace could not be read. Reset browser storage to rebuild a fresh local workspace seed.',
+    };
+  }
+
+  return {
+    code,
+    title: 'Workspace storage unavailable',
+    detail: 'TextForge could not initialize the browser-managed workspace. Retry the load or reset browser storage to recover.',
+  };
+}
+
 function createTextForgeWorkbenchController() {
-  const { workspace, resources } = createInitialWorkspace();
+  let workspace = createWorkspaceService({
+    workspaceId: 'textforge-shell',
+    name: 'TextForge Workspace',
+    now: createTimestampFactory(),
+    idFactory: createSequentialIdFactory('workspace'),
+  });
+  let persistedWorkspace;
+  let unsubscribePersistence;
+  let hydrationSource = 'seed';
+  let storageFailure;
   const blobLedger = createBlobUrlLedger(createBlobUrlDriver());
   const languageModes = listTextEditorLanguageModes();
   const parserBackedLanguageCount = languageModes.filter((mode) => mode.parserBacked).length;
@@ -202,10 +251,14 @@ function createTextForgeWorkbenchController() {
   const state = {
     activeMainSessionId: undefined,
     activePopupSessionId: undefined,
-    selectedWorkspaceItemId: resources.notes.id,
+    selectedWorkspaceItemId: undefined,
     utilityPaneOpen: false,
-    utilitySectionId: 'registry',
+    utilitySectionId: 'storage',
     workspaceTreeCollapsed: false,
+    storageResetPending: false,
+  };
+  const runtime = {
+    status: 'loading',
   };
 
   function emit() {
@@ -223,7 +276,20 @@ function createTextForgeWorkbenchController() {
   }
 
   function getEntry(resourceId) {
+    if (!resourceId) {
+      return undefined;
+    }
     return workspace.getEntry(resourceId);
+  }
+
+  function getSampleEntry(path) {
+    return workspace.getEntryByPath(path);
+  }
+
+  function getDefaultSelection() {
+    return getSampleEntry(sampleResourcePaths.notes)
+      ?? workspace.snapshot().resources[0]
+      ?? workspace.snapshot().folders.find((folder) => folder.id !== 'root');
   }
 
   function listMainSessions() {
@@ -290,11 +356,47 @@ function createTextForgeWorkbenchController() {
     }
 
     if (popupSessions.length === 0 && state.utilitySectionId === 'popups') {
-      state.utilitySectionId = 'registry';
+      state.utilitySectionId = 'storage';
     }
   }
 
+  function rememberSelection(entryId) {
+    state.selectedWorkspaceItemId = entryId;
+    if (runtime.status === 'ready' && typeof workspace.setSelectedResourceId === 'function') {
+      workspace.setSelectedResourceId(entryId);
+    }
+  }
+
+  function resetMountedSessions() {
+    for (const session of getOpenSessions()) {
+      getHostForPlacement(session.placement).close(session.id);
+      releaseAssetLeaseIfUnused(session.resource.resourceId);
+    }
+    for (const lease of assetLeaseByResourceId.values()) {
+      blobLedger.release(lease.id);
+    }
+    assetLeaseByResourceId.clear();
+    activeTextDocuments.clear();
+    state.activeMainSessionId = undefined;
+    state.activePopupSessionId = undefined;
+  }
+
+  function disposePersistedWorkspace() {
+    if (typeof unsubscribePersistence === 'function') {
+      unsubscribePersistence();
+      unsubscribePersistence = undefined;
+    }
+    if (persistedWorkspace?.disposePersistence) {
+      persistedWorkspace.disposePersistence();
+    }
+    persistedWorkspace = undefined;
+  }
+
   function openResourceEntry(entry, options = {}) {
+    if (runtime.status !== 'ready') {
+      return undefined;
+    }
+
     const existingSession = findSessionForResource(entry.id);
     const requestedPlacement = options.placement ?? existingSession?.placement ?? (entry.kind === 'binary' ? 'popup' : 'main');
     const preferredSurfaceId = options.preferredSurfaceId;
@@ -311,7 +413,7 @@ function createTextForgeWorkbenchController() {
       } else {
         state.activeMainSessionId = existingSession.id;
       }
-      state.selectedWorkspaceItemId = entry.id;
+      rememberSelection(entry.id);
       emit();
       return existingSession;
     }
@@ -336,31 +438,39 @@ function createTextForgeWorkbenchController() {
       state.activeMainSessionId = session.id;
     }
 
-    state.selectedWorkspaceItemId = entry.id;
+    rememberSelection(entry.id);
     normalizeActiveSessions();
     emit();
     return session;
   }
 
   function focusMainSession(sessionId) {
+    if (runtime.status !== 'ready') {
+      return;
+    }
+
     const session = mainHost.focus(sessionId) ?? findSessionById(sessionId);
     if (!session) {
       return;
     }
 
     state.activeMainSessionId = session.id;
-    state.selectedWorkspaceItemId = session.resource.resourceId;
+    rememberSelection(session.resource.resourceId);
     emit();
   }
 
   function focusPopupSession(sessionId) {
+    if (runtime.status !== 'ready') {
+      return;
+    }
+
     const session = popupHost.focus(sessionId) ?? findSessionById(sessionId);
     if (!session) {
       return;
     }
 
     state.activePopupSessionId = session.id;
-    state.selectedWorkspaceItemId = session.resource.resourceId;
+    rememberSelection(session.resource.resourceId);
     state.utilityPaneOpen = true;
     state.utilitySectionId = 'popups';
     emit();
@@ -386,7 +496,11 @@ function createTextForgeWorkbenchController() {
   }
 
   function selectWorkspaceItem(itemId) {
-    state.selectedWorkspaceItemId = itemId;
+    if (runtime.status !== 'ready') {
+      return;
+    }
+
+    rememberSelection(itemId);
     const entry = getEntry(itemId);
     if (!entry) {
       emit();
@@ -421,6 +535,10 @@ function createTextForgeWorkbenchController() {
   }
 
   function updateTextResourceLanguage(resourceId, languageId) {
+    if (runtime.status !== 'ready') {
+      return;
+    }
+
     const currentResource = workspace.getEntry(resourceId);
     if (!currentResource || currentResource.kind !== 'text') {
       return;
@@ -446,19 +564,37 @@ function createTextForgeWorkbenchController() {
       languageId,
       resource: workspaceEntryToResourceRef(nextResource),
     });
-    state.selectedWorkspaceItemId = resourceId;
+    rememberSelection(resourceId);
     emit();
   }
 
-  function handleToolbarAction(slotId) {
-    const entryBySlotId = {
-      'open-notes': resources.notes,
-      'open-architecture': resources.architecture,
-      'open-roadmap': resources.roadmap,
-    };
-    const entry = entryBySlotId[slotId];
-    if (entry) {
+  function openSampleResource(path) {
+    const entry = getSampleEntry(path);
+    if (entry && entry.kind !== 'folder') {
       openResourceEntry(entry);
+    }
+  }
+
+  function handleToolbarAction(slotId) {
+    if (slotId === 'open-notes') {
+      openSampleResource(sampleResourcePaths.notes);
+      return;
+    }
+
+    if (slotId === 'open-architecture') {
+      openSampleResource(sampleResourcePaths.architecture);
+      return;
+    }
+
+    if (slotId === 'open-roadmap') {
+      openSampleResource(sampleResourcePaths.roadmap);
+      return;
+    }
+
+    if (slotId === 'open-storage') {
+      state.utilityPaneOpen = true;
+      state.utilitySectionId = 'storage';
+      emit();
       return;
     }
 
@@ -467,6 +603,87 @@ function createTextForgeWorkbenchController() {
       state.utilitySectionId = 'registry';
       emit();
     }
+  }
+
+  async function hydrateWorkspace(options = {}) {
+    runtime.status = 'loading';
+    storageFailure = undefined;
+    state.storageResetPending = false;
+    if (options.resetStorage) {
+      state.utilityPaneOpen = true;
+      state.utilitySectionId = 'storage';
+    }
+    resetMountedSessions();
+    disposePersistedWorkspace();
+    emit();
+
+    try {
+      if (options.resetStorage) {
+        await resetWorkspaceDexieStorage({ databaseName: workspaceDatabaseName });
+      }
+
+      const hydrated = await createPersistedWorkspaceService({
+        workspaceId: 'textforge-shell',
+        name: 'TextForge Workspace',
+        now: createTimestampFactory(),
+        idFactory: createSequentialIdFactory('workspace'),
+        seed: createSeedWorkspaceState(),
+        storageOptions: {
+          databaseName: workspaceDatabaseName,
+        },
+      });
+      persistedWorkspace = hydrated.workspace;
+      workspace = hydrated.workspace;
+      hydrationSource = hydrated.hydrationSource;
+      unsubscribePersistence = hydrated.workspace.subscribePersistence(() => emit());
+      runtime.status = 'ready';
+
+      const selectedEntry = getEntry(workspace.getManifest().selectedResourceId) ?? getDefaultSelection();
+      state.selectedWorkspaceItemId = selectedEntry?.id;
+      normalizeActiveSessions();
+
+      if (hydrationSource === 'seed' && selectedEntry && selectedEntry.kind !== 'folder') {
+        openResourceEntry(selectedEntry, {
+          placement: selectedEntry.kind === 'binary' ? 'popup' : 'main',
+        });
+      } else {
+        emit();
+      }
+    } catch (error) {
+      workspace = createWorkspaceService({
+        workspaceId: 'textforge-shell',
+        name: 'TextForge Workspace',
+        now: createTimestampFactory(),
+        idFactory: createSequentialIdFactory('workspace'),
+      });
+      hydrationSource = 'seed';
+      runtime.status = 'error';
+      storageFailure = createStorageFailure(error);
+      state.selectedWorkspaceItemId = undefined;
+      state.utilityPaneOpen = true;
+      state.utilitySectionId = 'storage';
+      emit();
+    }
+  }
+
+  function requestStorageReset() {
+    state.storageResetPending = true;
+    state.utilityPaneOpen = true;
+    state.utilitySectionId = 'storage';
+    emit();
+  }
+
+  function cancelStorageReset() {
+    state.storageResetPending = false;
+    emit();
+  }
+
+  async function confirmStorageReset() {
+    await hydrateWorkspace({ resetStorage: true });
+  }
+
+  async function retryStorageInitialization() {
+    await hydrateWorkspace();
   }
 
   function createOpenWithControl(session, resource) {
@@ -620,7 +837,34 @@ function createTextForgeWorkbenchController() {
   }
 
   function describeSelectedEntry() {
-    const entry = getEntry(state.selectedWorkspaceItemId) ?? resources.notes;
+    if (runtime.status === 'loading') {
+      return {
+        title: 'Browser-managed workspace',
+        path: `IndexedDB / ${workspaceDatabaseName}`,
+        kind: 'folder',
+        detail: 'Hydrating the Dexie-backed workspace before surfaces are mounted.',
+      };
+    }
+
+    if (runtime.status === 'error') {
+      return {
+        title: storageFailure?.title ?? 'Workspace storage unavailable',
+        path: `IndexedDB / ${workspaceDatabaseName}`,
+        kind: 'folder',
+        detail: storageFailure?.detail ?? 'Retry the workspace load or reset browser storage to recover.',
+      };
+    }
+
+    const entry = getEntry(state.selectedWorkspaceItemId) ?? getDefaultSelection();
+    if (!entry) {
+      return {
+        title: 'Workspace root',
+        path: '/',
+        kind: 'folder',
+        detail: 'The browser-managed workspace is ready but no entry is currently selected.',
+      };
+    }
+
     return {
       title: entry.metadata.title ?? entry.path,
       path: entry.path,
@@ -634,6 +878,10 @@ function createTextForgeWorkbenchController() {
   }
 
   function getActiveMainView() {
+    if (runtime.status === 'loading') {
+      return createLoadingView();
+    }
+
     const session = state.activeMainSessionId ? mainHost.get(state.activeMainSessionId) : undefined;
     if (!session || session.state === 'closed') {
       return createWelcomeView();
@@ -643,6 +891,10 @@ function createTextForgeWorkbenchController() {
   }
 
   function getActivePopupView() {
+    if (runtime.status !== 'ready') {
+      return undefined;
+    }
+
     const session = state.activePopupSessionId ? popupHost.get(state.activePopupSessionId) : undefined;
     if (!session || session.state === 'closed') {
       return undefined;
@@ -653,9 +905,21 @@ function createTextForgeWorkbenchController() {
 
   function buildSnapshot() {
     normalizeActiveSessions();
-    const treeItems = createWorkspaceTreeItems(workspace.snapshot());
+    const treeItems = runtime.status === 'ready' ? createWorkspaceTreeItems(workspace.snapshot()) : [];
     const mainSessions = listMainSessions();
     const popupSessions = listPopupSessions();
+    const persistenceStatus = runtime.status === 'ready'
+      ? workspace.getPersistenceStatus()
+      : {
+        state: runtime.status === 'loading' ? 'persisting' : 'error',
+        driver: 'dexie',
+        databaseName: workspaceDatabaseName,
+        schemaVersion: 1,
+        browserManaged: true,
+        lastSavedAt: undefined,
+        pendingReason: runtime.status === 'loading' ? 'hydrate' : 'recovery-required',
+        error: storageFailure ? { code: storageFailure.code, message: storageFailure.detail } : undefined,
+      };
     const mainFrame = createMainSessionTabStrip(mainHost.list(), {
       activeTabId: state.activeMainSessionId,
     });
@@ -667,25 +931,54 @@ function createTextForgeWorkbenchController() {
       tabs: popupSessions.map((session) => createSurfaceSessionTab(session)),
       activeTabId: state.activePopupSessionId,
     };
+    const selectedResourceId = runtime.status === 'ready'
+      ? state.selectedWorkspaceItemId
+      : undefined;
+    const workspaceStatusLabel = runtime.status === 'loading'
+      ? 'Hydrating workspace'
+      : runtime.status === 'error'
+        ? 'Workspace recovery required'
+        : `${treeItems.length} items`;
+    const workspaceStatusTone = runtime.status === 'error'
+      ? 'warning'
+      : runtime.status === 'loading'
+        ? 'info'
+        : 'success';
+    const storageStatusLabel = persistenceStatus.state === 'error'
+      ? 'Storage error'
+      : persistenceStatus.state === 'persisting'
+        ? 'Saving workspace'
+        : 'Browser storage ready';
+    const hydrationLabel = runtime.status === 'ready'
+      ? (hydrationSource === 'storage' ? 'Restored from browser storage' : 'Seeded browser workspace')
+      : runtime.status === 'loading'
+        ? 'Opening browser storage'
+        : 'Reset may be required';
     const chromeModel = createWorkbenchChromeModel({
-      subtitle: 'React workbench recovery with package-owned surfaces',
+      subtitle: runtime.status === 'ready'
+        ? 'Dexie-backed browser workspace with package-owned surfaces'
+        : 'Browser-managed workspace recovery',
       workspaceTree: createWorkspaceTreeFrameModel({
         items: treeItems,
-        rootLabel: workspace.snapshot().manifest.name ?? 'Workspace root',
-        selectedResourceId: state.selectedWorkspaceItemId,
+        rootLabel: runtime.status === 'ready'
+          ? workspace.snapshot().manifest.name ?? 'Workspace root'
+          : 'Browser-managed workspace',
+        selectedResourceId,
       }),
       surfaceFrame: mainFrame,
       toolbarSlots: [
-        createToolbarSlot({ id: 'open-notes', label: 'Open notes', kind: 'workspace', pinned: true }),
-        createToolbarSlot({ id: 'open-architecture', label: 'Architecture note', kind: 'workspace' }),
-        createToolbarSlot({ id: 'open-roadmap', label: 'Roadmap note', kind: 'workspace' }),
+        createToolbarSlot({ id: 'open-notes', label: 'Open notes', kind: 'workspace', pinned: true, disabled: runtime.status !== 'ready' }),
+        createToolbarSlot({ id: 'open-architecture', label: 'Architecture note', kind: 'workspace', disabled: runtime.status !== 'ready' }),
+        createToolbarSlot({ id: 'open-roadmap', label: 'Roadmap note', kind: 'workspace', disabled: runtime.status !== 'ready' }),
+        createToolbarSlot({ id: 'open-storage', label: 'Storage', kind: 'status' }),
         createToolbarSlot({ id: 'open-registry', label: 'Registry', kind: 'navigation' }),
       ],
       statusBadges: [
         createStatusBadge({
           id: 'workspace-status',
-          label: `${treeItems.length} items`,
-          tone: 'success',
+          label: workspaceStatusLabel,
+          tone: workspaceStatusTone,
+          detail: 'The workspace is private browser storage, not a live local folder.',
         }),
         createStatusBadge({
           id: 'document-status',
@@ -698,14 +991,31 @@ function createTextForgeWorkbenchController() {
           tone: popupSessions.length > 0 ? 'warning' : 'neutral',
         }),
         createStatusBadge({
-          id: 'language-status',
-          label: `${parserBackedLanguageCount} parser-backed modes`,
-          tone: 'info',
+          id: 'storage-status',
+          label: storageStatusLabel,
+          tone: persistenceStatus.state === 'error'
+            ? 'warning'
+            : persistenceStatus.state === 'persisting'
+              ? 'info'
+              : 'success',
+          detail: `${persistenceStatus.driver} / IndexedDB / ${persistenceStatus.databaseName}`,
+        }),
+        createStatusBadge({
+          id: 'hydration-status',
+          label: hydrationLabel,
+          tone: runtime.status === 'error' ? 'warning' : 'info',
+          detail: `${parserBackedLanguageCount} parser-backed language modes remain available after hydration.`,
         }),
       ],
     });
 
     return {
+      runtime: {
+        status: runtime.status,
+        hydrationSource,
+        storageFailure,
+      },
+      persistenceStatus,
       chromeModel,
       contributionPacks: createContributionPacks(),
       popupFrame,
@@ -734,19 +1044,24 @@ function createTextForgeWorkbenchController() {
     assetLeaseByResourceId.clear();
     activeTextDocuments.clear();
     listeners.clear();
+    disposePersistedWorkspace();
   }
 
-  openResourceEntry(resources.notes, { placement: 'main' });
+  void hydrateWorkspace();
 
   return {
     subscribe,
     snapshot,
     dispose,
     actions: {
+      cancelStorageReset,
       closeSession,
+      confirmStorageReset,
       focusMainSession,
       focusPopupSession,
       handleToolbarAction,
+      requestStorageReset,
+      retryStorageInitialization,
       selectWorkspaceItem,
       setUtilitySection,
       toggleUtilityPane,
@@ -785,26 +1100,72 @@ function SurfaceMount({ view }) {
   });
 }
 
-function WelcomeState() {
+function WelcomeState({ hydrationSource }) {
   return element(
     'section',
     { className: 'tf-welcome', 'data-view-kind': 'welcome' },
-    element('span', { className: 'tf-welcome__eyebrow' }, 'Phase 3.1'),
-    element('h3', null, 'React workbench shell'),
+    element('span', { className: 'tf-welcome__eyebrow' }, 'Phase 3.2'),
+    element('h3', null, 'Browser-managed workspace'),
     element(
       'p',
       null,
-      'This shell is now rendered through React while the text editor and asset viewers still come from their package-owned surface factories.',
+      hydrationSource === 'storage'
+        ? 'The shell reopened a browser-managed Dexie workspace without restoring document tabs or layout state.'
+        : 'The shell seeded a fresh browser-managed Dexie workspace and opened the starter notes document.',
     ),
     element(
       'ul',
       { className: 'tf-welcome__list' },
-      element('li', null, 'Collapsible workspace tree region'),
-      element('li', null, 'Main-session tab strip for document surfaces'),
-      element('li', null, 'Utility/debug pane for popup sessions and registry visibility'),
-      element('li', null, 'Open-with and language controls preserved from package models'),
+      element('li', null, 'Browser-managed IndexedDB workspace boundary'),
+      element('li', null, 'Main-session tab strip stays transient; tabs are not restored'),
+      element('li', null, 'Popup asset sessions remain outside the main document strip'),
+      element('li', null, 'Open-with and language controls still come from package models'),
     ),
   );
+}
+
+function LoadingState() {
+  return element(TextForgeCallout, {
+    tone: 'info',
+    title: 'Hydrating browser workspace',
+    children: element(
+      React.Fragment,
+      null,
+      element('p', null, 'TextForge is opening the browser-managed Dexie workspace before any surface sessions are mounted.'),
+      element('p', null, 'Open tabs and shell layout are intentionally not rehydrated in Phase 3.2.'),
+    ),
+  });
+}
+
+function RecoveryState({ controller, snapshot }) {
+  return element(TextForgeCallout, {
+    tone: 'warning',
+    title: snapshot.runtime.storageFailure?.title ?? 'Workspace storage unavailable',
+    actions: [
+      element(TextForgeToolbarButton, {
+        key: 'retry-storage',
+        kind: 'secondary',
+        label: 'Retry',
+        onPress: controller.actions.retryStorageInitialization,
+      }),
+      element(TextForgeToolbarButton, {
+        key: 'reset-storage',
+        kind: 'primary',
+        label: snapshot.state.storageResetPending ? 'Reset Browser Workspace Now' : 'Reset Browser Workspace',
+        onPress: snapshot.state.storageResetPending
+          ? controller.actions.confirmStorageReset
+          : controller.actions.requestStorageReset,
+      }),
+    ],
+    children: element(
+      React.Fragment,
+      null,
+      element('p', null, snapshot.runtime.storageFailure?.detail ?? 'Retry the workspace load or reset browser storage to recover.'),
+      snapshot.state.storageResetPending
+        ? element('p', null, 'Confirm the reset from the Browser Storage utility section to clear the stored workspace and rebuild the seed content.')
+        : null,
+    ),
+  });
 }
 
 function SurfaceDetails({ view }) {
@@ -865,6 +1226,81 @@ function ContributionRegistryView({ packs }) {
   );
 }
 
+function StoragePaneView({ controller, snapshot }) {
+  const { persistenceStatus } = snapshot;
+  const statusTone = persistenceStatus.state === 'error'
+    ? 'warning'
+    : persistenceStatus.state === 'persisting'
+      ? 'info'
+      : 'success';
+
+  return element(
+    'div',
+    { className: 'tf-storage' },
+    element(TextForgeCallout, {
+      tone: statusTone,
+      title: 'Browser-managed workspace boundary',
+      actions: snapshot.runtime.status === 'loading'
+        ? []
+        : snapshot.state.storageResetPending
+          ? [
+            element(TextForgeToolbarButton, {
+              key: 'cancel-reset',
+              kind: 'secondary',
+              label: 'Cancel',
+              onPress: controller.actions.cancelStorageReset,
+            }),
+            element(TextForgeToolbarButton, {
+              key: 'confirm-reset',
+              kind: 'primary',
+              label: 'Reset Browser Workspace Now',
+              onPress: controller.actions.confirmStorageReset,
+            }),
+          ]
+          : [
+            element(TextForgeToolbarButton, {
+              key: 'request-reset',
+              kind: 'primary',
+              label: 'Reset Browser Workspace',
+              onPress: controller.actions.requestStorageReset,
+            }),
+            element(TextForgeToolbarButton, {
+              key: 'retry-hydration',
+              kind: 'secondary',
+              label: 'Retry Load',
+              onPress: controller.actions.retryStorageInitialization,
+            }),
+          ],
+      children: element(
+        React.Fragment,
+        null,
+        element('p', null, 'TextForge stores the workspace in browser-managed IndexedDB through Dexie. Clearing site data may remove it.'),
+        element('p', null, 'The app does not use File System Access API, directory handles, background sync, remote sync, or silent local file access.'),
+        snapshot.state.storageResetPending
+          ? element('p', null, 'Resetting clears the stored workspace content and rebuilds the starter seed. Open tabs and layout are not preserved.')
+          : null,
+      ),
+    }),
+    snapshot.runtime.status === 'error'
+      ? element(TextForgeCallout, {
+        tone: 'warning',
+        title: snapshot.runtime.storageFailure?.title ?? 'Storage recovery required',
+        children: element('p', null, snapshot.runtime.storageFailure?.detail ?? 'Reset browser storage to recover.'),
+      })
+      : null,
+    element(
+      'dl',
+      { className: 'tf-meta-list tf-storage__meta' },
+      element('div', null, element('dt', null, 'Storage engine'), element('dd', null, `${persistenceStatus.driver} / IndexedDB`)),
+      element('div', null, element('dt', null, 'Database'), element('dd', null, persistenceStatus.databaseName)),
+      element('div', null, element('dt', null, 'Hydration source'), element('dd', null, snapshot.runtime.hydrationSource)),
+      element('div', null, element('dt', null, 'Save state'), element('dd', null, persistenceStatus.state)),
+      element('div', null, element('dt', null, 'Last saved'), element('dd', null, persistenceStatus.lastSavedAt ?? 'Not saved yet')),
+      element('div', null, element('dt', null, 'Schema version'), element('dd', null, String(persistenceStatus.schemaVersion))),
+    ),
+  );
+}
+
 function PopupSessionsView({ controller, popupFrame, popupView }) {
   if (popupFrame.tabs.length === 0) {
     return element(
@@ -899,13 +1335,21 @@ function TextForgeWorkbenchApp({ controller }) {
   const mainView = snapshot.activeMainView;
   const utilityOpen = snapshot.state.utilityPaneOpen;
   const showPopupSessions = snapshot.state.utilitySectionId === 'popups';
+  const showStoragePane = snapshot.state.utilitySectionId === 'storage';
+  const mainViewportContent = snapshot.runtime.status === 'loading'
+    ? element(LoadingState)
+    : snapshot.runtime.status === 'error'
+      ? element(RecoveryState, { controller, snapshot })
+      : mainView.kind === 'welcome'
+        ? element(WelcomeState, { hydrationSource: snapshot.runtime.hydrationSource })
+        : element(SurfaceMount, { view: mainView });
 
   return element(
     TextForgeAppFrame,
     {
       footer: [
-        element('span', { key: 'phase' }, 'Phase 3.1 React workbench shell'),
-        element('span', { key: 'detail' }, 'Local runnable artifact preserved through the classic Vite loader bundle'),
+        element('span', { key: 'phase' }, 'Phase 3.2 Dexie workspace persistence recovery'),
+        element('span', { key: 'detail' }, 'Browser-managed IndexedDB workspace with explicit reset and recovery flow'),
       ],
       header: element(TextForgeTopBar, {
         brandTitle: snapshot.chromeModel.brandTitle,
@@ -933,7 +1377,7 @@ function TextForgeWorkbenchApp({ controller }) {
           onClose: controller.actions.toggleUtilityPane,
           onSelectSection: controller.actions.setUtilitySection,
           sections: snapshot.utilitySections,
-          subtitle: 'Popup surfaces and registry visibility stay out of the main document strip.',
+          subtitle: 'Popup surfaces, browser storage state, and registry visibility stay out of the main document strip.',
           title: 'Utility',
         },
         showPopupSessions
@@ -942,7 +1386,9 @@ function TextForgeWorkbenchApp({ controller }) {
               popupFrame: snapshot.popupFrame,
               popupView: snapshot.activePopupView,
             })
-          : element(ContributionRegistryView, { packs: snapshot.contributionPacks }),
+          : showStoragePane
+            ? element(StoragePaneView, { controller, snapshot })
+            : element(ContributionRegistryView, { packs: snapshot.contributionPacks }),
       ),
       utilityOpen,
     },
@@ -971,7 +1417,7 @@ function TextForgeWorkbenchApp({ controller }) {
         element(
           'div',
           { className: 'tf-surface-frame__viewport', 'data-view-kind': mainView.kind },
-          mainView.kind === 'welcome' ? element(WelcomeState) : element(SurfaceMount, { view: mainView }),
+          mainViewportContent,
         ),
         element(SurfaceDetails, { view: mainView }),
       ),
