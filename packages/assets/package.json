@@ -18,5 +18,8 @@
     "test": "node --test test/index.test.js",
     "lint": "node scripts/check.mjs",
     "typecheck": "node --check src/index.js"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5"
   }
 }

@@ -1,7 +1,10 @@
+import 'fake-indexeddb/auto';
+
 import assert from 'node:assert/strict';
 
 import {
   basenameWorkspacePath,
+  createPersistedWorkspaceService,
   createWorkspaceArchiveManifest,
   createSequentialIdFactory,
   createWorkspaceService,
@@ -13,7 +16,9 @@ import {
   joinWorkspacePath,
   mergeImportedWorkspaceState,
   normalizeWorkspacePath,
+  resetWorkspaceDexieStorage,
   workspaceContribution,
+  workspaceDexieSchema,
   workspaceEntryToResourceRef,
 } from '../src/index.js';
 
@@ -112,5 +117,39 @@ conflictTarget.createTextResource({ path: '/guides/old.md', text: '# Old\n', lan
 assert.equal(mergeImportedWorkspaceState(conflictTarget.snapshot(), importedFolderArchive.state, {
   conflictPolicy: 'replace',
 }).resources.some((resourceEntry) => resourceEntry.path === '/guides/intro.md'), true);
+
+assert.equal(typeof workspaceDexieSchema.system, 'string');
+assert.equal(typeof workspaceDexieSchema.textResources, 'string');
+assert.equal(typeof workspaceDexieSchema.binaryResources, 'string');
+
+const databaseName = `workspace-check-${Math.random().toString(16).slice(2)}`;
+await resetWorkspaceDexieStorage({ databaseName });
+
+const persisted = await createPersistedWorkspaceService({
+  storageOptions: { databaseName },
+  seed: workspace.snapshot(),
+  idFactory: createSequentialIdFactory('entry'),
+  now: () => '2026-05-24T00:00:00.000Z',
+});
+persisted.workspace.setSelectedResourceId(text.id);
+persisted.workspace.createTextResource({
+  path: '/docs/persisted.md',
+  text: '# Persisted\n',
+  languageId: 'markdown',
+  mimeType: 'text/markdown',
+});
+await persisted.workspace.whenIdle();
+persisted.workspace.disposePersistence();
+
+const restored = await createPersistedWorkspaceService({
+  storageOptions: { databaseName },
+  idFactory: createSequentialIdFactory('entry'),
+  now: () => '2026-05-24T00:00:00.000Z',
+});
+assert.equal(restored.hydrationSource, 'storage');
+assert.equal(restored.workspace.getManifest().selectedResourceId, text.id);
+assert.equal(restored.workspace.getEntryByPath('/docs/persisted.md')?.kind, 'text');
+restored.workspace.disposePersistence();
+await resetWorkspaceDexieStorage({ databaseName });
 
 console.info('workspace package checks passed');

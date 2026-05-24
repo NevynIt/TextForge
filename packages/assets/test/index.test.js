@@ -1,3 +1,5 @@
+import 'fake-indexeddb/auto';
+
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
@@ -13,12 +15,16 @@ import {
   selectAssetViewerKind,
 } from '../src/index.js';
 import {
+  createPersistedWorkspaceService,
   createSequentialIdFactory,
   createWorkspaceService,
   exportWorkspaceToZip,
   importWorkspaceFromZip,
+  resetWorkspaceDexieStorage,
   workspaceEntryToResourceRef,
 } from '../../workspace/src/index.js';
+
+const fixedNow = () => '2026-05-24T00:00:00.000Z';
 
 test('asset viewer helpers select and bind viewer kinds', () => {
   const request = {
@@ -85,4 +91,52 @@ test('binary workspace assets survive workspace zip round-trip', () => {
     workspaceResource: restoredSvg,
     title: svg.metadata.title,
   }).viewerKind, 'svg');
+});
+
+test('binary workspace assets rehydrate correctly through persisted Dexie workspace storage', async () => {
+  const databaseName = `asset-persisted-${Math.random().toString(16).slice(2)}`;
+  await resetWorkspaceDexieStorage({ databaseName });
+
+  const seededWorkspace = createWorkspaceService({
+    workspaceId: 'asset-persisted-test',
+    idFactory: createSequentialIdFactory('entry'),
+    now: fixedNow,
+  });
+  seededWorkspace.createFolder({ path: '/docs' });
+  const svgBytes = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><rect width="20" height="20"/></svg>');
+  seededWorkspace.createBinaryResource({
+    path: '/docs/system.svg',
+    bytes: svgBytes,
+    mimeType: 'image/svg+xml',
+    title: 'system.svg',
+  });
+
+  const firstPass = await createPersistedWorkspaceService({
+    storageOptions: { databaseName },
+    seed: seededWorkspace.snapshot(),
+    now: fixedNow,
+  });
+  await firstPass.workspace.whenIdle();
+  firstPass.workspace.disposePersistence();
+
+  const restored = await createPersistedWorkspaceService({
+    storageOptions: { databaseName },
+    now: fixedNow,
+  });
+  const restoredSvg = restored.workspace.getEntryByPath('/docs/system.svg');
+
+  assert.equal(restoredSvg?.kind, 'binary');
+  assert.deepEqual(restoredSvg?.bytes, svgBytes);
+  assert.equal(selectAssetViewerKind({
+    resource: workspaceEntryToResourceRef(restoredSvg),
+    workspaceResource: restoredSvg,
+  }), 'svg');
+  assert.equal(createWorkspaceAssetBinding({
+    resource: workspaceEntryToResourceRef(restoredSvg),
+    workspaceResource: restoredSvg,
+    title: restoredSvg.metadata.title,
+  }).viewerKind, 'svg');
+
+  restored.workspace.disposePersistence();
+  await resetWorkspaceDexieStorage({ databaseName });
 });

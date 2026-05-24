@@ -22,7 +22,7 @@ Third-party candidates: Dexie, fflate. All third-party dependencies must pass th
 
 ## Public surface
 
-WorkspaceService, WorkspaceResource, WorkspaceFolder, WorkspaceMutation, WorkspaceQuery, WorkspaceReferenceResolver, workspace manifest APIs.
+WorkspaceService, persisted-workspace helpers, Dexie storage/reset helpers, WorkspaceResource, WorkspaceFolder, WorkspaceMutation, WorkspaceQuery, WorkspaceReferenceResolver, and workspace manifest APIs.
 
 ## Milestone plan
 
@@ -59,3 +59,9 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Phase 3 closure note
 
 The package now exposes an `fflate`-backed archive manifest plus full-workspace and selected-folder ZIP export/import helpers, path normalization, and explicit `error | skip | replace` import conflict handling. Focused `lint` and `test` checks pass for the package, and `corepack pnpm verify` covers the broader workspace wiring.
+
+## Phase 3.2 closure note
+
+The package now ships Dexie as a real runtime dependency and exposes a browser-managed persistence path instead of only a schema placeholder. `openWorkspaceDexieStorage`, `createPersistentWorkspaceService`, `createPersistedWorkspaceService`, and `resetWorkspaceDexieStorage` back the existing workspace model with versioned IndexedDB tables for manifests, folders, text resources, binary resources, and schema metadata.
+
+The in-memory service contract also now carries `getManifest`, `replaceState`, and `setSelectedResourceId`, so startup hydration, selection persistence, ZIP import/export, and explicit storage reset/recovery all operate against the persisted workspace state without pulling tab/session restore forward. Focused package checks now cover Dexie hydration, selection persistence, ID continuity after reload, corrupted-storage detection, and reset recovery.

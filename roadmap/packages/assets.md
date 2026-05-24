@@ -86,3 +86,7 @@ Binary workspace assets now round-trip through the workspace ZIP helpers with by
 The React shell mounts the existing package-owned asset viewers without changing asset semantics. Popup asset sessions stay out of the main document strip and render through the utility pane, while the asset package still owns blob URL binding, viewer-kind selection, and read-only surface behaviour.
 
 Browser validation of the React shell opened the sample `system.svg` asset into the popup utility pane and confirmed that the mounted asset viewer still renders through the existing surface contribution path.
+
+## Phase 3.2 closure note
+
+Binary resources now survive Dexie-backed workspace hydration as well as ZIP round-trip export/import. The asset package still owns blob URL leasing and viewer-kind selection after the workspace reloads, and focused tests now verify that a persisted SVG resource rehydrates with byte fidelity and still resolves to the SVG viewer binding.

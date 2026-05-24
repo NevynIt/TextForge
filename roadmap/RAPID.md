@@ -23,9 +23,9 @@ Keep this block current. It may be edited because it is an operational pointer, 
 ```text
 Current branch: rewrite/v2-monorepo
 Current phase: Phase 3.2 - Dexie workspace persistence recovery
-Current package focus: apps/textforge-web, packages/workspace, packages/assets, packages/security-profile
-Last known good command: corepack pnpm verify
-Next recommended step: begin Phase 3.2 by replacing the workspace Dexie schema placeholder with real browser-managed persistence, then wire startup hydration/reset flows through the React shell without pulling session restore or command palette work forward
+Current package focus: packages/workspace, packages/assets
+Last known good command: corepack pnpm --filter @textforge/workspace test
+Next recommended step: wire the persisted workspace service into the React shell, add explicit browser-storage reset/recovery cues, and close the browser-envelope storage-boundary checks without pulling tab restore or command palette work forward
 Open questions: none
 ```
 
@@ -154,3 +154,4 @@ Append every new historical row to the end of this table. Do not reorder existin
 | A-009 | Action | M3.1 | Open | Begin Phase 3.1 React workbench shell and UI recovery in `apps/textforge-web`, `@textforge/ui`, and `@textforge/surfaces`, preserving local runnable-artifact behavior and existing editor/asset surface mounting. | agent | 2026-05-24 | `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/ui.md`, `roadmap/packages/surfaces.md` |
 | P-035 | Progress | M3.1 | Done | Closed Phase 3.1 by replacing the imperative shell bootstrap with a React-rendered workbench, converting `@textforge/ui` chrome helpers into accessible React primitives, adding main-session tab-strip helpers in `@textforge/surfaces`, preserving the package-owned CodeMirror and asset surface mounts, and re-validating runnable-artifact and license/security constraints. Focused package checks, app build checks, browser shell validation, and `corepack pnpm verify` passed. | agent | 2026-05-24 | `A-009`, `apps/textforge-web/src/workbench.js`, `packages/ui/src/index.js`, `packages/surfaces/src/index.js`, `apps/textforge-web/scripts/check.mjs`, `corepack pnpm verify` |
 | A-010 | Action | M3.2 | Open | Begin Phase 3.2 by turning the workspace Dexie schema placeholder into real browser-managed persistence, wiring shell hydration/reset flows, preserving binary resource rehydration, and extending the security-profile checks for the browser storage boundary without adding session restore or command palette work. | agent | 2026-05-24 | `roadmap/00_package_aware_roadmap.md`, `roadmap/packages/workspace.md`, `roadmap/packages/security-profile.md` |
+| P-036 | Progress | M3.2 | Done | Replaced the workspace Dexie placeholder with a real versioned Dexie persistence backend, added persisted workspace wrapper/reset helpers plus corrupted-storage detection, and extended focused asset validation so persisted SVG resources rehydrate with byte fidelity and the same viewer binding after reload. | agent | 2026-05-24 | `A-010`, `packages/workspace/src/index.js`, `packages/workspace/test/index.test.js`, `packages/assets/test/index.test.js`, `corepack pnpm --filter @textforge/workspace test` |

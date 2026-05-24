@@ -1,14 +1,12 @@
-import { unzipSync, zipSync } from 'fflate';
-
 import type { CanonicalPatch, PipelineValue, ResourceRef } from '@textforge/core';
 
-const textEncoder = new TextEncoder();
-const textDecoder = new TextDecoder();
-const workspaceArchiveFormat = 'textforge-workspace-archive';
-const workspaceArchiveVersion = 1;
-const workspaceArchiveManifestPath = 'textforge-workspace.json';
-
 export type WorkspaceEntryKind = 'folder' | 'text' | 'binary';
+export type WorkspaceArchiveResourceEncoding = 'utf8' | 'binary';
+export type WorkspaceImportConflictPolicy = 'error' | 'replace' | 'skip';
+export type WorkspaceStorageKind = 'indexeddb';
+export type WorkspaceStorageDriver = 'dexie';
+export type WorkspaceStorageStatus = 'idle' | 'persisting' | 'error';
+export type WorkspaceHydrationSource = 'seed' | 'storage';
 
 export interface WorkspaceMetadata {
   readonly title?: string;
@@ -61,8 +59,6 @@ export interface WorkspaceState {
   readonly resources: ReadonlyArray<WorkspaceResource>;
 }
 
-export type WorkspaceArchiveResourceEncoding = 'utf8' | 'binary';
-
 export interface WorkspaceArchiveFolderRecord {
   readonly id: string;
   readonly path: string;
@@ -100,8 +96,6 @@ export interface WorkspaceArchiveExportOptions {
   readonly exportedAt?: string;
 }
 
-export type WorkspaceImportConflictPolicy = 'error' | 'replace' | 'skip';
-
 export interface WorkspaceArchiveImportOptions {
   readonly existingState?: WorkspaceState;
   readonly conflictPolicy?: WorkspaceImportConflictPolicy;
@@ -121,8 +115,10 @@ export interface WorkspaceReferenceResolver {
 }
 
 export interface WorkspaceDexieSchema {
+  readonly system: string;
   readonly folders: string;
-  readonly resources: string;
+  readonly textResources: string;
+  readonly binaryResources: string;
   readonly manifests: string;
 }
 
@@ -182,6 +178,7 @@ export interface WorkspaceService {
   query(query: WorkspaceQuery): ReadonlyArray<WorkspaceEntry>;
   getEntry(resourceId: string): WorkspaceEntry | undefined;
   getEntryByPath(path: string): WorkspaceEntry | undefined;
+  getManifest(): WorkspaceManifest;
   createFolder(input: WorkspaceCreateFolderInput): WorkspaceFolder;
   createTextResource(input: WorkspaceCreateTextInput): WorkspaceTextResource;
   createBinaryResource(input: WorkspaceCreateBinaryInput): WorkspaceBinaryResource;
@@ -190,6 +187,8 @@ export interface WorkspaceService {
   renameEntry(resourceId: string, path: string): WorkspaceEntry | undefined;
   moveEntry(input: WorkspaceMoveInput): WorkspaceEntry | undefined;
   deleteEntry(resourceId: string): boolean;
+  replaceState(state: WorkspaceState | WorkspaceService): WorkspaceState;
+  setSelectedResourceId(resourceId?: string): WorkspaceManifest;
   resolveReference(source: ResourceRef, reference: string): ResourceRef | undefined;
   applyMutation(mutation: WorkspaceMutation): WorkspaceEntry | boolean | undefined;
 }
@@ -204,6 +203,72 @@ export interface WorkspaceServiceOptions {
   readonly state?: Partial<WorkspaceState>;
 }
 
+export interface WorkspaceStorageOptions {
+  readonly databaseName?: string;
+}
+
+export interface WorkspaceStorageErrorSnapshot {
+  readonly code: string;
+  readonly message: string;
+}
+
+export interface WorkspacePersistenceStatus {
+  readonly state: WorkspaceStorageStatus;
+  readonly driver: WorkspaceStorageDriver;
+  readonly databaseName: string;
+  readonly schemaVersion: number;
+  readonly browserManaged: boolean;
+  readonly lastSavedAt?: string;
+  readonly pendingReason?: string;
+  readonly error?: WorkspaceStorageErrorSnapshot;
+}
+
+export interface WorkspaceDexieStorage {
+  readonly kind: WorkspaceStorageKind;
+  readonly driver: WorkspaceStorageDriver;
+  readonly browserManaged: boolean;
+  readonly databaseName: string;
+  readonly schemaVersion: number;
+  loadState(): Promise<WorkspaceState | undefined>;
+  saveState(input: WorkspaceState | WorkspaceService): Promise<WorkspaceState>;
+  clear(): Promise<void>;
+  delete(): Promise<void>;
+  close(): void;
+}
+
+export interface PersistentWorkspaceService extends WorkspaceService {
+  readonly storage: WorkspaceDexieStorage;
+  getPersistenceStatus(): WorkspacePersistenceStatus;
+  subscribePersistence(listener: () => void): () => void;
+  whenIdle(): Promise<WorkspaceState>;
+  persistNow(reason?: string): Promise<WorkspaceState>;
+  resetPersistence(nextState?: WorkspaceState | WorkspaceService): Promise<WorkspaceState>;
+  disposePersistence(): void;
+}
+
+export interface CreatePersistedWorkspaceServiceOptions extends WorkspaceServiceOptions {
+  readonly storage?: WorkspaceDexieStorage;
+  readonly storageOptions?: WorkspaceStorageOptions;
+  readonly seed?: WorkspaceState | WorkspaceService | (() => WorkspaceState | WorkspaceService);
+}
+
+export interface HydratedWorkspaceServiceResult {
+  readonly hydrationSource: WorkspaceHydrationSource;
+  readonly storage: WorkspaceDexieStorage;
+  readonly workspace: PersistentWorkspaceService;
+}
+
+export interface WorkspaceTreeItem {
+  readonly id: string;
+  readonly label: string;
+  readonly path: string;
+  readonly kind: WorkspaceEntryKind;
+  readonly depth: number;
+  readonly expanded: boolean;
+  readonly active: boolean;
+  readonly badge: string;
+}
+
 export interface WorkspacePipelineValue<TValue = unknown> extends PipelineValue<TValue> {
   readonly kind: 'workspace';
 }
@@ -212,990 +277,65 @@ export interface WorkspaceCanonicalPatch extends CanonicalPatch {
   readonly target: ResourceRef;
 }
 
-export const workspaceDexieSchema: WorkspaceDexieSchema = {
-  folders: 'id, path, parentId, metadata.createdAt, metadata.updatedAt',
-  resources: 'id, path, parentId, kind, languageId, mimeType, metadata.createdAt, metadata.updatedAt',
-  manifests: 'workspaceId, name, rootPath, createdAt, updatedAt, selectedResourceId',
+export declare const workspaceDexieSchemaVersion: 1;
+export declare const defaultWorkspaceDexieDatabaseName: 'textforge-workspace';
+export declare const workspaceStorageErrorCodes: {
+  readonly initializationFailed: 'workspace-storage-initialization-failed';
+  readonly loadFailed: 'workspace-storage-load-failed';
+  readonly saveFailed: 'workspace-storage-save-failed';
+  readonly clearFailed: 'workspace-storage-clear-failed';
+  readonly deleteFailed: 'workspace-storage-delete-failed';
+  readonly corruptedState: 'workspace-storage-corrupted';
+  readonly incompatibleState: 'workspace-storage-incompatible';
 };
-
-export const workspaceContribution = {
-  id: '@textforge/workspace',
-  diagnostics: [],
-  commands: [],
-  surfaces: [],
-  pipelines: [],
-} as const;
-
-export const contributions = workspaceContribution;
-
-export function createSequentialIdFactory(prefix = 'workspace-entry'): () => string {
-  let counter = 0;
-
-  return () => {
-    counter += 1;
-    return `${prefix}-${counter}`;
-  };
-}
-
-export function normalizeWorkspacePath(path: string): string {
-  const segments = path
-    .replaceAll('\\', '/')
-    .split('/')
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-
-  const normalized: string[] = [];
-  for (const segment of segments) {
-    if (segment === '.') {
-      continue;
-    }
-
-    if (segment === '..') {
-      normalized.pop();
-      continue;
-    }
-
-    normalized.push(segment);
-  }
-
-  return `/${normalized.join('/')}`;
-}
-
-export function joinWorkspacePath(...parts: ReadonlyArray<string>): string {
-  return normalizeWorkspacePath(parts.filter(Boolean).join('/'));
-}
-
-export function dirnameWorkspacePath(path: string): string {
-  const normalized = normalizeWorkspacePath(path);
-  if (normalized === '/') {
-    return '/';
-  }
-
-  const segments = normalized.split('/').filter(Boolean);
-  segments.pop();
-  return segments.length === 0 ? '/' : `/${segments.join('/')}`;
-}
-
-export function basenameWorkspacePath(path: string): string {
-  const normalized = normalizeWorkspacePath(path);
-  if (normalized === '/') {
-    return '';
-  }
-
-  const segments = normalized.split('/').filter(Boolean);
-  return segments[segments.length - 1] ?? '';
-}
-
-export function createWorkspaceManifest(options: WorkspaceServiceOptions = {}): WorkspaceManifest {
-  const now = options.now ?? (() => new Date().toISOString());
-  const timestamp = now();
-
-  return {
-    workspaceId: options.workspaceId ?? 'workspace',
-    name: options.name ?? 'TextForge Workspace',
-    rootPath: normalizeWorkspacePath(options.rootPath ?? '/'),
-    createdAt: timestamp,
-    updatedAt: timestamp,
-    selectedResourceId: options.selectedResourceId,
-  };
-}
-
-function cloneMetadata(metadata: WorkspaceMetadata): WorkspaceMetadata {
-  return {
-    ...metadata,
-    tags: metadata.tags ? [...metadata.tags] : undefined,
-  };
-}
-
-function cloneWorkspaceManifestRecord(manifest: WorkspaceManifest): WorkspaceManifest {
-  return {
-    ...manifest,
-  };
-}
-
-function snapshotWorkspaceState(input: WorkspaceService | WorkspaceState): WorkspaceState {
-  return typeof (input as WorkspaceService).snapshot === 'function'
-    ? (input as WorkspaceService).snapshot()
-    : input as WorkspaceState;
-}
-
-function rebaseWorkspacePath(path: string, basePath: string): string {
-  const normalizedPath = normalizeWorkspacePath(path);
-  const normalizedBasePath = normalizeWorkspacePath(basePath);
-  if (normalizedBasePath === '/') {
-    return normalizedPath;
-  }
-
-  if (normalizedPath === normalizedBasePath || !normalizedPath.startsWith(`${normalizedBasePath}/`)) {
-    throw new Error(`Cannot rebase ${normalizedPath} from ${normalizedBasePath}`);
-  }
-
-  return normalizeWorkspacePath(normalizedPath.slice(normalizedBasePath.length));
-}
-
-function toArchiveResourcePath(path: string): string {
-  const normalizedPath = normalizeWorkspacePath(path);
-  const relativePath = normalizedPath.split('/').filter(Boolean).join('/');
-  if (relativePath.length === 0) {
-    throw new Error(`Cannot archive workspace resource without a path: ${path}`);
-  }
-
-  return `resources/${relativePath}`;
-}
-
-function normalizeArchiveEntryPath(path: string): string {
-  const segments = String(path ?? '')
-    .replaceAll('\\', '/')
-    .split('/')
-    .map((segment) => segment.trim())
-    .filter(Boolean);
-  if (segments.length === 0 || segments.some((segment) => segment === '.' || segment === '..')) {
-    throw new Error(`Invalid workspace archive entry path: ${path}`);
-  }
-
-  return segments.join('/');
-}
-
-function createWorkspaceArchiveFolderRecord(folder: WorkspaceFolder): WorkspaceArchiveFolderRecord {
-  return {
-    id: folder.id,
-    path: normalizeWorkspacePath(folder.path),
-    parentId: folder.parentId,
-    metadata: cloneMetadata(folder.metadata),
-  };
-}
-
-function createWorkspaceArchiveResourceRecord(resource: WorkspaceResource): WorkspaceArchiveResourceRecord {
-  return {
-    id: resource.id,
-    kind: resource.kind,
-    path: normalizeWorkspacePath(resource.path),
-    parentId: resource.parentId,
-    metadata: cloneMetadata(resource.metadata),
-    archivePath: toArchiveResourcePath(resource.path),
-    encoding: resource.kind === 'text' ? 'utf8' : 'binary',
-    languageId: resource.kind === 'text' ? resource.languageId : undefined,
-    mimeType: resource.mimeType,
-  };
-}
-
-function parseWorkspaceArchiveManifest(bytes: Uint8Array): WorkspaceArchiveManifest {
-  const parsed = JSON.parse(textDecoder.decode(bytes));
-  if (parsed?.format !== workspaceArchiveFormat) {
-    throw new Error(`Unsupported workspace archive format: ${parsed?.format ?? 'unknown'}`);
-  }
-
-  if (parsed.version !== workspaceArchiveVersion) {
-    throw new Error(`Unsupported workspace archive version: ${parsed?.version ?? 'unknown'}`);
-  }
-
-  if (!parsed.workspace || !Array.isArray(parsed.folders) || !Array.isArray(parsed.resources)) {
-    throw new Error('Invalid workspace archive manifest payload');
-  }
-
-  return parsed as WorkspaceArchiveManifest;
-}
-
-function cloneWorkspaceFolder(folder: WorkspaceFolder): WorkspaceFolder {
-  return {
-    ...folder,
-    metadata: cloneMetadata(folder.metadata),
-    childIds: [...(folder.childIds ?? [])],
-  };
-}
-
-function cloneWorkspaceResource(resource: WorkspaceResource): WorkspaceResource {
-  return resource.kind === 'text'
-    ? {
-      ...resource,
-      metadata: cloneMetadata(resource.metadata),
-    }
-    : {
-      ...resource,
-      metadata: cloneMetadata(resource.metadata),
-      bytes: cloneBytes(resource.bytes),
-    };
-}
-
-function cloneWorkspaceEntry(entry: WorkspaceEntry): WorkspaceEntry {
-  return entry.kind === 'folder' ? cloneWorkspaceFolder(entry) : cloneWorkspaceResource(entry);
-}
-
-function createWorkspaceState(
-  manifest: WorkspaceManifest,
-  folders: ReadonlyArray<WorkspaceFolder>,
-  resources: ReadonlyArray<WorkspaceResource>,
-): WorkspaceState {
-  const nextManifest = {
-    ...cloneWorkspaceManifestRecord(manifest),
-    rootPath: normalizeWorkspacePath(manifest.rootPath ?? '/'),
-  };
-  const nextFolders = folders
-    .filter((folder) => folder.id !== 'root')
-    .map((folder) => ({
-      ...cloneWorkspaceFolder(folder),
-      path: normalizeWorkspacePath(folder.path),
-      childIds: [],
-    }));
-  const nextResources = resources.map((resource) => ({
-    ...cloneWorkspaceResource(resource),
-    path: normalizeWorkspacePath(resource.path),
-  }));
-  const rootFolder: WorkspaceFolder = {
-    kind: 'folder',
-    id: 'root',
-    path: nextManifest.rootPath,
-    parentId: undefined,
-    metadata: {
-      title: nextManifest.name,
-      createdAt: nextManifest.createdAt,
-      updatedAt: nextManifest.updatedAt,
-    },
-    childIds: [],
-  };
-
-  return {
-    manifest: nextManifest,
-    folders: rebuildFolderChildren([rootFolder, ...nextFolders], nextResources),
-    resources: nextResources,
-  };
-}
-
-function collectImportedRootEntries(state: WorkspaceState): WorkspaceEntry[] {
-  const importedEntries = [...state.folders.filter((folder) => folder.id !== 'root'), ...state.resources];
-  const importedIds = new Set(importedEntries.map((entry) => entry.id));
-  return importedEntries
-    .filter((entry) => !entry.parentId || entry.parentId === 'root' || !importedIds.has(entry.parentId))
-    .sort((left, right) => left.path.localeCompare(right.path));
-}
-
-function findWorkspaceEntryByPath(
-  folders: ReadonlyArray<WorkspaceFolder>,
-  resources: ReadonlyArray<WorkspaceResource>,
-  path: string,
-): WorkspaceEntry | undefined {
-  return [...folders, ...resources].find((entry) => entry.path === path);
-}
-
-function minimizeConflictEntries(entries: ReadonlyArray<WorkspaceEntry>): WorkspaceEntry[] {
-  return entries.filter((entry, index) => !entries.some((candidate, candidateIndex) =>
-    candidateIndex !== index
-      && candidate.kind === 'folder'
-      && entry.path !== candidate.path
-      && entry.path.startsWith(`${candidate.path}/`),
-  ));
-}
-
-function removeWorkspaceEntrySubtree(
-  folders: ReadonlyArray<WorkspaceFolder>,
-  resources: ReadonlyArray<WorkspaceResource>,
-  entry: WorkspaceEntry,
-): { readonly folders: WorkspaceFolder[]; readonly resources: WorkspaceResource[] } {
-  if (entry.kind !== 'folder') {
-    return {
-      folders: [...folders],
-      resources: resources.filter((resource) => resource.id !== entry.id),
-    };
-  }
-
-  const descendants = collectDescendants([...folders, ...resources], entry.id);
-  const removedIds = new Set([entry.id, ...descendants.map((descendant) => descendant.id)]);
-  return {
-    folders: folders.filter((folder) => !removedIds.has(folder.id)),
-    resources: resources.filter((resource) => !removedIds.has(resource.id)),
-  };
-}
-
-function assignUniqueImportedEntryIds(entries: ReadonlyArray<WorkspaceEntry>, takenIds: Set<string>): WorkspaceEntry[] {
-  const idMap = new Map<string, string>();
-  let counter = 0;
-
-  function createUniqueId(baseId: string): string {
-    let candidate = baseId;
-    while (takenIds.has(candidate) || [...idMap.values()].includes(candidate)) {
-      counter += 1;
-      candidate = `${baseId}-import-${counter}`;
-    }
-    return candidate;
-  }
-
-  for (const entry of entries) {
-    const nextId = createUniqueId(entry.id);
-    idMap.set(entry.id, nextId);
-    takenIds.add(nextId);
-  }
-
-  return entries.map((entry) => {
-    const parentId = entry.parentId && idMap.has(entry.parentId)
-      ? idMap.get(entry.parentId)
-      : entry.parentId === 'root' || !entry.parentId
-        ? 'root'
-        : entry.parentId;
-    return entry.kind === 'folder'
-      ? {
-        ...cloneWorkspaceFolder(entry),
-        id: idMap.get(entry.id) as string,
-        parentId,
-        childIds: [],
-      }
-      : {
-        ...cloneWorkspaceResource(entry),
-        id: idMap.get(entry.id) as string,
-        parentId,
-      };
-  });
-}
-
-function createWorkspaceFolderArchiveState(input: WorkspaceService | WorkspaceState, folderPath: string): WorkspaceState {
-  const state = snapshotWorkspaceState(input);
-  const normalizedFolderPath = normalizeWorkspacePath(folderPath);
-  const selectedFolder = state.folders.find((folder) => folder.id !== 'root' && folder.path === normalizedFolderPath);
-  if (!selectedFolder) {
-    throw new Error(`Unknown workspace folder for archive export: ${normalizedFolderPath}`);
-  }
-
-  const selectionBasePath = dirnameWorkspacePath(normalizedFolderPath);
-  const selectedEntries = [selectedFolder, ...collectDescendants([...state.folders, ...state.resources], selectedFolder.id)];
-  const selectedIds = new Set(selectedEntries.map((entry) => entry.id));
-  const folders = selectedEntries
-    .filter((entry): entry is WorkspaceFolder => entry.kind === 'folder')
-    .map((folder) => ({
-      ...cloneWorkspaceFolder(folder),
-      path: rebaseWorkspacePath(folder.path, selectionBasePath),
-      parentId: selectedIds.has(folder.parentId ?? '') ? folder.parentId : 'root',
-      childIds: [],
-    }));
-  const resources = selectedEntries
-    .filter((entry): entry is WorkspaceResource => entry.kind !== 'folder')
-    .map((resource) => ({
-      ...cloneWorkspaceResource(resource),
-      path: rebaseWorkspacePath(resource.path, selectionBasePath),
-      parentId: selectedIds.has(resource.parentId ?? '') ? resource.parentId : 'root',
-    }));
-
-  return createWorkspaceState(
-    {
-      ...cloneWorkspaceManifestRecord(state.manifest),
-      rootPath: '/',
-      selectedResourceId: undefined,
-    },
-    folders,
-    resources,
-  );
-}
-
-function cloneBytes(bytes: Uint8Array): Uint8Array {
-  return new Uint8Array(bytes);
-}
-
-function createMetadata(title: string, now: () => string): WorkspaceMetadata {
-  const timestamp = now();
-  return {
-    title,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-}
-
-function matchesWorkspaceQuery(entry: WorkspaceEntry, query: WorkspaceQuery): boolean {
-  if (query.resourceId && entry.id !== query.resourceId) {
-    return false;
-  }
-
-  if (query.path && entry.path !== normalizeWorkspacePath(query.path)) {
-    return false;
-  }
-
-  if (query.kind && entry.kind !== query.kind) {
-    return false;
-  }
-
-  if (query.parentId && entry.parentId !== query.parentId) {
-    return false;
-  }
-
-  if (query.languageId && entry.kind === 'text' && entry.languageId !== query.languageId) {
-    return false;
-  }
-
-  if (query.mimeType && 'mimeType' in entry && entry.mimeType !== query.mimeType) {
-    return false;
-  }
-
-  return true;
-}
-
-function rebuildFolderChildren(
-  folders: ReadonlyArray<WorkspaceFolder>,
-  resources: ReadonlyArray<WorkspaceResource>,
-): WorkspaceFolder[] {
-  return folders.map((folder) => ({
-    ...folder,
-    childIds: [
-      ...folders.filter((candidate) => candidate.parentId === folder.id).map((candidate) => candidate.id),
-      ...resources.filter((candidate) => candidate.parentId === folder.id).map((candidate) => candidate.id),
-    ],
-  }));
-}
-
-function createFolderEntry(
-  input: WorkspaceCreateFolderInput,
-  now: () => string,
-  idFactory: () => string,
-  parentId?: string,
-): WorkspaceFolder {
-  const title = input.title ?? (basenameWorkspacePath(input.path) || 'Untitled folder');
-  return {
-    kind: 'folder',
-    id: idFactory(),
-    path: normalizeWorkspacePath(input.path),
-    parentId,
-    metadata: createMetadata(title, now),
-    childIds: [],
-  };
-}
-
-function createTextEntry(
-  input: WorkspaceCreateTextInput,
-  now: () => string,
-  idFactory: () => string,
-  parentId?: string,
-): WorkspaceTextResource {
-  const title = input.title ?? (basenameWorkspacePath(input.path) || 'Untitled text');
-  return {
-    kind: 'text',
-    id: idFactory(),
-    path: normalizeWorkspacePath(input.path),
-    parentId,
-    metadata: createMetadata(title, now),
-    text: input.text ?? '',
-    languageId: input.languageId,
-    mimeType: input.mimeType,
-  };
-}
-
-function createBinaryEntry(
-  input: WorkspaceCreateBinaryInput,
-  now: () => string,
-  idFactory: () => string,
-  parentId?: string,
-): WorkspaceBinaryResource {
-  const title = input.title ?? (basenameWorkspacePath(input.path) || 'Untitled binary');
-  return {
-    kind: 'binary',
-    id: idFactory(),
-    path: normalizeWorkspacePath(input.path),
-    parentId,
-    metadata: createMetadata(title, now),
-    bytes: cloneBytes(input.bytes),
-    mimeType: input.mimeType,
-  };
-}
-
-function replaceById<T extends WorkspaceEntry>(entries: ReadonlyArray<T>, nextEntry: T): T[] {
-  return entries.map((entry) => (entry.id === nextEntry.id ? nextEntry : entry));
-}
-
-function removeById<T extends WorkspaceEntry>(entries: ReadonlyArray<T>, id: string): T[] {
-  return entries.filter((entry) => entry.id !== id);
-}
-
-function updateDescendantPaths(entries: ReadonlyArray<WorkspaceEntry>, previousPath: string, nextPath: string): WorkspaceEntry[] {
-  const normalizedPreviousPath = normalizeWorkspacePath(previousPath);
-  const normalizedNextPath = normalizeWorkspacePath(nextPath);
-  const prefix = `${normalizedPreviousPath === '/' ? '' : `${normalizedPreviousPath}/`}`;
-
-  return entries.map((entry) => {
-    if (entry.path === normalizedPreviousPath) {
-      return entry;
-    }
-
-    if (normalizedPreviousPath !== '/' && !entry.path.startsWith(prefix)) {
-      return entry;
-    }
-
-    if (normalizedPreviousPath === '/' && entry.path === '/') {
-      return entry;
-    }
-
-    const suffix = entry.path.slice(normalizedPreviousPath.length);
-    return {
-      ...entry,
-      path: `${normalizedNextPath}${suffix}`,
-    };
-  });
-}
-
-function collectDescendants(entries: ReadonlyArray<WorkspaceEntry>, parentId: string): WorkspaceEntry[] {
-  const directChildren = entries.filter((entry) => entry.parentId === parentId);
-  return directChildren.flatMap((entry) => (entry.kind === 'folder' ? [entry, ...collectDescendants(entries, entry.id)] : [entry]));
-}
-
-function toResourceRef(entry: WorkspaceEntry): ResourceRef {
-  return {
-    resourceId: entry.id,
-    path: entry.path,
-    kind: entry.kind === 'folder' ? 'virtual' : entry.kind,
-    mimeType: 'mimeType' in entry ? entry.mimeType : undefined,
-    languageId: entry.kind === 'text' ? entry.languageId : undefined,
-    parentResourceId: entry.parentId,
-  };
-}
-
-export function createWorkspaceArchiveManifest(
-  input: WorkspaceService | WorkspaceState,
-  options: WorkspaceArchiveExportOptions = {},
-): WorkspaceArchiveManifest {
-  const state = snapshotWorkspaceState(input);
-  const exportedAt = options.exportedAt ?? new Date().toISOString();
-  return {
-    format: workspaceArchiveFormat,
-    version: workspaceArchiveVersion,
-    exportedAt,
-    workspace: cloneWorkspaceManifestRecord(state.manifest),
-    folders: state.folders.map((folder) => createWorkspaceArchiveFolderRecord(folder)),
-    resources: state.resources.map((resource) => createWorkspaceArchiveResourceRecord(resource)),
-  };
-}
-
-export function exportWorkspaceToZip(
-  input: WorkspaceService | WorkspaceState,
-  options: WorkspaceArchiveExportOptions = {},
-): Uint8Array {
-  const state = snapshotWorkspaceState(input);
-  const manifest = createWorkspaceArchiveManifest(state, options);
-  const archiveEntries: Record<string, Uint8Array> = {
-    [workspaceArchiveManifestPath]: textEncoder.encode(JSON.stringify(manifest, null, 2)),
-  };
-
-  for (const resource of state.resources) {
-    archiveEntries[toArchiveResourcePath(resource.path)] = resource.kind === 'text'
-      ? textEncoder.encode(resource.text)
-      : cloneBytes(resource.bytes);
-  }
-
-  return zipSync(archiveEntries);
-}
-
-export function exportWorkspaceFolderToZip(
-  input: WorkspaceService | WorkspaceState,
+export declare const workspaceDexieSchema: WorkspaceDexieSchema;
+export declare const workspaceContribution: {
+  readonly id: '@textforge/workspace';
+  readonly diagnostics: readonly [];
+  readonly commands: readonly [];
+  readonly surfaces: readonly [];
+  readonly pipelines: readonly [];
+};
+export declare const contributions: typeof workspaceContribution;
+
+export declare function createSequentialIdFactory(prefix?: string): () => string;
+export declare function normalizeWorkspacePath(path: string): string;
+export declare function joinWorkspacePath(...parts: ReadonlyArray<string>): string;
+export declare function dirnameWorkspacePath(path: string): string;
+export declare function basenameWorkspacePath(path: string): string;
+export declare function createWorkspaceManifest(options?: WorkspaceServiceOptions): WorkspaceManifest;
+export declare function workspaceEntryToResourceRef(entry: WorkspaceEntry): ResourceRef;
+export declare function createWorkspaceArchiveManifest(
+  input: WorkspaceState | WorkspaceService,
+  options?: WorkspaceArchiveExportOptions,
+): WorkspaceArchiveManifest;
+export declare function exportWorkspaceToZip(
+  input: WorkspaceState | WorkspaceService,
+  options?: WorkspaceArchiveExportOptions,
+): Uint8Array;
+export declare function exportWorkspaceFolderToZip(
+  input: WorkspaceState | WorkspaceService,
   folderPath: string,
-  options: WorkspaceArchiveExportOptions = {},
-): Uint8Array {
-  return exportWorkspaceToZip(createWorkspaceFolderArchiveState(input, folderPath), options);
-}
-
-export function mergeImportedWorkspaceState(
+  options?: WorkspaceArchiveExportOptions,
+): Uint8Array;
+export declare function mergeImportedWorkspaceState(
   existingState: WorkspaceState,
   importedState: WorkspaceState,
-  options: WorkspaceArchiveImportOptions = {},
-): WorkspaceState {
-  const conflictPolicy = options.conflictPolicy ?? 'error';
-  let resultFolders = existingState.folders.filter((folder) => folder.id !== 'root').map((folder) => cloneWorkspaceFolder(folder));
-  let resultResources = existingState.resources.map((resource) => cloneWorkspaceResource(resource));
-  const normalizedImportedState = createWorkspaceState(
-    importedState.manifest,
-    importedState.folders,
-    importedState.resources,
-  );
-  const importedEntries = [
-    ...normalizedImportedState.folders.filter((folder) => folder.id !== 'root'),
-    ...normalizedImportedState.resources,
-  ];
-
-  for (const rootEntry of collectImportedRootEntries(normalizedImportedState)) {
-    const subtreeEntries = [rootEntry, ...collectDescendants(importedEntries, rootEntry.id)].map((entry) => cloneWorkspaceEntry(entry));
-    const conflictingEntries = minimizeConflictEntries(
-      subtreeEntries
-        .map((entry) => findWorkspaceEntryByPath(resultFolders, resultResources, entry.path))
-        .filter((entry): entry is WorkspaceEntry => Boolean(entry)),
-    );
-
-    if (conflictingEntries.length > 0) {
-      if (conflictPolicy === 'error') {
-        throw new Error(`Workspace import conflict at ${conflictingEntries[0].path}`);
-      }
-
-      if (conflictPolicy === 'skip') {
-        continue;
-      }
-
-      if (conflictPolicy === 'replace') {
-        for (const conflictEntry of conflictingEntries) {
-          const nextState = removeWorkspaceEntrySubtree(resultFolders, resultResources, conflictEntry);
-          resultFolders = nextState.folders;
-          resultResources = nextState.resources;
-        }
-      }
-    }
-
-    const takenIds = new Set([...resultFolders, ...resultResources].map((entry) => entry.id));
-    const mergedEntries = assignUniqueImportedEntryIds(subtreeEntries, takenIds);
-    resultFolders = [...resultFolders, ...mergedEntries.filter((entry): entry is WorkspaceFolder => entry.kind === 'folder')];
-    resultResources = [...resultResources, ...mergedEntries.filter((entry): entry is WorkspaceResource => entry.kind !== 'folder')];
-  }
-
-  return createWorkspaceState(existingState.manifest, resultFolders, resultResources);
-}
-
-export function importWorkspaceFromZip(bytes: Uint8Array, options: WorkspaceArchiveImportOptions = {}): WorkspaceArchiveImportResult {
-  const archiveEntries = unzipSync(bytes);
-  const manifestBytes = archiveEntries[workspaceArchiveManifestPath];
-  if (!manifestBytes) {
-    throw new Error(`Workspace archive is missing ${workspaceArchiveManifestPath}`);
-  }
-
-  const manifest = parseWorkspaceArchiveManifest(manifestBytes);
-  const resources: WorkspaceResource[] = manifest.resources.map((resourceRecord) => {
-    const archivePath = normalizeArchiveEntryPath(resourceRecord.archivePath);
-    const resourceBytes = archiveEntries[archivePath];
-    if (!resourceBytes) {
-      throw new Error(`Workspace archive is missing ${archivePath}`);
-    }
-
-    const metadata = cloneMetadata(resourceRecord.metadata);
-    const normalizedPath = normalizeWorkspacePath(resourceRecord.path);
-    if (resourceRecord.kind === 'text') {
-      return {
-        kind: 'text',
-        id: resourceRecord.id,
-        path: normalizedPath,
-        parentId: resourceRecord.parentId,
-        metadata,
-        text: textDecoder.decode(resourceBytes),
-        languageId: resourceRecord.languageId,
-        mimeType: resourceRecord.mimeType,
-      };
-    }
-
-    if (resourceRecord.kind === 'binary') {
-      return {
-        kind: 'binary',
-        id: resourceRecord.id,
-        path: normalizedPath,
-        parentId: resourceRecord.parentId,
-        metadata,
-        bytes: cloneBytes(resourceBytes),
-        mimeType: resourceRecord.mimeType,
-      };
-    }
-
-    throw new Error(`Unsupported workspace resource kind in archive: ${resourceRecord.kind}`);
-  });
-
-  const folders: WorkspaceFolder[] = manifest.folders.map((folderRecord) => ({
-    kind: 'folder',
-    id: folderRecord.id,
-    path: normalizeWorkspacePath(folderRecord.path),
-    parentId: folderRecord.parentId,
-    metadata: cloneMetadata(folderRecord.metadata),
-    childIds: [],
-  }));
-  if (!folders.some((folder) => folder.id === 'root')) {
-    folders.unshift({
-      kind: 'folder',
-      id: 'root',
-      path: normalizeWorkspacePath(manifest.workspace.rootPath),
-      parentId: undefined,
-      metadata: {
-        title: manifest.workspace.name,
-        createdAt: manifest.workspace.createdAt,
-        updatedAt: manifest.workspace.updatedAt,
-      },
-      childIds: [],
-    });
-  }
-
-  const importedState = createWorkspaceState(
-    {
-      ...cloneWorkspaceManifestRecord(manifest.workspace),
-      rootPath: normalizeWorkspacePath(manifest.workspace.rootPath),
-    },
-    folders,
-    resources,
-  );
-  const state = options.existingState
-    ? mergeImportedWorkspaceState(options.existingState, importedState, options)
-    : importedState;
-
-  return {
-    manifest: {
-      format: manifest.format,
-      version: manifest.version,
-      exportedAt: manifest.exportedAt,
-      workspace: importedState.manifest,
-      folders: manifest.folders.map((folderRecord) => ({
-        ...folderRecord,
-        path: normalizeWorkspacePath(folderRecord.path),
-        metadata: cloneMetadata(folderRecord.metadata),
-      })),
-      resources: manifest.resources.map((resourceRecord) => ({
-        ...resourceRecord,
-        path: normalizeWorkspacePath(resourceRecord.path),
-        metadata: cloneMetadata(resourceRecord.metadata),
-        archivePath: normalizeArchiveEntryPath(resourceRecord.archivePath),
-      })),
-    },
-    state,
-  };
-}
-
-export function createWorkspaceService(options: WorkspaceServiceOptions = {}): WorkspaceService {
-  const now = options.now ?? (() => new Date().toISOString());
-  const idFactory = options.idFactory ?? createSequentialIdFactory(options.workspaceId ?? 'workspace-entry');
-
-  let manifest = options.state?.manifest ?? createWorkspaceManifest(options);
-  let folders = [...(options.state?.folders ?? [])];
-  let resources = [...(options.state?.resources ?? [])];
-
-  const rootFolder: WorkspaceFolder = {
-    kind: 'folder',
-    id: 'root',
-    path: manifest.rootPath,
-    metadata: {
-      title: manifest.name,
-      createdAt: manifest.createdAt,
-      updatedAt: manifest.updatedAt,
-    },
-    childIds: [],
-  };
-
-  if (!folders.some((folder) => folder.id === rootFolder.id)) {
-    folders = [rootFolder, ...folders];
-  }
-
-  function allEntries(): WorkspaceEntry[] {
-    return [...folders, ...resources];
-  }
-
-  function snapshot(): WorkspaceState {
-    return {
-      manifest,
-      folders: rebuildFolderChildren(folders, resources),
-      resources: resources.map((resource) =>
-        resource.kind === 'binary'
-          ? { ...resource, bytes: cloneBytes(resource.bytes) }
-          : { ...resource },
-      ),
-    };
-  }
-
-  function query(queryValue: WorkspaceQuery): ReadonlyArray<WorkspaceEntry> {
-    return allEntries().filter((entry) => matchesWorkspaceQuery(entry, queryValue));
-  }
-
-  function getEntry(resourceId: string): WorkspaceEntry | undefined {
-    return allEntries().find((entry) => entry.id === resourceId);
-  }
-
-  function getEntryByPath(path: string): WorkspaceEntry | undefined {
-    return allEntries().find((entry) => entry.path === normalizeWorkspacePath(path));
-  }
-
-  function resolveParentFolder(path: string): WorkspaceFolder | undefined {
-    const parentPath = dirnameWorkspacePath(path);
-    return allEntries().find((entry): entry is WorkspaceFolder => entry.kind === 'folder' && entry.path === parentPath);
-  }
-
-  function createFolder(input: WorkspaceCreateFolderInput): WorkspaceFolder {
-    const parent = resolveParentFolder(input.path);
-    const nextFolder = createFolderEntry(input, now, idFactory, parent?.id);
-    folders = [...folders, nextFolder];
-    if (parent) {
-      folders = folders.map((folder) =>
-        folder.id === parent.id ? { ...folder, childIds: [...folder.childIds, nextFolder.id] } : folder,
-      );
-    }
-    return nextFolder;
-  }
-
-  function createTextResource(input: WorkspaceCreateTextInput): WorkspaceTextResource {
-    const parent = resolveParentFolder(input.path);
-    const nextResource = createTextEntry(input, now, idFactory, parent?.id);
-    resources = [...resources, nextResource];
-    if (parent) {
-      folders = folders.map((folder) =>
-        folder.id === parent.id ? { ...folder, childIds: [...folder.childIds, nextResource.id] } : folder,
-      );
-    }
-    return nextResource;
-  }
-
-  function createBinaryResource(input: WorkspaceCreateBinaryInput): WorkspaceBinaryResource {
-    const parent = resolveParentFolder(input.path);
-    const nextResource = createBinaryEntry(input, now, idFactory, parent?.id);
-    resources = [...resources, nextResource];
-    if (parent) {
-      folders = folders.map((folder) =>
-        folder.id === parent.id ? { ...folder, childIds: [...folder.childIds, nextResource.id] } : folder,
-      );
-    }
-    return nextResource;
-  }
-
-  function saveTextResource(input: WorkspaceSaveTextInput): WorkspaceTextResource {
-    const current = resources.find((entry) => entry.id === input.resourceId && entry.kind === 'text');
-    if (!current) {
-      throw new Error(`Unknown text resource: ${input.resourceId}`);
-    }
-
-    const nextResource: WorkspaceTextResource = {
-      ...current,
-      text: input.text,
-      languageId: input.languageId ?? current.languageId,
-      mimeType: input.mimeType ?? current.mimeType,
-      metadata: {
-        ...current.metadata,
-        updatedAt: input.updatedAt ?? now(),
-      },
-    };
-
-    resources = replaceById(resources, nextResource);
-    return nextResource;
-  }
-
-  function saveBinaryResource(input: WorkspaceSaveBinaryInput): WorkspaceBinaryResource {
-    const current = resources.find((entry) => entry.id === input.resourceId && entry.kind === 'binary');
-    if (!current) {
-      throw new Error(`Unknown binary resource: ${input.resourceId}`);
-    }
-
-    const nextResource: WorkspaceBinaryResource = {
-      ...current,
-      bytes: cloneBytes(input.bytes),
-      metadata: {
-        ...current.metadata,
-        updatedAt: input.updatedAt ?? now(),
-      },
-    };
-
-    resources = replaceById(resources, nextResource);
-    return nextResource;
-  }
-
-  function renameEntry(resourceId: string, path: string): WorkspaceEntry | undefined {
-    const current = getEntry(resourceId);
-    if (!current) {
-      return undefined;
-    }
-
-    const nextPath = normalizeWorkspacePath(path);
-    const updatedAt = now();
-
-    if (current.kind === 'folder') {
-      const folderDescendants = collectDescendants(allEntries(), current.id);
-      folders = updateDescendantPaths(folders, current.path, nextPath) as WorkspaceFolder[];
-      resources = updateDescendantPaths(resources, current.path, nextPath) as WorkspaceResource[];
-      const nextFolder = folders.find((entry) => entry.id === current.id);
-      if (!nextFolder) {
-        return undefined;
-      }
-
-      const parent = resolveParentFolder(nextPath);
-      const patchedFolder: WorkspaceFolder = {
-        ...nextFolder,
-        path: nextPath,
-        parentId: parent?.id,
-        metadata: { ...nextFolder.metadata, updatedAt },
-        childIds: folderDescendants.filter((entry) => entry.parentId === current.id).map((entry) => entry.id),
-      };
-      folders = replaceById(folders, patchedFolder);
-      return patchedFolder;
-    }
-
-    const parent = resolveParentFolder(nextPath);
-    const nextResource: WorkspaceResource = {
-      ...current,
-      path: nextPath,
-      parentId: parent?.id,
-      metadata: { ...current.metadata, updatedAt },
-    };
-    resources = replaceById(resources, nextResource);
-    return nextResource;
-  }
-
-  function moveEntry(input: WorkspaceMoveInput): WorkspaceEntry | undefined {
-    const current = getEntry(input.resourceId);
-    if (!current) {
-      return undefined;
-    }
-
-    const parent = getEntryByPath(input.parentPath);
-    if (!parent || parent.kind !== 'folder') {
-      throw new Error(`Unknown workspace folder: ${input.parentPath}`);
-    }
-
-    const baseTitle = input.title ?? current.metadata.title ?? basenameWorkspacePath(current.path);
-    const title = baseTitle || current.id;
-    return renameEntry(current.id, joinWorkspacePath(parent.path, title));
-  }
-
-  function deleteEntry(resourceId: string): boolean {
-    const current = getEntry(resourceId);
-    if (!current) {
-      return false;
-    }
-
-    if (current.kind === 'folder') {
-      for (const descendant of collectDescendants(allEntries(), current.id)) {
-        if (descendant.kind === 'folder') {
-          folders = removeById(folders, descendant.id) as WorkspaceFolder[];
-        } else {
-          resources = removeById(resources, descendant.id) as WorkspaceResource[];
-        }
-      }
-      folders = removeById(folders, current.id) as WorkspaceFolder[];
-      return true;
-    }
-
-    resources = removeById(resources, current.id) as WorkspaceResource[];
-    return true;
-  }
-
-  function resolveReference(source: ResourceRef, reference: string): ResourceRef | undefined {
-    const resolvedPath = reference.startsWith('/')
-      ? normalizeWorkspacePath(reference)
-      : joinWorkspacePath(source.path ? dirnameWorkspacePath(source.path) : '/', reference);
-    const entry = getEntryByPath(resolvedPath);
-    return entry ? toResourceRef(entry) : undefined;
-  }
-
-  function applyMutation(mutation: WorkspaceMutation): WorkspaceEntry | boolean | undefined {
-    switch (mutation.kind) {
-      case 'create-folder':
-        return createFolder(mutation.input);
-      case 'create-text':
-        return createTextResource(mutation.input);
-      case 'create-binary':
-        return createBinaryResource(mutation.input);
-      case 'save-text':
-        return saveTextResource(mutation.input);
-      case 'save-binary':
-        return saveBinaryResource(mutation.input);
-      case 'rename':
-        return renameEntry(mutation.resourceId, mutation.path);
-      case 'move':
-        return moveEntry(mutation.input);
-      case 'delete':
-        return deleteEntry(mutation.resourceId);
-    }
-  }
-
-  return {
-    workspaceId: manifest.workspaceId,
-    snapshot,
-    query,
-    getEntry,
-    getEntryByPath,
-    createFolder,
-    createTextResource,
-    createBinaryResource,
-    saveTextResource,
-    saveBinaryResource,
-    renameEntry,
-    moveEntry,
-    deleteEntry,
-    resolveReference,
-    applyMutation,
-  };
-}
+  options?: WorkspaceArchiveImportOptions,
+): WorkspaceState;
+export declare function importWorkspaceFromZip(
+  bytes: Uint8Array,
+  options?: WorkspaceArchiveImportOptions,
+): WorkspaceArchiveImportResult;
+export declare function openWorkspaceDexieStorage(options?: WorkspaceStorageOptions): Promise<WorkspaceDexieStorage>;
+export declare function resetWorkspaceDexieStorage(options?: WorkspaceStorageOptions): Promise<void>;
+export declare function createPersistentWorkspaceService(
+  baseWorkspace: WorkspaceService,
+  storage: WorkspaceDexieStorage,
+  options?: Pick<WorkspaceServiceOptions, 'now'>,
+): PersistentWorkspaceService;
+export declare function createPersistedWorkspaceService(
+  options?: CreatePersistedWorkspaceServiceOptions,
+): Promise<HydratedWorkspaceServiceResult>;
+export declare function createWorkspaceTreeItems(state: WorkspaceState): ReadonlyArray<WorkspaceTreeItem>;
+export declare function createWorkspaceService(options?: WorkspaceServiceOptions): WorkspaceService;

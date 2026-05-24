@@ -1,3 +1,4 @@
+import Dexie from 'dexie';
 import { unzipSync, zipSync } from 'fflate';
 
 import { createResourceRef } from '../../core/src/index.js';
@@ -7,10 +8,31 @@ const textDecoder = new TextDecoder();
 const workspaceArchiveFormat = 'textforge-workspace-archive';
 const workspaceArchiveVersion = 1;
 const workspaceArchiveManifestPath = 'textforge-workspace.json';
+const workspaceSystemTableName = 'system';
+const workspaceFoldersTableName = 'folders';
+const workspaceTextResourcesTableName = 'textResources';
+const workspaceBinaryResourcesTableName = 'binaryResources';
+const workspaceManifestsTableName = 'manifests';
+const workspaceSchemaRecordKey = 'workspace-schema-version';
+const workspaceSavedAtRecordKey = 'workspace-last-saved-at';
+
+export const workspaceDexieSchemaVersion = 1;
+export const defaultWorkspaceDexieDatabaseName = 'textforge-workspace';
+export const workspaceStorageErrorCodes = {
+  initializationFailed: 'workspace-storage-initialization-failed',
+  loadFailed: 'workspace-storage-load-failed',
+  saveFailed: 'workspace-storage-save-failed',
+  clearFailed: 'workspace-storage-clear-failed',
+  deleteFailed: 'workspace-storage-delete-failed',
+  corruptedState: 'workspace-storage-corrupted',
+  incompatibleState: 'workspace-storage-incompatible',
+};
 
 export const workspaceDexieSchema = {
+  system: 'key',
   folders: 'id, path, parentId, metadata.createdAt, metadata.updatedAt',
-  resources: 'id, path, parentId, kind, languageId, mimeType, metadata.createdAt, metadata.updatedAt',
+  textResources: 'id, path, parentId, languageId, mimeType, metadata.createdAt, metadata.updatedAt',
+  binaryResources: 'id, path, parentId, mimeType, metadata.createdAt, metadata.updatedAt',
   manifests: 'workspaceId, name, rootPath, createdAt, updatedAt, selectedResourceId',
 };
 
@@ -248,6 +270,47 @@ function createWorkspaceState(manifest, folders, resources) {
     folders: rebuildFolderChildren([rootFolder, ...nextFolders], nextResources),
     resources: nextResources,
   };
+}
+
+function cloneWorkspaceState(state) {
+  return createWorkspaceState(state.manifest, state.folders, state.resources);
+}
+
+function createWorkspaceStorageError(code, message, cause) {
+  const error = new Error(message);
+  error.name = 'WorkspaceStorageError';
+  error.code = code;
+  if (cause !== undefined) {
+    error.cause = cause;
+  }
+  return error;
+}
+
+function cloneWorkspaceStorageErrorSnapshot(error) {
+  if (!error) {
+    return undefined;
+  }
+
+  return {
+    code: error.code ?? workspaceStorageErrorCodes.saveFailed,
+    message: error.message,
+  };
+}
+
+function getWorkspaceDexieTables(database) {
+  return {
+    system: database.table(workspaceSystemTableName),
+    folders: database.table(workspaceFoldersTableName),
+    textResources: database.table(workspaceTextResourcesTableName),
+    binaryResources: database.table(workspaceBinaryResourcesTableName),
+    manifests: database.table(workspaceManifestsTableName),
+  };
+}
+
+function createWorkspaceDexieDatabase(databaseName = defaultWorkspaceDexieDatabaseName) {
+  const database = new Dexie(databaseName);
+  database.version(workspaceDexieSchemaVersion).stores(workspaceDexieSchema);
+  return database;
 }
 
 function collectImportedRootEntries(state) {
@@ -687,6 +750,405 @@ export function importWorkspaceFromZip(bytes, options = {}) {
   };
 }
 
+function createDefaultWorkspaceSeedState(options = {}) {
+  if (options.seed) {
+    return cloneWorkspaceState(snapshotWorkspaceState(
+      typeof options.seed === 'function' ? options.seed() : options.seed,
+    ));
+  }
+
+  if (options.state) {
+    return cloneWorkspaceState(snapshotWorkspaceState(options.state));
+  }
+
+  return createWorkspaceService(options).snapshot();
+}
+
+export async function openWorkspaceDexieStorage(options = {}) {
+  const databaseName = options.databaseName ?? defaultWorkspaceDexieDatabaseName;
+  const database = createWorkspaceDexieDatabase(databaseName);
+
+  try {
+    await database.open();
+  } catch (cause) {
+    database.close();
+    throw createWorkspaceStorageError(
+      workspaceStorageErrorCodes.initializationFailed,
+      `Unable to open workspace browser storage ${databaseName}.`,
+      cause,
+    );
+  }
+
+  const tables = getWorkspaceDexieTables(database);
+
+  async function loadState() {
+    let records;
+    try {
+      records = await database.transaction(
+        'r',
+        tables.system,
+        tables.manifests,
+        tables.folders,
+        tables.textResources,
+        tables.binaryResources,
+        async () => ({
+          schemaRecord: await tables.system.get(workspaceSchemaRecordKey),
+          lastSavedAtRecord: await tables.system.get(workspaceSavedAtRecordKey),
+          manifestRecords: await tables.manifests.toArray(),
+          folderRecords: await tables.folders.toArray(),
+          textResourceRecords: await tables.textResources.toArray(),
+          binaryResourceRecords: await tables.binaryResources.toArray(),
+        }),
+      );
+    } catch (cause) {
+      throw createWorkspaceStorageError(
+        workspaceStorageErrorCodes.loadFailed,
+        `Unable to read workspace browser storage ${databaseName}.`,
+        cause,
+      );
+    }
+
+    const hasAnyRecords = Boolean(records.schemaRecord || records.lastSavedAtRecord)
+      || records.manifestRecords.length > 0
+      || records.folderRecords.length > 0
+      || records.textResourceRecords.length > 0
+      || records.binaryResourceRecords.length > 0;
+    if (!hasAnyRecords) {
+      return undefined;
+    }
+
+    if (!records.schemaRecord) {
+      throw createWorkspaceStorageError(
+        workspaceStorageErrorCodes.corruptedState,
+        'Persisted workspace state is missing the schema version record.',
+      );
+    }
+
+    if (records.schemaRecord.value !== workspaceDexieSchemaVersion) {
+      throw createWorkspaceStorageError(
+        workspaceStorageErrorCodes.incompatibleState,
+        `Persisted workspace schema version ${records.schemaRecord.value} is not supported.`,
+      );
+    }
+
+    if (records.manifestRecords.length !== 1) {
+      throw createWorkspaceStorageError(
+        workspaceStorageErrorCodes.corruptedState,
+        `Persisted workspace expected exactly one manifest record, found ${records.manifestRecords.length}.`,
+      );
+    }
+
+    return createWorkspaceState(
+      records.manifestRecords[0],
+      records.folderRecords.map((folder) => ({
+        ...cloneWorkspaceFolder(folder),
+        childIds: [],
+      })),
+      [
+        ...records.textResourceRecords.map((resource) => cloneWorkspaceResource(resource)),
+        ...records.binaryResourceRecords.map((resource) => cloneWorkspaceResource(resource)),
+      ],
+    );
+  }
+
+  async function saveState(input) {
+    const state = cloneWorkspaceState(snapshotWorkspaceState(input));
+    const savedAt = state.manifest.updatedAt;
+    const textResources = state.resources
+      .filter((resource) => resource.kind === 'text')
+      .map((resource) => cloneWorkspaceResource(resource));
+    const binaryResources = state.resources
+      .filter((resource) => resource.kind === 'binary')
+      .map((resource) => cloneWorkspaceResource(resource));
+
+    try {
+      await database.transaction(
+        'rw',
+        tables.system,
+        tables.manifests,
+        tables.folders,
+        tables.textResources,
+        tables.binaryResources,
+        async () => {
+          await Promise.all([
+            tables.system.clear(),
+            tables.manifests.clear(),
+            tables.folders.clear(),
+            tables.textResources.clear(),
+            tables.binaryResources.clear(),
+          ]);
+          await tables.system.bulkPut([
+            { key: workspaceSchemaRecordKey, value: workspaceDexieSchemaVersion },
+            { key: workspaceSavedAtRecordKey, value: savedAt },
+          ]);
+          await tables.manifests.put(cloneWorkspaceManifestRecord(state.manifest));
+          if (state.folders.length > 0) {
+            await tables.folders.bulkPut(state.folders.map((folder) => cloneWorkspaceFolder(folder)));
+          }
+          if (textResources.length > 0) {
+            await tables.textResources.bulkPut(textResources);
+          }
+          if (binaryResources.length > 0) {
+            await tables.binaryResources.bulkPut(binaryResources);
+          }
+        },
+      );
+    } catch (cause) {
+      throw createWorkspaceStorageError(
+        workspaceStorageErrorCodes.saveFailed,
+        `Unable to write workspace browser storage ${databaseName}.`,
+        cause,
+      );
+    }
+
+    return state;
+  }
+
+  async function clear() {
+    try {
+      await database.transaction(
+        'rw',
+        tables.system,
+        tables.manifests,
+        tables.folders,
+        tables.textResources,
+        tables.binaryResources,
+        async () => {
+          await Promise.all([
+            tables.system.clear(),
+            tables.manifests.clear(),
+            tables.folders.clear(),
+            tables.textResources.clear(),
+            tables.binaryResources.clear(),
+          ]);
+        },
+      );
+    } catch (cause) {
+      throw createWorkspaceStorageError(
+        workspaceStorageErrorCodes.clearFailed,
+        `Unable to clear workspace browser storage ${databaseName}.`,
+        cause,
+      );
+    }
+  }
+
+  return {
+    kind: 'indexeddb',
+    driver: 'dexie',
+    browserManaged: true,
+    databaseName,
+    schemaVersion: workspaceDexieSchemaVersion,
+    loadState,
+    saveState,
+    clear,
+    async delete() {
+      try {
+        database.close();
+        await Dexie.delete(databaseName);
+      } catch (cause) {
+        throw createWorkspaceStorageError(
+          workspaceStorageErrorCodes.deleteFailed,
+          `Unable to delete workspace browser storage ${databaseName}.`,
+          cause,
+        );
+      }
+    },
+    close() {
+      database.close();
+    },
+  };
+}
+
+export async function resetWorkspaceDexieStorage(options = {}) {
+  const databaseName = options.databaseName ?? defaultWorkspaceDexieDatabaseName;
+
+  try {
+    await Dexie.delete(databaseName);
+  } catch (cause) {
+    throw createWorkspaceStorageError(
+      workspaceStorageErrorCodes.deleteFailed,
+      `Unable to delete workspace browser storage ${databaseName}.`,
+      cause,
+    );
+  }
+}
+
+export function createPersistentWorkspaceService(baseWorkspace, storage, options = {}) {
+  const now = options.now ?? (() => new Date().toISOString());
+  const listeners = new Set();
+  let pendingState;
+  let pendingReason;
+  let flushQueued = false;
+  let writeChain = Promise.resolve(baseWorkspace.snapshot());
+  let persistenceStatus = {
+    state: 'idle',
+    driver: storage.driver ?? 'dexie',
+    databaseName: storage.databaseName,
+    schemaVersion: storage.schemaVersion ?? workspaceDexieSchemaVersion,
+    browserManaged: storage.browserManaged !== false,
+    lastSavedAt: baseWorkspace.getManifest().updatedAt,
+    pendingReason: undefined,
+    error: undefined,
+  };
+
+  function emitPersistence() {
+    for (const listener of listeners) {
+      listener();
+    }
+  }
+
+  function getPersistenceStatus() {
+    return {
+      ...persistenceStatus,
+      error: cloneWorkspaceStorageErrorSnapshot(persistenceStatus.error),
+    };
+  }
+
+  async function flushPendingPersistence() {
+    while (pendingState) {
+      const stateToPersist = pendingState;
+      const reasonToPersist = pendingReason;
+      pendingState = undefined;
+      pendingReason = undefined;
+
+      try {
+        const persistedState = await storage.saveState(stateToPersist);
+        persistenceStatus = {
+          ...persistenceStatus,
+          state: 'idle',
+          lastSavedAt: persistedState.manifest.updatedAt ?? now(),
+          pendingReason: undefined,
+          error: undefined,
+        };
+        emitPersistence();
+      } catch (error) {
+        flushQueued = false;
+        persistenceStatus = {
+          ...persistenceStatus,
+          state: 'error',
+          pendingReason: reasonToPersist,
+          error,
+        };
+        emitPersistence();
+        throw error;
+      }
+    }
+
+    flushQueued = false;
+    return baseWorkspace.snapshot();
+  }
+
+  function queuePersistence(reason = 'mutation') {
+    pendingState = baseWorkspace.snapshot();
+    pendingReason = reason;
+    persistenceStatus = {
+      ...persistenceStatus,
+      state: 'persisting',
+      pendingReason: reason,
+      error: undefined,
+    };
+    emitPersistence();
+
+    if (!flushQueued) {
+      flushQueued = true;
+      writeChain = writeChain.then(flushPendingPersistence, flushPendingPersistence);
+    }
+
+    return writeChain;
+  }
+
+  function persistLater(reason) {
+    void queuePersistence(reason).catch(() => undefined);
+  }
+
+  function wrapMutation(methodName, reason) {
+    return (...args) => {
+      const result = baseWorkspace[methodName](...args);
+      persistLater(reason);
+      return result;
+    };
+  }
+
+  return {
+    workspaceId: baseWorkspace.workspaceId,
+    storage,
+    snapshot: () => baseWorkspace.snapshot(),
+    query: (queryValue) => baseWorkspace.query(queryValue),
+    getEntry: (resourceId) => baseWorkspace.getEntry(resourceId),
+    getEntryByPath: (path) => baseWorkspace.getEntryByPath(path),
+    getManifest: () => baseWorkspace.getManifest(),
+    createFolder: wrapMutation('createFolder', 'create-folder'),
+    createTextResource: wrapMutation('createTextResource', 'create-text'),
+    createBinaryResource: wrapMutation('createBinaryResource', 'create-binary'),
+    saveTextResource: wrapMutation('saveTextResource', 'save-text'),
+    saveBinaryResource: wrapMutation('saveBinaryResource', 'save-binary'),
+    renameEntry: wrapMutation('renameEntry', 'rename-entry'),
+    moveEntry: wrapMutation('moveEntry', 'move-entry'),
+    deleteEntry: wrapMutation('deleteEntry', 'delete-entry'),
+    replaceState: wrapMutation('replaceState', 'replace-state'),
+    setSelectedResourceId: wrapMutation('setSelectedResourceId', 'select-resource'),
+    resolveReference: (source, reference) => baseWorkspace.resolveReference(source, reference),
+    applyMutation: wrapMutation('applyMutation', 'apply-mutation'),
+    getPersistenceStatus,
+    subscribePersistence(listener) {
+      listeners.add(listener);
+      return () => {
+        listeners.delete(listener);
+      };
+    },
+    whenIdle() {
+      return writeChain.then(() => baseWorkspace.snapshot(), () => {
+        throw persistenceStatus.error;
+      });
+    },
+    persistNow(reason = 'manual') {
+      return queuePersistence(reason);
+    },
+    async resetPersistence(nextState) {
+      await storage.clear();
+      baseWorkspace.replaceState(nextState ?? createDefaultWorkspaceSeedState({
+        workspaceId: baseWorkspace.workspaceId,
+        name: baseWorkspace.getManifest().name,
+        rootPath: baseWorkspace.getManifest().rootPath,
+        now,
+      }));
+      return queuePersistence('reset-storage');
+    },
+    disposePersistence() {
+      listeners.clear();
+      storage.close?.();
+    },
+  };
+}
+
+export async function createPersistedWorkspaceService(options = {}) {
+  const storage = options.storage ?? await openWorkspaceDexieStorage(options.storageOptions);
+  let loadedState;
+
+  try {
+    loadedState = await storage.loadState();
+    const hydrationSource = loadedState ? 'storage' : 'seed';
+    const baseWorkspace = createWorkspaceService({
+      ...options,
+      state: loadedState ?? createDefaultWorkspaceSeedState(options),
+    });
+    const workspace = createPersistentWorkspaceService(baseWorkspace, storage, options);
+
+    if (!loadedState) {
+      await workspace.persistNow('seed');
+    }
+
+    return {
+      hydrationSource,
+      storage,
+      workspace,
+    };
+  } catch (error) {
+    storage.close?.();
+    throw error;
+  }
+}
+
 export function createWorkspaceTreeItems(state) {
   const entries = [...state.folders, ...state.resources]
     .filter((entry) => entry.id !== 'root')
@@ -716,42 +1178,75 @@ export function createWorkspaceTreeItems(state) {
 
 export function createWorkspaceService(options = {}) {
   const now = options.now ?? (() => new Date().toISOString());
-  const idFactory = options.idFactory ?? createSequentialIdFactory(options.workspaceId ?? 'workspace-entry');
+  const initialState = createWorkspaceState(
+    options.state?.manifest ?? createWorkspaceManifest(options),
+    options.state?.folders ?? [],
+    options.state?.resources ?? [],
+  );
+  let manifest = initialState.manifest;
+  let folders = initialState.folders;
+  let resources = initialState.resources;
+  let existingIds = new Set();
+  const baseIdFactory = options.idFactory ?? createSequentialIdFactory(
+    options.workspaceId ?? manifest.workspaceId ?? 'workspace-entry',
+  );
 
-  let manifest = options.state?.manifest ?? createWorkspaceManifest(options);
-  let folders = [...(options.state?.folders ?? [])];
-  let resources = [...(options.state?.resources ?? [])];
+  function rebuildKnownIds() {
+    existingIds = new Set(allEntries().map((entry) => entry.id));
+  }
 
-  const rootFolder = {
-    kind: 'folder',
-    id: 'root',
-    path: manifest.rootPath,
-    metadata: {
-      title: manifest.name,
-      createdAt: manifest.createdAt,
-      updatedAt: manifest.updatedAt,
-    },
-    childIds: [],
-  };
-
-  if (!folders.some((folder) => folder.id === rootFolder.id)) {
-    folders = [rootFolder, ...folders];
+  function createUniqueId() {
+    let nextId = baseIdFactory();
+    while (existingIds.has(nextId)) {
+      nextId = baseIdFactory();
+    }
+    existingIds.add(nextId);
+    return nextId;
   }
 
   function allEntries() {
     return [...folders, ...resources];
   }
 
-  function snapshot() {
-    return {
-      manifest,
-      folders: rebuildFolderChildren(folders, resources),
-      resources: resources.map((resource) =>
-        resource.kind === 'binary'
-          ? { ...resource, bytes: cloneBytes(resource.bytes) }
-          : { ...resource },
-      ),
+  function touchManifest(updatedAt = now(), selectedResourceId = manifest.selectedResourceId) {
+    manifest = {
+      ...manifest,
+      updatedAt,
+      selectedResourceId,
     };
+  }
+
+  function normalizeSelectedResourceId(selectedResourceId) {
+    if (!selectedResourceId) {
+      return undefined;
+    }
+
+    return allEntries().some((entry) => entry.id === selectedResourceId) ? selectedResourceId : undefined;
+  }
+
+  function applyState(nextState) {
+    const normalizedState = createWorkspaceState(
+      nextState.manifest ?? createWorkspaceManifest(options),
+      nextState.folders ?? [],
+      nextState.resources ?? [],
+    );
+    manifest = normalizedState.manifest;
+    folders = normalizedState.folders;
+    resources = normalizedState.resources;
+    manifest = {
+      ...manifest,
+      selectedResourceId: normalizeSelectedResourceId(manifest.selectedResourceId),
+    };
+    rebuildKnownIds();
+    return snapshot();
+  }
+
+  function snapshot() {
+    return cloneWorkspaceState({
+      manifest,
+      folders,
+      resources,
+    });
   }
 
   function query(queryValue) {
@@ -773,37 +1268,28 @@ export function createWorkspaceService(options = {}) {
 
   function createFolder(input) {
     const parent = resolveParentFolder(input.path);
-    const nextFolder = createFolderEntry(input, now, idFactory, parent?.id);
+    const nextFolder = createFolderEntry(input, now, createUniqueId, parent?.id);
     folders = [...folders, nextFolder];
-    if (parent) {
-      folders = folders.map((folder) =>
-        folder.id === parent.id ? { ...folder, childIds: [...folder.childIds, nextFolder.id] } : folder,
-      );
-    }
+    folders = rebuildFolderChildren(folders, resources);
+    touchManifest(nextFolder.metadata.updatedAt);
     return nextFolder;
   }
 
   function createTextResource(input) {
     const parent = resolveParentFolder(input.path);
-    const nextResource = createTextEntry(input, now, idFactory, parent?.id);
+    const nextResource = createTextEntry(input, now, createUniqueId, parent?.id);
     resources = [...resources, nextResource];
-    if (parent) {
-      folders = folders.map((folder) =>
-        folder.id === parent.id ? { ...folder, childIds: [...folder.childIds, nextResource.id] } : folder,
-      );
-    }
+    folders = rebuildFolderChildren(folders, resources);
+    touchManifest(nextResource.metadata.updatedAt);
     return nextResource;
   }
 
   function createBinaryResource(input) {
     const parent = resolveParentFolder(input.path);
-    const nextResource = createBinaryEntry(input, now, idFactory, parent?.id);
+    const nextResource = createBinaryEntry(input, now, createUniqueId, parent?.id);
     resources = [...resources, nextResource];
-    if (parent) {
-      folders = folders.map((folder) =>
-        folder.id === parent.id ? { ...folder, childIds: [...folder.childIds, nextResource.id] } : folder,
-      );
-    }
+    folders = rebuildFolderChildren(folders, resources);
+    touchManifest(nextResource.metadata.updatedAt);
     return nextResource;
   }
 
@@ -825,6 +1311,7 @@ export function createWorkspaceService(options = {}) {
     };
 
     resources = replaceById(resources, nextResource);
+    touchManifest(nextResource.metadata.updatedAt);
     return nextResource;
   }
 
@@ -844,6 +1331,7 @@ export function createWorkspaceService(options = {}) {
     };
 
     resources = replaceById(resources, nextResource);
+    touchManifest(nextResource.metadata.updatedAt);
     return nextResource;
   }
 
@@ -874,6 +1362,8 @@ export function createWorkspaceService(options = {}) {
         childIds: folderDescendants.filter((entry) => entry.parentId === current.id).map((entry) => entry.id),
       };
       folders = replaceById(folders, patchedFolder);
+      folders = rebuildFolderChildren(folders, resources);
+      touchManifest(updatedAt);
       return patchedFolder;
     }
 
@@ -885,6 +1375,8 @@ export function createWorkspaceService(options = {}) {
       metadata: { ...current.metadata, updatedAt },
     };
     resources = replaceById(resources, nextResource);
+    folders = rebuildFolderChildren(folders, resources);
+    touchManifest(updatedAt);
     return nextResource;
   }
 
@@ -911,7 +1403,8 @@ export function createWorkspaceService(options = {}) {
     }
 
     if (current.kind === 'folder') {
-      for (const descendant of collectDescendants(allEntries(), current.id)) {
+      const descendants = collectDescendants(allEntries(), current.id);
+      for (const descendant of descendants) {
         if (descendant.kind === 'folder') {
           folders = removeById(folders, descendant.id);
         } else {
@@ -919,11 +1412,40 @@ export function createWorkspaceService(options = {}) {
         }
       }
       folders = removeById(folders, current.id);
+      const removedIds = new Set([current.id, ...descendants.map((entry) => entry.id)]);
+      if (removedIds.has(manifest.selectedResourceId)) {
+        touchManifest(now(), undefined);
+      } else {
+        touchManifest();
+      }
+      folders = rebuildFolderChildren(folders, resources);
+      rebuildKnownIds();
       return true;
     }
 
     resources = removeById(resources, current.id);
+    if (manifest.selectedResourceId === current.id) {
+      touchManifest(now(), undefined);
+    } else {
+      touchManifest();
+    }
+    folders = rebuildFolderChildren(folders, resources);
+    rebuildKnownIds();
     return true;
+  }
+
+  function getManifest() {
+    return cloneWorkspaceManifestRecord(manifest);
+  }
+
+  function replaceState(nextState) {
+    return applyState(snapshotWorkspaceState(nextState));
+  }
+
+  function setSelectedResourceId(resourceId) {
+    const nextSelectedResourceId = normalizeSelectedResourceId(resourceId);
+    touchManifest(now(), nextSelectedResourceId);
+    return getManifest();
   }
 
   function resolveReference(source, reference) {
@@ -955,12 +1477,15 @@ export function createWorkspaceService(options = {}) {
     }
   }
 
+  rebuildKnownIds();
+
   return {
     workspaceId: manifest.workspaceId,
     snapshot,
     query,
     getEntry,
     getEntryByPath,
+    getManifest,
     createFolder,
     createTextResource,
     createBinaryResource,
@@ -969,6 +1494,8 @@ export function createWorkspaceService(options = {}) {
     renameEntry,
     moveEntry,
     deleteEntry,
+    replaceState,
+    setSelectedResourceId,
     resolveReference,
     applyMutation,
   };
