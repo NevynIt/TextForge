@@ -13,6 +13,13 @@ import {
   markAssetBindingReady,
   selectAssetViewerKind,
 } from '../src/index.js';
+import {
+  createSequentialIdFactory,
+  createWorkspaceService,
+  exportWorkspaceToZip,
+  importWorkspaceFromZip,
+  workspaceEntryToResourceRef,
+} from '../../workspace/src/index.js';
 
 const request = {
   resource: { resourceId: 'resource-1', path: '/docs/system.svg', kind: 'binary', mimeType: 'image/svg+xml' },
@@ -46,5 +53,36 @@ assert.equal(createImageAssetViewerSurface(request, { binding: readyBinding, lea
 assert.equal(createSvgAssetViewerSurface(request, { binding: readyBinding, lease }).model.viewerKind, 'svg');
 assert.equal(createPdfAssetViewerSurface(request, { binding: readyBinding, lease }).model.viewerKind, 'pdf');
 assert.equal(createBinaryAssetViewerSurface(request, { binding: readyBinding, lease }).model.viewerKind, 'binary');
+
+const workspace = createWorkspaceService({
+  workspaceId: 'asset-archive-check',
+  idFactory: createSequentialIdFactory('entry'),
+  now: () => '2026-05-23T00:00:00.000Z',
+});
+workspace.createFolder({ path: '/docs' });
+workspace.createBinaryResource({
+  path: '/docs/system.svg',
+  bytes: new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>'),
+  mimeType: 'image/svg+xml',
+  title: 'system.svg',
+});
+const importedArchive = importWorkspaceFromZip(exportWorkspaceToZip(workspace));
+const restoredWorkspace = createWorkspaceService({
+  state: importedArchive.state,
+  idFactory: createSequentialIdFactory('restored'),
+  now: () => '2026-05-23T00:00:00.000Z',
+});
+const restoredSvg = restoredWorkspace.getEntryByPath('/docs/system.svg');
+
+assert.equal(restoredSvg?.kind, 'binary');
+assert.equal(selectAssetViewerKind({
+  resource: workspaceEntryToResourceRef(restoredSvg),
+  workspaceResource: restoredSvg,
+}), 'svg');
+assert.equal(createWorkspaceAssetBinding({
+  resource: workspaceEntryToResourceRef(restoredSvg),
+  workspaceResource: restoredSvg,
+  title: restoredSvg?.metadata.title,
+}).viewerKind, 'svg');
 
 console.info('assets package checks passed');

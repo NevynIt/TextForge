@@ -112,6 +112,20 @@ function snapshotWorkspaceState(input) {
   return typeof input?.snapshot === 'function' ? input.snapshot() : input;
 }
 
+function rebaseWorkspacePath(path, basePath) {
+  const normalizedPath = normalizeWorkspacePath(path);
+  const normalizedBasePath = normalizeWorkspacePath(basePath);
+  if (normalizedBasePath === '/') {
+    return normalizedPath;
+  }
+
+  if (normalizedPath === normalizedBasePath || !normalizedPath.startsWith(`${normalizedBasePath}/`)) {
+    throw new Error(`Cannot rebase ${normalizedPath} from ${normalizedBasePath}`);
+  }
+
+  return normalizeWorkspacePath(normalizedPath.slice(normalizedBasePath.length));
+}
+
 function toArchiveResourcePath(path) {
   const normalizedPath = normalizeWorkspacePath(path);
   const relativePath = normalizedPath.split('/').filter(Boolean).join('/');
@@ -173,6 +187,176 @@ function parseWorkspaceArchiveManifest(bytes) {
   }
 
   return parsed;
+}
+
+function cloneWorkspaceFolder(folder) {
+  return {
+    ...folder,
+    metadata: cloneMetadata(folder.metadata),
+    childIds: [...(folder.childIds ?? [])],
+  };
+}
+
+function cloneWorkspaceResource(resource) {
+  return resource.kind === 'text'
+    ? {
+      ...resource,
+      metadata: cloneMetadata(resource.metadata),
+    }
+    : {
+      ...resource,
+      metadata: cloneMetadata(resource.metadata),
+      bytes: cloneBytes(resource.bytes),
+    };
+}
+
+function cloneWorkspaceEntry(entry) {
+  return entry.kind === 'folder' ? cloneWorkspaceFolder(entry) : cloneWorkspaceResource(entry);
+}
+
+function createWorkspaceState(manifest, folders, resources) {
+  const nextManifest = {
+    ...cloneWorkspaceManifestRecord(manifest),
+    rootPath: normalizeWorkspacePath(manifest.rootPath ?? '/'),
+  };
+  const nextFolders = folders
+    .filter((folder) => folder.id !== 'root')
+    .map((folder) => ({
+      ...cloneWorkspaceFolder(folder),
+      path: normalizeWorkspacePath(folder.path),
+      childIds: [],
+    }));
+  const nextResources = resources.map((resource) => ({
+    ...cloneWorkspaceResource(resource),
+    path: normalizeWorkspacePath(resource.path),
+  }));
+  const rootFolder = {
+    kind: 'folder',
+    id: 'root',
+    path: nextManifest.rootPath,
+    parentId: undefined,
+    metadata: {
+      title: nextManifest.name,
+      createdAt: nextManifest.createdAt,
+      updatedAt: nextManifest.updatedAt,
+    },
+    childIds: [],
+  };
+
+  return {
+    manifest: nextManifest,
+    folders: rebuildFolderChildren([rootFolder, ...nextFolders], nextResources),
+    resources: nextResources,
+  };
+}
+
+function collectImportedRootEntries(state) {
+  const importedEntries = [...state.folders.filter((folder) => folder.id !== 'root'), ...state.resources];
+  const importedIds = new Set(importedEntries.map((entry) => entry.id));
+  return importedEntries
+    .filter((entry) => !entry.parentId || entry.parentId === 'root' || !importedIds.has(entry.parentId))
+    .sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function findWorkspaceEntryByPath(folders, resources, path) {
+  return [...folders, ...resources].find((entry) => entry.path === path);
+}
+
+function minimizeConflictEntries(entries) {
+  return entries.filter((entry, index) => !entries.some((candidate, candidateIndex) =>
+    candidateIndex !== index
+      && candidate.kind === 'folder'
+      && entry.path !== candidate.path
+      && entry.path.startsWith(`${candidate.path}/`),
+  ));
+}
+
+function removeWorkspaceEntrySubtree(folders, resources, entry) {
+  if (entry.kind !== 'folder') {
+    return {
+      folders,
+      resources: resources.filter((resource) => resource.id !== entry.id),
+    };
+  }
+
+  const descendants = collectDescendants([...folders, ...resources], entry.id);
+  const removedIds = new Set([entry.id, ...descendants.map((descendant) => descendant.id)]);
+  return {
+    folders: folders.filter((folder) => !removedIds.has(folder.id)),
+    resources: resources.filter((resource) => !removedIds.has(resource.id)),
+  };
+}
+
+function assignUniqueImportedEntryIds(entries, takenIds) {
+  const idMap = new Map();
+  let counter = 0;
+
+  function createUniqueId(baseId) {
+    let candidate = baseId;
+    while (takenIds.has(candidate) || idMap.has(candidate)) {
+      counter += 1;
+      candidate = `${baseId}-import-${counter}`;
+    }
+    return candidate;
+  }
+
+  for (const entry of entries) {
+    const nextId = createUniqueId(entry.id);
+    idMap.set(entry.id, nextId);
+    takenIds.add(nextId);
+  }
+
+  return entries.map((entry) => {
+    const parentId = entry.parentId && idMap.has(entry.parentId)
+      ? idMap.get(entry.parentId)
+      : entry.parentId === 'root' || !entry.parentId
+        ? 'root'
+        : entry.parentId;
+    return {
+      ...cloneWorkspaceEntry(entry),
+      id: idMap.get(entry.id),
+      parentId,
+      childIds: entry.kind === 'folder' ? [] : undefined,
+    };
+  });
+}
+
+function createWorkspaceFolderArchiveState(input, folderPath) {
+  const state = snapshotWorkspaceState(input);
+  const normalizedFolderPath = normalizeWorkspacePath(folderPath);
+  const selectedFolder = state.folders.find((folder) => folder.id !== 'root' && folder.path === normalizedFolderPath);
+  if (!selectedFolder) {
+    throw new Error(`Unknown workspace folder for archive export: ${normalizedFolderPath}`);
+  }
+
+  const selectionBasePath = dirnameWorkspacePath(normalizedFolderPath);
+  const selectedEntries = [selectedFolder, ...collectDescendants([...state.folders, ...state.resources], selectedFolder.id)];
+  const selectedIds = new Set(selectedEntries.map((entry) => entry.id));
+  const folders = selectedEntries
+    .filter((entry) => entry.kind === 'folder')
+    .map((folder) => ({
+      ...cloneWorkspaceFolder(folder),
+      path: rebaseWorkspacePath(folder.path, selectionBasePath),
+      parentId: selectedIds.has(folder.parentId) ? folder.parentId : 'root',
+      childIds: [],
+    }));
+  const resources = selectedEntries
+    .filter((entry) => entry.kind !== 'folder')
+    .map((resource) => ({
+      ...cloneWorkspaceResource(resource),
+      path: rebaseWorkspacePath(resource.path, selectionBasePath),
+      parentId: selectedIds.has(resource.parentId) ? resource.parentId : 'root',
+    }));
+
+  return createWorkspaceState(
+    {
+      ...cloneWorkspaceManifestRecord(state.manifest),
+      rootPath: '/',
+      selectedResourceId: undefined,
+    },
+    folders,
+    resources,
+  );
 }
 
 function cloneBytes(bytes) {
@@ -347,7 +531,60 @@ export function exportWorkspaceToZip(input, options = {}) {
   return zipSync(archiveEntries);
 }
 
-export function importWorkspaceFromZip(bytes) {
+export function exportWorkspaceFolderToZip(input, folderPath, options = {}) {
+  return exportWorkspaceToZip(createWorkspaceFolderArchiveState(input, folderPath), options);
+}
+
+export function mergeImportedWorkspaceState(existingState, importedState, options = {}) {
+  const conflictPolicy = options.conflictPolicy ?? 'error';
+  let resultFolders = existingState.folders.filter((folder) => folder.id !== 'root').map((folder) => cloneWorkspaceFolder(folder));
+  let resultResources = existingState.resources.map((resource) => cloneWorkspaceResource(resource));
+  const normalizedImportedState = createWorkspaceState(
+    importedState.manifest,
+    importedState.folders,
+    importedState.resources,
+  );
+  const importedEntries = [
+    ...normalizedImportedState.folders.filter((folder) => folder.id !== 'root'),
+    ...normalizedImportedState.resources,
+  ];
+
+  for (const rootEntry of collectImportedRootEntries(normalizedImportedState)) {
+    const subtreeEntries = [rootEntry, ...collectDescendants(importedEntries, rootEntry.id)].map((entry) => cloneWorkspaceEntry(entry));
+    const conflictingEntries = minimizeConflictEntries(
+      subtreeEntries
+        .map((entry) => findWorkspaceEntryByPath(resultFolders, resultResources, entry.path))
+        .filter(Boolean),
+    );
+
+    if (conflictingEntries.length > 0) {
+      if (conflictPolicy === 'error') {
+        throw new Error(`Workspace import conflict at ${conflictingEntries[0].path}`);
+      }
+
+      if (conflictPolicy === 'skip') {
+        continue;
+      }
+
+      if (conflictPolicy === 'replace') {
+        for (const conflictEntry of conflictingEntries) {
+          const nextState = removeWorkspaceEntrySubtree(resultFolders, resultResources, conflictEntry);
+          resultFolders = nextState.folders;
+          resultResources = nextState.resources;
+        }
+      }
+    }
+
+    const takenIds = new Set([...resultFolders, ...resultResources].map((entry) => entry.id));
+    const mergedEntries = assignUniqueImportedEntryIds(subtreeEntries, takenIds);
+    resultFolders = [...resultFolders, ...mergedEntries.filter((entry) => entry.kind === 'folder')];
+    resultResources = [...resultResources, ...mergedEntries.filter((entry) => entry.kind !== 'folder')];
+  }
+
+  return createWorkspaceState(existingState.manifest, resultFolders, resultResources);
+}
+
+export function importWorkspaceFromZip(bytes, options = {}) {
   const archiveEntries = unzipSync(bytes);
   const manifestBytes = archiveEntries[workspaceArchiveManifestPath];
   if (!manifestBytes) {
@@ -415,21 +652,25 @@ export function importWorkspaceFromZip(bytes) {
     });
   }
 
-  const state = {
-    manifest: {
+  const importedState = createWorkspaceState(
+    {
       ...cloneWorkspaceManifestRecord(manifest.workspace),
       rootPath: normalizeWorkspacePath(manifest.workspace.rootPath),
     },
-    folders: rebuildFolderChildren(folders, resources),
+    folders,
     resources,
-  };
+  );
+
+  const state = options.existingState
+    ? mergeImportedWorkspaceState(options.existingState, importedState, options)
+    : importedState;
 
   return {
     manifest: {
       format: manifest.format,
       version: manifest.version,
       exportedAt: manifest.exportedAt,
-      workspace: state.manifest,
+      workspace: importedState.manifest,
       folders: manifest.folders.map((folderRecord) => ({
         ...folderRecord,
         path: normalizeWorkspacePath(folderRecord.path),

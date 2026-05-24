@@ -76,3 +76,7 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Phase 1 closure note
 
 The package now exposes concrete image, SVG, PDF, and generic binary viewer surface factories, plus typed surface model and mount contracts. The web shell exercises the SVG viewer through the surface registry with blob URL binding, and CDP validation verifies the mounted viewer path.
+
+## Phase 3 closure note
+
+Binary workspace assets now round-trip through the workspace ZIP helpers with byte preservation and correct restored viewer-kind selection/binding. Focused `lint` and `test` checks pass for the package, and the coverage is included in `corepack pnpm verify`.

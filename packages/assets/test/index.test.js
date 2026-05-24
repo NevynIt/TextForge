@@ -12,6 +12,13 @@ import {
   markAssetBindingReleased,
   selectAssetViewerKind,
 } from '../src/index.js';
+import {
+  createSequentialIdFactory,
+  createWorkspaceService,
+  exportWorkspaceToZip,
+  importWorkspaceFromZip,
+  workspaceEntryToResourceRef,
+} from '../../workspace/src/index.js';
 
 test('asset viewer helpers select and bind viewer kinds', () => {
   const request = {
@@ -42,4 +49,40 @@ test('asset viewer helpers select and bind viewer kinds', () => {
   assert.equal(createPdfAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'pdf');
   assert.equal(createBinaryAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'binary');
   assert.equal(markAssetBindingReleased(binding).state, 'released');
+});
+
+test('binary workspace assets survive workspace zip round-trip', () => {
+  const workspace = createWorkspaceService({
+    workspaceId: 'asset-archive-test',
+    idFactory: createSequentialIdFactory('entry'),
+    now: () => '2026-05-23T00:00:00.000Z',
+  });
+  workspace.createFolder({ path: '/docs' });
+  const svgBytes = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>');
+  const svg = workspace.createBinaryResource({
+    path: '/docs/system.svg',
+    bytes: svgBytes,
+    mimeType: 'image/svg+xml',
+    title: 'system.svg',
+  });
+
+  const imported = importWorkspaceFromZip(exportWorkspaceToZip(workspace));
+  const restoredWorkspace = createWorkspaceService({
+    state: imported.state,
+    idFactory: createSequentialIdFactory('restored'),
+    now: () => '2026-05-23T00:00:00.000Z',
+  });
+  const restoredSvg = restoredWorkspace.getEntryByPath('/docs/system.svg');
+
+  assert.equal(restoredSvg?.kind, 'binary');
+  assert.deepEqual(restoredSvg?.bytes, svgBytes);
+  assert.equal(selectAssetViewerKind({
+    resource: workspaceEntryToResourceRef(restoredSvg),
+    workspaceResource: restoredSvg,
+  }), 'svg');
+  assert.equal(createWorkspaceAssetBinding({
+    resource: workspaceEntryToResourceRef(restoredSvg),
+    workspaceResource: restoredSvg,
+    title: svg.metadata.title,
+  }).viewerKind, 'svg');
 });

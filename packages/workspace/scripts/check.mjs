@@ -8,8 +8,10 @@ import {
   createWorkspaceTreeItems,
   dirnameWorkspacePath,
   exportWorkspaceToZip,
+  exportWorkspaceFolderToZip,
   importWorkspaceFromZip,
   joinWorkspacePath,
+  mergeImportedWorkspaceState,
   normalizeWorkspacePath,
   workspaceContribution,
   workspaceEntryToResourceRef,
@@ -81,5 +83,34 @@ assert.equal(imported.state.manifest.workspaceId, 'workspace-check');
 assert.equal(restoredWorkspace.getEntryByPath('/docs/guide.md')?.kind, 'text');
 assert.equal(restoredWorkspace.getEntryByPath('/docs/guide.md')?.text, 'hello: world');
 assert.equal(restoredWorkspace.getEntryByPath('/docs/system.svg')?.mimeType, 'image/svg+xml');
+
+const nestedWorkspace = createWorkspaceService({
+  workspaceId: 'workspace-folder-check',
+  idFactory: createSequentialIdFactory('folder'),
+  now: () => '2026-05-23T00:00:00.000Z',
+});
+nestedWorkspace.createFolder({ path: '/docs' });
+const guidesFolder = nestedWorkspace.createFolder({ path: '/docs/guides' });
+nestedWorkspace.createTextResource({
+  path: '/docs/guides/intro.md',
+  text: '# Intro\n',
+  languageId: 'markdown',
+  mimeType: 'text/markdown',
+});
+const folderArchive = exportWorkspaceFolderToZip(nestedWorkspace, guidesFolder.path, { exportedAt: '2026-05-23T00:00:00.000Z' });
+const importedFolderArchive = importWorkspaceFromZip(folderArchive);
+assert.equal(importedFolderArchive.state.folders.some((folderEntry) => folderEntry.path === '/guides'), true);
+assert.equal(importedFolderArchive.state.resources.some((resourceEntry) => resourceEntry.path === '/guides/intro.md'), true);
+
+const conflictTarget = createWorkspaceService({
+  workspaceId: 'workspace-conflict-target',
+  idFactory: createSequentialIdFactory('target'),
+  now: () => '2026-05-23T00:00:00.000Z',
+});
+conflictTarget.createFolder({ path: '/guides' });
+conflictTarget.createTextResource({ path: '/guides/old.md', text: '# Old\n', languageId: 'markdown', mimeType: 'text/markdown' });
+assert.equal(mergeImportedWorkspaceState(conflictTarget.snapshot(), importedFolderArchive.state, {
+  conflictPolicy: 'replace',
+}).resources.some((resourceEntry) => resourceEntry.path === '/guides/intro.md'), true);
 
 console.info('workspace package checks passed');

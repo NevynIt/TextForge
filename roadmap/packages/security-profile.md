@@ -65,3 +65,7 @@ Do not import app-shell internals. Do not bypass contribution registries. Do not
 ## Repository and workspace workflow
 
 This package lives inside the main TextForge Git repository as an npm workspace package. It should remain independently buildable and testable, but it should not be managed as a Git submodule. Cross-package changes may be made in one branch by one agent, with commits scoped by package where practical. Package dependencies should use `workspace:*` references, and public integration should happen through contribution manifests or stable exported contracts rather than direct app-shell coupling.
+
+## Phase 3 closure note
+
+The package now includes executable runtime/check/test entrypoints in addition to the TypeScript contract mirror, and the default profile covers forbidden privileged filesystem APIs plus archive-boundary documentation. Focused `lint` and `test` checks pass for the package, and the broader workspace verification passes through `corepack pnpm verify`.

@@ -1,103 +1,8 @@
-import type { Diagnostic, ResourceRef, Severity } from '@textforge/core';
-
-export type BrowserEnvelopeTarget = 'web' | 'extension' | 'pwa';
-
-export type SecurityCheckKind =
-  | 'csp'
-  | 'manifest'
-  | 'service-worker'
-  | 'remote-asset'
-  | 'privileged-api'
-  | 'filesystem-api'
-  | 'archive-boundary'
-  | 'license';
-
-export interface SecurityDependency {
-  readonly name: string;
-  readonly version?: string;
-  readonly license: string;
+export function createSecurityProfile(profile) {
+  return profile;
 }
 
-export interface SecurityArtifact {
-  readonly uri: string;
-  readonly mimeType?: string;
-  readonly origin?: string;
-}
-
-export interface SecurityManifestSnapshot {
-  readonly name?: string;
-  readonly shortName?: string;
-  readonly startUrl?: string;
-  readonly scope?: string;
-  readonly display?: string;
-  readonly contentSecurityPolicy?: string;
-  readonly serviceWorker?: boolean;
-}
-
-export interface ArchiveBoundarySnapshot {
-  readonly documented: boolean;
-  readonly format?: string;
-  readonly version?: string | number;
-  readonly notesUri?: string;
-}
-
-export interface SecurityProfile {
-  readonly id: string;
-  readonly name: string;
-  readonly target: BrowserEnvelopeTarget;
-  readonly description?: string;
-  readonly allowRemoteOrigins?: ReadonlyArray<string>;
-  readonly allowedPrivilegedBrowserApis?: ReadonlyArray<string>;
-  readonly allowedPrivilegedFilesystemApis?: ReadonlyArray<string>;
-  readonly dependencyPolicy: LicensePolicy;
-  readonly checks: ReadonlyArray<SecurityCheck>;
-}
-
-export interface LicensePolicy {
-  readonly allowedLicenses: ReadonlyArray<string>;
-  readonly forbiddenLicenses?: ReadonlyArray<string>;
-  readonly allowUnknown?: boolean;
-}
-
-export interface SecurityCheckContext {
-  readonly profile: SecurityProfile;
-  readonly resource?: ResourceRef;
-  readonly manifest?: SecurityManifestSnapshot;
-  readonly artifacts?: ReadonlyArray<SecurityArtifact>;
-  readonly dependencies?: ReadonlyArray<SecurityDependency>;
-  readonly privilegedApis?: ReadonlyArray<string>;
-  readonly filesystemApis?: ReadonlyArray<string>;
-  readonly archiveBoundary?: ArchiveBoundarySnapshot;
-}
-
-export interface SecurityCheckResult {
-  readonly checkId: string;
-  readonly kind: SecurityCheckKind;
-  readonly passed: boolean;
-  readonly severity: Severity;
-  readonly diagnostics: ReadonlyArray<Diagnostic>;
-  readonly summary?: string;
-}
-
-export interface SecurityCheck {
-  readonly id: string;
-  readonly kind: SecurityCheckKind;
-  readonly label: string;
-  readonly run: (context: SecurityCheckContext) => SecurityCheckResult;
-}
-
-export interface SecurityIssue {
-  readonly message: string;
-  readonly severity: Severity;
-  readonly resource?: ResourceRef;
-}
-
-function createResult(
-  checkId: string,
-  kind: SecurityCheckKind,
-  diagnostics: ReadonlyArray<Diagnostic>,
-  summary?: string,
-): SecurityCheckResult {
+function createResult(checkId, kind, diagnostics, summary) {
   return {
     checkId,
     kind,
@@ -112,7 +17,7 @@ function createResult(
   };
 }
 
-function createIssue(message: string, severity: Severity, resource?: ResourceRef): Diagnostic {
+function createIssue(message, severity, resource) {
   return {
     severity,
     message,
@@ -120,15 +25,15 @@ function createIssue(message: string, severity: Severity, resource?: ResourceRef
   };
 }
 
-function normalizeLicense(license: string): string {
+function normalizeLicense(license) {
   return license.trim().toUpperCase();
 }
 
-function isRemoteUri(uri: string): boolean {
+function isRemoteUri(uri) {
   return /^https?:\/\//i.test(uri);
 }
 
-function isAllowedLicense(license: string, policy: LicensePolicy): boolean {
+function isAllowedLicense(license, policy) {
   const normalized = normalizeLicense(license);
 
   if (!policy.allowUnknown && (!normalized || normalized === 'UNKNOWN' || normalized === 'UNLICENSED')) {
@@ -142,16 +47,8 @@ function isAllowedLicense(license: string, policy: LicensePolicy): boolean {
   return policy.allowedLicenses.some((entry) => normalizeLicense(entry) === normalized);
 }
 
-export function createSecurityProfile(profile: SecurityProfile): SecurityProfile {
-  return profile;
-}
-
-export function createOpenSourceLicenseGate(options: {
-  readonly id?: string;
-  readonly label?: string;
-  readonly policy?: LicensePolicy;
-} = {}): SecurityCheck {
-  const policy: LicensePolicy = options.policy ?? {
+export function createOpenSourceLicenseGate(options = {}) {
+  const policy = options.policy ?? {
     allowedLicenses: [
       '0BSD',
       'Apache-2.0',
@@ -177,12 +74,12 @@ export function createOpenSourceLicenseGate(options: {
         isAllowedLicense(dependency.license, policy)
           ? []
           : [
-              createIssue(
-                `Dependency ${dependency.name} uses disallowed license ${dependency.license}.`,
-                'error',
-                context.resource,
-              ),
-            ],
+            createIssue(
+              `Dependency ${dependency.name} uses disallowed license ${dependency.license}.`,
+              'error',
+              context.resource,
+            ),
+          ],
       );
 
       return createResult('security.license', 'license', diagnostics, 'License policy checked.');
@@ -190,14 +87,14 @@ export function createOpenSourceLicenseGate(options: {
   };
 }
 
-export function createCspCheck(options: { readonly id?: string; readonly label?: string } = {}): SecurityCheck {
+export function createCspCheck(options = {}) {
   return {
     id: options.id ?? 'security.csp',
     kind: 'csp',
     label: options.label ?? 'Content Security Policy',
     run(context) {
       const csp = context.manifest?.contentSecurityPolicy?.trim() ?? '';
-      const diagnostics: Diagnostic[] = [];
+      const diagnostics = [];
 
       if (!csp) {
         diagnostics.push(createIssue('Missing content security policy.', 'warning', context.resource));
@@ -216,17 +113,14 @@ export function createCspCheck(options: { readonly id?: string; readonly label?:
   };
 }
 
-export function createManifestCheck(options: {
-  readonly id?: string;
-  readonly label?: string;
-} = {}): SecurityCheck {
+export function createManifestCheck(options = {}) {
   return {
     id: options.id ?? 'security.manifest',
     kind: 'manifest',
     label: options.label ?? 'Web app manifest',
     run(context) {
       const manifest = context.manifest;
-      const diagnostics: Diagnostic[] = [];
+      const diagnostics = [];
 
       if (!manifest) {
         diagnostics.push(createIssue('Missing web app manifest snapshot.', 'warning', context.resource));
@@ -249,16 +143,13 @@ export function createManifestCheck(options: {
   };
 }
 
-export function createServiceWorkerCheck(options: {
-  readonly id?: string;
-  readonly label?: string;
-} = {}): SecurityCheck {
+export function createServiceWorkerCheck(options = {}) {
   return {
     id: options.id ?? 'security.serviceWorker',
     kind: 'service-worker',
     label: options.label ?? 'Service worker presence',
     run(context) {
-      const diagnostics: Diagnostic[] = [];
+      const diagnostics = [];
       const hasServiceWorker = context.manifest?.serviceWorker === true;
 
       if (!hasServiceWorker) {
@@ -270,10 +161,7 @@ export function createServiceWorkerCheck(options: {
   };
 }
 
-export function createRemoteAssetCheck(options: {
-  readonly id?: string;
-  readonly label?: string;
-} = {}): SecurityCheck {
+export function createRemoteAssetCheck(options = {}) {
   return {
     id: options.id ?? 'security.remoteAsset',
     kind: 'remote-asset',
@@ -289,9 +177,7 @@ export function createRemoteAssetCheck(options: {
           return [];
         }
 
-        return [
-          createIssue(`Remote asset ${artifact.uri} is not on an allowed origin.`, 'error', context.resource),
-        ];
+        return [createIssue(`Remote asset ${artifact.uri} is not on an allowed origin.`, 'error', context.resource)];
       });
 
       return createResult('security.remoteAsset', 'remote-asset', diagnostics, 'Remote assets inspected.');
@@ -299,10 +185,7 @@ export function createRemoteAssetCheck(options: {
   };
 }
 
-export function createForbiddenBrowserApiCheck(options: {
-  readonly id?: string;
-  readonly label?: string;
-} = {}): SecurityCheck {
+export function createForbiddenBrowserApiCheck(options = {}) {
   return {
     id: options.id ?? 'security.privilegedApi',
     kind: 'privileged-api',
@@ -320,10 +203,7 @@ export function createForbiddenBrowserApiCheck(options: {
   };
 }
 
-export function createForbiddenFilesystemApiCheck(options: {
-  readonly id?: string;
-  readonly label?: string;
-} = {}): SecurityCheck {
+export function createForbiddenFilesystemApiCheck(options = {}) {
   return {
     id: options.id ?? 'security.filesystemApi',
     kind: 'filesystem-api',
@@ -341,16 +221,13 @@ export function createForbiddenFilesystemApiCheck(options: {
   };
 }
 
-export function createArchiveBoundaryDocumentationCheck(options: {
-  readonly id?: string;
-  readonly label?: string;
-} = {}): SecurityCheck {
+export function createArchiveBoundaryDocumentationCheck(options = {}) {
   return {
     id: options.id ?? 'security.archiveBoundary',
     kind: 'archive-boundary',
     label: options.label ?? 'Archive boundary documentation',
     run(context) {
-      const diagnostics: Diagnostic[] = [];
+      const diagnostics = [];
       const archiveBoundary = context.archiveBoundary;
 
       if (!archiveBoundary?.documented) {
@@ -370,7 +247,7 @@ export function createArchiveBoundaryDocumentationCheck(options: {
   };
 }
 
-export function runSecurityChecks(profile: SecurityProfile, context: Omit<SecurityCheckContext, 'profile'>): ReadonlyArray<SecurityCheckResult> {
+export function runSecurityChecks(profile, context) {
   return profile.checks.map((check) => check.run({ ...context, profile }));
 }
 
@@ -402,4 +279,4 @@ export const contributions = {
   commands: [],
   surfaces: [],
   pipelines: [],
-} as const;
+};
