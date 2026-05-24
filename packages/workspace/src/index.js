@@ -1,7 +1,12 @@
 import Dexie from 'dexie';
 import { unzipSync, zipSync } from 'fflate';
 
-import { createCommand, createContributionManifest, createResourceRef } from '../../core/src/index.js';
+import {
+  createCommand,
+  createContributionManifest,
+  createResourceBadgeToken,
+  createResourceRef,
+} from '../../core/src/index.js';
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -15,6 +20,10 @@ const workspaceBinaryResourcesTableName = 'binaryResources';
 const workspaceManifestsTableName = 'manifests';
 const workspaceSchemaRecordKey = 'workspace-schema-version';
 const workspaceSavedAtRecordKey = 'workspace-last-saved-at';
+const resourceBadgeShapes = ['circle', 'triangle', 'square', 'diamond', 'pentagon', 'hex', 'octagon', 'shield'];
+const resourceBadgeAccents = ['teal', 'amber', 'sky', 'coral', 'lime', 'slate', 'rose', 'cobalt'];
+const resourceBadgeMarks = ['dot', 'bar', 'split', 'ring', 'corner', 'stack', 'plus', 'slash'];
+const resourceBadgePlacements = ['center', 'top', 'right', 'bottom', 'left'];
 
 export const workspaceDexieSchemaVersion = 1;
 export const defaultWorkspaceDexieDatabaseName = 'textforge-workspace';
@@ -188,9 +197,11 @@ export function createWorkspaceManifest(options = {}) {
 }
 
 function cloneMetadata(metadata) {
+  const normalizedMetadata = metadata ?? {};
   return {
-    ...metadata,
-    tags: metadata.tags ? [...metadata.tags] : undefined,
+    ...normalizedMetadata,
+    tags: normalizedMetadata.tags ? [...normalizedMetadata.tags] : undefined,
+    badge: normalizedMetadata.badge ? createResourceBadgeToken({ ...normalizedMetadata.badge }) : undefined,
   };
 }
 
@@ -306,6 +317,173 @@ function cloneWorkspaceEntry(entry) {
   return entry.kind === 'folder' ? cloneWorkspaceFolder(entry) : cloneWorkspaceResource(entry);
 }
 
+function hashText(value) {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function createWorkspaceBadgeFingerprint(entry) {
+  return JSON.stringify({
+    id: entry.id,
+    kind: entry.kind,
+    path: normalizeWorkspacePath(entry.path),
+    title: entry.metadata?.title ?? '',
+    languageId: entry.kind === 'text' ? entry.languageId ?? '' : '',
+    mimeType: entry.kind !== 'folder' ? entry.mimeType ?? '' : '',
+  });
+}
+
+function createWorkspaceBadgeLabel(token) {
+  return `${token.accent} ${token.shape} ${token.mark} ${token.placement}`.trim();
+}
+
+function createWorkspaceBadgeDescription(entry, label) {
+  const title = entry.metadata?.title ?? basenameWorkspacePath(entry.path) ?? entry.path;
+  return `${title} identity badge: ${label}`;
+}
+
+function normalizeResourceBadgeToken(entry, badge) {
+  if (!badge) {
+    return undefined;
+  }
+
+  const normalized = createResourceBadgeToken({
+    ...badge,
+    key: undefined,
+    fingerprint: badge.fingerprint ?? createWorkspaceBadgeFingerprint(entry),
+    placement: badge.placement,
+    variant: badge.variant ?? 0,
+  });
+  return createResourceBadgeToken({
+    ...normalized,
+    key: `${normalized.shape}-${normalized.accent}-${normalized.mark}-${normalized.placement}`,
+    label: badge.label ?? createWorkspaceBadgeLabel(normalized),
+    description: badge.description ?? createWorkspaceBadgeDescription(entry, badge.label ?? createWorkspaceBadgeLabel(normalized)),
+  });
+}
+
+function createWorkspaceBadgeToken(entry, variant = 0, repairedFromKey) {
+  const fingerprint = createWorkspaceBadgeFingerprint(entry);
+  const hash = hashText(`${fingerprint}:${variant}`);
+  const maxVariants = resourceBadgeShapes.length
+    * resourceBadgeAccents.length
+    * resourceBadgeMarks.length
+    * resourceBadgePlacements.length;
+  const baseIndex = hash % maxVariants;
+  const shape = resourceBadgeShapes[baseIndex % resourceBadgeShapes.length];
+  const accent = resourceBadgeAccents[Math.floor(baseIndex / resourceBadgeShapes.length) % resourceBadgeAccents.length];
+  const mark = resourceBadgeMarks[
+    Math.floor(baseIndex / (resourceBadgeShapes.length * resourceBadgeAccents.length)) % resourceBadgeMarks.length
+  ];
+  const placement = resourceBadgePlacements[
+    Math.floor(baseIndex / (resourceBadgeShapes.length * resourceBadgeAccents.length * resourceBadgeMarks.length))
+      % resourceBadgePlacements.length
+  ];
+  const token = createResourceBadgeToken({
+    key: `${shape}-${accent}-${mark}-${placement}`,
+    fingerprint,
+    shape,
+    accent,
+    mark,
+    placement,
+    variant,
+    repairedFromKey,
+  });
+  return createResourceBadgeToken({
+    ...token,
+    label: createWorkspaceBadgeLabel(token),
+    description: createWorkspaceBadgeDescription(entry, createWorkspaceBadgeLabel(token)),
+  });
+}
+
+function compareWorkspaceBadgeDescriptors(left, right) {
+  if (left.hasStableBadge !== right.hasStableBadge) {
+    return left.hasStableBadge ? -1 : 1;
+  }
+
+  const createdAt = (left.entry.metadata?.createdAt ?? '').localeCompare(right.entry.metadata?.createdAt ?? '');
+  if (createdAt !== 0) {
+    return createdAt;
+  }
+
+  const pathComparison = left.entry.path.localeCompare(right.entry.path);
+  if (pathComparison !== 0) {
+    return pathComparison;
+  }
+
+  if (left.entry.kind !== right.entry.kind) {
+    return left.entry.kind.localeCompare(right.entry.kind);
+  }
+
+  return left.entry.id.localeCompare(right.entry.id);
+}
+
+function findAvailableWorkspaceBadge(entry, preferredBadge, usedKeys) {
+  const maxVariants = resourceBadgeShapes.length
+    * resourceBadgeAccents.length
+    * resourceBadgeMarks.length
+    * resourceBadgePlacements.length;
+  for (let variant = (preferredBadge.variant ?? 0) + 1; variant < maxVariants + 8; variant += 1) {
+    const candidate = createWorkspaceBadgeToken(entry, variant, preferredBadge.key);
+    if (!usedKeys.has(candidate.key)) {
+      return candidate;
+    }
+  }
+
+  return createResourceBadgeToken({
+    ...createWorkspaceBadgeToken(entry, (preferredBadge.variant ?? 0) + maxVariants + 8, preferredBadge.key),
+    key: `${preferredBadge.key}-${entry.id}`,
+  });
+}
+
+function assignWorkspaceBadges(folders, resources) {
+  const descriptors = [...folders, ...resources].map((entry) => {
+    const storedBadge = normalizeResourceBadgeToken(entry, entry.metadata?.badge);
+    const fingerprint = createWorkspaceBadgeFingerprint(entry);
+    return {
+      entry,
+      fingerprint,
+      storedBadge,
+      hasStableBadge: Boolean(storedBadge && storedBadge.fingerprint === fingerprint && storedBadge.key),
+    };
+  }).sort(compareWorkspaceBadgeDescriptors);
+
+  const usedKeys = new Set();
+  const assignedById = new Map();
+
+  for (const descriptor of descriptors) {
+    const preferredBadge = descriptor.hasStableBadge
+      ? descriptor.storedBadge
+      : createWorkspaceBadgeToken(descriptor.entry, 0);
+    const assignedBadge = usedKeys.has(preferredBadge.key)
+      ? findAvailableWorkspaceBadge(descriptor.entry, preferredBadge, usedKeys)
+      : preferredBadge;
+    usedKeys.add(assignedBadge.key);
+    assignedById.set(descriptor.entry.id, assignedBadge);
+  }
+
+  return {
+    folders: folders.map((folder) => ({
+      ...folder,
+      metadata: {
+        ...folder.metadata,
+        badge: assignedById.get(folder.id),
+      },
+    })),
+    resources: resources.map((resource) => ({
+      ...resource,
+      metadata: {
+        ...resource.metadata,
+        badge: assignedById.get(resource.id),
+      },
+    })),
+  };
+}
+
 function createWorkspaceState(manifest, folders, resources) {
   const nextManifest = {
     ...cloneWorkspaceManifestRecord(manifest),
@@ -322,6 +500,7 @@ function createWorkspaceState(manifest, folders, resources) {
     ...cloneWorkspaceResource(resource),
     path: normalizeWorkspacePath(resource.path),
   }));
+  const badgedState = assignWorkspaceBadges(nextFolders, nextResources);
   const rootFolder = {
     kind: 'folder',
     id: 'root',
@@ -337,8 +516,8 @@ function createWorkspaceState(manifest, folders, resources) {
 
   return {
     manifest: nextManifest,
-    folders: rebuildFolderChildren([rootFolder, ...nextFolders], nextResources),
-    resources: nextResources,
+    folders: rebuildFolderChildren([rootFolder, ...badgedState.folders], badgedState.resources),
+    resources: badgedState.resources,
   };
 }
 
@@ -628,11 +807,52 @@ function toResourceRef(entry) {
     mimeType: 'mimeType' in entry ? entry.mimeType : undefined,
     languageId: entry.kind === 'text' ? entry.languageId : undefined,
     parentResourceId: entry.parentId,
+    badge: entry.metadata?.badge,
   });
 }
 
 export function workspaceEntryToResourceRef(entry) {
   return toResourceRef(entry);
+}
+
+function describeWorkspaceEntryDetail(entry) {
+  if (entry.kind === 'folder') {
+    const childCount = entry.childIds.length;
+    return `${childCount} item${childCount === 1 ? '' : 's'}`;
+  }
+
+  if (entry.kind === 'text') {
+    return entry.languageId ? entry.languageId.toUpperCase() : 'TEXT';
+  }
+
+  if (entry.mimeType === 'image/svg+xml') {
+    return 'SVG';
+  }
+
+  if (entry.mimeType?.startsWith('image/')) {
+    return 'IMAGE';
+  }
+
+  if (entry.mimeType === 'application/pdf') {
+    return 'PDF';
+  }
+
+  return 'BINARY';
+}
+
+export function listWorkspaceBadgeDiagnostics(input) {
+  const state = snapshotWorkspaceState(input);
+  return [...state.folders.filter((folder) => folder.id !== 'root'), ...state.resources]
+    .filter((entry) => entry.metadata?.badge?.repairedFromKey)
+    .map((entry) => ({
+      resourceId: entry.id,
+      path: entry.path,
+      kind: entry.kind,
+      badge: entry.metadata.badge,
+      previousKey: entry.metadata.badge.repairedFromKey,
+      nextKey: entry.metadata.badge.key,
+      message: `Resource badge collision repaired for ${entry.path}.`,
+    }));
 }
 
 export function createWorkspaceArchiveManifest(input, options = {}) {
@@ -1227,11 +1447,6 @@ export function createWorkspaceTreeItems(state) {
   return entries.map((entry) => {
     const pathSegments = entry.path.split('/').filter(Boolean);
     const depth = Math.max(0, pathSegments.length - 1);
-    const badge = entry.kind === 'folder'
-      ? String((state.folders.find((folder) => folder.id === entry.id)?.childIds.length ?? 0))
-      : entry.kind === 'text'
-        ? (entry.languageId ? entry.languageId.toUpperCase() : (entry.path.split('.').pop() ?? 'TXT').toUpperCase())
-        : (entry.mimeType === 'image/svg+xml' ? 'SVG' : entry.mimeType?.startsWith('image/') ? 'IMG' : 'BIN');
 
     return {
       id: entry.id,
@@ -1241,7 +1456,9 @@ export function createWorkspaceTreeItems(state) {
       depth,
       expanded: entry.kind === 'folder' ? (entry.childIds.length > 0) : false,
       active: state.manifest.selectedResourceId === entry.id,
-      badge,
+      badge: entry.metadata.badge,
+      detail: describeWorkspaceEntryDetail(entry),
+      attention: entry.metadata?.badge?.repairedFromKey ? 'warning' : undefined,
     };
   });
 }
@@ -1311,6 +1528,18 @@ export function createWorkspaceService(options = {}) {
     return snapshot();
   }
 
+  function refreshStructure() {
+    const normalizedState = createWorkspaceState(manifest, folders, resources);
+    manifest = normalizedState.manifest;
+    folders = normalizedState.folders;
+    resources = normalizedState.resources;
+    manifest = {
+      ...manifest,
+      selectedResourceId: normalizeSelectedResourceId(manifest.selectedResourceId),
+    };
+    rebuildKnownIds();
+  }
+
   function snapshot() {
     return cloneWorkspaceState({
       manifest,
@@ -1340,27 +1569,27 @@ export function createWorkspaceService(options = {}) {
     const parent = resolveParentFolder(input.path);
     const nextFolder = createFolderEntry(input, now, createUniqueId, parent?.id);
     folders = [...folders, nextFolder];
-    folders = rebuildFolderChildren(folders, resources);
     touchManifest(nextFolder.metadata.updatedAt);
-    return nextFolder;
+    refreshStructure();
+    return getEntry(nextFolder.id);
   }
 
   function createTextResource(input) {
     const parent = resolveParentFolder(input.path);
     const nextResource = createTextEntry(input, now, createUniqueId, parent?.id);
     resources = [...resources, nextResource];
-    folders = rebuildFolderChildren(folders, resources);
     touchManifest(nextResource.metadata.updatedAt);
-    return nextResource;
+    refreshStructure();
+    return getEntry(nextResource.id);
   }
 
   function createBinaryResource(input) {
     const parent = resolveParentFolder(input.path);
     const nextResource = createBinaryEntry(input, now, createUniqueId, parent?.id);
     resources = [...resources, nextResource];
-    folders = rebuildFolderChildren(folders, resources);
     touchManifest(nextResource.metadata.updatedAt);
-    return nextResource;
+    refreshStructure();
+    return getEntry(nextResource.id);
   }
 
   function saveTextResource(input) {
@@ -1382,7 +1611,8 @@ export function createWorkspaceService(options = {}) {
 
     resources = replaceById(resources, nextResource);
     touchManifest(nextResource.metadata.updatedAt);
-    return nextResource;
+    refreshStructure();
+    return getEntry(nextResource.id);
   }
 
   function saveBinaryResource(input) {
@@ -1402,7 +1632,8 @@ export function createWorkspaceService(options = {}) {
 
     resources = replaceById(resources, nextResource);
     touchManifest(nextResource.metadata.updatedAt);
-    return nextResource;
+    refreshStructure();
+    return getEntry(nextResource.id);
   }
 
   function renameEntry(resourceId, path) {
@@ -1432,9 +1663,9 @@ export function createWorkspaceService(options = {}) {
         childIds: folderDescendants.filter((entry) => entry.parentId === current.id).map((entry) => entry.id),
       };
       folders = replaceById(folders, patchedFolder);
-      folders = rebuildFolderChildren(folders, resources);
       touchManifest(updatedAt);
-      return patchedFolder;
+      refreshStructure();
+      return getEntry(patchedFolder.id);
     }
 
     const parent = resolveParentFolder(nextPath);
@@ -1445,9 +1676,9 @@ export function createWorkspaceService(options = {}) {
       metadata: { ...current.metadata, updatedAt },
     };
     resources = replaceById(resources, nextResource);
-    folders = rebuildFolderChildren(folders, resources);
     touchManifest(updatedAt);
-    return nextResource;
+    refreshStructure();
+    return getEntry(nextResource.id);
   }
 
   function moveEntry(input) {
@@ -1488,8 +1719,7 @@ export function createWorkspaceService(options = {}) {
       } else {
         touchManifest();
       }
-      folders = rebuildFolderChildren(folders, resources);
-      rebuildKnownIds();
+      refreshStructure();
       return true;
     }
 
@@ -1499,8 +1729,7 @@ export function createWorkspaceService(options = {}) {
     } else {
       touchManifest();
     }
-    folders = rebuildFolderChildren(folders, resources);
-    rebuildKnownIds();
+    refreshStructure();
     return true;
   }
 

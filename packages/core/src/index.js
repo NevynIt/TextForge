@@ -2,6 +2,8 @@ export const severityLevels = ['hint', 'info', 'warning', 'error'];
 
 export const resourceKinds = ['text', 'binary', 'generated', 'virtual'];
 
+export const resourceBadgePlacements = ['center', 'top', 'right', 'bottom', 'left'];
+
 export const languageDefinitions = [
   { id: 'plaintext', label: 'Plain text', mimeTypes: ['text/plain'], extensions: ['txt', 'text'], sourceEditor: true },
   { id: 'markdown', label: 'Markdown', mimeTypes: ['text/markdown', 'text/x-markdown'], extensions: ['md', 'markdown'], sourceEditor: true },
@@ -136,6 +138,32 @@ export function createResourceRef(resourceId, overrides = {}) {
   return {
     resourceId,
     ...overrides,
+  };
+}
+
+function normalizeResourceBadgePlacement(placement) {
+  if (resourceBadgePlacements.includes(placement)) {
+    return placement;
+  }
+  return 'center';
+}
+
+export function createResourceBadgeToken(overrides = {}) {
+  const placement = normalizeResourceBadgePlacement(overrides.placement);
+  const shape = overrides.shape ?? 'square';
+  const accent = overrides.accent ?? 'teal';
+  const mark = overrides.mark ?? 'dot';
+  return {
+    key: overrides.key ?? `${shape}-${accent}-${mark}-${placement}`,
+    fingerprint: overrides.fingerprint ?? '',
+    shape,
+    accent,
+    mark,
+    placement,
+    variant: Number.isInteger(overrides.variant) ? overrides.variant : 0,
+    label: overrides.label ?? 'Resource badge',
+    description: overrides.description,
+    repairedFromKey: overrides.repairedFromKey,
   };
 }
 

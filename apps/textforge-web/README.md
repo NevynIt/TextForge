@@ -8,6 +8,8 @@ The source entry is a dedicated `src/scriptLoader.js` bootstrap. Development sti
 
 Phase 3.1 replaced the earlier imperative shell bootstrap with a React-rendered workbench frame while keeping editor and asset behaviour inside their package-owned surface factories. Phase 3.2 keeps that shell but hydrates it from a browser-managed Dexie workspace, adds explicit storage reset/recovery flow, and preserves the deliberate non-goals of no tab restore and no saved shell layout.
 
+Phase 3.4 turns that shell into the readable authoring workbench promised by the roadmap: deterministic placement-based resource badges, calmer contribution-driven command chrome, viewport-safe top-bar menus, explicit local scroll regions for the editor/sidebar/inspector surfaces, and a utility drawer that no longer disturbs the main layout. React icon usage stays centralized in `@textforge/ui` through `lucide-react`.
+
 ## Commands
 
 - `pnpm --filter @textforge/textforge-web build`

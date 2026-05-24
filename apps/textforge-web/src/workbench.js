@@ -13,6 +13,7 @@ import {
   createSequentialIdFactory,
   createWorkspaceContributionManifest,
   createWorkspaceService,
+  listWorkspaceBadgeDiagnostics,
   createWorkspaceTreeItems,
   dirnameWorkspacePath,
   exportWorkspaceFolderToZip,
@@ -58,6 +59,9 @@ import {
   TextForgeAppFrame,
   TextForgeCallout,
   TextForgeCommandPalette,
+  TextForgeEmptyState,
+  TextForgeInspectorCard,
+  TextForgeResourceBadge,
   TextForgeSelectField,
   TextForgeSessionTabStrip,
   TextForgeToolbarButton,
@@ -78,13 +82,13 @@ const sampleResourcePaths = {
   notes: '/docs/notes.md',
   architecture: '/docs/architecture.txt',
   settings: '/docs/settings.yaml',
-  roadmap: '/roadmap/phase-3-3-command-palette.md',
+  roadmap: '/roadmap/phase-3-4-readability-pass.md',
   svg: '/docs/system.svg',
 };
 const utilitySections = [
-  { id: 'popups', label: 'Popup Sessions' },
-  { id: 'storage', label: 'Browser Storage' },
-  { id: 'registry', label: 'Contribution Packs' },
+  { id: 'popups', label: 'Popup Sessions', icon: 'utility' },
+  { id: 'storage', label: 'Browser Storage', icon: 'status' },
+  { id: 'registry', label: 'Contribution Packs', icon: 'command' },
 ];
 
 const assetSurfaceFactoryByContributionId = {
@@ -125,27 +129,27 @@ function createSeedWorkspaceState() {
   workspace.createTextResource({
     path: sampleResourcePaths.notes,
     title: 'notes.md',
-    text: '# TextForge\n\nPhase 3.3 replaces hard-coded shell actions with a local command palette, contribution-driven menus, and package-owned shell commands.',
+    text: '# TextForge\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.',
     languageId: 'markdown',
     mimeType: 'text/markdown',
   });
   workspace.createTextResource({
     path: sampleResourcePaths.architecture,
     title: 'architecture.txt',
-    text: 'The Phase 3.3 shell now dispatches package-owned commands locally without pulling plugin loading or external package execution forward.',
+    text: 'The Phase 3.4 shell keeps command dispatch local, uses deterministic badge metadata for orientation, and removes overflow-heavy debug chrome.',
     mimeType: 'text/plain',
   });
   workspace.createTextResource({
     path: sampleResourcePaths.settings,
     title: 'settings.yaml',
-    text: 'workspace: textforge\nshell: react\ncommands: palette-and-registry\n',
+    text: 'workspace: textforge\nshell: react\nreadability: compact\nbadges: deterministic\n',
     languageId: 'yaml',
     mimeType: 'text/yaml',
   });
   workspace.createTextResource({
     path: sampleResourcePaths.roadmap,
-    title: 'phase-3-3-command-palette.md',
-    text: 'Contribution-driven shell commands now cover workspace import/export, surface routing, source language changes, and asset download without pulling Phase 5 package composition forward.',
+    title: 'phase-3-4-readability-pass.md',
+    text: 'Phase 3.4 keeps the command substrate from Phase 3.3, adds stable Shapez-style resource badges, and tightens layout, status, inspector, and utility readability in one integrated pass.',
     languageId: 'markdown',
     mimeType: 'text/markdown',
   });
@@ -245,13 +249,69 @@ function createContributionPacks({ languageModes, surfaceContributions }) {
   ];
 }
 
+function resolveCommandIcon(commandId) {
+  if (commandId.startsWith('workspace.import')) {
+    return 'import';
+  }
+
+  if (commandId.startsWith('workspace.export') || commandId === 'asset.download-selected') {
+    return 'export';
+  }
+
+  if (commandId === 'workspace.new-folder') {
+    return 'folder';
+  }
+
+  if (commandId === 'workspace.new-resource' || commandId.startsWith('editor.set-language')) {
+    return 'fileText';
+  }
+
+  if (commandId.startsWith('surface.open-with') || commandId === 'surface.focus-main-session') {
+    return 'fileText';
+  }
+
+  if (commandId === 'surface.focus-popup-session') {
+    return 'utility';
+  }
+
+  if (commandId === 'surface.close-active' || commandId === 'workspace.delete-selected') {
+    return 'close';
+  }
+
+  if (commandId === 'workspace.reset-storage' || commandId === 'workspace.retry-storage') {
+    return 'warning';
+  }
+
+  return 'command';
+}
+
+function resolveEntryIcon(entry) {
+  if (!entry) {
+    return 'status';
+  }
+
+  if (entry.kind === 'folder') {
+    return 'folder';
+  }
+
+  if (entry.kind === 'text') {
+    return 'fileText';
+  }
+
+  if (entry.mimeType === 'image/svg+xml' || entry.mimeType?.startsWith('image/') || entry.mimeType === 'application/pdf') {
+    return 'fileImage';
+  }
+
+  return 'fileBinary';
+}
+
 function createWelcomeView() {
   return {
     id: 'welcome',
     kind: 'welcome',
     mountId: 'welcome',
-    title: 'Command-driven browser workspace',
-    summary: 'The React shell now resolves local command contributions from existing packages, renders registry-driven menus and toolbar buttons, and opens a local command palette without pulling plugin management or external package loading forward.',
+    title: 'Readable command-driven workspace',
+    summary: 'The shell keeps the local command system from Phase 3.3, adds deterministic resource badges, and shifts the workbench toward a calmer authoring layout.',
     openWith: 'Shell chrome',
     state: 'open',
     placement: 'main',
@@ -265,7 +325,7 @@ function createLoadingView() {
     kind: 'loading',
     mountId: 'workspace-loading',
     title: 'Hydrating browser workspace',
-    summary: 'TextForge is opening the browser-managed IndexedDB workspace before any command-driven surface sessions are mounted.',
+    summary: 'TextForge is opening the browser-managed IndexedDB workspace before any contribution-driven surface sessions are mounted.',
     openWith: 'Workspace storage',
     state: 'pending',
     placement: 'main',
@@ -306,7 +366,6 @@ function createTextForgeWorkbenchController() {
   let storageFailure;
   const blobLedger = createBlobUrlLedger(createBlobUrlDriver());
   const languageModes = listTextEditorLanguageModes();
-  const parserBackedLanguageCount = languageModes.filter((mode) => mode.parserBacked).length;
   const surfaceRegistry = createSurfaceRegistry([
     codeMirrorTextEditorSurfaceContribution,
     ...assetSurfaceContributions,
@@ -844,6 +903,8 @@ function createTextForgeWorkbenchController() {
 
     const openWith = surfaceRegistry.get(session.contributionId)?.label ?? 'Surface';
     const controls = [createOpenWithControl(session, resource)];
+    const badge = resource.metadata.badge;
+    const icon = resolveEntryIcon(resource);
     if (resource.kind === 'text') {
       const document = activeTextDocuments.get(resource.id) ?? createTextEditorDocument(
         workspaceEntryToResourceRef(resource),
@@ -872,9 +933,13 @@ function createTextForgeWorkbenchController() {
         mountId: `${session.id}:${surface.model.languageMode.languageId}:${session.contributionId}`,
         title: surface.model.title,
         summary: surface.model.summary,
+        badge,
+        icon,
         openWith,
         state: session.state,
         placement: session.placement,
+        detail: surface.model.languageLabel,
+        readOnly: false,
         controls: [...controls, createLanguageControl(resource, surface.model)],
         surface,
       };
@@ -908,9 +973,13 @@ function createTextForgeWorkbenchController() {
       mountId: `${session.id}:${session.contributionId}`,
       title: surface.model.title,
       summary: surface.model.summary,
+      badge,
+      icon,
       openWith,
       state: session.state,
       placement: session.placement,
+      detail: surface.model.mimeType,
+      readOnly: true,
       controls,
       surface,
     };
@@ -922,6 +991,7 @@ function createTextForgeWorkbenchController() {
         title: 'Browser-managed workspace',
         path: `IndexedDB / ${workspaceDatabaseName}`,
         kind: 'folder',
+        icon: 'status',
         detail: 'Hydrating the Dexie-backed workspace before surfaces and command routes are mounted.',
       };
     }
@@ -931,6 +1001,8 @@ function createTextForgeWorkbenchController() {
         title: storageFailure?.title ?? 'Workspace storage unavailable',
         path: `IndexedDB / ${workspaceDatabaseName}`,
         kind: 'folder',
+        icon: 'warning',
+        attention: 'warning',
         detail: storageFailure?.detail ?? 'Retry the workspace load or reset browser storage to recover.',
       };
     }
@@ -941,6 +1013,7 @@ function createTextForgeWorkbenchController() {
         title: 'Workspace root',
         path: '/',
         kind: 'folder',
+        icon: 'folder',
         detail: 'The browser-managed workspace is ready but no entry is currently selected.',
       };
     }
@@ -949,6 +1022,9 @@ function createTextForgeWorkbenchController() {
       title: entry.metadata.title ?? entry.path,
       path: entry.path,
       kind: entry.kind,
+      badge: entry.metadata.badge,
+      icon: resolveEntryIcon(entry),
+      attention: entry.metadata.badge?.repairedFromKey ? 'warning' : undefined,
       detail: entry.kind === 'folder'
         ? 'Folder selection drives workspace-scoped commands like create, import, export, rename, and delete.'
         : entry.kind === 'text'
@@ -981,6 +1057,37 @@ function createTextForgeWorkbenchController() {
     }
 
     return createSurfaceView(session);
+  }
+
+  function describeActiveResource() {
+    if (runtime.status !== 'ready') {
+      return undefined;
+    }
+
+    const activeSession = getActiveCommandSession();
+    const entry = activeSession
+      ? getEntry(activeSession.resource.resourceId)
+      : getSelectedEntry();
+    if (!entry || entry.kind === 'folder') {
+      return undefined;
+    }
+
+    const kindDetail = entry.kind === 'text'
+      ? (entry.languageId ? entry.languageId.toUpperCase() : 'TEXT')
+      : entry.mimeType === 'image/svg+xml'
+        ? 'SVG'
+        : entry.mimeType === 'application/pdf'
+          ? 'PDF'
+          : entry.mimeType?.startsWith('image/')
+            ? 'IMAGE'
+            : 'BINARY';
+    return {
+      title: entry.metadata.title ?? basenameWorkspacePath(entry.path) ?? entry.path,
+      detail: `${kindDetail} • ${activeSession?.placement === 'popup' ? 'Popup surface' : 'Main surface'}`,
+      badge: entry.metadata.badge,
+      icon: resolveEntryIcon(entry),
+      attention: entry.metadata.badge?.repairedFromKey ? 'warning' : undefined,
+    };
   }
 
   function collectAffectedEntryIds(entry) {
@@ -1444,14 +1551,17 @@ function createTextForgeWorkbenchController() {
         error: storageFailure ? { code: storageFailure.code, message: storageFailure.detail } : undefined,
       };
     const commandContext = buildCommandContext();
-    const toolbarCommands = commandRegistry.listToolbar(commandContext);
+    const toolbarCommands = commandRegistry.listToolbar(commandContext)
+      .filter((command) => command.toolbar?.kind === 'primary' || (command.id === 'surface.close-active' && command.enabled));
     const commandMenus = commandRegistry.listMenus(commandContext).map((group) => ({
       id: group.id,
       label: group.label,
+      icon: resolveCommandIcon(group.commands[0]?.id ?? 'command'),
       items: group.commands.map((command) => ({
         commandId: command.id,
         label: command.label,
         description: command.description,
+        icon: resolveCommandIcon(command.id),
         shortcut: command.hotkey,
         disabled: !command.enabled,
       })),
@@ -1463,6 +1573,7 @@ function createTextForgeWorkbenchController() {
         label: command.label,
         description: command.description,
         group: command.menu?.label ?? command.category ?? command.packageId,
+        icon: resolveCommandIcon(command.id),
         shortcut: command.hotkey,
         disabled: !command.enabled,
         keywords: command.keywords,
@@ -1490,29 +1601,23 @@ function createTextForgeWorkbenchController() {
     const selectedResourceId = runtime.status === 'ready'
       ? state.selectedWorkspaceItemId
       : undefined;
+    const badgeDiagnostics = runtime.status === 'ready'
+      ? listWorkspaceBadgeDiagnostics(workspace.snapshot())
+      : [];
+    const activeResource = describeActiveResource();
     const workspaceStatusLabel = runtime.status === 'loading'
-      ? 'Hydrating workspace'
+      ? 'Opening workspace'
       : runtime.status === 'error'
-        ? 'Workspace recovery required'
-        : `${treeItems.length} items`;
+        ? 'Recovery required'
+        : `${treeItems.length} resources`;
     const workspaceStatusTone = runtime.status === 'error'
       ? 'warning'
       : runtime.status === 'loading'
         ? 'info'
         : 'success';
-    const storageStatusLabel = persistenceStatus.state === 'error'
-      ? 'Storage error'
-      : persistenceStatus.state === 'persisting'
-        ? 'Saving workspace'
-        : 'Browser storage ready';
-    const hydrationLabel = runtime.status === 'ready'
-      ? (hydrationSource === 'storage' ? 'Restored from browser storage' : 'Seeded browser workspace')
-      : runtime.status === 'loading'
-        ? 'Opening browser storage'
-        : 'Reset may be required';
     const chromeModel = createWorkbenchChromeModel({
       subtitle: runtime.status === 'ready'
-        ? 'Contribution-driven shell commands over a Dexie-backed browser workspace'
+        ? 'Deterministic resource badges and calmer contribution-driven command chrome over a Dexie-backed browser workspace'
         : 'Browser-managed workspace recovery',
       workspaceTree: createWorkspaceTreeFrameModel({
         items: treeItems,
@@ -1528,6 +1633,7 @@ function createTextForgeWorkbenchController() {
           label: command.label,
           kind: 'command',
           description: command.description,
+          icon: resolveCommandIcon(command.id),
           pinned: command.toolbar?.kind === 'primary',
           disabled: !command.enabled,
           shortcut: command.hotkey,
@@ -1537,35 +1643,47 @@ function createTextForgeWorkbenchController() {
           id: 'workspace-status',
           label: workspaceStatusLabel,
           tone: workspaceStatusTone,
+          icon: runtime.status === 'error' ? 'warning' : runtime.status === 'loading' ? 'info' : 'success',
           detail: 'The workspace is private browser storage, not a live local folder.',
         }),
-        createStatusBadge({
-          id: 'document-status',
-          label: `${mainSessions.length} documents`,
-          tone: mainSessions.length > 0 ? 'info' : 'neutral',
-        }),
-        createStatusBadge({
-          id: 'popup-status',
-          label: `${popupSessions.length} popups`,
-          tone: popupSessions.length > 0 ? 'warning' : 'neutral',
-        }),
-        createStatusBadge({
-          id: 'storage-status',
-          label: storageStatusLabel,
-          tone: persistenceStatus.state === 'error'
-            ? 'warning'
-            : persistenceStatus.state === 'persisting'
-              ? 'info'
-              : 'success',
-          detail: `${persistenceStatus.driver} / IndexedDB / ${persistenceStatus.databaseName}`,
-        }),
-        createStatusBadge({
-          id: 'hydration-status',
-          label: hydrationLabel,
-          tone: runtime.status === 'error' ? 'warning' : 'info',
-          detail: `${parserBackedLanguageCount} parser-backed language modes remain available after hydration.`,
-        }),
-      ],
+        activeResource
+          ? createStatusBadge({
+            id: 'resource-status',
+            label: activeResource.title,
+            tone: activeResource.attention ? 'warning' : 'info',
+            icon: activeResource.icon,
+            detail: activeResource.detail,
+          })
+          : createStatusBadge({
+            id: 'resource-status',
+            label: 'No document open',
+            tone: 'neutral',
+            icon: 'info',
+            detail: 'Open a text or binary resource from the workspace tree to focus it here.',
+          }),
+        ...(badgeDiagnostics.length > 0
+          ? [
+            createStatusBadge({
+              id: 'badge-status',
+              label: `${badgeDiagnostics.length} badge repair${badgeDiagnostics.length === 1 ? '' : 's'}`,
+              tone: 'warning',
+              icon: 'warning',
+              detail: 'A resource badge key was repaired to keep identity badges unique and deterministic.',
+            }),
+          ]
+          : []),
+        ...(persistenceStatus.state === 'persisting' || persistenceStatus.state === 'error'
+          ? [
+            createStatusBadge({
+              id: 'storage-status',
+              label: persistenceStatus.state === 'error' ? 'Storage issue' : 'Saving workspace',
+              tone: persistenceStatus.state === 'error' ? 'warning' : 'info',
+              icon: persistenceStatus.state === 'error' ? 'warning' : 'status',
+              detail: `${persistenceStatus.driver} / IndexedDB / ${persistenceStatus.databaseName}`,
+            }),
+          ]
+          : []),
+      ].filter(Boolean),
     });
 
     return {
@@ -1579,8 +1697,10 @@ function createTextForgeWorkbenchController() {
       commandMenus,
       commandPaletteEntries,
       contributionPacks,
+      badgeDiagnostics,
       popupFrame,
       selectedEntry: describeSelectedEntry(),
+      activeResource,
       activeMainView: getActiveMainView(),
       activePopupView: getActivePopupView(),
       utilitySections,
@@ -1663,38 +1783,41 @@ function SurfaceMount({ view }) {
 }
 
 function WelcomeState({ hydrationSource }) {
-  return element(
-    'section',
-    { className: 'tf-welcome', 'data-view-kind': 'welcome' },
-    element('span', { className: 'tf-welcome__eyebrow' }, 'Phase 3.3'),
-    element('h3', null, 'Contribution-driven shell commands'),
-    element(
-      'p',
+  return element(TextForgeEmptyState, {
+    eyebrow: 'Phase 3.4',
+    icon: 'status',
+    title: 'Resource badges and calmer shell chrome',
+    children: element(
+      React.Fragment,
       null,
-      hydrationSource === 'storage'
-        ? 'The shell reopened a browser-managed Dexie workspace, restored the workspace contents, and rebuilt the local command registry without restoring document tabs or layout state.'
-        : 'The shell seeded a fresh browser-managed Dexie workspace and registered the package-owned shell commands over the starter documents.',
+      element(
+        'p',
+        null,
+        hydrationSource === 'storage'
+          ? 'The shell reopened the browser-managed workspace, restored deterministic resource badges, and rebuilt the local command registry without restoring tabs or layout.'
+          : 'The shell seeded a fresh browser-managed workspace with deterministic resource badges, compact chrome, and the existing local command system.',
+      ),
+      element(
+        'ul',
+        { className: 'tf-welcome__list' },
+        element('li', null, 'Deterministic Shapez-style resource badges across tree, tabs, header, and inspector'),
+        element('li', null, 'Compact command menus and a calmer toolbar driven by the existing Phase 3.3 command registry'),
+        element('li', null, 'A drawer-style utility panel that stays out of the main document layout'),
+        element('li', null, 'No plugin manager, remote package loading, or advanced tab-management pulled forward'),
+      ),
     ),
-    element(
-      'ul',
-      { className: 'tf-welcome__list' },
-      element('li', null, 'Local command palette with search, filter, and execute flow'),
-      element('li', null, 'Contribution-driven workspace, surface, editor, and asset commands'),
-      element('li', null, 'Open-with and language controls remain package-owned and still appear in the surface details pane'),
-      element('li', null, 'No plugin manager, remote package loading, or diagnostics dashboard pulled forward from Phase 5'),
-    ),
-  );
+  });
 }
 
 function LoadingState() {
   return element(TextForgeCallout, {
     tone: 'info',
-    title: 'Hydrating browser workspace',
+    title: 'Opening browser workspace',
     children: element(
       React.Fragment,
       null,
-      element('p', null, 'TextForge is opening the browser-managed Dexie workspace before any contribution-driven shell commands are executed.'),
-      element('p', null, 'Open tabs and shell layout are intentionally not rehydrated in Phase 3.3.'),
+      element('p', null, 'TextForge is opening the browser-managed Dexie workspace before command routes and surface sessions are rebuilt.'),
+      element('p', null, 'Open tabs and layout remain transient in Phase 3.4; the workspace content and badge assignments persist.'),
     ),
   });
 }
@@ -1735,25 +1858,80 @@ function SurfaceDetails({ view }) {
     'aside',
     { className: 'tf-surface-details' },
     element(
-      'div',
-      { className: 'tf-surface-details__section' },
-      element('span', { className: 'tf-surface-details__label' }, 'Current surface'),
-      element('h3', { className: 'tf-surface-details__title' }, view.title),
-      element('p', { className: 'tf-surface-details__summary' }, view.summary),
+      TextForgeInspectorCard,
+      {
+        eyebrow: 'Active resource',
+        icon: view.icon,
+        title: view.title,
+      },
+      element(
+        'div',
+        { className: 'tf-surface-details__identity' },
+        element(TextForgeResourceBadge, {
+          active: true,
+          attention: view.badge?.repairedFromKey ? 'warning' : undefined,
+          badge: view.badge,
+          label: `${view.title} badge`,
+          size: 'regular',
+        }),
+        element(
+          'div',
+          { className: 'tf-surface-details__copy' },
+          element('p', { className: 'tf-surface-details__summary' }, view.summary),
+          view.detail ? element('p', { className: 'tf-surface-details__detail' }, view.detail) : null,
+        ),
+      ),
     ),
     element(
-      'dl',
-      { className: 'tf-meta-list' },
-      element('div', null, element('dt', null, 'Placement'), element('dd', null, view.placement)),
-      element('div', null, element('dt', null, 'Open with'), element('dd', null, view.openWith)),
-      element('div', null, element('dt', null, 'State'), element('dd', null, view.state)),
+      TextForgeInspectorCard,
+      {
+        eyebrow: 'Surface state',
+        icon: view.badge?.repairedFromKey ? 'warning' : 'status',
+        title: 'Session metadata',
+      },
+      element(
+        'dl',
+        { className: 'tf-meta-list' },
+        element('div', null, element('dt', null, 'Placement'), element('dd', null, view.placement)),
+        element('div', null, element('dt', null, 'Open with'), element('dd', null, view.openWith)),
+        element('div', null, element('dt', null, 'State'), element('dd', null, view.state)),
+        element('div', null, element('dt', null, 'Access'), element('dd', null, view.readOnly ? 'Read-only' : 'Editable')),
+      ),
     ),
     view.controls.length > 0
       ? element(
-        'div',
-        { className: 'tf-surface-details__controls' },
-        ...view.controls.map((control) =>
-          element(TextForgeSelectField, { key: control.id, control })),
+        TextForgeInspectorCard,
+        {
+          eyebrow: 'Controls',
+          icon: 'command',
+          title: 'Surface controls',
+        },
+        element(
+          'div',
+          { className: 'tf-surface-details__controls' },
+          ...view.controls.map((control) =>
+            element(TextForgeSelectField, { key: control.id, control })),
+        ),
+      )
+      : element(TextForgeInspectorCard, {
+        eyebrow: 'Controls',
+        icon: 'info',
+        title: 'No extra controls',
+        children: element('p', { className: 'tf-empty' }, 'This surface is readable without additional switches.'),
+      }),
+    view.badge?.repairedFromKey
+      ? element(
+        TextForgeInspectorCard,
+        {
+          eyebrow: 'Badge repair',
+          icon: 'warning',
+          title: 'Collision repair applied',
+        },
+        element(
+          'p',
+          { className: 'tf-empty' },
+          `This resource kept a deterministic badge by repairing a duplicate key from ${view.badge.repairedFromKey}.`,
+        ),
       )
       : null,
   );
@@ -1761,11 +1939,30 @@ function SurfaceDetails({ view }) {
 
 function WorkspaceSelectionFooter({ selectedEntry }) {
   return element(
-    'div',
-    { className: 'tf-selection' },
-    element('span', { className: 'tf-selection__title' }, selectedEntry.title),
-    element('span', { className: 'tf-selection__path' }, selectedEntry.path),
-    element('p', { className: 'tf-selection__detail' }, selectedEntry.detail),
+    TextForgeInspectorCard,
+    {
+      eyebrow: 'Selection',
+      icon: selectedEntry.icon,
+      title: selectedEntry.title,
+    },
+    element(
+      'div',
+      { className: 'tf-selection' },
+      selectedEntry.badge
+        ? element(TextForgeResourceBadge, {
+          attention: selectedEntry.attention,
+          badge: selectedEntry.badge,
+          label: `${selectedEntry.title} badge`,
+          size: 'regular',
+        })
+        : null,
+      element(
+        'div',
+        { className: 'tf-selection__copy' },
+        element('span', { className: 'tf-selection__path' }, selectedEntry.path),
+        element('p', { className: 'tf-selection__detail' }, selectedEntry.detail),
+      ),
+    ),
   );
 }
 
@@ -1865,11 +2062,16 @@ function StoragePaneView({ controller, snapshot }) {
 
 function PopupSessionsView({ controller, popupFrame, popupView }) {
   if (popupFrame.tabs.length === 0) {
-    return element(
-      'div',
-      { className: 'tf-empty' },
-      'No popup sessions are open. Open a binary resource from the workspace tree or run an asset command to mount it here.',
-    );
+    return element(TextForgeEmptyState, {
+      eyebrow: 'Popup surfaces',
+      icon: 'utility',
+      title: 'No popup sessions are open',
+      children: element(
+        'p',
+        null,
+        'Open a binary resource from the workspace tree or run an asset command to mount it here.',
+      ),
+    });
   }
 
   return element(
@@ -1941,10 +2143,11 @@ function TextForgeWorkbenchApp({ controller }) {
       TextForgeAppFrame,
       {
         footer: [
-          element('span', { key: 'phase' }, 'Phase 3.3 Command palette and contribution-driven shell commands'),
-          element('span', { key: 'detail' }, 'Local command registry and palette over a browser-managed IndexedDB workspace'),
+          element('span', { key: 'phase' }, 'Phase 3.4 Resource identity badges and readability pass'),
+          element('span', { key: 'detail' }, 'Deterministic badges, calmer chrome, and a drawer-style utility panel over a browser-managed IndexedDB workspace'),
         ],
         header: element(TextForgeTopBar, {
+          activeResource: snapshot.activeResource,
           brandTitle: snapshot.chromeModel.brandTitle,
           commandPaletteLabel: 'Commands',
           commandPaletteShortcut: 'Ctrl+K',
@@ -1974,7 +2177,7 @@ function TextForgeWorkbenchApp({ controller }) {
             onClose: controller.actions.toggleUtilityPane,
             onSelectSection: controller.actions.setUtilitySection,
             sections: snapshot.utilitySections,
-            subtitle: 'Popup surfaces, browser storage state, and contribution-pack visibility stay out of the main document strip.',
+            subtitle: 'Popup surfaces, browser storage state, and contribution visibility stay out of the main document strip.',
             title: 'Utility',
           },
           showPopupSessions
@@ -1997,9 +2200,30 @@ function TextForgeWorkbenchApp({ controller }) {
           { className: 'tf-pane__header' },
           element(
             'div',
-            null,
-            element('h2', { className: 'tf-pane__title' }, snapshot.chromeModel.surfaceFrame.title),
-            element('p', { className: 'tf-pane__subtitle' }, 'Narrow main-session tab strip for document surfaces'),
+            { className: 'tf-surface-frame__headline' },
+            snapshot.activeResource?.badge
+              ? element(TextForgeResourceBadge, {
+                active: true,
+                attention: snapshot.activeResource.attention,
+                badge: snapshot.activeResource.badge,
+                label: `${snapshot.activeResource.title} badge`,
+                size: 'regular',
+              })
+              : null,
+            element(
+              'div',
+              null,
+              element(
+                'h2',
+                { className: 'tf-pane__title' },
+                snapshot.activeResource?.title ?? snapshot.chromeModel.surfaceFrame.title,
+              ),
+              element(
+                'p',
+                { className: 'tf-pane__subtitle' },
+                snapshot.activeResource?.detail ?? 'Compact main-session tabs and inspector cards keep the active document obvious.',
+              ),
+            ),
           ),
         ),
         element(TextForgeSessionTabStrip, {

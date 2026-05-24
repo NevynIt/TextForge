@@ -7,6 +7,7 @@ import {
   createForbiddenFilesystemApiCheck,
   createLocalCommandDispatchCheck,
   createOpenSourceLicenseGate,
+  createVisualIdentityBoundaryCheck,
   defaultSecurityProfile,
 } from '@textforge/security-profile';
 
@@ -18,8 +19,10 @@ const scriptLoaderJs = await readFile(resolve(rootDir, 'src/scriptLoader.js'), '
 const workbenchJs = await readFile(resolve(rootDir, 'src/workbench.js'), 'utf8');
 const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
 const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
+const uiPackageJson = await readFile(resolve(rootDir, '..', '..', 'packages', 'ui', 'package.json'), 'utf8');
 const storageBoundaryDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'browser-managed-workspace-storage.md'), 'utf8');
 const commandDispatchDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'local-command-dispatch.md'), 'utf8');
+const resourceIdentityDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'resource-identity-badges.md'), 'utf8');
 
 if (!indexHtml.includes('./src/scriptLoader.js')) {
   throw new Error('index.html must load ./src/scriptLoader.js as the development entrypoint');
@@ -93,6 +96,12 @@ if (!workbenchJs.includes('createOpenWithSelection') || !workbenchJs.includes('l
   throw new Error('workbench.js must preserve package-backed open-with and language control chrome');
 }
 
+for (const requiredPhase34Signal of ['TextForgeResourceBadge', 'TextForgeInspectorCard', 'TextForgeEmptyState', 'badge repair']) {
+  if (!workbenchJs.includes(requiredPhase34Signal)) {
+    throw new Error(`workbench.js must surface ${requiredPhase34Signal} for the Phase 3.4 readability pass`);
+  }
+}
+
 if (!workbenchJs.includes('createWorkspaceContributionManifest') || !workbenchJs.includes('createSurfaceContributionManifest') || !workbenchJs.includes('createEditorContributionManifest') || !workbenchJs.includes('createAssetContributionManifest')) {
   throw new Error('workbench.js must build the shell command registry from package contribution manifests');
 }
@@ -109,6 +118,14 @@ for (const requiredDependency of ['"react"', '"react-dom"', '"@textforge/securit
   if (!packageJson.includes(requiredDependency)) {
     throw new Error(`package.json must declare ${requiredDependency} for the Phase 3.1 shell`);
   }
+}
+
+if (!uiPackageJson.includes('"lucide-react"')) {
+  throw new Error('@textforge/ui must declare lucide-react for the Phase 3.4 readability pass');
+}
+
+if (packageJson.includes('"lucide-react"') || workbenchJs.includes("lucide-react")) {
+  throw new Error('apps/textforge-web must consume icon-bearing UI components instead of directly importing lucide-react');
 }
 
 for (const forbiddenApi of ['showOpenFilePicker', 'showDirectoryPicker', 'showSaveFilePicker', 'navigator.serviceWorker.register', 'BackgroundSync']) {
@@ -138,6 +155,12 @@ for (const requiredDocSignal of ['IndexedDB', 'File System Access API', 'backgro
 for (const requiredDocSignal of ['local command', 'external packages', 'remote commands', 'plugin manager']) {
   if (!commandDispatchDoc.toLowerCase().includes(requiredDocSignal)) {
     throw new Error(`local-command-dispatch.md must document ${requiredDocSignal}`);
+  }
+}
+
+for (const requiredDocSignal of ['lucide-react', 'deterministic', 'remote images', 'filesystem-derived identity', 'user-provided images']) {
+  if (!resourceIdentityDoc.toLowerCase().includes(requiredDocSignal)) {
+    throw new Error(`resource-identity-badges.md must document ${requiredDocSignal}`);
   }
 }
 
@@ -189,6 +212,22 @@ function assertSecurityEnvelope() {
     },
   }).passed !== true) {
     throw new Error('The shell must keep the workspace inside the browser-managed storage boundary');
+  }
+
+  if (createVisualIdentityBoundaryCheck().run({
+    profile: defaultSecurityProfile,
+    visualIdentity: {
+      documented: true,
+      deterministic: true,
+      usesLocalIcons: true,
+      usesRemoteIcons: false,
+      usesRemoteImages: false,
+      usesFilesystemDerivedIdentity: false,
+      usesUserProvidedImages: false,
+      notesUri: 'docs/specs/resource-identity-badges.md',
+    },
+  }).passed !== true) {
+    throw new Error('The shell must keep Phase 3.4 badges and icons local, deterministic, and browser-bounded');
   }
 
   if (createLocalCommandDispatchCheck().run({

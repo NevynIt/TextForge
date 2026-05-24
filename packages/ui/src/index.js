@@ -1,9 +1,81 @@
 import * as React from 'react';
+import {
+  AlertTriangle,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Command,
+  File,
+  FileImage,
+  FileText,
+  Folder,
+  FolderOpen,
+  HardDriveDownload,
+  HardDriveUpload,
+  Info,
+  Lock,
+  Search,
+  Sparkles,
+  SquareTerminal,
+  X,
+} from 'lucide-react';
 
 const element = React.createElement;
 
+const iconRegistry = {
+  success: CheckCircle2,
+  warning: AlertTriangle,
+  info: Info,
+  search: Search,
+  command: Command,
+  folder: Folder,
+  folderOpen: FolderOpen,
+  fileText: FileText,
+  fileImage: FileImage,
+  fileBinary: File,
+  import: HardDriveUpload,
+  export: HardDriveDownload,
+  collapse: ChevronLeft,
+  expand: ChevronRight,
+  close: X,
+  utility: SquareTerminal,
+  status: Sparkles,
+  lock: Lock,
+};
+
 function classNames(...tokens) {
   return tokens.filter(Boolean).join(' ');
+}
+
+function IconGlyph({ className, name, size = 16, strokeWidth = 1.9 }) {
+  const Icon = iconRegistry[name];
+  if (!Icon) {
+    return null;
+  }
+
+  return element(Icon, {
+    className,
+    size,
+    strokeWidth,
+    'aria-hidden': 'true',
+    focusable: 'false',
+  });
+}
+
+function resolveWorkspaceItemIcon(item) {
+  if (item.kind === 'folder') {
+    return item.active ? 'folderOpen' : 'folder';
+  }
+
+  if (item.detail === 'SVG' || item.detail === 'IMAGE' || item.detail === 'PDF') {
+    return 'fileImage';
+  }
+
+  return item.kind === 'text' ? 'fileText' : 'fileBinary';
+}
+
+function describeBadgeTitle(badge, label) {
+  return label ?? badge?.description ?? badge?.label;
 }
 
 function listFocusableItems(currentTarget, selector) {
@@ -252,6 +324,7 @@ export function TextForgeToolbarButton({
   active = false,
   ariaLabel,
   disabled = false,
+  icon,
   kind = 'secondary',
   label,
   onPress,
@@ -268,7 +341,8 @@ export function TextForgeToolbarButton({
       onClick: onPress,
       title: title ?? ariaLabel ?? label,
     },
-    label,
+    icon ? element(IconGlyph, { className: 'tf-button__icon', name: icon, size: 15 }) : null,
+    element('span', { className: 'tf-button__label' }, label),
   );
 }
 
@@ -292,6 +366,97 @@ export function TextForgeCallout({
   );
 }
 
+export function TextForgeResourceBadge({
+  active = false,
+  attention,
+  badge,
+  label,
+  size = 'compact',
+}) {
+  if (!badge) {
+    return null;
+  }
+
+  return element(
+    'span',
+    {
+      className: classNames(
+        'tf-resource-badge',
+        `is-shape-${badge.shape}`,
+        `is-accent-${badge.accent}`,
+        `is-mark-${badge.mark}`,
+        `is-placement-${badge.placement}`,
+        `is-size-${size}`,
+        active && 'is-active',
+        attention && `is-${attention}`,
+      ),
+      role: 'img',
+      'aria-label': describeBadgeTitle(badge, label),
+      title: describeBadgeTitle(badge, label),
+    },
+    element('span', { className: 'tf-resource-badge__shape', 'aria-hidden': 'true' }),
+    element('span', { className: 'tf-resource-badge__mark', 'aria-hidden': 'true' }),
+    attention === 'warning'
+      ? element(IconGlyph, {
+        className: 'tf-resource-badge__alert',
+        name: 'warning',
+        size: 11,
+        strokeWidth: 2.15,
+      })
+      : null,
+  );
+}
+
+export function TextForgeInspectorCard({
+  actions,
+  children,
+  eyebrow,
+  icon,
+  title,
+}) {
+  return element(
+    'section',
+    { className: 'tf-inspector-card' },
+    element(
+      'header',
+      { className: 'tf-inspector-card__header' },
+      element(
+        'div',
+        { className: 'tf-inspector-card__title' },
+        eyebrow
+          ? element('span', { className: 'tf-inspector-card__eyebrow' }, eyebrow)
+          : null,
+        element(
+          'div',
+          { className: 'tf-inspector-card__heading' },
+          icon ? element(IconGlyph, { className: 'tf-inspector-card__icon', name: icon, size: 15 }) : null,
+          element('strong', null, title),
+        ),
+      ),
+      actions?.length ? element('div', { className: 'tf-inspector-card__actions' }, ...actions) : null,
+    ),
+    children ? element('div', { className: 'tf-inspector-card__body' }, children) : null,
+  );
+}
+
+export function TextForgeEmptyState({
+  actions,
+  children,
+  eyebrow,
+  icon = 'info',
+  title,
+}) {
+  return element(
+    'section',
+    { className: 'tf-empty-state' },
+    element(IconGlyph, { className: 'tf-empty-state__icon', name: icon, size: 20, strokeWidth: 2.1 }),
+    eyebrow ? element('span', { className: 'tf-empty-state__eyebrow' }, eyebrow) : null,
+    element('h3', { className: 'tf-empty-state__title' }, title),
+    children ? element('div', { className: 'tf-empty-state__body' }, children) : null,
+    actions?.length ? element('div', { className: 'tf-empty-state__actions' }, ...actions) : null,
+  );
+}
+
 export function TextForgeStatusRail({ badges = [] }) {
   return element(
     'div',
@@ -304,6 +469,7 @@ export function TextForgeStatusRail({ badges = [] }) {
           className: classNames('tf-badge', `tf-badge--${badge.tone}`),
           title: badge.detail ?? badge.label,
         },
+        badge.icon ? element(IconGlyph, { className: 'tf-badge__icon', name: badge.icon, size: 14 }) : null,
         badge.label,
       )),
   );
@@ -353,6 +519,7 @@ function TextForgeCommandMenuBar({ groups = [], onCommandPress }) {
         },
         element(TextForgeToolbarButton, {
           active: openMenuId === group.id,
+          icon: group.icon ?? 'command',
           kind: 'secondary',
           label: group.label,
           onPress: () => setOpenMenuId((current) => (current === group.id ? undefined : group.id)),
@@ -381,6 +548,9 @@ function TextForgeCommandMenuBar({ groups = [], onCommandPress }) {
                     },
                     title: item.description ?? item.label,
                   },
+                  item.icon
+                    ? element(IconGlyph, { className: 'tf-command-menu__icon', name: item.icon, size: 14.5 })
+                    : null,
                   element('span', { className: 'tf-command-menu__label' }, item.label),
                   item.shortcut
                     ? element('span', { className: 'tf-command-menu__meta' }, item.shortcut)
@@ -393,6 +563,7 @@ function TextForgeCommandMenuBar({ groups = [], onCommandPress }) {
 }
 
 export function TextForgeTopBar({
+  activeResource,
   brandTitle,
   commandPaletteLabel = 'Commands',
   commandPaletteShortcut = 'Ctrl+K',
@@ -412,6 +583,7 @@ export function TextForgeTopBar({
       key: 'toggle-sidebar',
       active: !sidebarCollapsed,
       ariaLabel: sidebarCollapsed ? 'Show workspace tree' : 'Hide workspace tree',
+      icon: sidebarCollapsed ? 'expand' : 'collapse',
       kind: 'toggle',
       label: sidebarCollapsed ? 'Show Tree' : 'Hide Tree',
       onPress: onToggleSidebar,
@@ -426,6 +598,7 @@ export function TextForgeTopBar({
         key: slot.id,
         ariaLabel: slot.description ?? slot.label,
         disabled: slot.disabled,
+        icon: slot.icon,
         kind: slot.pinned ? 'primary' : 'secondary',
         label: slot.label,
         onPress: () => onCommandPress?.(slot.id),
@@ -435,6 +608,7 @@ export function TextForgeTopBar({
       ? element(TextForgeToolbarButton, {
         key: 'command-palette',
         ariaLabel: 'Open command palette',
+        icon: 'search',
         kind: 'secondary',
         label: commandPaletteLabel,
         onPress: onOpenCommandPalette,
@@ -445,6 +619,7 @@ export function TextForgeTopBar({
       key: 'toggle-utility',
       active: utilityOpen,
       ariaLabel: utilityOpen ? 'Hide utility pane' : 'Show utility pane',
+      icon: utilityOpen ? 'close' : 'utility',
       kind: 'toggle',
       label: utilityOpen ? 'Hide Utility' : 'Show Utility',
       onPress: onToggleUtility,
@@ -456,17 +631,58 @@ export function TextForgeTopBar({
     { className: 'tf-topbar' },
     element(
       'div',
-      { className: 'tf-brand' },
-      element('div', { className: 'tf-brand__mark', 'aria-hidden': 'true' }, 'TF'),
+      { className: 'tf-topbar__lead' },
       element(
         'div',
-        { className: 'tf-brand__text' },
-        element('strong', null, brandTitle),
-        subtitle ? element('span', null, subtitle) : null,
+        { className: 'tf-brand' },
+        element('div', { className: 'tf-brand__mark', 'aria-hidden': 'true' }, 'TF'),
+        element(
+          'div',
+          { className: 'tf-brand__text' },
+          element('strong', null, brandTitle),
+          subtitle ? element('span', null, subtitle) : null,
+        ),
       ),
+      activeResource
+        ? element(
+          'div',
+          {
+            className: classNames(
+              'tf-topbar__resource',
+              activeResource.attention && `is-${activeResource.attention}`,
+            ),
+          },
+          element(TextForgeResourceBadge, {
+            active: true,
+            attention: activeResource.attention,
+            badge: activeResource.badge,
+            label: activeResource.title,
+            size: 'regular',
+          }),
+          element(
+            'div',
+            { className: 'tf-topbar__resource-copy' },
+            element(
+              'div',
+              { className: 'tf-topbar__resource-line' },
+              activeResource.icon
+                ? element(IconGlyph, { className: 'tf-topbar__resource-icon', name: activeResource.icon, size: 15 })
+                : null,
+              element('strong', null, activeResource.title),
+            ),
+            activeResource.detail
+              ? element('span', { className: 'tf-topbar__resource-detail' }, activeResource.detail)
+              : null,
+          ),
+        )
+        : null,
+      element(TextForgeStatusRail, { badges: statusBadges }),
     ),
-    element(TextForgeStatusRail, { badges: statusBadges }),
-    element('div', { className: 'tf-topbar__actions' }, ...actions),
+    element(
+      'div',
+      { className: 'tf-topbar__actions' },
+      ...actions,
+    ),
   );
 }
 
@@ -492,6 +708,7 @@ export function TextForgeWorkspaceSidebar({
       ? element(TextForgeToolbarButton, {
         active: !collapsed,
         ariaLabel: collapsed ? 'Expand workspace tree' : 'Collapse workspace tree',
+        icon: collapsed ? 'expand' : 'collapse',
         kind: 'toggle',
         label: collapsed ? 'Expand' : 'Collapse',
         onPress: onToggleCollapsed,
@@ -520,9 +737,32 @@ export function TextForgeWorkspaceSidebar({
             title: item.path,
             style: { '--depth': item.depth },
           },
-          element('span', { className: 'tf-tree__kind', 'aria-hidden': 'true' }, item.kind),
-          element('span', { className: 'tf-tree__label' }, item.label),
-          item.badge ? element('span', { className: 'tf-tree__badge' }, item.badge) : null,
+          element(IconGlyph, {
+            className: 'tf-tree__icon',
+            name: resolveWorkspaceItemIcon(item),
+            size: 15,
+          }),
+          element(
+            'span',
+            { className: 'tf-tree__copy' },
+            element('span', { className: 'tf-tree__label' }, item.label),
+            item.detail ? element('span', { className: 'tf-tree__detail' }, item.detail) : null,
+          ),
+          element(
+            'span',
+            { className: 'tf-tree__meta' },
+            item.badge
+              ? element(TextForgeResourceBadge, {
+                active: item.id === workspaceTree.selectedResourceId,
+                attention: item.attention,
+                badge: item.badge,
+                label: `${item.label} badge`,
+              })
+              : null,
+            item.attention === 'warning'
+              ? element(IconGlyph, { className: 'tf-tree__attention', name: 'warning', size: 12.5 })
+              : null,
+          ),
         ),
       ));
 
@@ -591,8 +831,19 @@ export function TextForgeSessionTabStrip({
             onKeyDown: (event) => handleHorizontalTabsKeyDown(event, onSelectTab),
             title: tab.title,
           },
+          tab.badge
+            ? element(TextForgeResourceBadge, {
+              active: tab.id === frameModel.activeTabId,
+              attention: tab.attention,
+              badge: tab.badge,
+              label: `${tab.title} badge`,
+            })
+            : null,
           element('span', { className: 'tf-tab__title' }, tab.title),
           tab.stale ? element('span', { className: 'tf-tab__state', 'aria-hidden': 'true' }, 'Stale') : null,
+          tab.attention === 'warning'
+            ? element(IconGlyph, { className: 'tf-tab__attention', name: 'warning', size: 12.5 })
+            : null,
         ),
         onCloseTab && tab.surfaceId
           ? element(
@@ -606,7 +857,8 @@ export function TextForgeSessionTabStrip({
                 onCloseTab(tab.id);
               },
             },
-            'Close',
+            element(IconGlyph, { className: 'tf-tab__close-icon', name: 'close', size: 13 }),
+            element('span', { className: 'tf-visually-hidden' }, 'Close'),
           )
           : null,
       )),
@@ -668,6 +920,7 @@ export function TextForgeUtilityPane({
       onClose
         ? element(TextForgeToolbarButton, {
           ariaLabel: 'Hide utility pane',
+          icon: 'close',
           kind: 'toggle',
           label: 'Hide',
           onPress: onClose,
@@ -697,6 +950,7 @@ export function TextForgeUtilityPane({
               onClick: () => onSelectSection?.(section.id),
               onKeyDown: (event) => handleHorizontalTabsKeyDown(event, onSelectSection),
             },
+            section.icon ? element(IconGlyph, { className: 'tf-segments__icon', name: section.icon, size: 14 }) : null,
             section.label,
           )),
       )
@@ -809,21 +1063,28 @@ export function TextForgeCommandPalette({
             'aria-label': 'Close command palette',
             onClick: onClose,
           },
-          'Close',
+          element(IconGlyph, { className: 'tf-command-palette__close-icon', name: 'close', size: 14 }),
+          element('span', { className: 'tf-visually-hidden' }, 'Close'),
         ),
       ),
-      element('input', {
-        ref: inputRef,
-        className: 'tf-command-palette__input',
-        type: 'text',
-        value: query,
-        placeholder,
-        onChange: (event) => {
-          setQuery(event.currentTarget.value);
-          setActiveIndex(0);
-        },
-        onKeyDown: handleKeyDown,
-      }),
+      element(
+        'label',
+        { className: 'tf-command-palette__search' },
+        element(IconGlyph, { className: 'tf-command-palette__search-icon', name: 'search', size: 15 }),
+        element('span', { className: 'tf-visually-hidden' }, placeholder),
+        element('input', {
+          ref: inputRef,
+          className: 'tf-command-palette__input',
+          type: 'text',
+          value: query,
+          placeholder,
+          onChange: (event) => {
+            setQuery(event.currentTarget.value);
+            setActiveIndex(0);
+          },
+          onKeyDown: handleKeyDown,
+        }),
+      ),
       filteredEntries.length === 0
         ? element('div', { className: 'tf-command-palette__empty' }, emptyLabel)
         : element(
@@ -853,6 +1114,9 @@ export function TextForgeCommandPalette({
                 element(
                   'div',
                   { className: 'tf-command-palette__line' },
+                  entry.icon
+                    ? element(IconGlyph, { className: 'tf-command-palette__item-icon', name: entry.icon, size: 14.5 })
+                    : null,
                   element('span', { className: 'tf-command-palette__label' }, entry.label),
                   entry.shortcut
                     ? element('span', { className: 'tf-command-palette__shortcut' }, entry.shortcut)
@@ -904,10 +1168,24 @@ export function TextForgeAppFrame({
 export const defaultAppFrameModel = createAppFrameModel();
 
 export const defaultIcons = [
-  { name: 'search', glyph: 'S', viewBox: '0 0 24 24' },
-  { name: 'check', glyph: 'C', viewBox: '0 0 24 24' },
+  { name: 'success', glyph: 'C', viewBox: '0 0 24 24' },
   { name: 'warning', glyph: '!', viewBox: '0 0 24 24' },
+  { name: 'info', glyph: 'i', viewBox: '0 0 24 24' },
+  { name: 'search', glyph: 'S', viewBox: '0 0 24 24' },
+  { name: 'command', glyph: 'K', viewBox: '0 0 24 24' },
+  { name: 'folder', glyph: 'F', viewBox: '0 0 24 24' },
+  { name: 'folderOpen', glyph: 'O', viewBox: '0 0 24 24' },
+  { name: 'fileText', glyph: 'T', viewBox: '0 0 24 24' },
+  { name: 'fileImage', glyph: 'I', viewBox: '0 0 24 24' },
+  { name: 'fileBinary', glyph: 'B', viewBox: '0 0 24 24' },
+  { name: 'import', glyph: 'U', viewBox: '0 0 24 24' },
+  { name: 'export', glyph: 'D', viewBox: '0 0 24 24' },
+  { name: 'collapse', glyph: '<', viewBox: '0 0 24 24' },
+  { name: 'expand', glyph: '>', viewBox: '0 0 24 24' },
   { name: 'close', glyph: 'X', viewBox: '0 0 24 24' },
+  { name: 'utility', glyph: 'U', viewBox: '0 0 24 24' },
+  { name: 'status', glyph: '*', viewBox: '0 0 24 24' },
+  { name: 'lock', glyph: 'L', viewBox: '0 0 24 24' },
 ];
 
 export const contributions = {

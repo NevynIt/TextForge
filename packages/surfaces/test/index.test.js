@@ -14,6 +14,16 @@ import {
 } from '../src/index.js';
 
 test('surface registry picks the highest-priority compatible contribution', () => {
+  const badge = {
+    key: 'circle-teal-dot-center',
+    fingerprint: 'resource-1',
+    shape: 'circle',
+    accent: 'teal',
+    mark: 'dot',
+    placement: 'center',
+    variant: 0,
+    label: 'teal circle dot center',
+  };
   const registry = createSurfaceRegistry([
     {
       id: 'surface.editor',
@@ -47,7 +57,7 @@ test('surface registry picks the highest-priority compatible contribution', () =
   });
 
   const session = host.open({
-    resource: { resourceId: 'resource-1', kind: 'binary', path: '/docs/system.svg' },
+    resource: { resourceId: 'resource-1', kind: 'binary', path: '/docs/system.svg', badge },
   });
 
   assert.equal(session.contributionId, 'surface.preview');
@@ -72,7 +82,9 @@ test('surface registry picks the highest-priority compatible contribution', () =
   assert.equal(stale?.freshness, 'stale');
   assert.equal(host.markCurrent(session.id)?.freshness, 'current');
   assert.equal(listOpenSurfaceSessions(host.list(), 'main').length, 2);
-  assert.equal(createMainSessionTabStrip(host.list(), { activeTabId: svgSession.id }).activeTabId, svgSession.id);
+  const tabStrip = createMainSessionTabStrip(host.list(), { activeTabId: svgSession.id });
+  assert.equal(tabStrip.activeTabId, svgSession.id);
+  assert.equal(tabStrip.tabs[0]?.badge?.key, badge.key);
 
   const fallback = createSourceEditorFallback(session.resource, 'surface.editor', 'explicit-source-open');
   assert.equal(fallback.reason, 'explicit-source-open');

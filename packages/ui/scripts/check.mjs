@@ -4,6 +4,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 
 import {
   TextForgeAppFrame,
+  TextForgeEmptyState,
+  TextForgeInspectorCard,
+  TextForgeResourceBadge,
   TextForgeSessionTabStrip,
   TextForgeTopBar,
   TextForgeUtilityPane,
@@ -26,11 +29,43 @@ assert.equal(createStatusBadge({ id: 'badge-1', label: 'Ready', tone: 'success' 
 
 const chrome = createWorkbenchChromeModel({
   workspaceTree: createWorkspaceTreeFrameModel({
-    items: [{ id: 'resource-1', label: 'notes.md', path: '/docs/notes.md', kind: 'text', depth: 1 }],
+    items: [{
+      id: 'resource-1',
+      label: 'notes.md',
+      path: '/docs/notes.md',
+      kind: 'text',
+      depth: 1,
+      detail: 'MARKDOWN',
+      badge: {
+        key: 'markdown-notes',
+        fingerprint: 'markdown:notes',
+        shape: 'hex',
+        accent: 'teal',
+        mark: 'stack',
+        placement: 'center',
+        variant: 1,
+        label: 'MARKDOWN',
+      },
+    }],
     selectedResourceId: 'resource-1',
   }),
   surfaceFrame: createSurfaceFrameModel({
-    tabs: [{ id: 'tab-1', title: 'Welcome', surfaceId: 'welcome', active: true }],
+    tabs: [{
+      id: 'tab-1',
+      title: 'Welcome',
+      surfaceId: 'welcome',
+      active: true,
+      badge: {
+        key: 'markdown-notes',
+        fingerprint: 'markdown:notes',
+        shape: 'hex',
+        accent: 'teal',
+        mark: 'stack',
+        placement: 'center',
+        variant: 1,
+        label: 'MARKDOWN',
+      },
+    }],
     activeTabId: 'tab-1',
   }),
 });
@@ -40,6 +75,12 @@ const html = renderToStaticMarkup(
     TextForgeAppFrame,
     {
       header: React.createElement(TextForgeTopBar, {
+        activeResource: {
+          title: 'notes.md',
+          detail: 'MARKDOWN • Main surface',
+          badge: chrome.workspaceTree.items[0].badge,
+          icon: 'fileText',
+        },
         brandTitle: chrome.brandTitle,
         sidebarCollapsed: false,
         statusBadges: chrome.statusBadges,
@@ -58,9 +99,25 @@ const html = renderToStaticMarkup(
       }, React.createElement('div', null, 'Registry content')),
       utilityOpen: true,
     },
-    React.createElement(TextForgeSessionTabStrip, {
-      frameModel: chrome.surfaceFrame,
-    }),
+    React.createElement(
+      React.Fragment,
+      null,
+      React.createElement(TextForgeSessionTabStrip, {
+        frameModel: chrome.surfaceFrame,
+      }),
+      React.createElement(TextForgeInspectorCard, {
+        icon: 'status',
+        title: 'Inspector card',
+      }, React.createElement('p', null, 'Inspector body')),
+      React.createElement(TextForgeEmptyState, {
+        icon: 'utility',
+        title: 'No popup sessions',
+      }, React.createElement('p', null, 'Empty states stay local.')),
+      React.createElement(TextForgeResourceBadge, {
+        badge: chrome.workspaceTree.items[0].badge,
+        label: 'notes.md badge',
+      }),
+    ),
   ),
 );
 
@@ -74,5 +131,9 @@ assert.match(html, /role="tree"/);
 assert.match(html, /role="treeitem"/);
 assert.match(html, /aria-selected="true"/);
 assert.match(html, /tabindex="0"/);
+assert.match(html, /role="img"/);
+assert.match(html, /is-placement-center/);
+assert.match(html, /notes\.md badge/);
+assert.match(html, /No popup sessions/);
 
 console.info('ui package checks passed');

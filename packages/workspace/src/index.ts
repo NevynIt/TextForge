@@ -1,4 +1,11 @@
-import type { CanonicalPatch, CommandContribution, ContributionManifest, PipelineValue, ResourceRef } from '@textforge/core';
+import type {
+  CanonicalPatch,
+  CommandContribution,
+  ContributionManifest,
+  PipelineValue,
+  ResourceBadgeToken,
+  ResourceRef,
+} from '@textforge/core';
 
 export type WorkspaceEntryKind = 'folder' | 'text' | 'binary';
 export type WorkspaceArchiveResourceEncoding = 'utf8' | 'binary';
@@ -12,6 +19,7 @@ export interface WorkspaceMetadata {
   readonly title?: string;
   readonly description?: string;
   readonly tags?: ReadonlyArray<string>;
+  readonly badge?: ResourceBadgeToken;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -99,6 +107,16 @@ export interface WorkspaceArchiveExportOptions {
 export interface WorkspaceArchiveImportOptions {
   readonly existingState?: WorkspaceState;
   readonly conflictPolicy?: WorkspaceImportConflictPolicy;
+}
+
+export interface WorkspaceBadgeDiagnostic {
+  readonly resourceId: string;
+  readonly path: string;
+  readonly kind: WorkspaceEntryKind;
+  readonly badge: ResourceBadgeToken;
+  readonly previousKey: string;
+  readonly nextKey: string;
+  readonly message: string;
 }
 
 export interface WorkspaceQuery {
@@ -266,7 +284,9 @@ export interface WorkspaceTreeItem {
   readonly depth: number;
   readonly expanded: boolean;
   readonly active: boolean;
-  readonly badge: string;
+  readonly badge?: ResourceBadgeToken;
+  readonly detail?: string;
+  readonly attention?: 'warning';
 }
 
 export interface WorkspacePipelineValue<TValue = unknown> extends PipelineValue<TValue> {
@@ -311,6 +331,9 @@ export declare function dirnameWorkspacePath(path: string): string;
 export declare function basenameWorkspacePath(path: string): string;
 export declare function createWorkspaceManifest(options?: WorkspaceServiceOptions): WorkspaceManifest;
 export declare function workspaceEntryToResourceRef(entry: WorkspaceEntry): ResourceRef;
+export declare function listWorkspaceBadgeDiagnostics(
+  input: WorkspaceState | WorkspaceService,
+): ReadonlyArray<WorkspaceBadgeDiagnostic>;
 export declare function createWorkspaceArchiveManifest(
   input: WorkspaceState | WorkspaceService,
   options?: WorkspaceArchiveExportOptions,

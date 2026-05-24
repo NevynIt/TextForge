@@ -14,6 +14,7 @@ import {
   exportWorkspaceFolderToZip,
   importWorkspaceFromZip,
   joinWorkspacePath,
+  listWorkspaceBadgeDiagnostics,
   mergeImportedWorkspaceState,
   normalizeWorkspacePath,
   resetWorkspaceDexieStorage,
@@ -65,7 +66,11 @@ assert.equal(workspace.saveTextResource({
 }).languageId, 'yaml');
 
 const items = createWorkspaceTreeItems(workspace.snapshot());
-assert.equal(items.find((item) => item.id === text.id)?.badge, 'YAML');
+assert.equal(items.find((item) => item.id === text.id)?.detail, 'YAML');
+assert.equal(Boolean(items.find((item) => item.id === text.id)?.badge?.key), true);
+assert.equal(['center', 'top', 'right', 'bottom', 'left'].includes(items.find((item) => item.id === text.id)?.badge?.placement ?? ''), true);
+assert.equal(Object.hasOwn(items.find((item) => item.id === text.id)?.badge ?? {}, 'rotation'), false);
+assert.equal(listWorkspaceBadgeDiagnostics(workspace.snapshot()).length, 0);
 
 const moved = workspace.moveEntry({ resourceId: text.id, parentPath: '/docs', title: 'guide.md' });
 assert.equal(moved?.path, '/docs/guide.md');

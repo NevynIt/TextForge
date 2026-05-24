@@ -42,6 +42,20 @@ export interface ResourceRef {
   readonly mimeType?: string;
   readonly languageId?: LanguageId | string;
   readonly parentResourceId?: string;
+  readonly badge?: ResourceBadgeToken;
+}
+
+export interface ResourceBadgeToken {
+  readonly key: string;
+  readonly fingerprint: string;
+  readonly shape: string;
+  readonly accent: string;
+  readonly mark: string;
+  readonly placement: 'center' | 'top' | 'right' | 'bottom' | 'left';
+  readonly variant: number;
+  readonly label: string;
+  readonly description?: string;
+  readonly repairedFromKey?: string;
 }
 
 export interface DiagnosticRelatedInformation {
@@ -254,6 +268,7 @@ export const contributionKinds: {
 };
 
 export const languageDefinitions: ReadonlyArray<LanguageDefinition>;
+export const resourceBadgePlacements: ReadonlyArray<'center' | 'top' | 'right' | 'bottom' | 'left'>;
 
 export const editorCapabilityIds: {
   readonly source: 'editor.source';
@@ -266,6 +281,7 @@ export const editorCapabilityIds: {
 export declare function createSourcePosition(line: number, column: number, offset?: number): SourcePosition;
 export declare function createSourceRange(start: SourcePosition, end: SourcePosition): SourceRange;
 export declare function createResourceRef(resourceId: string, overrides?: Partial<ResourceRef>): ResourceRef;
+export declare function createResourceBadgeToken(overrides?: Partial<ResourceBadgeToken>): ResourceBadgeToken;
 export declare function createDiagnostic(message: string, severity?: Severity, overrides?: Partial<Diagnostic>): Diagnostic;
 export declare function createCapability(id: string, overrides?: Partial<Capability>): Capability;
 export declare function createCommand(

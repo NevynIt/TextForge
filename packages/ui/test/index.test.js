@@ -6,6 +6,9 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import {
   TextForgeAppFrame,
   TextForgeCommandPalette,
+  TextForgeEmptyState,
+  TextForgeInspectorCard,
+  TextForgeResourceBadge,
   TextForgeSessionTabStrip,
   TextForgeTopBar,
   TextForgeUtilityPane,
@@ -17,7 +20,24 @@ import {
 test('ui package renders react shell primitives from chrome models', () => {
   const chrome = createWorkbenchChromeModel({
     workspaceTree: createWorkspaceTreeFrameModel({
-      items: [{ id: 'resource-1', label: 'notes.md', path: '/docs/notes.md', kind: 'text', depth: 1 }],
+      items: [{
+        id: 'resource-1',
+        label: 'notes.md',
+        path: '/docs/notes.md',
+        kind: 'text',
+        depth: 1,
+        detail: 'MARKDOWN',
+        badge: {
+          key: 'markdown-notes',
+          fingerprint: 'markdown:notes',
+          shape: 'hex',
+          accent: 'teal',
+          mark: 'stack',
+          placement: 'center',
+          variant: 1,
+          label: 'MARKDOWN',
+        },
+      }],
       selectedResourceId: 'resource-1',
     }),
     surfaceFrame: {
@@ -26,7 +46,22 @@ test('ui package renders react shell primitives from chrome models', () => {
       placement: 'main',
       layout: 'tabs',
       activeTabId: 'tab-1',
-      tabs: [{ id: 'tab-1', surfaceId: 'surface-1', resourceId: 'resource-1', title: 'notes.md' }],
+      tabs: [{
+        id: 'tab-1',
+        surfaceId: 'surface-1',
+        resourceId: 'resource-1',
+        title: 'notes.md',
+        badge: {
+          key: 'markdown-notes',
+          fingerprint: 'markdown:notes',
+          shape: 'hex',
+          accent: 'teal',
+          mark: 'stack',
+          placement: 'center',
+          variant: 1,
+          label: 'MARKDOWN',
+        },
+      }],
     },
   });
 
@@ -43,6 +78,12 @@ test('ui package renders react shell primitives from chrome models', () => {
           statusBadges: chrome.statusBadges,
           subtitle: chrome.subtitle,
           toolbarSlots: chrome.toolbarSlots,
+          activeResource: {
+            title: 'notes.md',
+            detail: 'MARKDOWN • Main surface',
+            badge: chrome.workspaceTree.items[0].badge,
+            icon: 'fileText',
+          },
           utilityOpen: true,
         }),
         sidebar: React.createElement(TextForgeWorkspaceSidebar, {
@@ -67,6 +108,18 @@ test('ui package renders react shell primitives from chrome models', () => {
           open: true,
           title: 'Command palette',
         }),
+        React.createElement(TextForgeInspectorCard, {
+          icon: 'status',
+          title: 'Inspector card',
+        }, React.createElement('p', null, 'Inspector body')),
+        React.createElement(TextForgeEmptyState, {
+          icon: 'utility',
+          title: 'No popup sessions',
+        }, React.createElement('p', null, 'Empty states stay local.')),
+        React.createElement(TextForgeResourceBadge, {
+          badge: chrome.workspaceTree.items[0].badge,
+          label: 'notes.md badge',
+        }),
       ),
     ),
   );
@@ -76,10 +129,15 @@ test('ui package renders react shell primitives from chrome models', () => {
   assert.match(html, /Contribution Packs/);
   assert.match(html, /Workspace/);
   assert.match(html, /Command palette/);
+  assert.match(html, /notes\.md badge/);
+  assert.match(html, /No popup sessions/);
+  assert.match(html, /Inspector card/);
+  assert.match(html, /is-placement-center/);
   assert.match(html, /role="tablist"/);
   assert.match(html, /role="tree"/);
   assert.match(html, /role="treeitem"/);
   assert.match(html, /role="dialog"/);
+  assert.match(html, /role="img"/);
   assert.match(html, /aria-selected="true"/);
   assert.match(html, /tabindex="0"/);
   assert.match(html, /data-pane="workspace"/);

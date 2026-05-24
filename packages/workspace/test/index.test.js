@@ -10,6 +10,7 @@ import {
   createPersistedWorkspaceService,
   createSequentialIdFactory,
   createWorkspaceManifest,
+  listWorkspaceBadgeDiagnostics,
   createWorkspaceService,
   createWorkspaceTreeItems,
   exportWorkspaceToZip,
@@ -77,6 +78,77 @@ test('workspace service normalizes paths and mutates entries', () => {
   assert.equal(createWorkspaceTreeItems(workspace.snapshot()).length >= 2, true);
 });
 
+test('workspace badges stay deterministic and duplicate stored badges are repaired', () => {
+  const workspace = createWorkspaceService({
+    workspaceId: 'workspace-badge-test',
+    idFactory: createSequentialIdFactory('badge'),
+    now: () => '2026-05-24T00:00:00.000Z',
+  });
+
+  workspace.createFolder({ path: '/docs' });
+  workspace.createTextResource({
+    path: '/docs/notes.md',
+    text: '# Notes',
+    languageId: 'markdown',
+    mimeType: 'text/markdown',
+  });
+  workspace.createTextResource({
+    path: '/docs/intro.md',
+    text: '# Intro',
+    languageId: 'markdown',
+    mimeType: 'text/markdown',
+  });
+
+  const initialState = workspace.snapshot();
+  const notes = initialState.resources.find((resource) => resource.path === '/docs/notes.md');
+  const intro = initialState.resources.find((resource) => resource.path === '/docs/intro.md');
+  assert.equal(Boolean(notes?.metadata.badge?.key), true);
+  assert.equal(Boolean(intro?.metadata.badge?.key), true);
+  assert.equal(notes?.metadata.badge?.key.split('-').length, 4);
+  assert.equal(['center', 'top', 'right', 'bottom', 'left'].includes(notes?.metadata.badge?.placement ?? ''), true);
+  assert.equal(Object.hasOwn(notes?.metadata.badge ?? {}, 'rotation'), false);
+
+  const duplicatedBadgeState = {
+    ...initialState,
+    resources: initialState.resources.map((resource) =>
+      resource.id === intro?.id
+        ? {
+          ...resource,
+          metadata: {
+            ...resource.metadata,
+            badge: intro?.metadata.badge
+              ? {
+                ...intro.metadata.badge,
+                shape: notes?.metadata.badge?.shape ?? intro.metadata.badge.shape,
+                accent: notes?.metadata.badge?.accent ?? intro.metadata.badge.accent,
+                mark: notes?.metadata.badge?.mark ?? intro.metadata.badge.mark,
+                placement: notes?.metadata.badge?.placement ?? intro.metadata.badge.placement,
+              }
+              : notes?.metadata.badge,
+          },
+        }
+        : resource),
+  };
+  const restoredState = createWorkspaceService({
+    state: duplicatedBadgeState,
+    idFactory: createSequentialIdFactory('restored-badge'),
+    now: () => '2026-05-24T00:00:00.000Z',
+  }).snapshot();
+
+  const restoredNotes = restoredState.resources.find((resource) => resource.path === '/docs/notes.md');
+  const restoredIntro = restoredState.resources.find((resource) => resource.path === '/docs/intro.md');
+  assert.notEqual(restoredIntro?.metadata.badge?.key, restoredNotes?.metadata.badge?.key);
+  const repairedEntries = [restoredNotes, restoredIntro].filter((resource) => resource?.metadata.badge?.repairedFromKey);
+  assert.equal(repairedEntries.length, 1);
+  assert.equal(repairedEntries[0]?.metadata.badge?.repairedFromKey, notes?.metadata.badge?.key);
+
+  const diagnostics = listWorkspaceBadgeDiagnostics(restoredState);
+  assert.equal(diagnostics.length, 1);
+  assert.equal(['/docs/notes.md', '/docs/intro.md'].includes(diagnostics[0]?.path), true);
+  assert.equal(['center', 'top', 'right', 'bottom', 'left'].includes(diagnostics[0]?.badge?.placement ?? ''), true);
+  assert.equal(createWorkspaceTreeItems(restoredState).every((item) => Boolean(item.badge?.key)), true);
+});
+
 test('workspace contribution manifest exposes the Phase 3.3 shell commands', () => {
   const manifest = createWorkspaceContributionManifest();
 
@@ -132,6 +204,7 @@ test('workspace archives round-trip full workspace state through zip', () => {
   assert.equal(imported.state.manifest.workspaceId, 'workspace-archive-test');
   assert.equal(restoredWorkspace.getEntryByPath('/docs/notes.md')?.kind, 'text');
   assert.equal(restoredWorkspace.getEntryByPath('/docs/notes.md')?.text, '# Notes\n');
+  assert.equal(restoredWorkspace.getEntryByPath('/docs/notes.md')?.metadata.badge?.key, notes.metadata.badge?.key);
   assert.deepEqual(restoredWorkspace.getEntryByPath('/docs/system.svg')?.bytes, binaryBytes);
 });
 
@@ -249,6 +322,10 @@ test('persisted workspace service hydrates through Dexie and preserves IDs, sele
   assert.equal(restored.hydrationSource, 'storage');
   assert.equal(restored.workspace.getManifest().selectedResourceId, selectedResource?.id);
   assert.equal(restored.workspace.getEntryByPath('/docs/followup.md')?.text, 'persist me');
+  assert.equal(
+    restored.workspace.getEntryByPath('/docs/followup.md')?.metadata.badge?.key,
+    createdText.metadata.badge?.key,
+  );
   assert.deepEqual(restored.workspace.getEntryByPath('/docs/diagram.svg')?.bytes, createdBinary.bytes);
 
   const postHydration = restored.workspace.createTextResource({

@@ -7,6 +7,7 @@ import {
   createForbiddenFilesystemApiCheck,
   createLocalCommandDispatchCheck,
   createOpenSourceLicenseGate,
+  createVisualIdentityBoundaryCheck,
   defaultSecurityProfile,
   runSecurityChecks,
 } from '../src/index.js';
@@ -17,6 +18,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
   const archiveBoundaryCheck = createArchiveBoundaryDocumentationCheck();
   const storageBoundaryCheck = createBrowserStorageBoundaryCheck();
   const commandDispatchCheck = createLocalCommandDispatchCheck();
+  const visualIdentityCheck = createVisualIdentityBoundaryCheck();
 
   assert.equal(licenseGate.run({
     profile: defaultSecurityProfile,
@@ -55,6 +57,19 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       notesUri: 'docs/specs/local-command-dispatch.md',
     },
   }).passed, true);
+  assert.equal(visualIdentityCheck.run({
+    profile: defaultSecurityProfile,
+    visualIdentity: {
+      documented: true,
+      deterministic: true,
+      usesLocalIcons: true,
+      usesRemoteIcons: false,
+      usesRemoteImages: false,
+      usesFilesystemDerivedIdentity: false,
+      usesUserProvidedImages: false,
+      notesUri: 'docs/specs/resource-identity-badges.md',
+    },
+  }).passed, true);
 
   const results = runSecurityChecks(defaultSecurityProfile, {
     manifest: {
@@ -67,6 +82,16 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
     artifacts: [{ uri: '/assets/textforge.css' }],
     filesystemApis: ['showDirectoryPicker'],
     archiveBoundary: { documented: false },
+    visualIdentity: {
+      documented: true,
+      deterministic: false,
+      usesLocalIcons: false,
+      usesRemoteIcons: true,
+      usesRemoteImages: false,
+      usesFilesystemDerivedIdentity: true,
+      usesUserProvidedImages: true,
+      notesUri: 'docs/specs/resource-identity-badges.md',
+    },
     storageBoundary: {
       documented: true,
       browserManaged: true,
@@ -90,6 +115,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
 
   assert.equal(results.some((result) => result.kind === 'filesystem-api' && result.passed === false), true);
   assert.equal(results.some((result) => result.kind === 'archive-boundary' && result.passed === false), true);
+  assert.equal(results.some((result) => result.kind === 'visual-identity' && result.passed === false), true);
   assert.equal(results.some((result) => result.kind === 'storage-boundary' && result.passed === false), true);
   assert.equal(results.some((result) => result.kind === 'command-dispatch' && result.passed === false), true);
 });

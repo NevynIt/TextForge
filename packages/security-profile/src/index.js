@@ -247,6 +247,52 @@ export function createArchiveBoundaryDocumentationCheck(options = {}) {
   };
 }
 
+export function createVisualIdentityBoundaryCheck(options = {}) {
+  return {
+    id: options.id ?? 'security.visualIdentity',
+    kind: 'visual-identity',
+    label: options.label ?? 'Visual identity boundary',
+    run(context) {
+      const diagnostics = [];
+      const visualIdentity = context.visualIdentity;
+
+      if (!visualIdentity?.documented) {
+        diagnostics.push(createIssue('Resource identity badge and icon behavior must be documented.', 'warning', context.resource));
+      } else {
+        if (!visualIdentity.deterministic) {
+          diagnostics.push(createIssue('Resource identity badges must remain deterministic.', 'error', context.resource));
+        }
+
+        if (!visualIdentity.usesLocalIcons) {
+          diagnostics.push(createIssue('React UI icons must remain local and bundled.', 'error', context.resource));
+        }
+
+        if (!visualIdentity.notesUri) {
+          diagnostics.push(createIssue('Visual identity documentation should link to a badge/icon policy note.', 'warning', context.resource));
+        }
+      }
+
+      if (visualIdentity?.usesRemoteIcons) {
+        diagnostics.push(createIssue('Resource identity chrome must not fetch remote icons.', 'error', context.resource));
+      }
+
+      if (visualIdentity?.usesRemoteImages) {
+        diagnostics.push(createIssue('Resource identity badges must not fetch remote images.', 'error', context.resource));
+      }
+
+      if (visualIdentity?.usesFilesystemDerivedIdentity) {
+        diagnostics.push(createIssue('Resource identity badges must not depend on filesystem-derived identity.', 'error', context.resource));
+      }
+
+      if (visualIdentity?.usesUserProvidedImages) {
+        diagnostics.push(createIssue('Resource identity chrome must not use user-provided images as icon identity.', 'error', context.resource));
+      }
+
+      return createResult('security.visualIdentity', 'visual-identity', diagnostics, 'Visual identity boundary inspected.');
+    },
+  };
+}
+
 export function createBrowserStorageBoundaryCheck(options = {}) {
   return {
     id: options.id ?? 'security.storageBoundary',
@@ -358,6 +404,7 @@ export const defaultSecurityProfile = createSecurityProfile({
     createForbiddenBrowserApiCheck(),
     createForbiddenFilesystemApiCheck(),
     createArchiveBoundaryDocumentationCheck(),
+    createVisualIdentityBoundaryCheck(),
     createBrowserStorageBoundaryCheck(),
     createLocalCommandDispatchCheck(),
   ],

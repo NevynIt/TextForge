@@ -10,6 +10,7 @@ export type SecurityCheckKind =
   | 'privileged-api'
   | 'filesystem-api'
   | 'archive-boundary'
+  | 'visual-identity'
   | 'storage-boundary'
   | 'command-dispatch'
   | 'license';
@@ -57,6 +58,17 @@ export interface BrowserStorageBoundarySnapshot {
   readonly notesUri?: string;
 }
 
+export interface VisualIdentityBoundarySnapshot {
+  readonly documented: boolean;
+  readonly deterministic: boolean;
+  readonly usesLocalIcons: boolean;
+  readonly usesRemoteIcons?: boolean;
+  readonly usesRemoteImages?: boolean;
+  readonly usesFilesystemDerivedIdentity?: boolean;
+  readonly usesUserProvidedImages?: boolean;
+  readonly notesUri?: string;
+}
+
 export interface LocalCommandDispatchSnapshot {
   readonly documented: boolean;
   readonly localOnly: boolean;
@@ -92,6 +104,7 @@ export interface SecurityCheckContext {
   readonly privilegedApis?: ReadonlyArray<string>;
   readonly filesystemApis?: ReadonlyArray<string>;
   readonly archiveBoundary?: ArchiveBoundarySnapshot;
+  readonly visualIdentity?: VisualIdentityBoundarySnapshot;
   readonly storageBoundary?: BrowserStorageBoundarySnapshot;
   readonly commandDispatch?: LocalCommandDispatchSnapshot;
 }
@@ -396,6 +409,55 @@ export function createArchiveBoundaryDocumentationCheck(options: {
   };
 }
 
+export function createVisualIdentityBoundaryCheck(options: {
+  readonly id?: string;
+  readonly label?: string;
+} = {}): SecurityCheck {
+  return {
+    id: options.id ?? 'security.visualIdentity',
+    kind: 'visual-identity',
+    label: options.label ?? 'Visual identity boundary',
+    run(context) {
+      const diagnostics: Diagnostic[] = [];
+      const visualIdentity = context.visualIdentity;
+
+      if (!visualIdentity?.documented) {
+        diagnostics.push(createIssue('Resource identity badge and icon behavior must be documented.', 'warning', context.resource));
+      } else {
+        if (!visualIdentity.deterministic) {
+          diagnostics.push(createIssue('Resource identity badges must remain deterministic.', 'error', context.resource));
+        }
+
+        if (!visualIdentity.usesLocalIcons) {
+          diagnostics.push(createIssue('React UI icons must remain local and bundled.', 'error', context.resource));
+        }
+
+        if (!visualIdentity.notesUri) {
+          diagnostics.push(createIssue('Visual identity documentation should link to a badge/icon policy note.', 'warning', context.resource));
+        }
+      }
+
+      if (visualIdentity?.usesRemoteIcons) {
+        diagnostics.push(createIssue('Resource identity chrome must not fetch remote icons.', 'error', context.resource));
+      }
+
+      if (visualIdentity?.usesRemoteImages) {
+        diagnostics.push(createIssue('Resource identity badges must not fetch remote images.', 'error', context.resource));
+      }
+
+      if (visualIdentity?.usesFilesystemDerivedIdentity) {
+        diagnostics.push(createIssue('Resource identity badges must not depend on filesystem-derived identity.', 'error', context.resource));
+      }
+
+      if (visualIdentity?.usesUserProvidedImages) {
+        diagnostics.push(createIssue('Resource identity chrome must not use user-provided images as icon identity.', 'error', context.resource));
+      }
+
+      return createResult('security.visualIdentity', 'visual-identity', diagnostics, 'Visual identity boundary inspected.');
+    },
+  };
+}
+
 export function createBrowserStorageBoundaryCheck(options: {
   readonly id?: string;
   readonly label?: string;
@@ -513,6 +575,7 @@ export const defaultSecurityProfile = createSecurityProfile({
     createForbiddenBrowserApiCheck(),
     createForbiddenFilesystemApiCheck(),
     createArchiveBoundaryDocumentationCheck(),
+    createVisualIdentityBoundaryCheck(),
     createBrowserStorageBoundaryCheck(),
     createLocalCommandDispatchCheck(),
   ],

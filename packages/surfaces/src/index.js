@@ -389,9 +389,11 @@ export function createSurfaceSessionTab(session) {
     surfaceId: session.contributionId,
     resourceId: session.resource.resourceId,
     title: session.title,
+    badge: session.resource.badge,
     active: session.state === 'open',
     dirty: false,
     stale: session.state === 'stale',
+    attention: session.resource.badge?.repairedFromKey ? 'warning' : undefined,
   };
 }
 

@@ -1,4 +1,5 @@
-import type { CSSProperties, ReactNode } from 'react';
+import type { ResourceBadgeToken } from '@textforge/core';
+import type { ReactNode } from 'react';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ChromeDensity = 'compact' | 'comfortable';
@@ -6,6 +7,26 @@ export type FrameRegionKind = 'toolbar' | 'sidebar' | 'main' | 'footer' | 'overl
 export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
 export type WorkspaceTreeItemKind = 'folder' | 'text' | 'binary';
 export type SurfaceTabLayout = 'single' | 'tabs';
+export type ResourceAttention = 'warning';
+export type IconName =
+  | 'success'
+  | 'warning'
+  | 'info'
+  | 'search'
+  | 'command'
+  | 'folder'
+  | 'folderOpen'
+  | 'fileText'
+  | 'fileImage'
+  | 'fileBinary'
+  | 'import'
+  | 'export'
+  | 'collapse'
+  | 'expand'
+  | 'close'
+  | 'utility'
+  | 'status'
+  | 'lock';
 
 export interface ThemeTokens {
   readonly brand: string;
@@ -51,6 +72,7 @@ export interface ToolbarSlot {
   readonly label: string;
   readonly kind: 'command' | 'navigation' | 'status' | 'workspace';
   readonly description?: string;
+  readonly icon?: IconName;
   readonly pinned?: boolean;
   readonly disabled?: boolean;
   readonly shortcut?: string;
@@ -60,6 +82,7 @@ export interface CommandMenuItem {
   readonly commandId: string;
   readonly label: string;
   readonly description?: string;
+  readonly icon?: IconName;
   readonly shortcut?: string;
   readonly disabled?: boolean;
 }
@@ -67,6 +90,7 @@ export interface CommandMenuItem {
 export interface CommandMenuGroup {
   readonly id: string;
   readonly label: string;
+  readonly icon?: IconName;
   readonly items: ReadonlyArray<CommandMenuItem>;
 }
 
@@ -83,9 +107,11 @@ export interface WorkspaceTreeItem {
   readonly path: string;
   readonly kind: WorkspaceTreeItemKind;
   readonly depth: number;
+  readonly detail?: string;
   readonly expanded?: boolean;
   readonly active?: boolean;
-  readonly badge?: string;
+  readonly attention?: ResourceAttention;
+  readonly badge?: ResourceBadgeToken;
 }
 
 export interface WorkspaceTreeFrame {
@@ -102,6 +128,8 @@ export interface SurfaceTab {
   readonly resourceId?: string;
   readonly title: string;
   readonly active?: boolean;
+  readonly badge?: ResourceBadgeToken;
+  readonly attention?: ResourceAttention;
   readonly dirty?: boolean;
   readonly stale?: boolean;
 }
@@ -119,6 +147,7 @@ export interface StatusBadge {
   readonly id: string;
   readonly label: string;
   readonly tone: BadgeTone;
+  readonly icon?: IconName;
   readonly detail?: string;
 }
 
@@ -148,6 +177,7 @@ export interface CommandPaletteEntry {
   readonly label: string;
   readonly description?: string;
   readonly group?: string;
+  readonly icon?: IconName;
   readonly shortcut?: string;
   readonly disabled?: boolean;
   readonly keywords?: ReadonlyArray<string>;
@@ -163,6 +193,7 @@ export interface TextForgeToolbarButtonProps {
   readonly active?: boolean;
   readonly ariaLabel?: string;
   readonly disabled?: boolean;
+  readonly icon?: IconName;
   readonly kind?: 'primary' | 'secondary' | 'toggle';
   readonly label: string;
   readonly onPress?: () => void;
@@ -181,6 +212,13 @@ export interface TextForgeCalloutProps {
 }
 
 export interface TextForgeTopBarProps {
+  readonly activeResource?: {
+    readonly title: string;
+    readonly detail?: string;
+    readonly icon?: IconName;
+    readonly attention?: ResourceAttention;
+    readonly badge?: ResourceBadgeToken;
+  };
   readonly brandTitle: string;
   readonly commandPaletteLabel?: string;
   readonly commandPaletteShortcut?: string;
@@ -233,6 +271,7 @@ export interface TextForgeSelectFieldProps {
 export interface UtilityPaneSection {
   readonly id: string;
   readonly label: string;
+  readonly icon?: IconName;
 }
 
 export interface TextForgeUtilityPaneProps {
@@ -265,6 +304,30 @@ export interface TextForgeAppFrameProps {
   readonly utilityOpen?: boolean;
 }
 
+export interface TextForgeResourceBadgeProps {
+  readonly active?: boolean;
+  readonly attention?: ResourceAttention;
+  readonly badge?: ResourceBadgeToken;
+  readonly label?: string;
+  readonly size?: 'compact' | 'regular';
+}
+
+export interface TextForgeInspectorCardProps {
+  readonly actions?: ReadonlyArray<ReactNode>;
+  readonly children?: ReactNode;
+  readonly eyebrow?: string;
+  readonly icon?: IconName;
+  readonly title: string;
+}
+
+export interface TextForgeEmptyStateProps {
+  readonly actions?: ReadonlyArray<ReactNode>;
+  readonly children?: ReactNode;
+  readonly eyebrow?: string;
+  readonly icon?: IconName;
+  readonly title: string;
+}
+
 export declare function createWorkbenchTheme(overrides?: Partial<WorkbenchTheme>): WorkbenchTheme;
 export declare const defaultTheme: WorkbenchTheme;
 export declare function createWorkspaceTreeFrameModel(overrides?: Partial<WorkspaceTreeFrame>): WorkspaceTreeFrame;
@@ -276,6 +339,9 @@ export declare function createWorkbenchChromeModel(overrides?: Partial<Workbench
 
 export declare function TextForgeToolbarButton(props: TextForgeToolbarButtonProps): unknown;
 export declare function TextForgeCallout(props: TextForgeCalloutProps): unknown;
+export declare function TextForgeResourceBadge(props: TextForgeResourceBadgeProps): unknown;
+export declare function TextForgeInspectorCard(props: TextForgeInspectorCardProps): unknown;
+export declare function TextForgeEmptyState(props: TextForgeEmptyStateProps): unknown;
 export declare function TextForgeStatusRail(props: TextForgeStatusRailProps): unknown;
 export declare function TextForgeTopBar(props: TextForgeTopBarProps): unknown;
 export declare function TextForgeWorkspaceSidebar(props: TextForgeWorkspaceSidebarProps): unknown;

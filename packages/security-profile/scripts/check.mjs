@@ -5,12 +5,14 @@ import {
   createBrowserStorageBoundaryCheck,
   createForbiddenFilesystemApiCheck,
   createOpenSourceLicenseGate,
+  createVisualIdentityBoundaryCheck,
   defaultSecurityProfile,
   runSecurityChecks,
 } from '../src/index.js';
 
 assert.equal(defaultSecurityProfile.checks.some((check) => check.kind === 'filesystem-api'), true);
 assert.equal(defaultSecurityProfile.checks.some((check) => check.kind === 'archive-boundary'), true);
+assert.equal(defaultSecurityProfile.checks.some((check) => check.kind === 'visual-identity'), true);
 
 assert.equal(createOpenSourceLicenseGate().run({
   profile: defaultSecurityProfile,
@@ -41,6 +43,19 @@ assert.equal(createBrowserStorageBoundaryCheck().run({
     usesSilentLocalFileAccess: false,
   },
 }).passed, true);
+assert.equal(createVisualIdentityBoundaryCheck().run({
+  profile: defaultSecurityProfile,
+  visualIdentity: {
+    documented: true,
+    deterministic: true,
+    usesLocalIcons: true,
+    usesRemoteIcons: false,
+    usesRemoteImages: false,
+    usesFilesystemDerivedIdentity: false,
+    usesUserProvidedImages: false,
+    notesUri: 'docs/specs/resource-identity-badges.md',
+  },
+}).passed, true);
 
 const results = runSecurityChecks(defaultSecurityProfile, {
   manifest: {
@@ -53,6 +68,16 @@ const results = runSecurityChecks(defaultSecurityProfile, {
   artifacts: [{ uri: '/assets/textforge.css' }],
   filesystemApis: ['showDirectoryPicker'],
   archiveBoundary: { documented: false },
+  visualIdentity: {
+    documented: true,
+    deterministic: false,
+    usesLocalIcons: false,
+    usesRemoteIcons: true,
+    usesRemoteImages: false,
+    usesFilesystemDerivedIdentity: true,
+    usesUserProvidedImages: true,
+    notesUri: 'docs/specs/resource-identity-badges.md',
+  },
   storageBoundary: {
     documented: true,
     browserManaged: true,
@@ -69,6 +94,7 @@ const results = runSecurityChecks(defaultSecurityProfile, {
 
 assert.equal(results.some((result) => result.kind === 'filesystem-api' && result.passed === false), true);
 assert.equal(results.some((result) => result.kind === 'archive-boundary' && result.passed === false), true);
+assert.equal(results.some((result) => result.kind === 'visual-identity' && result.passed === false), true);
 assert.equal(results.some((result) => result.kind === 'storage-boundary' && result.passed === false), true);
 
 console.info('security-profile package checks passed');

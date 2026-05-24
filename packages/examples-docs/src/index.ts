@@ -36,6 +36,13 @@ export const docsIndex = {
       summary: 'A minimal template that package guides can reuse for public docs.',
       tags: ['docs', 'template', 'package'],
     },
+    {
+      id: 'resource-identity-badges',
+      title: 'Resource identity badges',
+      summary: 'Phase 3.4 guidance for deterministic badges, local icons, and collision repair.',
+      href: 'docs/specs/resource-identity-badges.md',
+      tags: ['phase-3.4', 'badges', 'icons', 'readability'],
+    },
   ] satisfies ReadonlyArray<DocumentationTopic>,
   sampleWorkspaces: [
     {
@@ -46,6 +53,8 @@ export const docsIndex = {
       notes: [
         'Treat Markdown and structured model files as canonical workspace inputs.',
         'Keep generated previews and exports as derived resources.',
+        'Use deterministic resource badges so tree, tabs, header, and inspector keep the same orientation cues.',
+        'When imported badge metadata collides, repair it deterministically and surface the local diagnostic in shell chrome.',
       ],
     },
   ] satisfies ReadonlyArray<SampleWorkspaceConvention>,
