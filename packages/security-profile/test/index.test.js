@@ -5,6 +5,7 @@ import {
   createArchiveBoundaryDocumentationCheck,
   createBrowserStorageBoundaryCheck,
   createForbiddenFilesystemApiCheck,
+  createLocalCommandDispatchCheck,
   createOpenSourceLicenseGate,
   defaultSecurityProfile,
   runSecurityChecks,
@@ -15,6 +16,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
   const filesystemCheck = createForbiddenFilesystemApiCheck();
   const archiveBoundaryCheck = createArchiveBoundaryDocumentationCheck();
   const storageBoundaryCheck = createBrowserStorageBoundaryCheck();
+  const commandDispatchCheck = createLocalCommandDispatchCheck();
 
   assert.equal(licenseGate.run({
     profile: defaultSecurityProfile,
@@ -43,6 +45,16 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       usesSilentLocalFileAccess: false,
     },
   }).passed, true);
+  assert.equal(commandDispatchCheck.run({
+    profile: defaultSecurityProfile,
+    commandDispatch: {
+      documented: true,
+      localOnly: true,
+      usesPluginExecution: false,
+      usesRemoteExecution: false,
+      notesUri: 'docs/specs/local-command-dispatch.md',
+    },
+  }).passed, true);
 
   const results = runSecurityChecks(defaultSecurityProfile, {
     manifest: {
@@ -67,9 +79,17 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       usesSilentLocalFileAccess: false,
       notesUri: 'docs/specs/browser-managed-workspace-storage.md',
     },
+    commandDispatch: {
+      documented: true,
+      localOnly: false,
+      usesPluginExecution: true,
+      usesRemoteExecution: false,
+      notesUri: 'docs/specs/local-command-dispatch.md',
+    },
   });
 
   assert.equal(results.some((result) => result.kind === 'filesystem-api' && result.passed === false), true);
   assert.equal(results.some((result) => result.kind === 'archive-boundary' && result.passed === false), true);
   assert.equal(results.some((result) => result.kind === 'storage-boundary' && result.passed === false), true);
+  assert.equal(results.some((result) => result.kind === 'command-dispatch' && result.passed === false), true);
 });

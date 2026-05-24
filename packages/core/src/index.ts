@@ -88,6 +88,118 @@ export interface Command {
   readonly capabilities?: ReadonlyArray<Capability['id']>;
 }
 
+export interface CommandToolbarPresentation {
+  readonly order?: number;
+  readonly kind?: 'primary' | 'secondary';
+}
+
+export interface CommandMenuPresentation {
+  readonly id: string;
+  readonly label: string;
+  readonly groupOrder?: number;
+  readonly order?: number;
+}
+
+export interface CommandContextSelection {
+  readonly resourceId?: string;
+  readonly kind?: string;
+  readonly path?: string;
+  readonly mimeType?: string;
+  readonly languageId?: string;
+}
+
+export interface CommandContextSurface {
+  readonly sessionId?: string;
+  readonly contributionId?: string;
+  readonly placement?: string;
+  readonly resourceId?: string;
+  readonly resourceKind?: ResourceKind | string;
+  readonly freshness?: string;
+}
+
+export interface CommandContext {
+  readonly runtimeStatus?: string;
+  readonly workspaceReady?: boolean;
+  readonly selection?: CommandContextSelection;
+  readonly activeSurface?: CommandContextSurface;
+  readonly availableSurfaceIds?: ReadonlyArray<string>;
+}
+
+export interface CommandWhen {
+  readonly runtimeStatuses?: ReadonlyArray<string>;
+  readonly workspaceReady?: boolean;
+  readonly selectionRequired?: boolean;
+  readonly selectionKinds?: ReadonlyArray<string>;
+  readonly activeSurfaceRequired?: boolean;
+  readonly activeSurfacePlacements?: ReadonlyArray<string>;
+  readonly activeSurfaceResourceKinds?: ReadonlyArray<string>;
+  readonly activeSurfaceContributionIds?: ReadonlyArray<string>;
+  readonly availableSurfaceIds?: ReadonlyArray<string>;
+}
+
+export interface CommandContribution extends Command {
+  readonly packageId?: string;
+  readonly category?: string;
+  readonly keywords?: ReadonlyArray<string>;
+  readonly toolbar?: CommandToolbarPresentation;
+  readonly menu?: CommandMenuPresentation;
+  readonly when?: CommandWhen;
+}
+
+export interface CommandManifest {
+  readonly packageId: string;
+  readonly commands: ReadonlyArray<CommandContribution>;
+}
+
+export interface ResolvedCommand extends CommandContribution {
+  readonly packageId: string;
+  readonly visible: boolean;
+  readonly enabled: boolean;
+}
+
+export interface CommandMenuGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly groupOrder?: number;
+  readonly commands: ReadonlyArray<ResolvedCommand>;
+}
+
+export interface CommandDispatcherExecution {
+  readonly context?: CommandContext;
+}
+
+export interface CommandHandlerExecution {
+  readonly command: ResolvedCommand;
+  readonly context: CommandContext;
+}
+
+export type CommandHandler<TResult = unknown> = (execution: CommandHandlerExecution) => TResult | Promise<TResult>;
+
+export interface CommandDispatcherResult<TResult = unknown> {
+  readonly handled: boolean;
+  readonly command?: ResolvedCommand;
+  readonly context: CommandContext;
+  readonly value?: TResult;
+}
+
+export interface CommandRegistry {
+  registerManifest(manifest: CommandManifest | Pick<ContributionManifest, 'packageId' | 'commands'> | { readonly id: string; readonly commands?: ReadonlyArray<CommandContribution> }): CommandRegistry;
+  registerCommands(packageId: string, commands?: ReadonlyArray<CommandContribution>): CommandRegistry;
+  get(commandId: string): CommandContribution | undefined;
+  list(): ReadonlyArray<CommandContribution>;
+  listManifests(): ReadonlyArray<CommandManifest>;
+  resolve(context?: CommandContext): ReadonlyArray<ResolvedCommand>;
+  listToolbar(context?: CommandContext): ReadonlyArray<ResolvedCommand>;
+  listMenus(context?: CommandContext): ReadonlyArray<CommandMenuGroup>;
+}
+
+export interface CommandDispatcher {
+  register(commandId: string, handler: CommandHandler): CommandDispatcher;
+  get(commandId: string): CommandHandler | undefined;
+  listHandlers(): ReadonlyArray<string>;
+  execute(commandId: string, execution?: CommandDispatcherExecution): Promise<CommandDispatcherResult>;
+}
+
 export interface SurfaceContribution {
   readonly id: string;
   readonly role?: 'main' | 'popup' | 'auxiliary';
@@ -101,13 +213,14 @@ export interface PipelineContribution {
 }
 
 export interface ContributionManifest {
+  readonly id?: string;
   readonly packageId: string;
   readonly name?: string;
   readonly version?: string;
   readonly description?: string;
   readonly dependencies?: ReadonlyArray<string>;
   readonly capabilities?: ReadonlyArray<Capability>;
-  readonly commands?: ReadonlyArray<Command>;
+  readonly commands?: ReadonlyArray<CommandContribution>;
   readonly surfaces?: ReadonlyArray<SurfaceContribution>;
   readonly pipelines?: ReadonlyArray<PipelineContribution>;
 }
@@ -133,38 +246,67 @@ export interface CanonicalPatch {
   readonly summary?: string;
 }
 
-export const contributionKinds = {
-  diagnostics: 'diagnostics',
-  commands: 'commands',
-  surfaces: 'surfaces',
-  pipelines: 'pipelines',
-} as const;
+export const contributionKinds: {
+  readonly diagnostics: 'diagnostics';
+  readonly commands: 'commands';
+  readonly surfaces: 'surfaces';
+  readonly pipelines: 'pipelines';
+};
 
-export const languageDefinitions: ReadonlyArray<LanguageDefinition> = [
-  { id: 'plaintext', label: 'Plain text', mimeTypes: ['text/plain'], extensions: ['txt', 'text'], sourceEditor: true },
-  { id: 'markdown', label: 'Markdown', mimeTypes: ['text/markdown', 'text/x-markdown'], extensions: ['md', 'markdown'], sourceEditor: true },
-  { id: 'itm', label: 'ITM', mimeTypes: ['text/x-itm'], extensions: ['itm'], sourceEditor: true },
-  { id: 'lua', label: 'Lua', mimeTypes: ['text/x-lua', 'application/x-lua'], extensions: ['lua'], sourceEditor: true },
-  { id: 'json', label: 'JSON', mimeTypes: ['application/json', 'text/json'], extensions: ['json'], sourceEditor: true },
-  { id: 'xml', label: 'XML', mimeTypes: ['application/xml', 'text/xml'], extensions: ['xml'], sourceEditor: true },
-  { id: 'bpmn-xml', label: 'BPMN XML', mimeTypes: ['application/bpmn+xml'], extensions: ['bpmn'], sourceEditor: true },
-  { id: 'archimate-exchange-xml', label: 'ArchiMate exchange XML', mimeTypes: ['application/vnd.opengroup.archimate+xml'], extensions: ['archimate', 'xml'], sourceEditor: true },
-  { id: 'csv', label: 'CSV', mimeTypes: ['text/csv'], extensions: ['csv'], sourceEditor: true },
-  { id: 'tsv', label: 'TSV', mimeTypes: ['text/tab-separated-values'], extensions: ['tsv'], sourceEditor: true },
-  { id: 'mermaid', label: 'Mermaid', mimeTypes: ['text/x-mermaid'], extensions: ['mmd', 'mermaid'], sourceEditor: true },
-  { id: 'dot', label: 'DOT', mimeTypes: ['text/vnd.graphviz'], extensions: ['dot', 'gv'], sourceEditor: true },
-  { id: 'svg', label: 'SVG', mimeTypes: ['image/svg+xml'], extensions: ['svg'], sourceEditor: true },
-  { id: 'yaml', label: 'YAML', mimeTypes: ['application/yaml', 'text/yaml', 'text/x-yaml'], extensions: ['yaml', 'yml'], sourceEditor: true },
-];
+export const languageDefinitions: ReadonlyArray<LanguageDefinition>;
 
-export const editorCapabilityIds = {
-  source: 'editor.source',
-  sourceRange: 'editor.source-range',
-  diagnostics: 'editor.diagnostics',
-  languageMode: 'editor.language-mode',
-  sourceFallback: 'editor.source-fallback',
-} as const;
+export const editorCapabilityIds: {
+  readonly source: 'editor.source';
+  readonly sourceRange: 'editor.source-range';
+  readonly diagnostics: 'editor.diagnostics';
+  readonly languageMode: 'editor.language-mode';
+  readonly sourceFallback: 'editor.source-fallback';
+};
 
+export declare function createSourcePosition(line: number, column: number, offset?: number): SourcePosition;
+export declare function createSourceRange(start: SourcePosition, end: SourcePosition): SourceRange;
+export declare function createResourceRef(resourceId: string, overrides?: Partial<ResourceRef>): ResourceRef;
+export declare function createDiagnostic(message: string, severity?: Severity, overrides?: Partial<Diagnostic>): Diagnostic;
+export declare function createCapability(id: string, overrides?: Partial<Capability>): Capability;
+export declare function createCommand(
+  id: string,
+  label: string,
+  overrides?: Partial<CommandContribution>,
+): CommandContribution;
+export declare function createCommandManifest(
+  packageId: string,
+  commands?: ReadonlyArray<CommandContribution>,
+): CommandManifest;
+export declare function createCommandContext(overrides?: CommandContext): CommandContext;
+export declare function matchesCommandContext(command: CommandContribution, context?: CommandContext): boolean;
+export declare function resolveCommandState(
+  command: CommandContribution,
+  context?: CommandContext,
+): ResolvedCommand;
+export declare function createCommandRegistry(
+  initialManifests?: ReadonlyArray<CommandManifest | Pick<ContributionManifest, 'packageId' | 'commands'> | { readonly id: string; readonly commands?: ReadonlyArray<CommandContribution> }>,
+): CommandRegistry;
+export declare function createCommandDispatcher(options?: {
+  readonly registry?: CommandRegistry;
+  readonly getContext?: () => CommandContext;
+  readonly handlers?: Readonly<Record<string, CommandHandler>>;
+}): CommandDispatcher;
+export declare function createSurfaceContribution(id: string, overrides?: Partial<SurfaceContribution>): SurfaceContribution;
+export declare function createPipelineContribution(id: string, overrides?: Partial<PipelineContribution>): PipelineContribution;
+export declare function createContributionManifest(
+  packageId: string,
+  overrides?: Partial<ContributionManifest>,
+): ContributionManifest;
+export declare function createPipelineValue<TValue = unknown>(
+  kind: string,
+  value: TValue,
+  overrides?: Partial<PipelineValue<TValue>>,
+): PipelineValue<TValue>;
+export declare function createCanonicalPatch(
+  target: ResourceRef,
+  operations: ReadonlyArray<CanonicalPatchOperation>,
+  overrides?: Partial<CanonicalPatch>,
+): CanonicalPatch;
 export declare function getLanguageDefinition(languageId: LanguageId | string | undefined): LanguageDefinition | undefined;
 export declare function inferLanguageId(input: {
   readonly path?: string;
@@ -172,10 +314,6 @@ export declare function inferLanguageId(input: {
   readonly fallback?: LanguageId;
 }): LanguageId;
 
-export const contributions = {
-  id: '@textforge/core',
-  diagnostics: [],
-  commands: [],
-  surfaces: [],
-  pipelines: [],
-} as const;
+export declare const defaultContributionManifest: ContributionManifest;
+
+export declare const contributions: ContributionManifest;

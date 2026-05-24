@@ -274,6 +274,8 @@ Deliberate pull-forward. This moves the shell-facing command palette and menu/to
 
 Scope boundary: no full pipeline contribution loading, no diagnostics aggregation UI, no plugin manager, no deep context-menu proliferation, no advanced permissions model, and no later domain packages. Phase 5 remains responsible for the broader contribution-pack system.
 
+Implementation note: the delivered Phase 3.3 shell slice uses a local command registry and dispatcher in `@textforge/core`, contribution-driven toolbar/menu slots, and a local command palette. It does not introduce external package loading, remote command execution, or plugin-management UX.
+
 ### Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
 
 #### Architecture and pnpm implementation anchors

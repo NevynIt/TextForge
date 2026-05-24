@@ -4,6 +4,7 @@ import test from 'node:test';
 import {
   applyTextEdit,
   createCodeMirrorTextEditorSurface,
+  createEditorCommandContributions,
   createTextEditorDocument,
   createTextEditorSelection,
   listTextEditorLanguageModes,
@@ -32,5 +33,6 @@ test('text editor selection and edit helpers preserve document metadata', () => 
   )).parserBacked, false);
   assert.equal(listTextEditorLanguageModes().some((mode) => mode.languageId === 'bpmn-xml'), true);
   assert.equal(listTextEditorLanguageModes().find((mode) => mode.languageId === 'svg')?.parserBacked, true);
+  assert.equal(createEditorCommandContributions().some((command) => command.id === 'editor.set-language:yaml'), true);
   assert.equal(typeof surface.mount, 'function');
 });

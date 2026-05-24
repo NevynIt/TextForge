@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createAssetContributionManifest,
   createBinaryAssetViewerSurface,
   createImageAssetViewerSurface,
   createPdfAssetViewerSurface,
@@ -54,6 +55,7 @@ test('asset viewer helpers select and bind viewer kinds', () => {
   assert.equal(createSvgAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'svg');
   assert.equal(createPdfAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'pdf');
   assert.equal(createBinaryAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'binary');
+  assert.equal(createAssetContributionManifest().commands.some((command) => command.id === 'asset.download-selected'), true);
   assert.equal(markAssetBindingReleased(binding).state, 'released');
 });
 

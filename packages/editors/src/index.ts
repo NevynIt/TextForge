@@ -1,4 +1,4 @@
-import type { Diagnostic, LanguageId, ResourceRef, SourceRange } from '@textforge/core';
+import type { CommandContribution, ContributionManifest, Diagnostic, LanguageId, ResourceRef, SourceRange } from '@textforge/core';
 import type { SurfaceContribution, SurfacePlacement, SurfaceOpenRequest } from '@textforge/surfaces';
 
 export type TextEditOperation =
@@ -98,14 +98,6 @@ export const codeMirrorTextEditorSurfaceContribution: TextEditorSurfaceContribut
   resourceKinds: ['text'],
   openWithPriority: 100,
 };
-
-export const contributions = {
-  id: '@textforge/editors',
-  diagnostics: [],
-  commands: [],
-  surfaces: [codeMirrorTextEditorSurfaceContribution],
-  pipelines: [],
-} as const;
 
 export function createTextEditorSelection(anchor: number, head: number = anchor): TextEditorSelection {
   return { anchor, head };
@@ -235,6 +227,12 @@ export declare function createTextEditorLanguageModeConfig(
 ): TextEditorLanguageModeConfig;
 
 export declare function listTextEditorLanguageModes(): ReadonlyArray<TextEditorLanguageModeConfig>;
+export declare function createEditorCommandContributions(
+  languageModes?: ReadonlyArray<TextEditorLanguageModeConfig>,
+): ReadonlyArray<CommandContribution>;
+export declare function createEditorContributionManifest(
+  languageModes?: ReadonlyArray<TextEditorLanguageModeConfig>,
+): ContributionManifest;
 
 export declare function resolveTextEditorLanguageMode(document: TextEditorDocument): TextEditorLanguageModeConfig;
 
@@ -248,3 +246,5 @@ export declare function createCodeMirrorTextEditorSurface(props?: {
   readonly diagnostics?: ReadonlyArray<Diagnostic>;
   readonly onChange?: (document: TextEditorDocument) => void;
 }): CodeMirrorTextEditorSurface;
+
+export declare const contributions: ContributionManifest;

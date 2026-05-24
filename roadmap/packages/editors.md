@@ -123,3 +123,7 @@ The package now consumes the shared language definitions from `@textforge/core`,
 No new editor behaviour was pulled forward for this phase. The existing CodeMirror surface still mounts through `createCodeMirrorTextEditorSurface(...)`, and the React shell continues to drive package-owned language-mode and open-with controls instead of duplicating editor logic in the app.
 
 Browser validation of the recovered shell confirmed that the CodeMirror editor still mounts, remains editable inside the React frame, and preserves the established source-editor workflow without broadening the package scope.
+
+## Phase 3.3 closure note
+
+The package now exposes the existing source-editor language-mode changes as shell command descriptors rather than only through the surface-side select control. No new editor behavior was added to populate the palette; the command layer simply routes the already-supported language-mode change path through the shared shell command substrate.

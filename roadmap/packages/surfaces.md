@@ -141,3 +141,7 @@ The package now exposes open-with selection models, source-editor fallback recor
 The React shell still consumes the existing public registry and host contracts. The package now adds `listOpenSurfaceSessions(...)` and `createMainSessionTabStrip(...)` so the shell can derive a narrow main document strip from main sessions only while keeping popup sessions out of that strip.
 
 Focused `lint` and `test` checks pass for the package, and browser-level shell validation confirms that the React frame still mounts the package-owned editor and asset surfaces through the unchanged surface registry/open-with path.
+
+## Phase 3.3 closure note
+
+The package now contributes the base shell actions that operate on open surfaces: close, refresh, move between main and popup placement, focus main/popup sessions, and command descriptors for compatible open-with targets. Capability-aware surface routing still stays inside the public surface registry and host contracts; the phase does not pull broader package-composition or later surface contribution work forward.

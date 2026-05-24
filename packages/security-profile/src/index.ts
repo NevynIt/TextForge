@@ -11,6 +11,7 @@ export type SecurityCheckKind =
   | 'filesystem-api'
   | 'archive-boundary'
   | 'storage-boundary'
+  | 'command-dispatch'
   | 'license';
 
 export interface SecurityDependency {
@@ -56,6 +57,14 @@ export interface BrowserStorageBoundarySnapshot {
   readonly notesUri?: string;
 }
 
+export interface LocalCommandDispatchSnapshot {
+  readonly documented: boolean;
+  readonly localOnly: boolean;
+  readonly usesPluginExecution?: boolean;
+  readonly usesRemoteExecution?: boolean;
+  readonly notesUri?: string;
+}
+
 export interface SecurityProfile {
   readonly id: string;
   readonly name: string;
@@ -84,6 +93,7 @@ export interface SecurityCheckContext {
   readonly filesystemApis?: ReadonlyArray<string>;
   readonly archiveBoundary?: ArchiveBoundarySnapshot;
   readonly storageBoundary?: BrowserStorageBoundarySnapshot;
+  readonly commandDispatch?: LocalCommandDispatchSnapshot;
 }
 
 export interface SecurityCheckResult {
@@ -443,6 +453,43 @@ export function createBrowserStorageBoundaryCheck(options: {
   };
 }
 
+export function createLocalCommandDispatchCheck(options: {
+  readonly id?: string;
+  readonly label?: string;
+} = {}): SecurityCheck {
+  return {
+    id: options.id ?? 'security.commandDispatch',
+    kind: 'command-dispatch',
+    label: options.label ?? 'Local command dispatch boundary',
+    run(context) {
+      const diagnostics: Diagnostic[] = [];
+      const commandDispatch = context.commandDispatch;
+
+      if (!commandDispatch?.documented) {
+        diagnostics.push(createIssue('Local command-dispatch behavior must be documented.', 'warning', context.resource));
+      } else {
+        if (!commandDispatch.localOnly) {
+          diagnostics.push(createIssue('Phase 3.3 command dispatch must remain local-only.', 'error', context.resource));
+        }
+
+        if (!commandDispatch.notesUri) {
+          diagnostics.push(createIssue('Local command-dispatch documentation should link to a boundary note.', 'warning', context.resource));
+        }
+      }
+
+      if (commandDispatch?.usesPluginExecution) {
+        diagnostics.push(createIssue('Phase 3.3 command dispatch must not execute plugins or external packages.', 'error', context.resource));
+      }
+
+      if (commandDispatch?.usesRemoteExecution) {
+        diagnostics.push(createIssue('Phase 3.3 command dispatch must not execute remote commands.', 'error', context.resource));
+      }
+
+      return createResult('security.commandDispatch', 'command-dispatch', diagnostics, 'Local command dispatch inspected.');
+    },
+  };
+}
+
 export function runSecurityChecks(profile: SecurityProfile, context: Omit<SecurityCheckContext, 'profile'>): ReadonlyArray<SecurityCheckResult> {
   return profile.checks.map((check) => check.run({ ...context, profile }));
 }
@@ -467,6 +514,7 @@ export const defaultSecurityProfile = createSecurityProfile({
     createForbiddenFilesystemApiCheck(),
     createArchiveBoundaryDocumentationCheck(),
     createBrowserStorageBoundaryCheck(),
+    createLocalCommandDispatchCheck(),
   ],
 });
 

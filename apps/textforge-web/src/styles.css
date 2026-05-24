@@ -130,6 +130,64 @@ select {
   justify-content: flex-end;
 }
 
+.tf-command-menus,
+.tf-command-palette__line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tf-command-menus {
+  position: relative;
+  flex-wrap: wrap;
+}
+
+.tf-command-menu {
+  position: relative;
+}
+
+.tf-command-menu__panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20;
+  min-width: 260px;
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: rgba(10, 15, 27, 0.98);
+  box-shadow: 0 20px 40px rgba(2, 6, 23, 0.35);
+}
+
+.tf-command-menu__item,
+.tf-command-palette__item,
+.tf-command-palette__close {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.tf-command-menu__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 38px;
+  padding: 0 10px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tf-command-menu__meta,
+.tf-command-palette__shortcut,
+.tf-command-palette__group {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
 .tf-badge,
 .tf-button,
 .tf-tab__button,
@@ -183,6 +241,9 @@ select {
 }
 
 .tf-button:focus-visible,
+.tf-command-menu__item:focus-visible,
+.tf-command-palette__item:focus-visible,
+.tf-command-palette__close:focus-visible,
 .tf-tab__button:focus-visible,
 .tf-tab__close:focus-visible,
 .tf-tree__row:focus-visible,
@@ -621,6 +682,91 @@ select {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+}
+
+.tf-command-palette__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: start center;
+  padding: 72px 16px 16px;
+  background: rgba(2, 6, 23, 0.56);
+  backdrop-filter: blur(10px);
+}
+
+.tf-command-palette {
+  width: min(720px, 100%);
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line-strong);
+  border-radius: 16px;
+  background: rgba(10, 15, 27, 0.98);
+  box-shadow: 0 28px 60px rgba(2, 6, 23, 0.45);
+}
+
+.tf-command-palette__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.tf-command-palette__close {
+  min-height: 34px;
+  padding: 0 10px;
+  cursor: pointer;
+}
+
+.tf-command-palette__input {
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--bg-muted);
+  color: var(--text);
+  padding: 0 14px;
+}
+
+.tf-command-palette__list {
+  display: grid;
+  gap: 8px;
+  max-height: min(60vh, 520px);
+  overflow: auto;
+}
+
+.tf-command-palette__item {
+  display: grid;
+  gap: 6px;
+  padding: 12px 14px;
+  cursor: pointer;
+  text-align: left;
+}
+
+.tf-command-palette__item.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tf-command-palette__content,
+.tf-command-palette__empty {
+  display: grid;
+  gap: 4px;
+}
+
+.tf-command-palette__label {
+  font-weight: 600;
+}
+
+.tf-command-palette__line {
+  justify-content: space-between;
+}
+
+.tf-command-palette__detail,
+.tf-command-palette__empty {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
 }
 
 .tf-storage {

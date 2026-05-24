@@ -88,6 +88,25 @@ function handleTreeKeyDown(event, onSelect) {
   }
 }
 
+function matchesCommandPaletteEntry(entry, query) {
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return true;
+  }
+
+  const searchable = [
+    entry.label,
+    entry.description,
+    entry.group,
+    entry.shortcut,
+    ...(entry.keywords ?? []),
+  ]
+    .filter(Boolean)
+    .map((value) => String(value).toLowerCase());
+
+  return searchable.some((value) => value.includes(normalizedQuery));
+}
+
 export function createWorkbenchTheme(overrides = {}) {
   const defaultTheme = {
     id: 'textforge-default',
@@ -190,10 +209,7 @@ export function createAppFrameModel(overrides = {}) {
     ],
     workspaceTree: createWorkspaceTreeFrameModel(),
     surfaceFrame: createSurfaceFrameModel(),
-    toolbarSlots: [
-      createToolbarSlot({ id: 'open-notes', label: 'Open notes', kind: 'workspace', pinned: true }),
-      createToolbarSlot({ id: 'open-architecture', label: 'Architecture note', kind: 'workspace' }),
-    ],
+    toolbarSlots: [],
     statusBadges: [
       createStatusBadge({ id: 'workspace-status', label: 'Workspace ready', tone: 'success' }),
       createStatusBadge({ id: 'surface-status', label: 'No active documents', tone: 'neutral' }),
@@ -213,10 +229,7 @@ export function createAppFrameModel(overrides = {}) {
     ],
     workspaceTree: overrides.workspaceTree ?? createWorkspaceTreeFrameModel(),
     surfaceFrame: overrides.surfaceFrame ?? createSurfaceFrameModel(),
-    toolbarSlots: overrides.toolbarSlots ?? [
-      createToolbarSlot({ id: 'open-notes', label: 'Open notes', kind: 'workspace', pinned: true }),
-      createToolbarSlot({ id: 'open-architecture', label: 'Architecture note', kind: 'workspace' }),
-    ],
+    toolbarSlots: overrides.toolbarSlots ?? [],
     statusBadges: overrides.statusBadges ?? [
       createStatusBadge({ id: 'workspace-status', label: 'Workspace ready', tone: 'success' }),
       createStatusBadge({ id: 'surface-status', label: 'No active documents', tone: 'neutral' }),
@@ -296,8 +309,96 @@ export function TextForgeStatusRail({ badges = [] }) {
   );
 }
 
+function TextForgeCommandMenuBar({ groups = [], onCommandPress }) {
+  const [openMenuId, setOpenMenuId] = React.useState();
+
+  React.useEffect(() => {
+    if (!openMenuId) {
+      return undefined;
+    }
+
+    function handlePointerDown(event) {
+      if (!event.target.closest('[data-command-menu-bar]')) {
+        setOpenMenuId(undefined);
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        setOpenMenuId(undefined);
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [openMenuId]);
+
+  if (groups.length === 0) {
+    return null;
+  }
+
+  return element(
+    'div',
+    { className: 'tf-command-menus', 'data-command-menu-bar': 'true' },
+    ...groups.map((group) =>
+      element(
+        'div',
+        {
+          key: group.id,
+          className: classNames('tf-command-menu', openMenuId === group.id && 'is-open'),
+        },
+        element(TextForgeToolbarButton, {
+          active: openMenuId === group.id,
+          kind: 'secondary',
+          label: group.label,
+          onPress: () => setOpenMenuId((current) => (current === group.id ? undefined : group.id)),
+          title: `Open ${group.label} commands`,
+        }),
+        openMenuId === group.id
+          ? element(
+              'div',
+              {
+                className: 'tf-command-menu__panel',
+                role: 'menu',
+                'aria-label': group.label,
+              },
+              ...group.items.map((item) =>
+                element(
+                  'button',
+                  {
+                    key: item.commandId,
+                    type: 'button',
+                    role: 'menuitem',
+                    className: 'tf-command-menu__item',
+                    disabled: item.disabled,
+                    onClick: () => {
+                      setOpenMenuId(undefined);
+                      onCommandPress?.(item.commandId);
+                    },
+                    title: item.description ?? item.label,
+                  },
+                  element('span', { className: 'tf-command-menu__label' }, item.label),
+                  item.shortcut
+                    ? element('span', { className: 'tf-command-menu__meta' }, item.shortcut)
+                    : null,
+                )),
+            )
+          : null,
+      )),
+  );
+}
+
 export function TextForgeTopBar({
   brandTitle,
+  commandPaletteLabel = 'Commands',
+  commandPaletteShortcut = 'Ctrl+K',
+  menuGroups = [],
+  onCommandPress,
+  onOpenCommandPalette,
   onToggleSidebar,
   onToggleUtility,
   sidebarCollapsed = false,
@@ -305,7 +406,6 @@ export function TextForgeTopBar({
   subtitle,
   toolbarSlots = [],
   utilityOpen = false,
-  onToolbarAction,
 }) {
   const actions = [
     element(TextForgeToolbarButton, {
@@ -316,6 +416,11 @@ export function TextForgeTopBar({
       label: sidebarCollapsed ? 'Show Tree' : 'Hide Tree',
       onPress: onToggleSidebar,
     }),
+    element(TextForgeCommandMenuBar, {
+      key: 'command-menus',
+      groups: menuGroups,
+      onCommandPress,
+    }),
     ...toolbarSlots.map((slot) =>
       element(TextForgeToolbarButton, {
         key: slot.id,
@@ -323,9 +428,19 @@ export function TextForgeTopBar({
         disabled: slot.disabled,
         kind: slot.pinned ? 'primary' : 'secondary',
         label: slot.label,
-        onPress: () => onToolbarAction?.(slot.id),
+        onPress: () => onCommandPress?.(slot.id),
         title: slot.description,
       })),
+    onOpenCommandPalette
+      ? element(TextForgeToolbarButton, {
+        key: 'command-palette',
+        ariaLabel: 'Open command palette',
+        kind: 'secondary',
+        label: commandPaletteLabel,
+        onPress: onOpenCommandPalette,
+        title: commandPaletteShortcut ? `Open command palette (${commandPaletteShortcut})` : 'Open command palette',
+      })
+      : null,
     element(TextForgeToolbarButton, {
       key: 'toggle-utility',
       active: utilityOpen,
@@ -334,7 +449,7 @@ export function TextForgeTopBar({
       label: utilityOpen ? 'Hide Utility' : 'Show Utility',
       onPress: onToggleUtility,
     }),
-  ];
+  ].filter(Boolean);
 
   return element(
     'header',
@@ -375,41 +490,41 @@ export function TextForgeWorkspaceSidebar({
     ),
     onToggleCollapsed
       ? element(TextForgeToolbarButton, {
-          active: !collapsed,
-          ariaLabel: collapsed ? 'Expand workspace tree' : 'Collapse workspace tree',
-          kind: 'toggle',
-          label: collapsed ? 'Expand' : 'Collapse',
-          onPress: onToggleCollapsed,
-        })
+        active: !collapsed,
+        ariaLabel: collapsed ? 'Expand workspace tree' : 'Collapse workspace tree',
+        kind: 'toggle',
+        label: collapsed ? 'Expand' : 'Collapse',
+        onPress: onToggleCollapsed,
+      })
       : null,
   );
 
   const items = collapsed
     ? []
     : workspaceTree.items.map((item, index) =>
+      element(
+        'li',
+        { key: item.id, className: 'tf-tree__item' },
         element(
-          'li',
-          { key: item.id, className: 'tf-tree__item' },
-          element(
-            'button',
-            {
-              type: 'button',
-              className: classNames('tf-tree__row', item.id === workspaceTree.selectedResourceId && 'is-active'),
-              role: 'treeitem',
-              'aria-level': item.depth + 1,
-              'aria-selected': item.id === workspaceTree.selectedResourceId,
-              tabIndex: index === fallbackIndex ? 0 : -1,
-              'data-item-id': item.id,
-              onClick: () => onSelectItem?.(item.id),
-              onKeyDown: (event) => handleTreeKeyDown(event, onSelectItem),
-              title: item.path,
-              style: { '--depth': item.depth },
-            },
-            element('span', { className: 'tf-tree__kind', 'aria-hidden': 'true' }, item.kind),
-            element('span', { className: 'tf-tree__label' }, item.label),
-            item.badge ? element('span', { className: 'tf-tree__badge' }, item.badge) : null,
-          ),
-        ));
+          'button',
+          {
+            type: 'button',
+            className: classNames('tf-tree__row', item.id === workspaceTree.selectedResourceId && 'is-active'),
+            role: 'treeitem',
+            'aria-level': item.depth + 1,
+            'aria-selected': item.id === workspaceTree.selectedResourceId,
+            tabIndex: index === fallbackIndex ? 0 : -1,
+            'data-item-id': item.id,
+            onClick: () => onSelectItem?.(item.id),
+            onKeyDown: (event) => handleTreeKeyDown(event, onSelectItem),
+            title: item.path,
+            style: { '--depth': item.depth },
+          },
+          element('span', { className: 'tf-tree__kind', 'aria-hidden': 'true' }, item.kind),
+          element('span', { className: 'tf-tree__label' }, item.label),
+          item.badge ? element('span', { className: 'tf-tree__badge' }, item.badge) : null,
+        ),
+      ));
 
   return element(
     'aside',
@@ -420,20 +535,20 @@ export function TextForgeWorkspaceSidebar({
     header,
     collapsed
       ? element(
-          'div',
-          { className: 'tf-sidebar__collapsed-note' },
-          `${workspaceTree.items.length} items`,
-        )
+        'div',
+        { className: 'tf-sidebar__collapsed-note' },
+        `${workspaceTree.items.length} items`,
+      )
       : element(
-          'ul',
-          {
-            className: 'tf-tree',
-            role: 'tree',
-            'aria-label': workspaceTree.title,
-            'data-roving-root': 'workspace-tree',
-          },
-          ...items,
-        ),
+        'ul',
+        {
+          className: 'tf-tree',
+          role: 'tree',
+          'aria-label': workspaceTree.title,
+          'data-roving-root': 'workspace-tree',
+        },
+        ...items,
+      ),
     footer ? element('div', { className: 'tf-sidebar__footer' }, footer) : null,
   );
 }
@@ -481,18 +596,18 @@ export function TextForgeSessionTabStrip({
         ),
         onCloseTab && tab.surfaceId
           ? element(
-              'button',
-              {
-                type: 'button',
-                className: 'tf-tab__close',
-                'aria-label': `Close ${tab.title}`,
-                onClick: (event) => {
-                  event.stopPropagation();
-                  onCloseTab(tab.id);
-                },
+            'button',
+            {
+              type: 'button',
+              className: 'tf-tab__close',
+              'aria-label': `Close ${tab.title}`,
+              onClick: (event) => {
+                event.stopPropagation();
+                onCloseTab(tab.id);
               },
-              'Close',
-            )
+            },
+            'Close',
+          )
           : null,
       )),
   );
@@ -552,41 +667,207 @@ export function TextForgeUtilityPane({
       ),
       onClose
         ? element(TextForgeToolbarButton, {
-            ariaLabel: 'Hide utility pane',
-            kind: 'toggle',
-            label: 'Hide',
-            onPress: onClose,
-          })
+          ariaLabel: 'Hide utility pane',
+          kind: 'toggle',
+          label: 'Hide',
+          onPress: onClose,
+        })
         : null,
     ),
     sections.length > 0
       ? element(
+        'div',
+        {
+          className: 'tf-segments',
+          role: 'tablist',
+          'aria-label': 'Utility sections',
+          'data-roving-root': 'utility-sections',
+        },
+        ...sections.map((section) =>
+          element(
+            'button',
+            {
+              key: section.id,
+              type: 'button',
+              role: 'tab',
+              'aria-selected': section.id === activeSectionId,
+              tabIndex: section.id === activeSectionId ? 0 : -1,
+              className: classNames('tf-segments__button', section.id === activeSectionId && 'is-active'),
+              'data-item-id': section.id,
+              onClick: () => onSelectSection?.(section.id),
+              onKeyDown: (event) => handleHorizontalTabsKeyDown(event, onSelectSection),
+            },
+            section.label,
+          )),
+      )
+      : null,
+    element('div', { className: 'tf-utility__body' }, children),
+  );
+}
+
+export function TextForgeCommandPalette({
+  emptyLabel = 'No commands match the current query.',
+  entries = [],
+  onClose,
+  onCommandPress,
+  open = false,
+  placeholder = 'Search shell commands',
+  title = 'Command palette',
+}) {
+  const [query, setQuery] = React.useState('');
+  const [activeIndex, setActiveIndex] = React.useState(0);
+  const inputRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    setQuery('');
+    setActiveIndex(0);
+    const handle = window.setTimeout(() => {
+      inputRef.current?.focus();
+    }, 0);
+
+    return () => window.clearTimeout(handle);
+  }, [open]);
+
+  if (!open) {
+    return null;
+  }
+
+  const filteredEntries = entries.filter((entry) => matchesCommandPaletteEntry(entry, query));
+  const boundedIndex = filteredEntries.length === 0
+    ? -1
+    : Math.min(activeIndex, filteredEntries.length - 1);
+
+  function commit(entry) {
+    if (!entry || entry.disabled) {
+      return;
+    }
+
+    onCommandPress?.(entry.commandId);
+    onClose?.();
+  }
+
+  function handleKeyDown(event) {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      onClose?.();
+      return;
+    }
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (filteredEntries.length > 0) {
+        setActiveIndex((current) => (current + 1) % filteredEntries.length);
+      }
+      return;
+    }
+
+    if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (filteredEntries.length > 0) {
+        setActiveIndex((current) => (current - 1 + filteredEntries.length) % filteredEntries.length);
+      }
+      return;
+    }
+
+    if (event.key === 'Enter' && boundedIndex >= 0) {
+      event.preventDefault();
+      commit(filteredEntries[boundedIndex]);
+    }
+  }
+
+  return element(
+    'div',
+    {
+      className: 'tf-command-palette__backdrop',
+      onMouseDown: (event) => {
+        if (event.target === event.currentTarget) {
+          onClose?.();
+        }
+      },
+    },
+    element(
+      'section',
+      {
+        className: 'tf-command-palette',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': title,
+      },
+      element(
+        'div',
+        { className: 'tf-command-palette__header' },
+        element('strong', null, title),
+        element(
+          'button',
+          {
+            type: 'button',
+            className: 'tf-command-palette__close',
+            'aria-label': 'Close command palette',
+            onClick: onClose,
+          },
+          'Close',
+        ),
+      ),
+      element('input', {
+        ref: inputRef,
+        className: 'tf-command-palette__input',
+        type: 'text',
+        value: query,
+        placeholder,
+        onChange: (event) => {
+          setQuery(event.currentTarget.value);
+          setActiveIndex(0);
+        },
+        onKeyDown: handleKeyDown,
+      }),
+      filteredEntries.length === 0
+        ? element('div', { className: 'tf-command-palette__empty' }, emptyLabel)
+        : element(
           'div',
           {
-            className: 'tf-segments',
-            role: 'tablist',
-            'aria-label': 'Utility sections',
-            'data-roving-root': 'utility-sections',
+            className: 'tf-command-palette__list',
+            role: 'listbox',
+            'aria-label': 'Available commands',
           },
-          ...sections.map((section) =>
+          ...filteredEntries.map((entry, index) =>
             element(
               'button',
               {
-                key: section.id,
+                key: entry.commandId,
                 type: 'button',
-                role: 'tab',
-                'aria-selected': section.id === activeSectionId,
-                tabIndex: section.id === activeSectionId ? 0 : -1,
-                className: classNames('tf-segments__button', section.id === activeSectionId && 'is-active'),
-                'data-item-id': section.id,
-                onClick: () => onSelectSection?.(section.id),
-                onKeyDown: (event) => handleHorizontalTabsKeyDown(event, onSelectSection),
+                role: 'option',
+                'aria-selected': boundedIndex === index,
+                className: classNames('tf-command-palette__item', boundedIndex === index && 'is-active'),
+                disabled: entry.disabled,
+                onMouseEnter: () => setActiveIndex(index),
+                onClick: () => commit(entry),
+                title: entry.description ?? entry.label,
               },
-              section.label,
+              element(
+                'div',
+                { className: 'tf-command-palette__content' },
+                element(
+                  'div',
+                  { className: 'tf-command-palette__line' },
+                  element('span', { className: 'tf-command-palette__label' }, entry.label),
+                  entry.shortcut
+                    ? element('span', { className: 'tf-command-palette__shortcut' }, entry.shortcut)
+                    : null,
+                ),
+                entry.description
+                  ? element('p', { className: 'tf-command-palette__detail' }, entry.description)
+                  : null,
+                entry.group
+                  ? element('span', { className: 'tf-command-palette__group' }, entry.group)
+                  : null,
+              ),
             )),
-        )
-      : null,
-    element('div', { className: 'tf-utility__body' }, children),
+        ),
+    ),
   );
 }
 

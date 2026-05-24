@@ -1,4 +1,4 @@
-import type { ResourceRef } from '@textforge/core';
+import type { CommandContribution, ContributionManifest, ResourceRef } from '@textforge/core';
 import type { SurfaceContribution } from '@textforge/surfaces';
 import type { WorkspaceResource } from '@textforge/workspace';
 
@@ -137,13 +137,9 @@ export const assetSurfaceContributions: ReadonlyArray<AssetSurfaceContribution> 
   },
 ];
 
-export const contributions = {
-  id: '@textforge/assets',
-  diagnostics: [],
-  commands: [],
-  surfaces: assetSurfaceContributions,
-  pipelines: [],
-} as const;
+export declare const assetCommandContributions: ReadonlyArray<CommandContribution>;
+export declare function createAssetContributionManifest(): ContributionManifest;
+export declare const contributions: ContributionManifest;
 
 export function createWorkspaceAssetBinding(request: AssetViewerRequest): WorkspaceAssetBinding {
   const viewerKind = selectAssetViewerKind(request);

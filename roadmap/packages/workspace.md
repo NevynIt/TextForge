@@ -102,3 +102,7 @@ The package now exposes an `fflate`-backed archive manifest plus full-workspace 
 The package now ships Dexie as a real runtime dependency and exposes a browser-managed persistence path instead of only a schema placeholder. `openWorkspaceDexieStorage`, `createPersistentWorkspaceService`, `createPersistedWorkspaceService`, and `resetWorkspaceDexieStorage` back the existing workspace model with versioned IndexedDB tables for manifests, folders, text resources, binary resources, and schema metadata.
 
 The in-memory service contract also now carries `getManifest`, `replaceState`, and `setSelectedResourceId`, so startup hydration, selection persistence, ZIP import/export, and explicit storage reset/recovery all operate against the persisted workspace state without pulling tab/session restore forward. Focused package checks now cover Dexie hydration, selection persistence, ID continuity after reload, corrupted-storage detection, and reset recovery.
+
+## Phase 3.3 closure note
+
+The package now exposes its existing shell-facing actions as command contributions instead of leaving them hard-wired in the app shell. The delivered command set covers new folder/resource creation, workspace ZIP import/export, selected-folder ZIP export, rename/delete, and explicit storage reset/retry actions over the existing persisted workspace service without adding new workspace behavior solely to fill the palette.

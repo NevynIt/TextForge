@@ -7,7 +7,7 @@ import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/
 import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua';
 import { tags } from '@lezer/highlight';
 import { EditorView, lineNumbers } from '@codemirror/view';
-import { getLanguageDefinition, inferLanguageId, languageDefinitions } from '@textforge/core';
+import { createCommand, createContributionManifest, getLanguageDefinition, inferLanguageId, languageDefinitions } from '@textforge/core';
 
 const parserBackedLanguageFactories = {
   markdown: () => markdownLanguage(),
@@ -179,13 +179,28 @@ export const codeMirrorTextEditorSurfaceContribution = {
   openWithPriority: 100,
 };
 
-export const contributions = {
-  id: '@textforge/editors',
-  diagnostics: [],
-  commands: [],
-  surfaces: [codeMirrorTextEditorSurfaceContribution],
-  pipelines: [],
-};
+export function createEditorCommandContributions(languageModes = listTextEditorLanguageModes()) {
+  return languageModes.map((mode) =>
+    createCommand(`editor.set-language:${mode.languageId}`, `Set language: ${mode.label}`, {
+      category: 'editor',
+      description: mode.parserBacked
+        ? `Set the selected text resource to ${mode.label} using the parser-backed source editor mode.`
+        : `Set the selected text resource to ${mode.label}; this format remains metadata-only in Phase 3.3.`,
+      keywords: ['editor', 'language', 'mode', mode.languageId, mode.label],
+      menu: { id: 'editor', label: 'Editor', groupOrder: 30, order: 10 },
+      when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['text'] },
+    }),
+  );
+}
+
+export function createEditorContributionManifest(languageModes = listTextEditorLanguageModes()) {
+  return createContributionManifest('@textforge/editors', {
+    commands: createEditorCommandContributions(languageModes),
+    surfaces: [codeMirrorTextEditorSurfaceContribution],
+  });
+}
+
+export const contributions = createEditorContributionManifest();
 
 export function createTextEditorLanguageModeConfig(languageId, resource) {
   const resolvedLanguageId = getLanguageDefinition(languageId)

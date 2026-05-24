@@ -5,6 +5,7 @@ import test from 'node:test';
 import Dexie from 'dexie';
 
 import {
+  createWorkspaceContributionManifest,
   createWorkspaceArchiveManifest,
   createPersistedWorkspaceService,
   createSequentialIdFactory,
@@ -74,6 +75,26 @@ test('workspace service normalizes paths and mutates entries', () => {
   assert.equal(updated.languageId, 'yaml');
   assert.equal(updated.mimeType, 'text/yaml');
   assert.equal(createWorkspaceTreeItems(workspace.snapshot()).length >= 2, true);
+});
+
+test('workspace contribution manifest exposes the Phase 3.3 shell commands', () => {
+  const manifest = createWorkspaceContributionManifest();
+
+  assert.equal(manifest.packageId, '@textforge/workspace');
+  assert.deepEqual(
+    manifest.commands.map((command) => command.id),
+    [
+      'workspace.new-folder',
+      'workspace.new-resource',
+      'workspace.import-workspace',
+      'workspace.export-workspace',
+      'workspace.export-selected-folder',
+      'workspace.rename-selected',
+      'workspace.delete-selected',
+      'workspace.reset-storage',
+      'workspace.retry-storage',
+    ],
+  );
 });
 
 test('workspace archives round-trip full workspace state through zip', () => {

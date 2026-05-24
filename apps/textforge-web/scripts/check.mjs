@@ -5,6 +5,7 @@ import {
   createBrowserStorageBoundaryCheck,
   createForbiddenBrowserApiCheck,
   createForbiddenFilesystemApiCheck,
+  createLocalCommandDispatchCheck,
   createOpenSourceLicenseGate,
   defaultSecurityProfile,
 } from '@textforge/security-profile';
@@ -18,6 +19,7 @@ const workbenchJs = await readFile(resolve(rootDir, 'src/workbench.js'), 'utf8')
 const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
 const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
 const storageBoundaryDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'browser-managed-workspace-storage.md'), 'utf8');
+const commandDispatchDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'local-command-dispatch.md'), 'utf8');
 
 if (!indexHtml.includes('./src/scriptLoader.js')) {
   throw new Error('index.html must load ./src/scriptLoader.js as the development entrypoint');
@@ -72,8 +74,11 @@ for (const requiredReactSignal of [
   "from 'react'",
   "from 'react-dom/client'",
   'useSyncExternalStore',
+  'createCommandRegistry',
+  'createCommandDispatcher',
   'TextForgeAppFrame',
   'TextForgeCallout',
+  'TextForgeCommandPalette',
   'TextForgeTopBar',
   'TextForgeWorkspaceSidebar',
   'TextForgeUtilityPane',
@@ -86,6 +91,10 @@ for (const requiredReactSignal of [
 
 if (!workbenchJs.includes('createOpenWithSelection') || !workbenchJs.includes('listTextEditorLanguageModes') || !workbenchJs.includes('TextForgeSelectField')) {
   throw new Error('workbench.js must preserve package-backed open-with and language control chrome');
+}
+
+if (!workbenchJs.includes('createWorkspaceContributionManifest') || !workbenchJs.includes('createSurfaceContributionManifest') || !workbenchJs.includes('createEditorContributionManifest') || !workbenchJs.includes('createAssetContributionManifest')) {
+  throw new Error('workbench.js must build the shell command registry from package contribution manifests');
 }
 
 if (!workbenchJs.includes('createPersistedWorkspaceService') || !workbenchJs.includes('resetWorkspaceDexieStorage')) {
@@ -114,9 +123,21 @@ for (const requiredStorageSignal of ['IndexedDB', 'browser-managed', 'Reset Brow
   }
 }
 
+for (const requiredCommandSignal of ['Command palette', 'local command', 'contribution-driven']) {
+  if (!workbenchJs.includes(requiredCommandSignal)) {
+    throw new Error(`workbench.js must surface ${requiredCommandSignal} command-layer wording`);
+  }
+}
+
 for (const requiredDocSignal of ['IndexedDB', 'File System Access API', 'background sync', 'remote sync']) {
   if (!storageBoundaryDoc.includes(requiredDocSignal)) {
     throw new Error(`browser-managed-workspace-storage.md must document ${requiredDocSignal}`);
+  }
+}
+
+for (const requiredDocSignal of ['local command', 'external packages', 'remote commands', 'plugin manager']) {
+  if (!commandDispatchDoc.toLowerCase().includes(requiredDocSignal)) {
+    throw new Error(`local-command-dispatch.md must document ${requiredDocSignal}`);
   }
 }
 
@@ -168,5 +189,18 @@ function assertSecurityEnvelope() {
     },
   }).passed !== true) {
     throw new Error('The shell must keep the workspace inside the browser-managed storage boundary');
+  }
+
+  if (createLocalCommandDispatchCheck().run({
+    profile: defaultSecurityProfile,
+    commandDispatch: {
+      documented: true,
+      localOnly: true,
+      usesPluginExecution: false,
+      usesRemoteExecution: false,
+      notesUri: 'docs/specs/local-command-dispatch.md',
+    },
+  }).passed !== true) {
+    throw new Error('The shell must keep Phase 3.3 command dispatch local and bundled');
   }
 }

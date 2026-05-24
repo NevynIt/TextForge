@@ -1,5 +1,7 @@
 import type {
   Capability,
+  CommandContribution,
+  ContributionManifest,
   ResourceKind,
   ResourceRef,
   SurfaceContribution as CoreSurfaceContribution,
@@ -114,13 +116,17 @@ export interface SurfaceSessionTabStrip {
 
 export type SurfaceSessionManager = SurfaceHost;
 
-export const contributions = {
-  id: '@textforge/surfaces',
-  diagnostics: [],
-  commands: [],
-  surfaces: [],
-  pipelines: [],
-} as const;
+export declare const surfaceCommandContributions: ReadonlyArray<CommandContribution>;
+export declare function createSurfaceOpenWithCommands(
+  surfaceContributions?: ReadonlyArray<SurfaceContribution>,
+): ReadonlyArray<CommandContribution>;
+export declare function createSurfaceCommandContributions(
+  surfaceContributions?: ReadonlyArray<SurfaceContribution>,
+): ReadonlyArray<CommandContribution>;
+export declare function createSurfaceContributionManifest(
+  surfaceContributions?: ReadonlyArray<SurfaceContribution>,
+): ContributionManifest;
+export const contributions: ContributionManifest;
 
 export function createSequentialSessionIdFactory(prefix = 'surface-session'): () => string {
   let counter = 0;

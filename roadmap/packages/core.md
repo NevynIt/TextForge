@@ -102,3 +102,7 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Phase 2 progress note
 
 The package now defines stable source-editor language IDs, language metadata for the Phase 2 formats, editor capability IDs, and a diagnostic bridge contract. Runtime helpers infer language IDs from MIME type or extension for downstream editor and surface packages.
+
+## Phase 3.3 closure note
+
+The package now owns the minimal shell-command substrate promised for Phase 3.3: command contribution descriptors, command-context filtering, a command registry, grouped toolbar/menu resolution, and a local command dispatcher contract. The delivered substrate is intentionally limited to bundled shell commands so later Phase 5 work can extend the contribution-pack system without reworking the local command palette contract.

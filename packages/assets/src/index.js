@@ -1,3 +1,5 @@
+import { createCommand, createContributionManifest } from '@textforge/core';
+
 export function createAssetViewerSurfaceContribution(overrides) {
   return {
     ...overrides,
@@ -144,13 +146,25 @@ export const assetSurfaceContributions = [
   }),
 ];
 
-export const contributions = {
-  id: '@textforge/assets',
-  diagnostics: [],
-  commands: [],
-  surfaces: assetSurfaceContributions,
-  pipelines: [],
-};
+export const assetCommandContributions = [
+  createCommand('asset.download-selected', 'Download selected asset', {
+    category: 'asset',
+    description: 'Download the selected binary resource through the existing asset viewer path.',
+    keywords: ['asset', 'download', 'binary', 'viewer'],
+    menu: { id: 'asset', label: 'Asset', groupOrder: 40, order: 10 },
+    toolbar: { order: 90, kind: 'secondary' },
+    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['binary'] },
+  }),
+];
+
+export function createAssetContributionManifest() {
+  return createContributionManifest('@textforge/assets', {
+    commands: assetCommandContributions,
+    surfaces: assetSurfaceContributions,
+  });
+}
+
+export const contributions = createAssetContributionManifest();
 
 function escapeHtml(text) {
   return text

@@ -1,4 +1,4 @@
-import type { CanonicalPatch, PipelineValue, ResourceRef } from '@textforge/core';
+import type { CanonicalPatch, CommandContribution, ContributionManifest, PipelineValue, ResourceRef } from '@textforge/core';
 
 export type WorkspaceEntryKind = 'folder' | 'text' | 'binary';
 export type WorkspaceArchiveResourceEncoding = 'utf8' | 'binary';
@@ -289,10 +289,16 @@ export declare const workspaceStorageErrorCodes: {
   readonly incompatibleState: 'workspace-storage-incompatible';
 };
 export declare const workspaceDexieSchema: WorkspaceDexieSchema;
+export declare const workspaceCommandContributions: ReadonlyArray<CommandContribution>;
+export declare function createWorkspaceContributionManifest(): ContributionManifest;
 export declare const workspaceContribution: {
-  readonly id: '@textforge/workspace';
-  readonly diagnostics: readonly [];
-  readonly commands: readonly [];
+  readonly packageId: '@textforge/workspace';
+  readonly name?: string;
+  readonly version?: string;
+  readonly description?: string;
+  readonly dependencies: readonly [];
+  readonly capabilities: readonly [];
+  readonly commands: ReadonlyArray<CommandContribution>;
   readonly surfaces: readonly [];
   readonly pipelines: readonly [];
 };

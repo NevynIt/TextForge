@@ -53,6 +53,21 @@ export interface ToolbarSlot {
   readonly description?: string;
   readonly pinned?: boolean;
   readonly disabled?: boolean;
+  readonly shortcut?: string;
+}
+
+export interface CommandMenuItem {
+  readonly commandId: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly shortcut?: string;
+  readonly disabled?: boolean;
+}
+
+export interface CommandMenuGroup {
+  readonly id: string;
+  readonly label: string;
+  readonly items: ReadonlyArray<CommandMenuItem>;
 }
 
 export interface FrameRegion {
@@ -131,9 +146,11 @@ export interface WorkbenchChromeModel extends AppFrameModel {
 export interface CommandPaletteEntry {
   readonly commandId: string;
   readonly label: string;
+  readonly description?: string;
   readonly group?: string;
   readonly shortcut?: string;
   readonly disabled?: boolean;
+  readonly keywords?: ReadonlyArray<string>;
 }
 
 export interface IconSpec {
@@ -165,6 +182,11 @@ export interface TextForgeCalloutProps {
 
 export interface TextForgeTopBarProps {
   readonly brandTitle: string;
+  readonly commandPaletteLabel?: string;
+  readonly commandPaletteShortcut?: string;
+  readonly menuGroups?: ReadonlyArray<CommandMenuGroup>;
+  readonly onCommandPress?: (commandId: string) => void;
+  readonly onOpenCommandPalette?: () => void;
   readonly onToggleSidebar?: () => void;
   readonly onToggleUtility?: () => void;
   readonly sidebarCollapsed?: boolean;
@@ -172,7 +194,6 @@ export interface TextForgeTopBarProps {
   readonly subtitle?: string;
   readonly toolbarSlots?: ReadonlyArray<ToolbarSlot>;
   readonly utilityOpen?: boolean;
-  readonly onToolbarAction?: (slotId: string) => void;
 }
 
 export interface TextForgeWorkspaceSidebarProps {
@@ -224,6 +245,16 @@ export interface TextForgeUtilityPaneProps {
   readonly title?: string;
 }
 
+export interface TextForgeCommandPaletteProps {
+  readonly emptyLabel?: string;
+  readonly entries?: ReadonlyArray<CommandPaletteEntry>;
+  readonly onClose?: () => void;
+  readonly onCommandPress?: (commandId: string) => void;
+  readonly open?: boolean;
+  readonly placeholder?: string;
+  readonly title?: string;
+}
+
 export interface TextForgeAppFrameProps {
   readonly children?: ReactNode;
   readonly footer?: ReactNode;
@@ -251,6 +282,7 @@ export declare function TextForgeWorkspaceSidebar(props: TextForgeWorkspaceSideb
 export declare function TextForgeSessionTabStrip(props: TextForgeSessionTabStripProps): unknown;
 export declare function TextForgeSelectField(props: TextForgeSelectFieldProps): unknown;
 export declare function TextForgeUtilityPane(props: TextForgeUtilityPaneProps): unknown;
+export declare function TextForgeCommandPalette(props: TextForgeCommandPaletteProps): unknown;
 export declare function TextForgeAppFrame(props: TextForgeAppFrameProps): unknown;
 
 export declare const defaultAppFrameModel: AppFrameModel;

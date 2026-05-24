@@ -138,3 +138,7 @@ Browser validation of the React shell opened the sample `system.svg` asset into 
 ## Phase 3.2 closure note
 
 Binary resources now survive Dexie-backed workspace hydration as well as ZIP round-trip export/import. The asset package still owns blob URL leasing and viewer-kind selection after the workspace reloads, and focused tests now verify that a persisted SVG resource rehydrates with byte fidelity and still resolves to the SVG viewer binding.
+
+## Phase 3.3 closure note
+
+The package now exposes the existing asset download path as a shell command descriptor while leaving viewer-kind selection and open-with routing inside the package-owned surface model. Phase 3.3 does not add generated-asset workflows or broaden asset semantics beyond the already-delivered viewer surface behavior.

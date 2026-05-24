@@ -130,3 +130,7 @@ React and React DOM are now part of the delivered shell dependency set, and the 
 ## Phase 3.2 closure note
 
 The default profile now includes an explicit browser-managed storage-boundary check in addition to the earlier archive-boundary and forbidden-filesystem checks. Phase 3.2 validation covers the Dexie/IndexedDB workspace boundary, the dedicated storage-boundary notes document, and the continued absence of File System Access API, directory handles, background sync, remote sync, and silent local file access in the shipped shell.
+
+## Phase 3.3 closure note
+
+The default profile now also checks the local command-dispatch boundary introduced by the shell command palette. Phase 3.3 validation confirms that command execution stays bundled and local to the shell, without implying a plugin permission system, external package loading, or remote command execution.

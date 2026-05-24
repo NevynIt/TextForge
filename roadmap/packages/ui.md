@@ -144,3 +144,7 @@ The delivered shell chrome includes the collapsible workspace tree region, narro
 ## Phase 3.2 closure note
 
 The package now also provides the lightweight storage/recovery chrome needed by the shell without taking ownership of persistence itself. `TextForgeCallout` and the existing top-bar, utility-pane, and badge primitives now carry the browser-managed workspace wording, reset confirmation flow, and storage initialization/recovery messaging used by the Phase 3.2 shell.
+
+## Phase 3.3 closure note
+
+The package now renders the command-focused shell chrome promised for this phase: contribution-driven menu and toolbar presentation plus a local command palette with search, keyboard navigation, and execute flow. The Phase 3.3 UI remains intentionally narrow; it does not become a plugin manager, diagnostics dashboard, or full feature-package composition surface.

@@ -1,7 +1,7 @@
 import Dexie from 'dexie';
 import { unzipSync, zipSync } from 'fflate';
 
-import { createResourceRef } from '../../core/src/index.js';
+import { createCommand, createContributionManifest, createResourceRef } from '../../core/src/index.js';
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -36,13 +36,83 @@ export const workspaceDexieSchema = {
   manifests: 'workspaceId, name, rootPath, createdAt, updatedAt, selectedResourceId',
 };
 
-export const workspaceContribution = {
-  id: '@textforge/workspace',
-  diagnostics: [],
-  commands: [],
-  surfaces: [],
-  pipelines: [],
-};
+export const workspaceCommandContributions = [
+  createCommand('workspace.new-folder', 'New folder...', {
+    category: 'workspace',
+    description: 'Create a folder in the selected workspace context.',
+    keywords: ['workspace', 'create', 'folder', 'directory'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 10 },
+    toolbar: { order: 20, kind: 'primary' },
+    when: { workspaceReady: true },
+  }),
+  createCommand('workspace.new-resource', 'New resource...', {
+    category: 'workspace',
+    description: 'Create a text or binary resource in the selected workspace context.',
+    keywords: ['workspace', 'create', 'resource', 'file'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 20 },
+    toolbar: { order: 30, kind: 'primary' },
+    when: { workspaceReady: true },
+  }),
+  createCommand('workspace.import-workspace', 'Import workspace ZIP...', {
+    category: 'workspace',
+    description: 'Import a workspace archive into the browser-managed workspace.',
+    keywords: ['workspace', 'import', 'zip', 'archive'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 30 },
+    toolbar: { order: 40, kind: 'secondary' },
+    when: { workspaceReady: true },
+  }),
+  createCommand('workspace.export-workspace', 'Export workspace ZIP', {
+    category: 'workspace',
+    description: 'Export the current browser-managed workspace as a ZIP archive.',
+    keywords: ['workspace', 'export', 'zip', 'archive'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 40 },
+    toolbar: { order: 50, kind: 'secondary' },
+    when: { workspaceReady: true },
+  }),
+  createCommand('workspace.export-selected-folder', 'Export selected folder ZIP', {
+    category: 'workspace',
+    description: 'Export the selected folder subtree as a ZIP archive rebased at archive root.',
+    keywords: ['workspace', 'export', 'folder', 'zip', 'archive'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 50 },
+    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder'] },
+  }),
+  createCommand('workspace.rename-selected', 'Rename selected item...', {
+    category: 'workspace',
+    description: 'Rename the currently selected folder or resource.',
+    keywords: ['workspace', 'rename', 'selected'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 60 },
+    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder', 'text', 'binary'] },
+  }),
+  createCommand('workspace.delete-selected', 'Delete selected item...', {
+    category: 'workspace',
+    description: 'Delete the currently selected folder or resource.',
+    keywords: ['workspace', 'delete', 'remove', 'selected'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 70 },
+    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder', 'text', 'binary'] },
+  }),
+  createCommand('workspace.reset-storage', 'Reset browser workspace...', {
+    category: 'workspace',
+    description: 'Open the explicit browser-storage reset flow for the persisted workspace.',
+    keywords: ['workspace', 'storage', 'reset', 'recovery'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 80 },
+    when: { runtimeStatuses: ['ready', 'error'] },
+  }),
+  createCommand('workspace.retry-storage', 'Retry workspace load', {
+    category: 'workspace',
+    description: 'Retry browser-managed workspace initialization after a storage failure.',
+    keywords: ['workspace', 'retry', 'storage', 'recovery'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 90 },
+    when: { runtimeStatuses: ['error'] },
+  }),
+];
+
+export function createWorkspaceContributionManifest() {
+  return createContributionManifest('@textforge/workspace', {
+    commands: workspaceCommandContributions,
+  });
+}
+
+export const workspaceContribution = createWorkspaceContributionManifest();
 
 export const contributions = workspaceContribution;
 

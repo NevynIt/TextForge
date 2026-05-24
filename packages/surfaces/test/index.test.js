@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createSurfaceCommandContributions,
+  createSurfaceContributionManifest,
   createMainSessionTabStrip,
   createMainSurfaceHost,
   createOpenWithSelection,
@@ -74,4 +76,28 @@ test('surface registry picks the highest-priority compatible contribution', () =
 
   const fallback = createSourceEditorFallback(session.resource, 'surface.editor', 'explicit-source-open');
   assert.equal(fallback.reason, 'explicit-source-open');
+});
+
+test('surface command contributions include shell actions and open-with descriptors', () => {
+  const commands = createSurfaceCommandContributions([
+    {
+      id: 'surface.editor',
+      label: 'Editor',
+      resourceKinds: ['text'],
+      placements: ['main'],
+    },
+    {
+      id: 'surface.svg',
+      label: 'SVG viewer',
+      resourceKinds: ['binary'],
+      mimeTypes: ['image/svg+xml'],
+      placements: ['popup'],
+    },
+  ]);
+
+  assert.equal(commands.some((command) => command.id === 'surface.close-active'), true);
+  assert.equal(commands.some((command) => command.id === 'surface.move-active-to-popup'), true);
+  assert.equal(commands.some((command) => command.id === 'surface.open-with:surface.editor'), true);
+  assert.equal(commands.find((command) => command.id === 'surface.open-with:surface.svg')?.when?.availableSurfaceIds?.[0], 'surface.svg');
+  assert.equal(createSurfaceContributionManifest().packageId, '@textforge/surfaces');
 });
