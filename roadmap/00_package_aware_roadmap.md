@@ -1,4 +1,4 @@
-# TextForge V15f Package-Aware Roadmap
+# TextForge V15g Package-Aware Roadmap
 
 This roadmap interweaves the architecture milestones with the package split. It is intentionally package-oriented: every phase states which packages are created or updated and what each package receives.
 
@@ -30,7 +30,7 @@ The first stable user-facing checkpoint is the one where the app shell can launc
 - workspace tree or sidebar
 - main surface host area
 - toolbar or command entry points
-- status badges or equivalent shell feedback, including stable document identity badges and a readable, overflow-safe workbench pass after Phase 3.4
+- status badges or equivalent shell feedback, including stable document identity badges, a readable overflow-safe workbench pass after Phase 3.4, and focused popup/resizable-panel/chrome cleanup after Phase 3.5
 - contribution registration and open-with routing for the registered surfaces
 
 When that checkpoint must also remain runnable as a direct local `file://` artifact, do not define the shipped local path around `<script type="module">` and do not rely on post-build HTML rewriting to fix a generated module entry later. The runnable local artifact should be source-owned: a canonical file-launch HTML document, a dedicated loader entry, and focused checks that reject runtime ES module syntax in the emitted local bundle.
@@ -328,6 +328,42 @@ Acceptance criteria: Phase 3.4 is delivered in one coherent implementation pass;
 
 Scope boundary: no arbitrary user icon picker, no remote image badges, no React icon library beyond bundled `lucide-react`, no semantic meaning encoded only by color, no document-type taxonomy expansion, no file-system-derived identity, no saved layout/session restore, no split panes, no drag/drop tab management, no Phase 13 advanced tab management, and no new plugin/package-management UX.
 
+### Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
+
+#### Architecture and pnpm implementation anchors
+
+Architecture paragraphs to consider: `ARCH-4-P04..P06`, `ARCH-5.1-P03`, `ARCH-5.2-P01..P06`, `ARCH-6.1-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.3-P01..P05`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`. Resolve these IDs through `roadmap/02_architecture_paragraph_reference_index.md`, which maps each anchor to the exact paragraph/block and line range in `roadmap/textforge_rebuild_whitepaper_main.md`.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | No new core concept by default; consume existing surface/session/placement contracts. Add only tiny public types if existing placement/session contracts cannot express popup focus or panel preference state. | No new package install. |
+| `@textforge/surfaces` | Restore popup placement as actual app popup/overlay sessions and keep popup sessions separate from the main document strip. | No new package install. |
+| `@textforge/ui` | Bounded popup host chrome, resizable shell side panels, chrome deduplication primitives, screenshot-validation helpers, and panel-size affordances. `react-resizable-panels` is pulled forward only for shell side panels, not IDE split panes. | `pnpm --filter @textforge/ui add react-resizable-panels` |
+| `@textforge/editors` | Validate that editor surfaces stay readable after side-panel resize/collapse and popup host changes. | No new package install. |
+| `@textforge/assets` | Validate that asset/viewer surfaces stay readable after side-panel resize/collapse and popup host changes. | No new package install. |
+| `apps/textforge-web` | Integrate popup overlays, resizable left/right panels, deduplicated active-resource chrome, reduced redundant buttons/titles, and screenshot-based UI checks. | No new package install. |
+| `@textforge/security-profile` | Confirm popup hosts and resize state remain local UI state only; no detached browser windows, new permissions, remote assets, background sync, or local filesystem access. | No new package install. |
+| `@textforge/examples-docs` | Add screenshot-based validation checklist and before/after evidence guidance for wasted space, awkward scrollbars, duplicate titles, and popup behavior. | No new package install. |
+
+Focused follow-on phase after the completed Phase 3.4 readability pass. Phase 3.5 deliberately does **not** pull Phase 13 forward. It fixes the remaining shell usability problems that are visible in the current screenshot: popup content behaves like a side-panel detail view instead of a popup, side panels are fixed-width, collapsed/secondary regions waste horizontal space, top/header/surface labels repeat the active file too many times, and scrollbars appear in awkward shell-level places.
+
+Recommended components of the single Phase 3.5 pass:
+
+| Component | Implementation guidance |
+|---|---|
+| Real app popups | Popup sessions should render in a bounded floating popup/overlay host with close/focus behavior. The right inspector or utility panel may summarize popup state, but must not be the popup container. |
+| Resizable side panels | Left workspace and right inspector/utility regions should have draggable resize handles, sensible min/max widths, and collapsed states that release real workspace area. Persist widths only if cheap and clearly browser-local. |
+| Chrome deduplication | Make the document tab/active surface the primary identity point. Remove or collapse duplicate active-resource cards, selection blocks, repeated paths, and top-level buttons that do not add orientation. Target two or three visible instances of the active file name, not six. |
+| Header and command cleanup | Keep app-level commands in the app header, document/session commands near tabs/surfaces, and lower-frequency actions in the Phase 3.3 command system. Avoid equal-weight duplicate buttons. |
+| Scrollbar discipline | Shell regions should not create global or cross-shell horizontal scrollbars. Horizontal scroll belongs only inside content that genuinely needs it, such as code/editor text. |
+| Screenshot validation | Add checklist-driven screenshot review using `roadmap/04_phase_3_5_screenshot_validation_checklist.md` and the reference anti-pattern screenshot under `roadmap/validation/phase-3-5-reference-antipattern.png`. |
+
+Acceptance criteria: Phase 3.5 is delivered as one focused shell-usability pass; popup sessions render as actual in-app popups/overlays rather than only as right-panel or utility-panel content; left and right side panels are resizable within sensible bounds and collapsed panels release real workspace area; active document/resource identity is deduplicated so the same visible title/path appears no more than three times in the normal shell; top-level buttons and titles are reduced or grouped through the Phase 3.3 command system where appropriate; the editor/main surface remains the dominant visual region at normal desktop widths; there is no page-level horizontal scrollbar and no awkward whole-shell scrollbar like the reference screenshot; panel/content scrollbars visually belong to the region they scroll; screenshots at 1440×900 and, where practical, 1920×1080 pass the Phase 3.5 checklist; and focused UI/surface/app/security documentation/tests cover popup, resize, duplicate-chrome, and screenshot-review behavior.
+
+Scope boundary: no Phase 13 advanced tab groups, tab drag/reorder, split panes, saved layout/session restoration, detached browser windows, multi-monitor workflows, deep tab persistence, or full contribution-pack/plugin-management UX. `react-resizable-panels` is allowed only for bounded shell side panels in this phase; dnd-kit and advanced tab movement remain Phase 13.
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 #### Architecture and pnpm implementation anchors
@@ -532,16 +568,16 @@ Package dependency actions for this phase:
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
 | `@textforge/surfaces` | Advanced placement/session model. | No new package install. |
-| `@textforge/ui` | Advanced tab chrome, movement affordances, group-aware keyboard navigation. | `pnpm --filter @textforge/ui add react-resizable-panels @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities` |
+| `@textforge/ui` | Advanced tab chrome, movement affordances, group-aware keyboard navigation. Reuse the shell side-panel dependency introduced in Phase 3.5. | `pnpm --filter @textforge/ui add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities` |
 | `@textforge/core` | Stable session persistence types if needed. | No new package install. |
 
 
-Phase 3.1 may already provide a narrow main-session document tab strip for usability. Phase 13 is the later advanced tabbed-surface milestone.
+Phase 3.1 may already provide a narrow main-session document tab strip for usability, and Phase 3.5 may already provide real app popup overlays plus resizable shell side panels. Phase 13 is the later advanced tabbed-surface milestone.
 
 | Package | Action | Content |
 |---|---|---|
 | `@textforge/core` | Update | Update. Add stable session persistence types if needed. |
-| `@textforge/surfaces` | Update | Update. Add tab groups, tab movement, richer open-to-main/open-as-popup transitions, optional pinned state, and advanced session semantics. Splits remain future. |
+| `@textforge/surfaces` | Update | Update. Add tab groups, tab movement, richer open-to-main/open-as-popup transitions beyond the Phase 3.5 basic popup overlay, optional pinned state, and advanced session semantics. Splits remain future. |
 | `@textforge/ui` | Update | Update. Add advanced tab chrome, movement affordances, group-aware keyboard navigation, and richer tab-state indicators. |
 
 ### Phase 14 — Rich Markdown editing, optional and round-trip gated

@@ -86,6 +86,16 @@ Implementation anchors:
 Update. Extend security-profile guidance/checks only as needed to keep the badge and readability pass local and deterministic: allow bundled `lucide-react` only for generic shell icons, but reject remote badge images, remote icon fetches, File System Access API identity, directory handles, background sync, remote sync, and silent local-file probing. Badges are UI/resource metadata, not proof of external file identity.
 
 
+### Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-3.1-P01..P03`, `ARCH-3.2-P01..P03`, `ARCH-3.3-P01..P03`, `ARCH-4-P04..P06`, `ARCH-6.14-P01..P06`, `ARCH-11.4-P01`.
+- pnpm packages: Phase 3.5: No new package install.
+
+Update. Confirm that popup overlays and side-panel size preferences remain ordinary local UI state. Reject detached browser windows, extra browser permissions, remote popup/content loading, background sync, remote sync, File System Access API usage, directory handles, or silent local-file probing.
+
+
 ### Phase 16 — ArchiMate visual editing investigation
 
 Implementation anchors:

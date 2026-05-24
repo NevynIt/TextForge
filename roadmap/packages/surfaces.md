@@ -81,6 +81,18 @@ Update. Carry source-resource badge metadata into surface sessions, tab models, 
 Do not pull Phase 13 advanced tab grouping, tab persistence, split panes, or drag/drop tab behavior forward.
 
 
+### Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-4-P04..P06`, `ARCH-5.2-P01..P06`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.3-P01..P05`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.5: No new package install.
+
+Update. Restore popup placement as a real in-app popup/overlay session rather than treating popup content as right-panel or utility-panel detail. Keep popup sessions separate from the main document strip, preserve capability-filtered move-to-main/open-as-popup actions, and provide only the session/placement metadata the UI needs for focus, close, and title behavior.
+
+Do not add Phase 13 tab groups, tab drag/reorder, saved layout state, split panes, detached browser windows, or richer session persistence here.
+
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -119,11 +131,11 @@ Implementation anchors:
 - pnpm packages: Phase 13: No new package install.
 
 
-Update. Add tabbed main surface groups, tab movement, richer open-to-main/open-as-popup transitions, optional pinned state, and advanced session semantics. Splits remain future.
+Update. Add tabbed main surface groups, tab movement, richer open-to-main/open-as-popup transitions beyond the Phase 3.5 popup overlay, optional pinned state, and advanced session semantics. Splits remain future.
 
 ## Tests and definition of done
 
-Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests, React-shell host compatibility tests after Phase 3.1, command contribution tests after Phase 3.3, and badge metadata projection and chrome-readability tests after Phase 3.4.
+Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests, React-shell host compatibility tests after Phase 3.1, command contribution tests after Phase 3.3, and badge metadata projection and chrome-readability tests after Phase 3.4, plus screenshot/layout checks after Phase 3.5.
 
 ## Non-goals
 

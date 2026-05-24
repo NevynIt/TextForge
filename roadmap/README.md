@@ -1,8 +1,8 @@
-# TextForge Rebuild Roadmap Package V15f
+# TextForge Rebuild Roadmap Package V15g
 
 This package is arranged as a single drop-in `roadmap/` folder for the TextForge repository. Copy or merge this folder into the repository root. After that, every coding agent should start from `roadmap/AGENTS_START_HERE.md`.
 
-The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15f keeps the Phase 3.1 React/UI recovery, Phase 3.2 Dexie persistence recovery, and Phase 3.3 shell command/palette pull-forward sequence, then updates Phase 3.4 into a single resource identity badges and workbench readability pass. It keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row, and keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
+The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15g keeps the Phase 3.1 React/UI recovery, Phase 3.2 Dexie persistence recovery, and Phase 3.3 shell command/palette pull-forward sequence, then updates Phase 3.4 into a single resource identity badges and workbench readability pass and inserts Phase 3.5 for focused popup usability, resizable side panels, chrome deduplication, and screenshot-based UI checks before Phase 4. It keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row, and keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
 
 The roadmap also includes exact architecture-reference anchors, a consolidated pnpm install matrix, and a phase-sequenced package dependency activity diagram that shows when each package starts depending on other packages and app surfaces across Phases -1 through 19.
 
@@ -21,9 +21,11 @@ Authority split:
 - `02_architecture_paragraph_reference_index.md` — exact paragraph/block anchors for the architecture whitepaper.
 - `02_phase_architecture_pnpm_matrix.md` — consolidated phase/package architecture references and pnpm install commands.
 - `03_package_dependency_activity_diagram.md` — package dependency activity sequence diagram across roadmap phases.
+- `04_phase_3_5_screenshot_validation_checklist.md` — screenshot-based validation checklist for Phase 3.5 shell usability.
+- `validation/phase-3-5-reference-antipattern.png` — reference screenshot showing the layout anti-patterns Phase 3.5 must eliminate.
 - `RAPID.md` — repository-local append-only RAPID log.
 - `textforge_rebuild_whitepaper_main.md` — main standalone architecture body; it deliberately does not own phase sequencing.
-- `packages/*.md` — one implementation guide per package, including Phase 3.1/3.2/3.3/3.4 recovery, pull-forward, readability, resource-identity, and document-badge responsibilities or compatibility notes.
+- `packages/*.md` — one implementation guide per package, including Phase 3.1/3.2/3.3/3.4/3.5 recovery, pull-forward, readability, resource-identity, popup usability, resizable-panel, and screenshot-validation responsibilities or compatibility notes.
 
 ## How to use
 

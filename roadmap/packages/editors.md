@@ -110,7 +110,7 @@ Update. Define rich-editor capability and unsupported-construct warning conventi
 
 ## Tests and definition of done
 
-Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests, React-shell mounting smoke tests after Phase 3.1, command descriptor tests after Phase 3.3 where applicable, and text-editor fit/readability checks after Phase 3.4.
+Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests, React-shell mounting smoke tests after Phase 3.1, command descriptor tests after Phase 3.3 where applicable, and text-editor fit/readability checks after Phase 3.4, plus screenshot/layout checks after Phase 3.5.
 
 ## Non-goals
 

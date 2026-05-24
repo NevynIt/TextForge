@@ -66,6 +66,16 @@ Implementation anchors:
 Update only if a shared cross-package badge/resource identity contract is needed. Keep the contract minimal, such as a `DocumentBadgeToken` or resource badge metadata shape with `shape`, `accent`, `mark`, `placement`, `variant`, and labels. Rotation is not part of the Phase 3.4 token. Do not put visual badge-generation policy, persistence, shell rendering, panel layout, or readability styling in core.
 
 
+### Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-4-P04..P06`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.7-P01..P04`.
+- pnpm packages: Phase 3.5: No new package install.
+
+Update only if existing public contracts cannot express popup focus, popup/main placement, or local panel preference state. Prefer no core change. Do not put visual layout policy, screenshot logic, resize implementation details, or app-shell duplication rules in core.
+
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:

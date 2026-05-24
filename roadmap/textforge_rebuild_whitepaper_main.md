@@ -3,7 +3,7 @@
 **Version:** 15d  
 **Purpose:** Standalone architecture blueprint for rebuilding TextForge from scratch as a React-based, local-first, text-first, secure browser workbench. The design centers on an application-private virtual workspace, ITM as the canonical structural model, explicit pipelines, restricted Lua automation, binary workspace resources, Markdown/report generation, enterprise architecture and ArchiMate support, browser-envelope accreditation, and a Surface-based UI where editors, rich editors, structured editors, viewers, consoles, inspectors, and generated previews are peers.
 
-This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15f roadmap documents under `roadmap/`.
+This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15g roadmap documents under `roadmap/`.
 
 ---
 
@@ -257,29 +257,29 @@ This keeps the accreditation harness reusable across applications and prevents i
 
 The Surface model changes the center of gravity of the runtime architecture. The application should not be built around the assumption that the main pane is always CodeMirror and that every viewer is a popup. Instead, TextForge should be built around a **Surface Workbench**.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
 
 
 A **surface** is any interactive or read-only work area that can be hosted by the application shell. CodeMirror is one surface. A Markdown preview is another. An image viewer, PDF viewer, ITM graph, BPMN diagram, Lua console, diagnostics table, and generated report preview are also surfaces.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
 
 
 Placement is separate from identity:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
 
 
 ```text
 Resource or pipeline output -> Surface contribution -> Surface session -> Placement
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
 
 
 Initial placements should be deliberately simple:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
 
 
 ```text
@@ -291,6 +291,11 @@ Phase 3.1 usability recovery:
   narrow main-session document tab strip
   cleaner React shell
 
+Phase 3.5 shell usability refinement:
+  popup placement behaves as an actual in-app popup/overlay
+  side panels are resizable bounded shell panes
+  duplicate active-resource chrome is deduplicated
+
 Stage 2 target, later:
   advanced tabbed main surface groups
   editors and viewers as peer tabs
@@ -301,7 +306,7 @@ Future after Stage 2:
   detached browser windows
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
 
 
 ### 4.1 Runtime architecture
@@ -519,7 +524,7 @@ Prettier or equivalent formatting
 
 Recommended initial target:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 ```text
@@ -529,12 +534,12 @@ Stage 2: advanced tabbed main surface groups, added later in the roadmap
 Future: split panes, saved layouts, detached windows
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 Use custom TextForge types for `SurfaceContribution`, `SurfaceSession`, `SurfacePlacement`, and `SurfaceCapability`. Do not over-adopt a complete IDE layout framework early.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 ### 5.3 Editable surfaces and controlled write-back
@@ -1970,12 +1975,12 @@ For pure source editors, CodeMirror edits the canonical text directly because th
 
 The Surface Session Manager tracks open surface instances independently from their placement.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 Responsibilities:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 - open surfaces for resources or pipeline results;
@@ -1985,12 +1990,12 @@ Responsibilities:
 - support moving a surface between main and popup placement;
 - prepare for later tabbed main surface groups.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 Suggested model:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 ```ts
@@ -2022,24 +2027,24 @@ export interface SurfaceProvenance {
 }
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 A derived surface should become stale when any source resource version changes. A generated resource surface should also show the generated artifact path and source pipeline.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
 
 
 ### 6.14 Placement manager and hosts
 
 The Placement Manager decides where a surface appears. This is intentionally separate from the surface contribution itself.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 Stage 1 placements:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 ```ts
@@ -2048,12 +2053,12 @@ export type SurfacePlacement =
   | { kind: "popup"; popupId: string };
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 Stage 2 later adds:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 ```ts
@@ -2063,17 +2068,17 @@ export type SurfacePlacement =
   | { kind: "tab"; groupId: string; tabId: string };
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 Future expansions may add splits and detached windows, but those should not be part of the first implementation target.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 Shared chrome requirements:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`, `@textforge/workspace`.
 
 
 ```text
@@ -2090,12 +2095,12 @@ export/download where supported
 close
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`, `@textforge/workspace`.
 
 
 Hosts:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
 
 
 ```text
@@ -2105,12 +2110,12 @@ Future TabHost      tabbed main surface group
 Future SplitHost    split-pane workbench surfaces
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
 
 
 The existing popup concept becomes one placement option. Popups should remain useful for quick previews, generated diagrams, and secondary references, but they should no longer be the only way viewers appear.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
 
 
 ### 6.15 Initial built-in surface contributions
@@ -2759,12 +2764,12 @@ Security rules:
 
 The UI should be a **React workbench of surfaces**, not an editor with popup-only viewers. Components should be selected for good TypeScript types, documented examples, accessibility where practical, and predictable testability. Bundle size is secondary to maintainability, agentic implementation reliability, and integration confidence.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/assets`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/assets`, `apps/textforge-web`.
 
 
 Recommended React UI support stack:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/assets`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/assets`, `apps/textforge-web`.
 
 
 ```text
@@ -2779,7 +2784,7 @@ React Flow            future controlled visual graph editing only
 Zustand/custom stores app state slices
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/assets`, `apps/textforge-web`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/assets`, `apps/textforge-web`.
 
 
 ### 7.1 Security-visible workspace boundary
@@ -2852,12 +2857,12 @@ The main surface is not synonymous with CodeMirror.
 
 Stage 2 is the target advanced workbench model, but it should be implemented later in the roadmap after the basic surface abstraction is stable. The roadmap may introduce a narrow Phase 3.1 main-session tab strip earlier for usability; that earlier strip is not the full Stage 2 tab-group model.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 Stage 2 adds a tabbed main surface group where editors and viewers are peers:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 ```text
@@ -2872,12 +2877,12 @@ Stage 2 adds a tabbed main surface group where editors and viewers are peers:
 +--------------------------------------------------------------------------------+
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 Tab requirements:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 - surface icon or type marker;
@@ -2890,12 +2895,12 @@ Tab requirements:
 - `Move to popup`;
 - later tab reorder via dnd-kit.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 Stage 2 should not introduce full split-pane complexity yet. It should simply allow multiple surfaces in the main area.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 ### 7.4 Future layout expansions
@@ -3225,7 +3230,7 @@ This avoids a separate `TextForge2` repository while avoiding a confusing side-b
 
 ## 10. Companion roadmap set and authority split
 
-The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15f roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
+The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15g roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
 
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
 
@@ -3313,7 +3318,7 @@ Required:
 
 Required:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/core`.
 
 
 - create/rename/delete/move in workspace tree;
@@ -3327,7 +3332,7 @@ Required:
 - ArchiMate model explorer and matrix surfaces;
 - EA view generation and stale-state handling.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery; Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/core`.
 
 
 ### 11.4 Security and accreditation tests

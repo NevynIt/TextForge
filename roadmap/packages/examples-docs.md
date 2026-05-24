@@ -56,6 +56,16 @@ Implementation anchors:
 Update. Add a short document-badge and workbench-readability style note. Include the placement-based `8 × 8 × 8 × 5 = 2560` badge model, the `lucide-react` generic-icon rule, and sample workspace fixtures or screenshots/checklists showing stable badges, duplicate-name handling, ZIP export/import preservation, deterministic collision repair after restore or batch import, no global horizontal scrolling, compact top chrome, active-resource highlighting, and utility-panel behavior.
 
 
+### Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-7.2-P01..P04`, `ARCH-7.3-P01..P05`, `ARCH-7.5-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-12.4-P01..P02`.
+- pnpm packages: Phase 3.5: No new package install.
+
+Update. Add and maintain the screenshot-based validation checklist and any before/after screenshot evidence guidance. The checklist must explicitly catch wasted screen real estate, awkward whole-shell scrollbars, collapsed panels that still reserve space, duplicated active file titles/paths, and popup content relegated to side panels.
+
+
 ### Phase 19 — Release-envelope verification and accreditation evidence
 
 Implementation anchors:

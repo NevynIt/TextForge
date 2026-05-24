@@ -82,7 +82,7 @@ The workspace package does not own the readability pass, but it must provide cle
 
 ## Tests and definition of done
 
-Persistence tests, Dexie schema/version tests after Phase 3.2, ZIP import/export tests, path normalization tests, binary resource round-trip tests, workspace manifest tests, command contribution tests after Phase 3.3, and badge identity/collision-repair tests after Phase 3.4.
+Persistence tests, Dexie schema/version tests after Phase 3.2, ZIP import/export tests, path normalization tests, binary resource round-trip tests, workspace manifest tests, command contribution tests after Phase 3.3, and badge identity/collision-repair tests after Phase 3.4, plus screenshot/layout checks after Phase 3.5.
 
 ## Non-goals
 

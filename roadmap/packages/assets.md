@@ -88,6 +88,16 @@ Implementation anchors:
 
 Validate/update lightly. Ensure image, SVG, PDF, and binary viewer surfaces fit the cleaned workbench layout, present resource identity/state consistently through the common chrome, and avoid introducing editable-source affordances for read-only binary resources. Do not change binary resource semantics in this phase.
 
+### Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-4-P04..P06`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.6-P01..P05`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.5: No new package install.
+
+Validate/update lightly. Ensure SVG/image/PDF/binary viewer surfaces remain readable when side panels are resized or collapsed and when a viewer is hosted as a popup overlay. Do not change binary resource semantics.
+
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 Implementation anchors:

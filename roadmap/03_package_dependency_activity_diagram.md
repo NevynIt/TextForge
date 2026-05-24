@@ -120,6 +120,19 @@ sequenceDiagram
     Docs->>UI: document badge/readability style and fixture expectations
   end
 
+  rect rgb(235,250,250)
+    Note over Surf,App: Phase 3.5 — popup usability, resizable panels, and chrome deduplication pass
+    Surf->>UI: expose popup/main placement state for real in-app popup hosts
+    UI->>UI: use react-resizable-panels for bounded shell side panels only
+    UI->>Surf: render popup sessions as overlays, not right-panel content
+    App->>UI: deduplicate active-resource cards, title rows, buttons, and repeated paths
+    App->>UI: enforce no page-level horizontal scrollbar and no orphaned collapsed-panel space
+    Edit->>UI: validate editor readability after panel resize/collapse
+    Assets->>UI: validate viewer readability after panel resize/collapse
+    Sec->>UI: verify popup/resize state is local UI state with no new browser permissions
+    Docs->>UI: capture screenshot evidence against the Phase 3.5 checklist
+  end
+
   rect rgb(250,240,255)
     Note over Pipe,Diag: Phase 4 — Markdown, local assets, generated diagram assets
     Pipe->>Core: consume pipeline value, trace, diagnostics, generated resource contracts

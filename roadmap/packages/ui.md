@@ -92,6 +92,20 @@ Update. Implement the UI side of the single Phase 3.4 pass: compact Shapez.io-st
 The priority is readability and orientation. Keep resource identity in the deterministic placement-based badge token rather than a per-file icon taxonomy. Do not add arbitrary icon pickers, semantic meaning encoded only by color, another icon library, saved layout/session restore, split panes, drag/drop tab management, or Phase 13 advanced tab-management behavior.
 
 
+### Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-4-P04..P06`, `ARCH-5.1-P03`, `ARCH-5.2-P01..P06`, `ARCH-6.1-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.3-P01..P05`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.5: `pnpm --filter @textforge/ui add react-resizable-panels`.
+
+Update. Implement bounded popup/overlay host chrome, shell-level resizable side panels, collapse states that release real workspace area, and deduplication primitives for active-resource cards, repeated titles/paths, and redundant header buttons. `react-resizable-panels` is allowed here only for left/right shell side panels and utility/inspector sizing; it is not permission to implement IDE split panes or advanced tab groups.
+
+Add screenshot-review support by exposing stable layout landmarks/test IDs where useful and by aligning the implementation with `roadmap/04_phase_3_5_screenshot_validation_checklist.md`.
+
+Do not add dnd-kit, tab drag/reorder, saved layout/session restoration, detached browser windows, arbitrary popup windows outside the app shell, or a new icon library.
+
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -117,14 +131,14 @@ Update. Common table toolbar/filter/sort components.
 Implementation anchors:
 
 - Architecture paragraphs: `ARCH-5.2-P04..P06`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.3-P01..P06`, `ARCH-7.4-P01..P03`, `ARCH-11.3-P01..P02`.
-- pnpm packages: Phase 13: `pnpm --filter @textforge/ui add react-resizable-panels @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities`
+- pnpm packages: Phase 13: `pnpm --filter @textforge/ui add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities`. `react-resizable-panels` should already be present from Phase 3.5 for shell side panels.
 
 
-Update. Add advanced tab chrome, group-aware keyboard navigation, movement affordances, pinned/dirty/stale indicators, and richer tab state beyond the narrow Phase 3.1 main-session strip.
+Update. Add advanced tab chrome, group-aware keyboard navigation, movement affordances, pinned/dirty/stale indicators, and richer tab state beyond the narrow Phase 3.1 main-session strip and the Phase 3.5 bounded side-panel resizing.
 
 ## Tests and definition of done
 
-Component tests, accessibility checks, keyboard navigation tests, command palette tests after Phase 3.3, badge rendering/accessibility tests and shell-layout usability smoke tests after Phase 3.4.
+Component tests, accessibility checks, keyboard navigation tests, command palette tests after Phase 3.3, badge rendering/accessibility tests and shell-layout usability smoke tests after Phase 3.4, plus screenshot/layout checks after Phase 3.5.
 
 ## Non-goals
 

@@ -116,6 +116,21 @@ Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `A
 | `@textforge/security-profile` | Local deterministic rendering and browser-boundary checks; no remote icon/image loading or filesystem identity. | No new package install. |
 | `@textforge/examples-docs` | Badge/readability style note, fixtures, and collision-repair examples. | No new package install. |
 
+## Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
+
+Architecture paragraphs: `ARCH-4-P04..P06`, `ARCH-5.1-P03`, `ARCH-5.2-P01..P06`, `ARCH-6.1-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.3-P01..P05`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | No new core dependency; consume existing placement/session contracts unless a tiny shared type is unavoidable. | No new package install. |
+| `@textforge/surfaces` | Popup placement/session behavior and popup/main separation. | No new package install. |
+| `@textforge/ui` | Popup overlay host, resizable side panels, chrome deduplication primitives, and screenshot-review helpers. | `pnpm --filter @textforge/ui add react-resizable-panels` |
+| `@textforge/editors` | Editor fit/readability validation inside resized/collapsed shell regions. | No new package install. |
+| `@textforge/assets` | Viewer fit/readability validation inside resized/collapsed shell regions. | No new package install. |
+| `apps/textforge-web` | Integrate real popups, bounded panel resizing, deduplicated document chrome, and screenshot checks. | No new package install. |
+| `@textforge/security-profile` | Verify popup/resize state stays local and does not introduce browser-window, permission, network, sync, or filesystem changes. | No new package install. |
+| `@textforge/examples-docs` | Screenshot-based validation checklist and evidence guidance. | No new package install. |
+
 ## Phase 4 — Markdown, local assets, and generated diagram assets
 
 Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P01..P06`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-11.5-P01..P03`, `ARCH-13.8-P01..P03`
@@ -210,7 +225,7 @@ Architecture paragraphs: `ARCH-5.2-P04..P06`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
 | `@textforge/surfaces` | Advanced placement/session model. | No new package install. |
-| `@textforge/ui` | Advanced tab chrome, movement affordances, group-aware keyboard navigation. | `pnpm --filter @textforge/ui add react-resizable-panels @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities` |
+| `@textforge/ui` | Advanced tab chrome, movement affordances, group-aware keyboard navigation. Reuse the shell side-panel dependency introduced in Phase 3.5. | `pnpm --filter @textforge/ui add @dnd-kit/core @dnd-kit/sortable @dnd-kit/utilities` |
 | `@textforge/core` | Stable session persistence types if needed. | No new package install. |
 
 ## Phase 14 — Rich Markdown editing, optional and round-trip gated

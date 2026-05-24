@@ -247,19 +247,21 @@ Use this order:
 
 ## Phase 3 recovery sequence
 
-After Phase 3 ZIP import/export closes, do not jump directly to Phase 4. The roadmap now inserts three explicit phases:
+After Phase 3 ZIP import/export closes, do not jump directly to Phase 4. The roadmap now inserts five explicit phases:
 
 ```text
 Phase 3.1 — React workbench shell and UI recovery
 Phase 3.2 — Dexie workspace persistence recovery
 Phase 3.3 — Command palette and contribution-driven shell commands
+Phase 3.4 — Resource identity badges and workbench readability pass
+Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
 ```
 
-Treat Phase 3.1 and Phase 3.2 as recovery phases for promised work that was previously deferred. Treat Phase 3.3 as a deliberate pull-forward of only the shell-facing command palette and menu/toolbar slice from Phase 5.
+Treat Phase 3.1 and Phase 3.2 as recovery phases for promised work that was previously deferred. Treat Phase 3.3 as a deliberate pull-forward of only the shell-facing command palette and menu/toolbar slice from Phase 5. Treat Phase 3.4 as the integrated resource-identity/readability pass. Treat Phase 3.5 as a focused shell-usability pass for real app popups, bounded side-panel resizing, chrome deduplication, and screenshot-based validation before Phase 4.
 
-Phase 3.3 is not permission to pull the whole Phase 5 contribution system forward. Do not implement pipeline contribution loading, diagnostics aggregation UI, plugin management, deep context-menu proliferation, or later domain package work in Phase 3.3.
+Phase 3.3 is not permission to pull the whole Phase 5 contribution system forward. Phase 3.5 is not permission to pull Phase 13 forward. Do not implement pipeline contribution loading, diagnostics aggregation UI, plugin management, deep context-menu proliferation, later domain package work, advanced tab groups, tab drag/reorder, saved layouts, detached browser windows, or split panes in these recovery/usability phases.
 
-Each of these phases must update the central roadmap, the affected package guide, and `RAPID.md` in the same commit as the implementation slice.
+Each of these phases must update the central roadmap, the affected package guide, and `RAPID.md` in the same commit as the implementation slice. Phase 3.5 also requires screenshot evidence against `roadmap/04_phase_3_5_screenshot_validation_checklist.md` or an explicit RAPID note explaining any validation gap.
 
 ## Package-boundary rules
 
