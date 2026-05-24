@@ -2,6 +2,8 @@
 
 This roadmap interweaves the architecture milestones with the package split. It is intentionally package-oriented: every phase states which packages are created or updated and what each package receives.
 
+For a phase-sequenced cross-package dependency view, see `roadmap/03_package_dependency_activity_diagram.md`.
+
 ## Repository model used by this roadmap
 
 This roadmap assumes one Git repository with pnpm workspaces. Each phase may update several packages in one branch, but each package keeps its own public API, tests, documentation, and versioning metadata. Changes should be made through package contribution manifests rather than by centralizing feature logic in the app shell. Git submodules are deliberately excluded from the initial rebuild because they make cross-package agentic changes and pull requests unnecessarily fragile.
