@@ -30,29 +30,71 @@ Source editor surfaces, language mode registry, lint bridge, editor commands, so
 
 ### Phase 1 — Workspace and Stage 1 surface skeleton
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-4.1-P01..P02`, `ARCH-4.2-P01..P03`, `ARCH-4.3-P01..P07`, `ARCH-5.2-P01..P06`, `ARCH-5.3-P01..P05`, `ARCH-5.6-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.2-P01..P04`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.15-P01..P04`, `ARCH-7.1-P01..P04`, `ARCH-7.2-P01..P04`, `ARCH-7.5-P01..P04`, `ARCH-7.6-P01..P06`, `ARCH-7.7-P01..P04`, `ARCH-14.1-P01..P02`.
+- pnpm packages: Phase 1: `pnpm --filter @textforge/editors add @textforge/core@workspace:* @textforge/surfaces@workspace:* @textforge/ui@workspace:* @codemirror/state @codemirror/view @codemirror/commands @codemirror/language @codemirror/search`
+
+
 Create. CodeMirrorTextEditorSurface with generic text editing and source range hooks.
 
 ### Phase 2 — Source-editor coverage and language foundation
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.6-P01..P04`, `ARCH-6.6-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.16-P01..P04`, `ARCH-11.1-P01..P02`, `ARCH-14.1-P01..P02`.
+- pnpm packages: Phase 2: `pnpm --filter @textforge/editors add @codemirror/lang-markdown @codemirror/lang-json @codemirror/lang-xml @codemirror/lang-yaml @codemirror/lang-html @codemirror/lang-css @codemirror/lang-javascript @codemirror/legacy-modes @codemirror/lint`
+
 
 Update. Add CodeMirror language modes, syntax highlighting, and editor configuration for Markdown, ITM, Lua, JSON, XML, BPMN XML, ArchiMate exchange XML, CSV/TSV, Mermaid, DOT, SVG, YAML.
 
 ### Phase 3.1 — React workbench shell and UI recovery
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.1-P01..P06`, `ARCH-5.2-P01..P06`, `ARCH-6.1-P01..P05`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.5-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.1: `pnpm --filter @textforge/editors add react react-dom`; `pnpm --filter @textforge/editors add -D @types/react @types/react-dom`
+
+
 Update only as needed to ensure existing CodeMirror source-editor surfaces mount correctly through the React shell and preserve source selection/range hooks. Do not add rich editing, new language features, or domain authoring helpers here.
 
 ### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`.
+- pnpm packages: Phase 3.3: No new package install.
+
 
 Update only to expose existing source-editor actions as command descriptors where they already exist. Do not add new editor behaviour simply to populate the command palette.
 
 ### Phase 6 — ITM integration and model/report foundation
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.6-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.9-P01..P07`, `ARCH-6.18-P01..P12`, `ARCH-11.2-P01..P02`, `ARCH-12.2-P01`.
+- pnpm packages: No direct package install in this compatibility phase; consume public contracts produced by the active phase packages.
+
+
 Update. Add ITM source assistance and diagnostics integration.
 
 ### Phase 8 — Lua automation
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.15-P01..P04`, `ARCH-6.19-P01..P06`, `ARCH-7.10-P01..P05`, `ARCH-11.1-P01..P02`.
+- pnpm packages: No direct package install in this compatibility phase; consume public contracts produced by the active phase packages.
+
+
 Update. Add Lua source editor mode and action/snippet authoring helpers.
 
 ### Phase 14 — Rich Markdown editing, optional and round-trip gated
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.3-P01..P08`, `ARCH-5.4-P01..P03`, `ARCH-6.12-P01..P05`, `ARCH-14.1-P01..P02`.
+- pnpm packages: Phase 14: No new package install.
+
 
 Update. Define rich-editor capability and unsupported-construct warning conventions.
 

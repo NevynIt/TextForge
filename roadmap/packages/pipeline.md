@@ -29,29 +29,71 @@ PipelineContribution, PipelineStep, PipelineRunner, PipelineTrace, PipelineResul
 
 ### Phase 3.3 — Command palette and contribution-driven shell commands
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`.
+- pnpm packages: No direct package install in this compatibility phase; consume public contracts produced by the active phase packages.
+
+
 No direct package work. This phase must not pull pipeline contribution loading, diagnostics aggregation, or intermediate reopening forward. It only creates the shell-command substrate that later pipeline actions may use.
 
 ### Phase 4 — Markdown, local assets, and generated diagram assets
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P01..P06`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-11.5-P01..P03`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 4: `pnpm --filter @textforge/pipeline add @textforge/core@workspace:* @textforge/workspace@workspace:*`
+
 
 Create. Minimal pipeline contribution registry, pipeline runner, trace, generated resource output type.
 
 ### Phase 5 — Contribution registries and package composition
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`.
+- pnpm packages: Phase 5: No new package install.
+
+
 Update. Add step contribution loading, diagnostics aggregation, intermediate value reopening using the broader contribution-pack system that extends Phase 3.3.
 
 ### Phase 6 — ITM integration and model/report foundation
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.6-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.9-P01..P07`, `ARCH-6.18-P01..P12`, `ARCH-11.2-P01..P02`, `ARCH-12.2-P01`.
+- pnpm packages: Phase 6: No new package install.
+
 
 Update. Add ITM model value type and ITM-based transformation step contracts.
 
 ### Phase 8 — Lua automation
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.15-P01..P04`, `ARCH-6.19-P01..P06`, `ARCH-7.10-P01..P05`, `ARCH-11.1-P01..P02`.
+- pnpm packages: Phase 8: No new package install.
+
+
 Update. Add Lua-backed pipeline step type and diagnostics mapping.
 
 ### Phase 10 — BPMN support and first mature visual editor
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.13-P01..P05`, `ARCH-5.3-P01..P08`, `ARCH-6.12-P01..P05`, `ARCH-6.16-P01..P04`, `ARCH-14.1-P01..P02`.
+- pnpm packages: No direct package install in this compatibility phase; consume public contracts produced by the active phase packages.
+
+
 Update. Add BPMN XML value and optional BPMN-to-ITM/ITM-to-BPMN extension points.
 
 ### Phase 15 — Controlled graph, diagram, and pipeline editors
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.3-P01..P08`, `ARCH-5.4-P01..P03`, `ARCH-6.8-P01..P06`, `ARCH-6.9-P01..P07`, `ARCH-14.1-P01..P02`.
+- pnpm packages: Phase 15: No new package install.
+
 
 Update. Add visual pipeline editor schema and controlled write-back patches.
 

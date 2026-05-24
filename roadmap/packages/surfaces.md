@@ -29,13 +29,31 @@ SurfaceContribution, SurfaceRegistry, SurfaceSessionManager, SurfacePlacement, S
 
 ### Phase 1 — Workspace and Stage 1 surface skeleton
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-4.1-P01..P02`, `ARCH-4.2-P01..P03`, `ARCH-4.3-P01..P07`, `ARCH-5.2-P01..P06`, `ARCH-5.3-P01..P05`, `ARCH-5.6-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.2-P01..P04`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.15-P01..P04`, `ARCH-7.1-P01..P04`, `ARCH-7.2-P01..P04`, `ARCH-7.5-P01..P04`, `ARCH-7.6-P01..P06`, `ARCH-7.7-P01..P04`, `ARCH-14.1-P01..P02`.
+- pnpm packages: Phase 1: `pnpm --filter @textforge/surfaces add @textforge/core@workspace:* @textforge/ui@workspace:*`
+
+
 Create. SurfaceContribution, SurfaceSession, SurfaceRegistry, one main SurfaceHost, popup SurfaceHost, open-with contract.
 
 ### Phase 2 — Source-editor coverage and language foundation
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.6-P01..P04`, `ARCH-6.6-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.16-P01..P04`, `ARCH-11.1-P01..P02`, `ARCH-14.1-P01..P02`.
+- pnpm packages: Phase 2: No new package install.
+
+
 Update. Add open-with selection, source editor fallback, basic stale/current indicators.
 
 ### Phase 3.1 — React workbench shell and UI recovery
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.1-P01..P06`, `ARCH-5.2-P01..P06`, `ARCH-6.1-P01..P05`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.5-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.1: `pnpm --filter @textforge/surfaces add react react-dom`; `pnpm --filter @textforge/surfaces add -D @types/react @types/react-dom`
+
 
 Update. Keep the registry, session, placement, and host contracts stable while making them easy for the React shell to consume. Support the narrow main-session tab model required by the refreshed shell, with popup sessions kept out of the main document strip.
 
@@ -43,21 +61,51 @@ Do not add Phase 13 tab groups, drag movement, saved layout state, splits, or ri
 
 ### Phase 3.3 — Command palette and contribution-driven shell commands
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`.
+- pnpm packages: Phase 3.3: No new package install.
+
+
 Update. Expose existing surface actions as shell command contributions where applicable: open-with, close, refresh/current-state handling, move main/popup, and active-surface focus actions. Preserve capability filtering through public contracts.
 
 ### Phase 5 — Contribution registries and package composition
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`.
+- pnpm packages: Phase 5: No new package install.
+
 
 Update. Add package-provided surface registration and capability-filtered commands beyond the base shell actions delivered in Phase 3.3.
 
 ### Phase 7 — ITM visual projections
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.12-P01..P04`, `ARCH-6.9-P01..P07`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-11.5-P01..P03`.
+- pnpm packages: No direct package install in this compatibility phase; consume public contracts produced by the active phase packages.
+
+
 Update. Add ITM projection surface registrations.
 
 ### Phase 10 — BPMN support and first mature visual editor
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.13-P01..P05`, `ARCH-5.3-P01..P08`, `ARCH-6.12-P01..P05`, `ARCH-6.16-P01..P04`, `ARCH-14.1-P01..P02`.
+- pnpm packages: No direct package install in this compatibility phase; consume public contracts produced by the active phase packages.
+
+
 Update. Ensure controlled-write-back capability is represented in surface chrome.
 
 ### Phase 13 — Stage 2 advanced tabbed main surfaces
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P04..P06`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.3-P01..P06`, `ARCH-7.4-P01..P03`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 13: No new package install.
+
 
 Update. Add tabbed main surface groups, tab movement, richer open-to-main/open-as-popup transitions, optional pinned state, and advanced session semantics. Splits remain future.
 

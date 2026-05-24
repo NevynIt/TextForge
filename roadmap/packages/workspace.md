@@ -28,19 +28,43 @@ WorkspaceService, persisted-workspace helpers, Dexie storage/reset helpers, Work
 
 ### Phase 1 — Workspace and Stage 1 surface skeleton
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-4.1-P01..P02`, `ARCH-4.2-P01..P03`, `ARCH-4.3-P01..P07`, `ARCH-5.2-P01..P06`, `ARCH-5.3-P01..P05`, `ARCH-5.6-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.2-P01..P04`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.15-P01..P04`, `ARCH-7.1-P01..P04`, `ARCH-7.2-P01..P04`, `ARCH-7.5-P01..P04`, `ARCH-7.6-P01..P06`, `ARCH-7.7-P01..P04`, `ARCH-14.1-P01..P02`.
+- pnpm packages: Phase 1: `pnpm --filter @textforge/workspace add @textforge/core@workspace:*`
+
+
 Create. Virtual files/folders, resource IDs, text/binary resource metadata, Dexie schema, basic create/open/save/delete/rename/move APIs. The schema may exist before the real Dexie runtime is wired.
 
 ### Phase 3 — ZIP workspace import/export
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.9-P01..P05`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.22-P01..P04`, `ARCH-7.1-P01..P04`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3: `pnpm --filter @textforge/workspace add fflate`
+
+
 Update. Add fflate ZIP import/export, selected-folder export, full-workspace export, workspace manifest, path normalization, conflict policy.
 
 ### Phase 3.2 — Dexie workspace persistence recovery
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.8-P01..P05`, `ARCH-6.2-P01..P04`, `ARCH-6.4-P01..P04`, `ARCH-7.1-P01..P04`, `ARCH-11.1-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.2: `pnpm --filter @textforge/workspace add dexie`
+
 
 Update. Add Dexie as a real runtime dependency and implement versioned IndexedDB-backed persistence for folders, text resources, binary resources, resource metadata, language IDs, workspace manifests, and schema versioning. Hydrate the workspace on startup, persist all core mutation flows, and make ZIP import/export operate against the persisted workspace state.
 
 Include explicit reset/recovery behaviour for corrupted or incompatible local browser storage. Exclude remote sync, filesystem mirroring, directory handles, session-layout restore, and open-tab restore.
 
 ### Phase 3.3 — Command palette and contribution-driven shell commands
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`.
+- pnpm packages: Phase 3.3: No new package install.
+
 
 Update. Expose existing workspace actions as shell command contributions where applicable, including import/export, selected-folder ZIP export, new folder/resource, rename, delete, and storage reset/recovery actions. Do not add new workspace behaviours solely to populate the palette.
 

@@ -31,33 +31,81 @@ Asset viewer surfaces, blob URL service, asset picker, generated asset metadata/
 
 ### Phase 1 — Workspace and Stage 1 surface skeleton
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-4.1-P01..P02`, `ARCH-4.2-P01..P03`, `ARCH-4.3-P01..P07`, `ARCH-5.2-P01..P06`, `ARCH-5.3-P01..P05`, `ARCH-5.6-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.2-P01..P04`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.15-P01..P04`, `ARCH-7.1-P01..P04`, `ARCH-7.2-P01..P04`, `ARCH-7.5-P01..P04`, `ARCH-7.6-P01..P06`, `ARCH-7.7-P01..P04`, `ARCH-14.1-P01..P02`.
+- pnpm packages: Phase 1: `pnpm --filter @textforge/assets add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/ui@workspace:* pdfjs-dist`
+
+
 Create. Image/SVG/PDF/generic binary read-only surfaces; blob URL lifecycle; workspace asset binding.
 
 ### Phase 3 — ZIP workspace import/export
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.9-P01..P05`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.22-P01..P04`, `ARCH-7.1-P01..P04`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3: No new package install.
+
 
 Update. Ensure binary files round-trip through workspace ZIP.
 
 ### Phase 3.1 — React workbench shell and UI recovery
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.1-P01..P06`, `ARCH-5.2-P01..P06`, `ARCH-6.1-P01..P05`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.5-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.1: `pnpm --filter @textforge/assets add react react-dom`; `pnpm --filter @textforge/assets add -D @types/react @types/react-dom`
+
+
 Update only as needed to ensure existing image/SVG/PDF/generic binary viewer surfaces mount through the React shell without changing asset semantics.
 
 ### Phase 3.2 — Dexie workspace persistence recovery
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.8-P01..P05`, `ARCH-6.2-P01..P04`, `ARCH-6.4-P01..P04`, `ARCH-7.1-P01..P04`, `ARCH-11.1-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.2: No new package install.
+
 
 Update. Ensure binary resources persist and rehydrate correctly through the workspace Dexie backend, and that blob URL lifecycle remains package-owned after hydration.
 
 ### Phase 3.3 — Command palette and contribution-driven shell commands
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`.
+- pnpm packages: Phase 3.3: No new package install.
+
+
 Update only to expose existing asset viewer actions as command descriptors where they already exist. Do not add generated asset workflows early.
 
 ### Phase 4 — Markdown, local assets, and generated diagram assets
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P01..P06`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-11.5-P01..P03`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 4: No new package install.
+
 
 Update. Add generated asset provenance, stale-state display, SVG/PNG export actions.
 
 ### Phase 17 — Sketch and annotation resources
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.4-P01..P03`, `ARCH-5.11-P01..P09`, `ARCH-6.5-P01..P07`, `ARCH-6.22-P01..P04`, `ARCH-13.8-P01..P03`, `ARCH-14.1-P01..P02`.
+- pnpm packages: Phase 17: `pnpm --filter @textforge/assets add @excalidraw/excalidraw`
+
+
 Update. Add Excalidraw sketch/annotation resource surface if still desired; store sketch JSON plus SVG/PNG exports as workspace resources.
 
 ### Phase 18 — Late PDF generation and PDF annotation
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.11-P05..P09`, `ARCH-6.18-P26..P29`, `ARCH-6.22-P01..P04`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 18: No new package install if implemented over existing `pdfjs-dist`; add annotation helper packages only after a RAPID decision.
+
 
 Update. Optional PDF annotation layer over PDF.js; store annotations as separate workspace resources/deltas.
 

@@ -1,4 +1,4 @@
-# TextForge V15b Repository and Package Strategy
+# TextForge V15c Repository and Package Strategy
 
 ## Purpose
 
@@ -181,6 +181,33 @@ Package-to-package references should use workspace dependencies:
 ```
 
 This keeps local development fast and avoids accidental dependency on a published older package version.
+
+## Phase dependency command discipline
+
+The roadmap now records dependency actions in two places:
+
+- `roadmap/00_package_aware_roadmap.md` under each phase;
+- `roadmap/02_phase_architecture_pnpm_matrix.md` as the consolidated phase/package matrix.
+
+Every dependency introduced by a phase should be installed through an explicit `pnpm` command and then committed through `package.json` and `pnpm-lock.yaml`. Workspace dependencies should use `workspace:*`; third-party dependencies should be added to the package that imports them, not to the root, unless they are truly root build/test tooling.
+
+Recommended command forms:
+
+```bash
+# Runtime dependency used by one workspace package
+pnpm --filter @textforge/<package> add <npm-package>
+
+# Internal workspace dependency
+pnpm --filter @textforge/<package> add @textforge/<dependency>@workspace:*
+
+# Package-local dev dependency
+pnpm --filter @textforge/<package> add -D <npm-package>
+
+# Root-only build/test/release tooling
+pnpm add -D -w <npm-package>
+```
+
+If implementation chooses a different package than the roadmap candidate, the agent must record the reason in `roadmap/RAPID.md`, update the relevant package guide, and keep the security/license gate green.
 
 ---
 

@@ -19,6 +19,8 @@ roadmap/
   AGENTS_START_HERE.md
   00_package_aware_roadmap.md
   01_repository_and_package_strategy.md
+  02_architecture_paragraph_reference_index.md
+  02_phase_architecture_pnpm_matrix.md
   03_package_dependency_activity_diagram.md
   RAPID.md
   textforge_rebuild_whitepaper_main.md
@@ -50,11 +52,12 @@ Before changing code, do the following:
 1. Read `roadmap/AGENTS_START_HERE.md`.
 2. Read `roadmap/RAPID.md`.
 3. Read `roadmap/00_package_aware_roadmap.md`.
-4. Read `roadmap/03_package_dependency_activity_diagram.md` for cross-package phase sequencing context.
-5. Inspect `git status`, current branch, recent commits, and package structure.
-6. Determine the current phase and the next incomplete step.
-7. Check whether the roadmap still matches the repository reality.
-8. Proceed only within the next coherent phase or phase slice.
+4. Read `roadmap/02_phase_architecture_pnpm_matrix.md` for the active phase's architecture anchors and pnpm dependency commands.
+5. Read `roadmap/03_package_dependency_activity_diagram.md` for cross-package phase sequencing context.
+6. Inspect `git status`, current branch, recent commits, and package structure.
+7. Determine the current phase and the next incomplete step.
+8. Check whether the roadmap still matches the repository reality.
+9. Proceed only within the next coherent phase or phase slice.
 
 Do not start by guessing from file names alone. The RAPID log and roadmap are the authoritative operational context.
 
@@ -94,10 +97,11 @@ git log --oneline -5
 find roadmap -maxdepth 2 -type f | sort || true
 cat roadmap/RAPID.md 2>/dev/null || true
 cat roadmap/00_package_aware_roadmap.md 2>/dev/null || true
+cat roadmap/02_phase_architecture_pnpm_matrix.md 2>/dev/null || true
 cat roadmap/03_package_dependency_activity_diagram.md 2>/dev/null || true
 ```
 
-If `roadmap/` does not exist yet, copy or merge the V15b `roadmap/` folder into the repository root. If the repository has not yet been pivoted, follow the Phase -1 instructions in `roadmap/00_package_aware_roadmap.md`, using Git history and the preserved RAPID record as the operational source.
+If `roadmap/` does not exist yet, copy or merge the V15d `roadmap/` folder into the repository root. If the repository has not yet been pivoted, follow the Phase -1 instructions in `roadmap/00_package_aware_roadmap.md`, using Git history and the preserved RAPID record as the operational source.
 
 After the repository is initialized, use the available verification commands instead of inventing new ones. Typical commands will eventually be:
 

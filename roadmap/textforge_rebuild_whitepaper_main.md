@@ -1,9 +1,9 @@
 # TextForge Rebuild Whitepaper
 
-**Version:** 15  
+**Version:** 15d  
 **Purpose:** Standalone architecture blueprint for rebuilding TextForge from scratch as a React-based, local-first, text-first, secure browser workbench. The design centers on an application-private virtual workspace, ITM as the canonical structural model, explicit pipelines, restricted Lua automation, binary workspace resources, Markdown/report generation, enterprise architecture and ArchiMate support, browser-envelope accreditation, and a Surface-based UI where editors, rich editors, structured editors, viewers, consoles, inspectors, and generated previews are peers.
 
-This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15b roadmap documents under `roadmap/`.
+This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15d roadmap documents under `roadmap/`.
 
 ---
 
@@ -11,7 +11,13 @@ This document is self-contained and states the target architecture directly. It 
 
 TextForge should be rebuilt as a **React-based, local-first, text-first structured-text workbench**. Its central promise is that plain text remains the canonical source while diagrams, graphs, rendered Markdown, BPMN views, enterprise architecture views, ArchiMate views, SVGs, PNGs, images, reference PDFs, tables, reports, and transformed outputs remain derived, inspectable, and disposable artifacts. The UI should be a workbench of interchangeable surfaces, not a CodeMirror-only editor with secondary popup viewers. Editing must remain source-first: richer visual and structured editors are valuable, but only when they have an explicit and testable write-back contract to the canonical text, model, XML, CSV, or workspace resource they edit.
 
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
+
 The rebuild should not start as a generic web IDE. It should start as a deterministic local document workbench with four pillars:
+
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
 
 1. **A virtual workspace** backed by IndexedDB, with explicit manual upload/download as the only file boundary.
 2. **A canonical ITM object model** used as the internal structural representation for trees, graphs, diagrams, views, report fragments, and model-driven transformations.
@@ -19,7 +25,13 @@ The rebuild should not start as a generic web IDE. It should start as a determin
 4. **A restricted Lua automation layer** for user-defined transformations and actions, replacing unsafe user-provided JavaScript plugins.
 5. **A reusable browser-envelope accreditation profile** that demonstrates TextForge is packaged with the expected browser safeguards: no unapproved network egress, no remote code loading, no privileged local filesystem APIs, no broad extension permissions, and no unsafe service-worker escape path.
 
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
+
 The recommended rebuild should use React as the UI foundation and reuse proven libraries where they do not compromise the product model:
+
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
 
 | Area | Selected component |
 |---|---|
@@ -60,13 +72,22 @@ The recommended rebuild should use React as the UI foundation and reuse proven l
 | PDF generation from Markdown HTML | late-stage browser-local export path; start with print-optimized HTML and evaluate client-side PDF generation only after core report pipeline is stable |
 | Accreditation harness | reusable scripts checking CSP, manifests, service workers, remote assets, and forbidden browser APIs |
 
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
+
 The key custom components should be: virtual workspace model, ITM integration, pipeline runner, diagnostics model, source/view bridge, report generation orchestration, Lua sandbox policy, controlled write-back, and a reusable browser-envelope accreditation configuration/harness.
+
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
 
 ---
 
 ## 2. Product doctrine
 
 The rebuild should preserve the following invariants.
+
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
 
 ```text
 1. Text is canonical.
@@ -87,7 +108,13 @@ The rebuild should preserve the following invariants.
 16. Dependencies must remain compatible with an open-source TextForge distribution.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
+
 These invariants should be treated as architectural tests. A new feature that violates one of them should be rejected or redesigned.
+
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
 
 
 ---
@@ -96,23 +123,47 @@ These invariants should be treated as architectural tests. A new feature that vi
 
 TextForge is intended to run as:
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3 — ZIP workspace import/export; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/workspace`, `@textforge/examples-docs`.
+
+
 1. a local/static web app where feasible;
 2. a packaged browser extension;
 3. optionally, a PWA-like local web app if served from a controlled origin.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3 — ZIP workspace import/export; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/workspace`, `@textforge/examples-docs`.
+
+
 All accredited local targets must preserve the same security claim:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3 — ZIP workspace import/export; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/workspace`, `@textforge/examples-docs`.
+
 
 > TextForge cannot silently access or modify user-visible local files. Local files, including images and reference PDFs, enter through explicit user upload/import or ZIP import. Local files leave through explicit user download/export, ZIP export, copy, or print. The accredited local profile performs no unapproved network access and loads no remote code, remote plugins, or CDN assets.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3 — ZIP workspace import/export; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/workspace`, `@textforge/examples-docs`.
+
+
 This is stronger than “offline-capable.” It is a deliberate accreditation posture.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3 — ZIP workspace import/export; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/workspace`, `@textforge/examples-docs`.
+
 
 The security claim should be understood as a **browser-envelope claim**, not a proof of every internal implementation detail. The accreditation harness should verify that the browser and deployment safeguards are present and correctly configured. The browser then enforces the core boundary through CSP, extension permissions, service-worker restrictions, same-origin packaging, and the absence of privileged filesystem APIs.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3 — ZIP workspace import/export; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/workspace`, `@textforge/examples-docs`.
+
+
 TextForge-specific architectural discipline remains important, but it should not be confused with reusable accreditation. For example, TextForge should still use a `WorkspaceStorageGateway`, `FileGateway`, and `ExportGateway` because they make the code easier to reason about. However, the reusable accreditation harness should not attempt to prove that only those gateway modules ever touch IndexedDB or user-mediated file input. IndexedDB and ordinary file input are allowed browser capabilities inside the app. The accreditation boundary is about preventing unapproved network egress, remote code loading, broad extension permissions, service-worker escape paths, and privileged silent filesystem access.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3 — ZIP workspace import/export; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/workspace`, `@textforge/examples-docs`.
+
 
 ### 3.1 Browser-envelope accreditation profile
 
 The default TextForge target should conform to a reusable profile similar to:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 ```yaml
 profile: local-only-manual-file-workspace-webapp
@@ -143,11 +194,20 @@ pwa:
   serviceWorkerArbitraryProxy: forbidden
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
+
 This profile is intentionally application-independent. It can apply to TextForge, another local Markdown tool, a PDF utility, a modelling workbench, or a browser-based document processor.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 ### 3.2 What the accreditation harness should verify
 
 The reusable harness should check the deployment envelope:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 - CSP for the static/PWA target;
 - extension manifest permissions for the extension target;
@@ -158,11 +218,20 @@ The reusable harness should check the deployment envelope:
 - no service-worker code that acts as an arbitrary network proxy;
 - no runtime network policy that contradicts the declared profile.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
+
 The harness should not become a TextForge architecture verifier. It should not need to know the TextForge workspace model, ITM processor, viewer registry, Lua module layout, or whether all storage writes pass through a particular class. Those checks can exist as ordinary project tests, but they are not the reusable accreditation core.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 ### 3.3 Internal architecture rules versus accreditation rules
 
 The distinction should be explicit:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 | Concern | Belongs to | Example |
 |---|---|---|
@@ -174,7 +243,13 @@ The distinction should be explicit:
 | ITM correctness | TextForge tests | parser/resolver/serializer tests |
 | Lua API quality | TextForge tests | capability tests for `tf.*` APIs |
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
+
 This keeps the accreditation harness reusable across applications and prevents it from becoming an overfitted static-analysis project.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 ---
 
@@ -182,15 +257,30 @@ This keeps the accreditation harness reusable across applications and prevents i
 
 The Surface model changes the center of gravity of the runtime architecture. The application should not be built around the assumption that the main pane is always CodeMirror and that every viewer is a popup. Instead, TextForge should be built around a **Surface Workbench**.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+
+
 A **surface** is any interactive or read-only work area that can be hosted by the application shell. CodeMirror is one surface. A Markdown preview is another. An image viewer, PDF viewer, ITM graph, BPMN diagram, Lua console, diagnostics table, and generated report preview are also surfaces.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+
+
 Placement is separate from identity:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+
 
 ```text
 Resource or pipeline output -> Surface contribution -> Surface session -> Placement
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+
+
 Initial placements should be deliberately simple:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+
 
 ```text
 Stage 1 target:
@@ -210,6 +300,9 @@ Future after Stage 2:
   saved layouts
   detached browser windows
 ```
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`.
+
 
 ### 4.1 Runtime architecture
 
@@ -264,11 +357,20 @@ flowchart TD
   Build --> Harness
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
+
 The accreditation harness is intentionally shown outside the runtime application. It verifies the packaging and browser security envelope. It is not an internal runtime service and should not be coupled to TextForge-specific domain modules.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
 
 ### 4.2 Source, model, surface, and export
 
 The important separation is now between **source**, **model**, **surface**, **placement**, and **export**.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
 
 ```mermaid
 flowchart LR
@@ -290,13 +392,25 @@ flowchart LR
   Surface -.controlled write-back patch.-> Source
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
+
 This keeps the text/model source-of-truth doctrine intact while allowing rendered artifacts to become first-class work surfaces.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
 
 ### 4.3 Resource surfaces and derived surfaces
 
 Two surface classes should be distinguished.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
+
 **Resource surfaces** open a workspace resource directly:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
 
 ```text
 .itm      -> CodeMirror editor / ITM tree / ITM graph / ITM inspector
@@ -308,7 +422,13 @@ Two surface classes should be distinguished.
 .bpmn     -> CodeMirror XML editor / BPMN viewer
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
+
 **Derived surfaces** are generated from a source resource or a pipeline:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
 
 ```text
 Markdown rendered HTML
@@ -321,7 +441,13 @@ Generated PNG preview
 Generated SVG preview
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
+
 Derived surfaces must carry provenance: source resources, source versions, pipeline ID, generated asset ID if any, and stale/current state.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
 
 ---
 
@@ -331,16 +457,31 @@ Derived surfaces must carry provenance: source resources, source versions, pipel
 
 **Decision:** Use React 19.x with TypeScript and Vite.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
 
 - compatibility and coding-agent support matter more than minimum bundle size;
 - React is the default target for most reusable UI components and examples;
 - React Arborist, React Flow, react-resizable-panels, dnd-kit, TanStack Table, Radix/shadcn-style primitives, and many testing examples are React-first;
 - the app is local-first, so a moderately larger bundle is acceptable if runtime behavior remains offline and auditable.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 **Non-goal:** Do not adopt server-first React patterns. TextForge should remain a static browser application. React Server Components, Next.js server routes, telemetry, hosted services, and runtime network dependencies are out of scope for the accredited local build.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 Recommended baseline:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
 
 ```text
 React 19.x
@@ -352,19 +493,34 @@ ESLint
 Prettier or equivalent formatting
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 
 ### 5.2 Surface workbench architecture
 
 **Decision:** Introduce a custom Surface abstraction rather than treating CodeMirror as the only main work area and viewers as popup-only components.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
 
 - TextForge is a workbench over mixed resources, not only a text editor.
 - Read-only images, reference PDFs, rendered reports, ITM graphs, BPMN diagrams, and generated SVG/PNG previews often deserve to be the main surface.
 - Editors and viewers should share window chrome, provenance, stale-state, source navigation, export, refresh, and placement controls.
 - A common Surface interface makes future tabbed and split-pane layouts possible without rewriting every viewer.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
+
 Recommended initial target:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
 
 ```text
 Stage 1: one main surface + optional popup placement
@@ -373,15 +529,30 @@ Stage 2: advanced tabbed main surface groups, added later in the roadmap
 Future: split panes, saved layouts, detached windows
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 Use custom TextForge types for `SurfaceContribution`, `SurfaceSession`, `SurfacePlacement`, and `SurfaceCapability`. Do not over-adopt a complete IDE layout framework early.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
 
 ### 5.3 Editable surfaces and controlled write-back
 
 **Decision:** Treat editors as Surface contributions with editing capabilities, not as a separate UI class that bypasses the workbench model.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 10, Phase 14, and Phase 15, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/bpmn`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`.
+
+
 A surface may be read-only, source-editing, rich-text-editing, table-editing, diagram-editing, model-editing, annotation-editing, or hybrid. Placement remains independent: an editor can appear in the main surface, a popup, and later a tab.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 10, Phase 14, and Phase 15, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/bpmn`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`.
+
+
 The critical rule is that every non-source editor must declare its write-back contract before it is accepted into TextForge. The contract must identify:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 10, Phase 14, and Phase 15, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/bpmn`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`.
+
 
 - the canonical resource format it edits;
 - the operations it supports;
@@ -390,9 +561,18 @@ The critical rule is that every non-source editor must declare its write-back co
 - the fallback source editor;
 - the required round-trip tests.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 10, Phase 14, and Phase 15, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/bpmn`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`.
+
+
 This protects the spirit of TextForge: visual convenience is allowed, but canonical text and explicit resources remain the authority.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 10, Phase 14, and Phase 15, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/bpmn`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`.
+
+
 Recommended contribution shape:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 10 — BPMN support and first mature visual editor; Phase 14 — Rich Markdown editing, optional and round-trip gated; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/bpmn`, `@textforge/editors`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`.
+
 
 ```ts
 export interface EditableSurfaceContribution<TInput = SurfaceInput>
@@ -429,11 +609,20 @@ export interface EditableSurfaceContribution<TInput = SurfaceInput>
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 10 — BPMN support and first mature visual editor; Phase 14 — Rich Markdown editing, optional and round-trip gated; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/bpmn`, `@textforge/editors`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`.
+
+
 The initial implementation should not attempt to deliver all rich and visual editors. It should make CodeMirror universal, add mature standalone editors where they are isolated and valuable, and defer more fragile rich/visual editing until the text pipeline foundation is solid.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 10 — BPMN support and first mature visual editor; Phase 14 — Rich Markdown editing, optional and round-trip gated; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/bpmn`, `@textforge/editors`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`.
+
 
 ### 5.4 Editor library selection and maturity posture
 
 TextForge should prefer mature, open-source-compatible editor libraries that either preserve source directly or expose a controlled data model suitable for patch generation.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 11, Phase 14, Phase 15, Phase 16, and Phase 17, through `@textforge/tables`, `@textforge/bpmn`, `@textforge/editors`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`, `@textforge/security-profile`, `@textforge/archimate`, `@textforge/assets`.
+
 
 | Editing need | Selected approach | Maturity / licensing posture | Roadmap posture |
 |---|---|---|---|
@@ -449,13 +638,25 @@ TextForge should prefer mature, open-source-compatible editor libraries that eit
 | PDF annotation/editing | PDF.js plus custom annotation layer | Custom late-stage work | Late |
 | SVG editing | CodeMirror source editor first; full visual SVG editing deferred | Avoids scope explosion | Source-first only initially |
 
+**Reverse traceability:** Implemented wholly or in part by Phase 11, Phase 14, Phase 15, Phase 16, and Phase 17, through `@textforge/tables`, `@textforge/bpmn`, `@textforge/editors`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`, `@textforge/security-profile`, `@textforge/archimate`, `@textforge/assets`.
+
+
 Libraries that are not open-source-compatible, require commercial production keys, or impose non-commercial/source-available-only terms should not enter the default TextForge baseline.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 11, Phase 14, Phase 15, Phase 16, and Phase 17, through `@textforge/tables`, `@textforge/bpmn`, `@textforge/editors`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`, `@textforge/security-profile`, `@textforge/archimate`, `@textforge/assets`.
+
 
 ### 5.5 Open-source dependency licensing gate
 
 TextForge should include a dependency policy from the beginning. The policy should be used for all editor, viewer, pipeline, and UI dependencies.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 16 — ArchiMate visual editing investigation; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/archimate`.
+
+
 Allowed by default:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 16 — ArchiMate visual editing investigation; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/archimate`.
+
 
 ```text
 MIT
@@ -465,7 +666,13 @@ Apache-2.0
 ISC
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 16 — ArchiMate visual editing investigation; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/archimate`.
+
+
 Allowed only with explicit review:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 16 — ArchiMate visual editing investigation; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/archimate`.
+
 
 ```text
 MPL-2.0
@@ -474,7 +681,13 @@ custom attribution licenses, such as the bpmn.io license
 licenses with branding or notice requirements
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 16 — ArchiMate visual editing investigation; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/archimate`.
+
+
 Rejected by default:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 16 — ArchiMate visual editing investigation; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/archimate`.
+
 
 ```text
 commercial-only
@@ -485,7 +698,13 @@ licenses that prevent normal open-source redistribution
 copyleft dependencies that unexpectedly constrain the whole TextForge distribution
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 16 — ArchiMate visual editing investigation; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/archimate`.
+
+
 Practical baseline decisions:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 16 — ArchiMate visual editing investigation; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/archimate`.
+
 
 - use TanStack Table and possibly AG Grid Community instead of Handsontable;
 - use Excalidraw instead of tldraw for the open-source baseline;
@@ -493,11 +712,20 @@ Practical baseline decisions:
 - accept bpmn-js only if TextForge is comfortable preserving required visible attribution;
 - audit ArchiMate visual editing dependencies before selecting them as baseline.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 16 — ArchiMate visual editing investigation; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/archimate`.
+
+
 ### 5.6 CodeMirror 6 for editing
 
 **Decision:** Preserve CodeMirror 6.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 2 — Source-editor coverage and language foundation, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 2 — Source-editor coverage and language foundation, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`.
+
 
 - modular extension model;
 - good fit for custom languages and DSLs;
@@ -505,13 +733,25 @@ Practical baseline decisions:
 - lighter and more composable than Monaco;
 - already aligned with TextForge’s text-first model.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 2 — Source-editor coverage and language foundation, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`.
+
+
 **Do not use Monaco by default.** Monaco is excellent for a browser IDE, but TextForge is not primarily a clone of VS Code. It is a structured-text workbench with custom model and viewer pipelines.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 2 — Source-editor coverage and language foundation, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`.
+
 
 ### 5.7 React Arborist for workspace explorer
 
 **Decision:** Use React Arborist as the virtual workspace tree UI.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `@textforge/ui`, `@textforge/workspace`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `@textforge/ui`, `@textforge/workspace`.
+
 
 - tree virtualization;
 - file-explorer-like UX;
@@ -519,9 +759,18 @@ Practical baseline decisions:
 - rename/select/open patterns;
 - allows TextForge to own the underlying workspace model.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `@textforge/ui`, `@textforge/workspace`.
+
+
 React Arborist must be treated as a **view component only**. It must not own persistence, paths, language IDs, include resolution, document identity, or security decisions.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `@textforge/ui`, `@textforge/workspace`.
+
+
 Recommended adapter model:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `@textforge/ui`, `@textforge/workspace`.
+
 
 ```ts
 export interface WorkspaceTreeNode {
@@ -535,17 +784,32 @@ export interface WorkspaceTreeNode {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery, through `@textforge/ui`, `@textforge/workspace`.
+
+
 ### 5.8 Dexie.js for IndexedDB
 
 **Decision:** Use Dexie.js for persistence.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`.
+
 
 - more maintainable than direct IndexedDB for multi-store workspace state;
 - supports versioned schemas and migrations;
 - useful for documents, folders, pipeline preferences, Lua scripts, resource metadata, and persisted UI state.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 Minimum stores:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`.
+
 
 ```ts
 export interface TextForgeDbSchema {
@@ -558,18 +822,33 @@ export interface TextForgeDbSchema {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 ### 5.9 fflate for zip import/export
 
 **Decision:** Use fflate.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`.
+
 
 - small and fast;
 - browser-compatible;
 - supports folder/workspace import/export through explicit user action;
 - avoids requiring File System Access API.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`.
+
+
 Required use cases:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`.
+
 
 - import zip into current folder;
 - import zip as new workspace;
@@ -578,27 +857,48 @@ Required use cases:
 - preserve relative paths;
 - reject dangerous paths such as `../`, absolute paths, drive roots, or hidden system paths when appropriate.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`.
+
+
 ### 5.10 markdown-it plus unified/remark/rehype
 
 **Decision:** Use both, for different jobs.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 ```text
 Interactive preview: markdown-it
 Report/document pipeline: unified + remark + rehype
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 - markdown-it is fast and practical for preview;
 - unified/remark/rehype is better for AST-level document transformation;
 - ITM-in-Markdown report generation needs structural extraction and reconstruction, not just HTML preview.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 
 ### 5.11 Binary resources, image assets, and PDF viewing
 
 **Decision:** Treat binary resources as first-class workspace files, but keep them read-only unless a specific transformer generates a new derived artifact.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 Required binary resource classes:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 ```text
 Images: PNG, JPEG, GIF, WebP, SVG
@@ -607,15 +907,33 @@ Generated diagram assets: SVG and PNG
 Future generated report assets: HTML and possibly PDF
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 **Image resources** should use native browser image rendering through object URLs or blob URLs created from workspace content. Markdown image references should resolve through the workspace resolver, not through direct network fetches.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 **PDF resources** should be viewable as read-only reference documents. Use PDF.js if consistent local rendering, page navigation, zoom, and text layer/search are needed. Browser-native PDF embedding is acceptable as an early fallback, but PDF.js is the better long-term fit for a controlled local workbench.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 **Generated SVG and PNG assets** should be stored in the workspace as derived files. SVG is the preferred canonical generated diagram asset. PNG should be produced by local rasterization when users need bitmap output for reports, presentations, or downstream tools.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 **Markdown-to-PDF generation** should be treated as a late-stage capability. The first reliable path should be print-optimized HTML. Direct browser-local PDF generation from complex Markdown HTML should be introduced only after the core Markdown/report pipeline is stable, because pagination, fonts, diagram scaling, SVG handling, page breaks, and cross-browser fidelity are difficult.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 Rationale:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 - Markdown projects need local image references.
 - ITM and diagram pipelines need a place to store generated SVG/PNG artifacts.
@@ -623,9 +941,15 @@ Rationale:
 - The virtual workspace should support mixed text and binary project folders.
 - PDF generation is valuable, but should not delay the core text/model/report architecture.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 ### 5.12 Cytoscape.js, Sigma.js/Graphology, jsMind
 
 **Decision:** Preserve multiple model viewers.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 7 — ITM visual projections, through `@textforge/itm`, `@textforge/diagrams`.
+
 
 ```text
 ITM -> Cytoscape.js      rich interactive graph
@@ -634,39 +958,75 @@ ITM -> jsMind            mind map
 ITM -> Tree viewer       hierarchy/source navigation
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 7 — ITM visual projections, through `@textforge/itm`, `@textforge/diagrams`.
+
+
 **Rationale:**
 
+**Reverse traceability:** Implemented wholly or in part by Phase 7 — ITM visual projections, through `@textforge/itm`, `@textforge/diagrams`.
+
+
 No single graph/mindmap library covers all use cases well. TextForge should allow the same ITM source to be projected into multiple derived views.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 7 — ITM visual projections, through `@textforge/itm`, `@textforge/diagrams`.
+
 
 ### 5.13 bpmn-js and bpmn-moddle
 
 **Decision:** Use bpmn-js for BPMN rendering and future controlled editing.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 10 — BPMN support and first mature visual editor, through `@textforge/bpmn`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 10 — BPMN support and first mature visual editor, through `@textforge/bpmn`.
+
 
 - BPMN XML is complex;
 - rebuilding BPMN visualization is wasteful;
 - bpmn-moddle provides BPMN XML parsing/serialization;
 - bpmn-js provides the rendering/modeling surface.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 10 — BPMN support and first mature visual editor, through `@textforge/bpmn`.
+
+
 TextForge must still preserve the source-of-truth rule:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 10 — BPMN support and first mature visual editor, through `@textforge/bpmn`.
+
 
 ```text
 BPMN XML source -> bpmn-js viewer/modeler -> reviewed write-back patch -> XML source
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 10 — BPMN support and first mature visual editor, through `@textforge/bpmn`.
+
+
 ### 5.14 Enterprise architecture and ArchiMate support
 
 **Decision:** Add enterprise architecture and ArchiMate as first-class model workflows, parallel to BPMN support.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 - TextForge should support enterprise architecture repositories and views, not only generic graph rendering.
 - ArchiMate is a structured enterprise architecture language with concepts, relationships, viewpoints, and exchange needs that should be handled through explicit ITM profiles and validation.
 - The canonical authoring and transformation layer should remain ITM. ArchiMate support should therefore be implemented as a profile, transformation, validation, and viewpoint package over ITM, not as a separate hidden repository format.
 - The app should support practical interchange with enterprise architecture tools through the Open Group ArchiMate Model Exchange File Format, while still allowing lightweight text-first ArchiMate-style authoring in ITM.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 Required capabilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 ```text
 ITM ArchiMate profile
@@ -696,7 +1056,13 @@ Report integration
   generated EA views, matrices, catalogues, and traceability tables embedded into Markdown reports
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 Recommended version strategy:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 ```text
 Use profile packages, not hardcoded assumptions.
@@ -705,19 +1071,37 @@ Allow additional compatibility profiles where enterprise tools still use earlier
 Keep the exchange transformer version-aware.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 The important architectural principle is the same as for BPMN: external standards are supported through explicit profile and transformation layers, while TextForge keeps text and ITM as the inspectable source layer wherever practical.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 ### 5.15 Fengari for Lua
 
 **Decision:** Use Fengari as Lua VM only.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
+
 **Rationale:**
+
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
 
 - browser-compatible Lua execution;
 - good basis for the Lua pivot;
 - allows user-defined transformations without user-provided JavaScript.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
+
 TextForge must own the sandbox policy, worker isolation, module whitelist, limits, bridge API, and diagnostics.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
 
 ---
 
@@ -727,13 +1111,22 @@ TextForge must own the sandbox policy, worker isolation, module whitelist, limit
 
 Responsibilities:
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `apps/textforge-web`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/workspace`.
+
+
 - initialize services;
 - host layout;
 - host top-level menus/actions;
 - coordinate editor, workspace, popups, diagnostics, plugins, and resource browser;
 - remain thin.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `apps/textforge-web`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/workspace`.
+
+
 Suggested folder:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `apps/textforge-web`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/workspace`.
+
 
 ```text
 src/app/
@@ -747,11 +1140,20 @@ src/app/
   useAttentionState.ts
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `apps/textforge-web`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/workspace`.
+
+
 The rebuild should explicitly prevent `App.tsx` becoming the central orchestration module.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `apps/textforge-web`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/workspace`.
+
 
 ### 6.2 Workspace manager
 
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
 
 - own documents;
 - own folders;
@@ -763,7 +1165,13 @@ Responsibilities:
 - provide include resolution for ITM and Markdown/report pipelines;
 - persist through Dexie.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
+
 Interfaces:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
 
 ```ts
 export interface TextDocument {
@@ -803,11 +1211,20 @@ export interface WorkspaceManager {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
+
 ### 6.3 Virtual file system
 
 The virtual file system is not a filesystem API wrapper. It is an application model.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
 
 - normalize workspace paths;
 - prevent path traversal;
@@ -817,7 +1234,13 @@ Responsibilities:
 - expose read-only resolver functions to parser/report pipelines;
 - prevent direct local filesystem persistence.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 Forbidden:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
 
 - File System Access API;
 - directory handles;
@@ -825,9 +1248,15 @@ Forbidden:
 - silent file writes;
 - network repository resolution unless explicitly introduced in a separately accredited mode.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 ### 6.4 Storage service
 
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`.
+
 
 - Dexie schema definition;
 - migrations;
@@ -836,7 +1265,13 @@ Responsibilities:
 - backup/export state;
 - uniqueness repair for document identities/badges after restore or batch upload.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 Suggested Dexie schema:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`.
+
 
 ```ts
 class TextForgeDb extends Dexie {
@@ -849,12 +1284,21 @@ class TextForgeDb extends Dexie {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`.
+
+
 
 ### 6.5 Binary resource and asset service
 
 TextForge should support workspace files that are not editable text documents. These files are still part of the virtual workspace and can participate in Markdown, reports, generated assets, and reference workflows.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+
+
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+
 
 - store binary content through the workspace storage layer;
 - classify binary resources by media type and extension;
@@ -866,7 +1310,13 @@ Responsibilities:
 - mark generated artifacts as derived from source documents/pipelines;
 - keep binary resources out of CodeMirror editor tabs unless explicitly opened as source/text.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+
+
 Suggested interfaces:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+
 
 ```ts
 export type WorkspaceResourceKind =
@@ -903,7 +1353,13 @@ export interface AssetService {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+
+
 Important distinction:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+
 
 ```text
 Editable text document: opened in CodeMirror and changed by the user.
@@ -911,11 +1367,20 @@ Read-only binary resource: stored in workspace, previewed, referenced, exported,
 Generated artifact: derived from a source/pipeline and stored in workspace as an output.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+
+
 This distinction should be visible in the UI and in diagnostics.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources; Phase 18 — Late PDF generation and PDF annotation, through `@textforge/assets`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 ### 6.6 Language registry
 
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 6 — ITM integration and model/report foundation, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`.
+
 
 - identify language from filename/content/user choice;
 - expose CodeMirror language extensions;
@@ -923,7 +1388,13 @@ Responsibilities:
 - expose available pipelines;
 - maintain language hierarchy.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 6 — ITM integration and model/report foundation, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`.
+
+
 Language IDs should include at least:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 6 — ITM integration and model/report foundation, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`.
+
 
 ```text
 text
@@ -943,8 +1414,14 @@ javascript
 python
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 6 — ITM integration and model/report foundation, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`.
+
+
 
 Resource classifications should include non-text files:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 6 — ITM integration and model/report foundation, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`.
+
 
 ```text
 image.png / image.jpeg / image.webp / image.gif -> resource.image
@@ -955,13 +1432,25 @@ generated diagram SVG -> resource.svg + role=generated
 generated raster image -> resource.image + role=generated
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 6 — ITM integration and model/report foundation, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`.
+
+
 Binary resources should normally open in viewers, not in CodeMirror. SVG may have both a rendered viewer and a source-text editor mode because SVG is XML text.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 6 — ITM integration and model/report foundation, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`.
+
 
 ### 6.7 Plugin and contribution registry
 
 Internal TypeScript contributions should remain trusted and packaged.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
+
 Contribution kinds:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
 
 ```ts
 export type ContributionKind =
@@ -977,7 +1466,13 @@ export type ContributionKind =
   | "luaBridge";
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
+
 Pipeline conflicts must be errors, not override points.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
 
 ```ts
 export interface RegisteredPipeline {
@@ -993,7 +1488,13 @@ export interface RegisteredPipeline {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
+
 Registry API:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
 
 ```ts
 export interface PluginRegistry {
@@ -1007,9 +1508,15 @@ export interface PluginRegistry {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
+
 ### 6.8 Pipeline runner
 
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 5, Phase 6, and Phase 15, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/core`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/itm`.
+
 
 - execute ordered steps;
 - connect contributions by ID;
@@ -1019,7 +1526,13 @@ Responsibilities:
 - allow intermediate results to open as editable documents;
 - distinguish viewer, exporter, transformer, linter, and write-back steps.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 5, Phase 6, and Phase 15, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/core`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/itm`.
+
+
 Pipeline value model:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 5, Phase 6, and Phase 15, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/core`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/itm`.
+
 
 ```ts
 export type PipelineValueKind =
@@ -1047,7 +1560,13 @@ export interface PipelineValue<T = unknown> {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 5, Phase 6, and Phase 15, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/core`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/itm`.
+
+
 Trace model:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 5, Phase 6, and Phase 15, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/core`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/itm`.
+
 
 ```ts
 export interface PipelineTraceStep {
@@ -1062,11 +1581,20 @@ export interface PipelineTraceStep {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 5, Phase 6, and Phase 15, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/core`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/itm`.
+
+
 ### 6.9 ITM integration module
 
 The ITM module is one of the highest-risk and highest-value parts.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 7 — ITM visual projections; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 7 — ITM visual projections; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 - call `@textforge/itm` for parsing/resolution;
 - provide TextForge workspace resolver functions;
@@ -1076,7 +1604,13 @@ Responsibilities:
 - serialize ITM where supported;
 - support strict/tolerant modes.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 7 — ITM visual projections; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 TextForge-side include resolver:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 7 — ITM visual projections; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 ```ts
 export function createWorkspaceItmResolver(workspace: WorkspaceManager): ItmIncludeResolver {
@@ -1098,7 +1632,13 @@ export function createWorkspaceItmResolver(workspace: WorkspaceManager): ItmIncl
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 7 — ITM visual projections; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 ITM processing sequence:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 7 — ITM visual projections; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 ```mermaid
 flowchart TD
@@ -1120,11 +1660,20 @@ flowchart TD
   Raw --> Directives --> Includes --> Namespaces --> Packages --> Entities --> Implicit --> Overlays --> Relationships --> Types --> Rules --> Styles --> Views --> Diag
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 7 — ITM visual projections; Phase 15 — Controlled graph, diagram, and pipeline editors, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 ### 6.10 Enterprise architecture and ArchiMate module
 
 Enterprise architecture support should be implemented as a profile-driven model package on top of ITM. It should not be a single monolithic viewer.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 - provide one or more ArchiMate ITM profile packages;
 - define ArchiMate element types, relationship types, layers, aspects, and viewpoints;
@@ -1136,7 +1685,13 @@ Responsibilities:
 - integrate generated EA outputs into Markdown/report pipelines;
 - preserve provenance between imported exchange files, ITM entities, generated views, and exported artifacts.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 Suggested files:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 ```text
 src/ea/
@@ -1153,7 +1708,13 @@ src/ea/
   archimateReportBlocks.ts
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 Suggested profile/resource files:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 ```text
 resources/profiles/archimate/
@@ -1165,7 +1726,13 @@ resources/profiles/archimate/
   archimate-report-templates.md
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 The import pipeline should be explicit:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 ```text
 ArchiMate exchange XML
@@ -1176,7 +1743,13 @@ ArchiMate exchange XML
   -> emit ITM model package + diagnostics
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 The export pipeline should also be explicit:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 ```text
 ITM ArchiMate model package
@@ -1185,9 +1758,18 @@ ITM ArchiMate model package
   -> emit exchange XML + diagnostics
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 Export should be conservative. If TextForge has ITM content that cannot be faithfully represented in the selected ArchiMate exchange profile, it should preserve the ITM source and emit diagnostics rather than pretending the export is lossless.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
+
 Recommended ITM authoring pattern:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/markdown`, `@textforge/tables`, `@textforge/security-profile`.
+
 
 ```itm
 %using archimate_profile
@@ -1203,9 +1785,18 @@ Recommended ITM authoring pattern:
 @archimate::served_by:crm
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/itm`, `@textforge/tables`, `@textforge/markdown`, `@textforge/security-profile`.
+
+
 The exact relationship names should be defined by the ArchiMate profile package rather than scattered across application code.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/itm`, `@textforge/tables`, `@textforge/markdown`, `@textforge/security-profile`.
+
+
 Enterprise architecture outputs should include:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/itm`, `@textforge/tables`, `@textforge/markdown`, `@textforge/security-profile`.
+
 
 ```text
 Capability maps
@@ -1219,13 +1810,25 @@ Element catalogues
 Architecture decision and gap reports
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/itm`, `@textforge/tables`, `@textforge/markdown`, `@textforge/security-profile`.
+
+
 These outputs can be rendered as surfaces, exported as SVG/PNG/HTML/CSV where appropriate, and embedded into Markdown reports.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 12 — Enterprise architecture and ArchiMate foundation; Phase 16 — ArchiMate visual editing investigation, through `@textforge/archimate`, `@textforge/itm`, `@textforge/tables`, `@textforge/markdown`, `@textforge/security-profile`.
+
 
 ### 6.11 Surface registry
 
 The Surface registry replaces the older viewer-only registry concept. It registers any UI contribution that can occupy a workbench surface: editors, viewers, inspectors, consoles, diagnostics views, report previews, and generated asset previews.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 3.1, Phase 3.3, and Phase 5, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`, `@textforge/pipeline`.
+
+
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 3.1, Phase 3.3, and Phase 5, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`, `@textforge/pipeline`.
+
 
 - register surface contributions;
 - choose compatible surfaces for workspace resources and pipeline outputs;
@@ -1234,7 +1837,13 @@ Responsibilities:
 - support both main-surface and popup placement;
 - allow the same resource to be opened through different surfaces.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 3.1, Phase 3.3, and Phase 5, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`, `@textforge/pipeline`.
+
+
 Core interface:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 3.1, Phase 3.3, and Phase 5, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`, `@textforge/pipeline`.
+
 
 ```ts
 export type SurfaceKind =
@@ -1287,7 +1896,13 @@ export interface SurfaceInstance {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 3.1, Phase 3.3, and Phase 5, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`, `@textforge/pipeline`.
+
+
 The registry should support a command such as:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 3.1, Phase 3.3, and Phase 5, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`, `@textforge/pipeline`.
+
 
 ```text
 Open With...
@@ -1300,11 +1915,20 @@ Open With...
   SVG Viewer
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 3.1, Phase 3.3, and Phase 5, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`, `@textforge/pipeline`.
+
+
 ### 6.12 Editor registry as part of the Surface registry
 
 Do not create a separate editor subsystem that bypasses Surface lifecycle, placement, provenance, or diagnostics. Instead, define editor contributions as a specialized subset of Surface contributions.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 2, Phase 10, and Phase 14, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`, `@textforge/bpmn`, `@textforge/markdown`.
+
+
 Editor contributions should be grouped by risk and maturity:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 2, Phase 10, and Phase 14, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`, `@textforge/bpmn`, `@textforge/markdown`.
+
 
 | Editor class | Examples | Default posture |
 |---|---|---|
@@ -1315,7 +1939,13 @@ Editor contributions should be grouped by risk and maturity:
 | Visual graph editors | pipelines, flowcharts, small model graphs | later, patch-gated |
 | Canvas/annotation editors | sketches, image annotation | later, resource-oriented |
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 2, Phase 10, and Phase 14, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`, `@textforge/bpmn`, `@textforge/markdown`.
+
+
 A controlled editor must never silently replace the canonical source. The accepted pattern is:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 2, Phase 10, and Phase 14, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`, `@textforge/bpmn`, `@textforge/markdown`.
+
 
 ```text
 Open canonical resource
@@ -1327,14 +1957,26 @@ Open canonical resource
   -> diagnostics and derived surfaces refresh
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 2, Phase 10, and Phase 14, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`, `@textforge/bpmn`, `@textforge/markdown`.
+
+
 For pure source editors, CodeMirror edits the canonical text directly because the canonical source is already visible and editable. For rich/visual/structured editors, the patch boundary must be explicit.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 2, Phase 10, Phase 14, and Phase 15, through `@textforge/surfaces`, `@textforge/editors`, `@textforge/bpmn`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`.
+
 
 
 ### 6.13 Surface session manager
 
 The Surface Session Manager tracks open surface instances independently from their placement.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
 
 - open surfaces for resources or pipeline results;
 - track title, dirty state, stale state, source binding, and provenance;
@@ -1343,7 +1985,13 @@ Responsibilities:
 - support moving a surface between main and popup placement;
 - prepare for later tabbed main surface groups.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 Suggested model:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
 
 ```ts
 export type SurfaceInput =
@@ -1374,13 +2022,25 @@ export interface SurfaceProvenance {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 A derived surface should become stale when any source resource version changes. A generated resource surface should also show the generated artifact path and source pipeline.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+
 
 ### 6.14 Placement manager and hosts
 
 The Placement Manager decides where a surface appears. This is intentionally separate from the surface contribution itself.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 Stage 1 placements:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
 
 ```ts
 export type SurfacePlacement =
@@ -1388,7 +2048,13 @@ export type SurfacePlacement =
   | { kind: "popup"; popupId: string };
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 Stage 2 later adds:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
 
 ```ts
 export type SurfacePlacement =
@@ -1397,9 +2063,18 @@ export type SurfacePlacement =
   | { kind: "tab"; groupId: string; tabId: string };
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 Future expansions may add splits and detached windows, but those should not be part of the first implementation target.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 Shared chrome requirements:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+
 
 ```text
 title
@@ -1415,7 +2090,13 @@ export/download where supported
 close
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+
+
 Hosts:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+
 
 ```text
 MainSurfaceHost     primary work area, initially one active surface
@@ -1424,11 +2105,20 @@ Future TabHost      tabbed main surface group
 Future SplitHost    split-pane workbench surfaces
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+
+
 The existing popup concept becomes one placement option. Popups should remain useful for quick previews, generated diagrams, and secondary references, but they should no longer be the only way viewers appear.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`.
+
 
 ### 6.15 Initial built-in surface contributions
 
 The initial surface list should include both editors and viewers.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 11 — Tables, catalogues, and matrices, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/tables`, `@textforge/bpmn`.
+
 
 ```text
 CodeMirrorTextEditorSurface     editable text resources
@@ -1455,7 +2145,13 @@ LuaConsoleSurface               Lua execution console
 DiagnosticsSurface              grouped diagnostics table
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 11 — Tables, catalogues, and matrices, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/tables`, `@textforge/bpmn`.
+
+
 Required read-only resource behavior:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 11 — Tables, catalogues, and matrices, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/tables`, `@textforge/bpmn`.
+
 
 ```text
 Image resources open read-only with zoom, fit, copy path, export/download, and reveal in workspace.
@@ -1465,9 +2161,15 @@ Unsupported binaries open in BinaryInfoSurface, not CodeMirror.
 Generated SVG/PNG resources show provenance and stale/current state where possible.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 11 — Tables, catalogues, and matrices, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/tables`, `@textforge/bpmn`.
+
+
 ### 6.16 Source/view bridge
 
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 10 — BPMN support and first mature visual editor, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/bpmn`.
+
 
 - map source ranges to model elements;
 - map model elements to visual nodes/edges;
@@ -1477,7 +2179,13 @@ Responsibilities:
 - support Markdown embedded diagram/code block mapping;
 - work across both main and popup placements.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 10 — BPMN support and first mature visual editor, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/bpmn`.
+
+
 Core types:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 10 — BPMN support and first mature visual editor, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/bpmn`.
+
 
 ```ts
 export interface SourceRange {
@@ -1507,9 +2215,15 @@ export interface SourceBinding {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 10 — BPMN support and first mature visual editor, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/bpmn`.
+
+
 ### 6.17 Diagnostics service
 
 Diagnostics should be universal.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
 
 ```ts
 export type DiagnosticSeverity = "error" | "warning" | "information" | "observation";
@@ -1532,7 +2246,13 @@ export interface Diagnostic {
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
+
 Sources:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
 
 - parser;
 - ITM resolver;
@@ -1545,17 +2265,32 @@ Sources:
 - security checker;
 - workspace importer.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
+
 ### 6.18 Markdown preview and report engine
 
 Two paths should coexist.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, and Phase 9, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 #### Preview path
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, and Phase 9, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 ```text
 Markdown source -> markdown-it -> HTML viewer
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, and Phase 9, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 Supports:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, and Phase 9, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 - syntax highlighting;
 - Mermaid fences;
@@ -1564,7 +2299,13 @@ Supports:
 - SVG popout/export;
 - source-aware embedded blocks.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, and Phase 9, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 #### Report path
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, and Phase 9, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 ```text
 Markdown source
@@ -1576,9 +2317,18 @@ Markdown source
   -> rehype/HTML or Markdown output
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, and Phase 9, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 This report path is central to the “ITM becomes the source for report generation through embedding into Markdown” concept. The same path should support enterprise architecture publication: ArchiMate views, application catalogues, capability maps, relationship matrices, dependency graphs, and architecture traceability tables can be generated from ITM profile-conformant models and embedded into Markdown reports.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, Phase 9, and Phase 12, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/archimate`, `@textforge/tables`.
+
+
 Recommended embedded block patterns:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, Phase 9, and Phase 12, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/archimate`, `@textforge/tables`.
+
 
 ````markdown
 ```itm name=core-model
@@ -1594,7 +2344,13 @@ Recommended embedded block patterns:
 ```
 ````
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, Phase 9, and Phase 12, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/archimate`, `@textforge/tables`.
+
+
 Key rules:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, Phase 9, and Phase 12, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/archimate`, `@textforge/tables`.
+
 
 - Markdown is the narrative envelope;
 - ITM blocks are semantic model sources;
@@ -1602,25 +2358,49 @@ Key rules:
 - duplicate named model blocks should be rejected unless the syntax explicitly defines overlays/imports;
 - block order should not create hidden semantics except inside a single publishing cell that explicitly imports conflicting inputs.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 6, Phase 7, Phase 9, and Phase 12, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/archimate`, `@textforge/tables`.
+
+
 
 #### Local image and asset resolution
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 Markdown rendering must resolve relative image paths through the virtual workspace.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 Example:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 ```markdown
 ![Context diagram](assets/context-diagram.svg)
 ![Screenshot](../images/screenshot.png)
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 Resolution rule:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 ```text
 Markdown file path + relative href -> WorkspaceReferenceResolver -> AssetService -> scoped object URL -> rendered HTML
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 Requirements:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 - resolve relative image references from the Markdown file location;
 - support workspace images imported manually or via ZIP;
@@ -1629,11 +2409,23 @@ Requirements:
 - block remote image URLs under the default local-only profile unless a future profile explicitly allows them;
 - avoid leaking absolute local paths into rendered HTML or exported workspace artifacts.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 #### Diagram asset generation
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 Generated diagrams should be saveable into the workspace.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 Examples:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 ```text
 Markdown Mermaid block -> generated/diagram-001.svg
@@ -1642,13 +2434,28 @@ ITM viewpoint -> generated/capability-map.svg
 Generated SVG -> generated/capability-map.png
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
+
 SVG export should preserve the generated vector output. PNG export should rasterize locally, normally by loading the SVG into an image/canvas pipeline and writing the resulting PNG blob back to the workspace or offering it through explicit download/export.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 9 — Markdown + ITM report generation, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`.
+
 
 #### Late-stage Markdown-to-PDF generation
 
+**Reverse traceability:** Implemented wholly or in part by Phase 18 — Late PDF generation and PDF annotation, through `@textforge/assets`, `@textforge/markdown`.
+
+
 PDF generation from rendered Markdown HTML should be a late capability. It should not block Markdown preview, image embedding, report generation, or SVG/PNG asset export.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 18 — Late PDF generation and PDF annotation, through `@textforge/assets`, `@textforge/markdown`.
+
+
 Recommended staged approach:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 18 — Late PDF generation and PDF annotation, through `@textforge/assets`, `@textforge/markdown`.
+
 
 1. produce print-optimized HTML and CSS;
 2. support browser print/save-as-PDF as a user-mediated output path;
@@ -1656,9 +2463,15 @@ Recommended staged approach:
 4. store generated PDF into the workspace only if the client-side output is reliable enough;
 5. keep PDF generation behind a feature flag until pagination, diagrams, images, fonts, page breaks, and cross-browser fidelity are acceptable.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 18 — Late PDF generation and PDF annotation, through `@textforge/assets`, `@textforge/markdown`.
+
+
 ### 6.19 Lua runtime service
 
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
 
 - run Lua snippets/documents/selections;
 - discover named Lua actions;
@@ -1668,7 +2481,13 @@ Responsibilities:
 - return structured diagnostics and outputs;
 - integrate with pipeline/action surface.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
+
 Suggested files:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
 
 ```text
 src/lua/
@@ -1689,7 +2508,13 @@ src/lua/
     tf_markdown.lua
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
+
 Lua safety rules:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
 
 ```text
 No DOM.
@@ -1704,18 +2529,33 @@ No filesystem.
 No network.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
+
 ### 6.20 Reusable accreditation harness
 
 The security accreditation harness should be a **reusable browser-envelope checker**, not a TextForge-specific architectural static analyzer.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
+
 Purpose:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 - verify that the delivered app remains inside the approved secure local-first deployment profile;
 - check the safeguards that the browser or extension platform enforces;
 - produce an accreditation evidence package that can be reused for similar local-first web applications;
 - avoid coupling the harness to TextForge internals such as ITM, Lua action names, viewer implementations, or the exact workspace class structure.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
+
 The harness should check:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 ```text
 Deployment envelope:
@@ -1753,7 +2593,13 @@ Service-worker posture:
   no service-worker weakening of the declared network profile
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
+
 The harness should **not** check:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 ```text
 Whether only WorkspaceStorageGateway touches IndexedDB.
@@ -1764,9 +2610,18 @@ Whether each viewer uses the preferred internal adapter.
 Whether Lua APIs are pleasant or well-designed.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
+
 Those are important engineering and test concerns, but they are not the reusable accreditation boundary. IndexedDB is an allowed browser storage mechanism for the application-private workspace. Ordinary user-mediated file input is allowed. The accreditation claim is that TextForge does not gain silent local filesystem authority or unapproved network/remote-code authority.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
+
 Suggested files:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
 
 ```text
 tools/accreditation/
@@ -1789,7 +2644,13 @@ tools/accreditation/
     writeAccreditationReport.ts
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
+
 Recommended npm scripts:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
 
 ```json
 {
@@ -1800,11 +2661,20 @@ Recommended npm scripts:
 }
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
+
 The harness may include lightweight source checks as a convenience, but its authoritative role should be artifact and deployment-envelope verification. A release should be assessed against what the browser will actually load: final HTML, final JavaScript bundles, extension manifest, PWA manifest, service worker, and CSP.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
 
 ### 6.21 Resource browser
 
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 11 — Tables, catalogues, and matrices, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/tables`, `@textforge/bpmn`.
+
 
 - expose bundled docs/examples;
 - preview resources;
@@ -1813,7 +2683,13 @@ Responsibilities:
 - render Markdown resources directly;
 - include manual test plans and future-feature docs.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 11 — Tables, catalogues, and matrices, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/tables`, `@textforge/bpmn`.
+
+
 Resource groups:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 11 — Tables, catalogues, and matrices, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/tables`, `@textforge/bpmn`.
+
 
 ```text
 README
@@ -1834,9 +2710,15 @@ Manual test plan
 Future features
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 7 — ITM visual projections; Phase 11 — Tables, catalogues, and matrices, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/tables`, `@textforge/bpmn`.
+
+
 ### 6.22 Export/import subsystem
 
 Responsibilities:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 - explicit user-triggered import;
 - explicit user-triggered export;
@@ -1854,7 +2736,13 @@ Responsibilities:
 - open intermediate as editable document when the intermediate is text;
 - open generated binary outputs as read-only workspace resources.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 Security rules:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
 
 - never export automatically;
 - never overwrite local files silently;
@@ -1862,13 +2750,22 @@ Security rules:
 - never preserve absolute host paths in zip exports;
 - sanitize zip paths on import.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+
+
 ---
 
 ## 7. UI requirements
 
 The UI should be a **React workbench of surfaces**, not an editor with popup-only viewers. Components should be selected for good TypeScript types, documented examples, accessibility where practical, and predictable testability. Bundle size is secondary to maintainability, agentic implementation reliability, and integration confidence.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/assets`, `apps/textforge-web`.
+
+
 Recommended React UI support stack:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/assets`, `apps/textforge-web`.
+
 
 ```text
 React Arborist        workspace tree
@@ -1882,11 +2779,20 @@ React Flow            future controlled visual graph editing only
 Zustand/custom stores app state slices
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/assets`, `apps/textforge-web`.
+
+
 ### 7.1 Security-visible workspace boundary
 
 The UI should make the workspace boundary understandable without turning security into noise. TextForge should say, in user-facing wording, that workspace files are stored inside the browser-managed TextForge workspace and that exporting is required to create a copy outside the app.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `apps/textforge-web`.
+
+
 Required UI cues:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `apps/textforge-web`.
+
 
 - workspace root clearly labelled as an application workspace, not a live local folder;
 - import actions labelled as manual import/open/ZIP import;
@@ -1895,11 +2801,20 @@ Required UI cues:
 - generated artifacts visually distinguishable from source files where practical;
 - no UI implication that TextForge is synchronizing a real local directory.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `apps/textforge-web`.
+
+
 This is a product requirement, not an accreditation-harness static-analysis requirement.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.2 — Dexie workspace persistence recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `apps/textforge-web`.
+
 
 ### 7.2 Stage 1 main layout
 
 Stage 1 should be the first implementation target. It should support one main surface and optional popup surfaces. The main surface may be CodeMirror, a viewer, a diagnostics surface, a report preview, or a binary-resource surface.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
 
 ```text
 +--------------------------------------------------------------------------------+
@@ -1914,7 +2829,13 @@ Stage 1 should be the first implementation target. It should support one main su
 +--------------------------------------------------------------------------------+
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
+
 Important Stage 1 rules:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
 
 ```text
 Double-clicking a text file may open CodeMirror in the main surface.
@@ -1924,11 +2845,20 @@ A surface can be moved between main and popup if supported.
 The main surface is not synonymous with CodeMirror.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
+
 ### 7.3 Stage 2 target: advanced tabbed main surfaces
 
 Stage 2 is the target advanced workbench model, but it should be implemented later in the roadmap after the basic surface abstraction is stable. The roadmap may introduce a narrow Phase 3.1 main-session tab strip earlier for usability; that earlier strip is not the full Stage 2 tab-group model.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`.
+
+
 Stage 2 adds a tabbed main surface group where editors and viewers are peers:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`.
+
 
 ```text
 +--------------------------------------------------------------------------------+
@@ -1942,7 +2872,13 @@ Stage 2 adds a tabbed main surface group where editors and viewers are peers:
 +--------------------------------------------------------------------------------+
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`.
+
+
 Tab requirements:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`.
+
 
 - surface icon or type marker;
 - resource/file name or derived view title;
@@ -1954,11 +2890,20 @@ Tab requirements:
 - `Move to popup`;
 - later tab reorder via dnd-kit.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`.
+
+
 Stage 2 should not introduce full split-pane complexity yet. It should simply allow multiple surfaces in the main area.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`.
+
 
 ### 7.4 Future layout expansions
 
 After Stage 2, the following can be considered:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`.
+
 
 ```text
 Stage 3: split panes, open to side, bottom diagnostics/console panel
@@ -1966,11 +2911,20 @@ Stage 4: saved layouts and workspace layout restoration
 Stage 5: detached browser windows or multi-monitor workflows
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`.
+
+
 These are intentionally future expansions. The rebuild should design the Surface interfaces so they are possible, but should not require them for the first rebuild.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`.
+
 
 ### 7.5 Workspace explorer UI
 
 Use React Arborist for:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
 
 - folders/files;
 - expand/collapse;
@@ -1984,7 +2938,13 @@ Use React Arborist for:
 - language/resource icons;
 - document badges.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
+
 Required context menu actions:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
 
 ```text
 New File
@@ -2003,11 +2963,20 @@ Open as Popup
 Copy Path
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`.
+
+
 ### 7.6 Binary resource UI
 
 The workspace explorer should show read-only binary resources distinctly from editable text files.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
+
 Required UI behavior:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
 
 ```text
 Image file double-click      -> open ImageViewerSurface, preferably in main surface
@@ -2018,7 +2987,13 @@ Generated SVG/PNG            -> show generated/provenance marker
 Markdown unresolved image    -> diagnostic plus broken-reference marker in preview
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
+
 Surface toolbar requirements:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
 
 ```text
 Images/SVGs: zoom, fit, copy path, export/download, reveal in workspace
@@ -2027,13 +3002,25 @@ PDFs: page navigation, zoom, search if supported, download/export, reveal in wor
 Generated assets: show source pipeline and stale/current state
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
+
 The UI should avoid suggesting that PDFs and raster images are editable source files. They are workspace resources, references, or generated artifacts.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+
 
 ### 7.7 Surface chrome
 
 All surfaces should share a common outer chrome where practical.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 Common controls:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
 
 ```text
 Title / resource path / view title
@@ -2051,13 +3038,25 @@ Zoom/Fit, if supported
 Close
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
+
 The chrome should adapt to capability flags. For example, a PDF surface shows page/zoom controls, while a CodeMirror surface shows editor actions and a generated report surface shows refresh/export/print controls.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+
 
 ### 7.8 Diagnostics UI
 
 Diagnostics should be available both as a popup and as a main surface.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition; Phase 11 — Tables, catalogues, and matrices, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`, `@textforge/tables`, `@textforge/bpmn`.
+
+
 Diagnostics button should indicate attention when any of these exist:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition; Phase 11 — Tables, catalogues, and matrices, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`, `@textforge/tables`, `@textforge/bpmn`.
+
 
 - document diagnostics;
 - plugin conflicts;
@@ -2066,7 +3065,13 @@ Diagnostics button should indicate attention when any of these exist:
 - Lua runtime errors;
 - workspace import warnings.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition; Phase 11 — Tables, catalogues, and matrices, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`, `@textforge/tables`, `@textforge/bpmn`.
+
+
 Diagnostics view should support grouping by:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition; Phase 11 — Tables, catalogues, and matrices, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`, `@textforge/tables`, `@textforge/bpmn`.
+
 
 ```text
 Document
@@ -2077,11 +3082,20 @@ Plugin
 Security check
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition; Phase 11 — Tables, catalogues, and matrices, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`, `@textforge/tables`, `@textforge/bpmn`.
+
+
 ### 7.9 Plugin manager UI
 
 The plugin manager can initially be a popup or dialog, but should later be usable as a main surface if it grows.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
+
 Must show:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
 
 - packaged plugins;
 - loaded/failed status;
@@ -2093,15 +3107,30 @@ Must show:
 - user override selection;
 - persisted preferences.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
+
 Pipeline conflicts must be visible and resolvable by the user.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.3 — Command palette and contribution-driven shell commands; Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/ui`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/pipeline`.
+
 
 ### 7.10 Lua console UI
 
 The Lua console should be a surface, not a special case. It can open in the main area or popup.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
+
 Can use xterm.js if a terminal-like interaction is desired.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
+
 Required actions:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
 
 - run current Lua document;
 - run selection;
@@ -2110,6 +3139,9 @@ Required actions:
 - inspect last result;
 - open last result as document or surface;
 - show diagnostics.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 8 — Lua automation, through `@textforge/lua`, `@textforge/pipeline`.
+
 
 ---
 
@@ -2155,6 +3187,9 @@ flowchart TD
   SecurityVerifier --> DiagnosticsService
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 5 — Contribution registries and package composition, through `@textforge/core`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/ui`.
+
+
 ---
 
 
@@ -2162,7 +3197,13 @@ flowchart TD
 
 TextForge should keep its existing repository name and Git history while moving to the modular rebuild. The pivot should be explicit, reversible, and easy for coding agents to understand.
 
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
+
 The recommended approach is:
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
 
 ```text
 1. Preserve the current implementation with tag `textforge-v1-final`.
@@ -2174,13 +3215,25 @@ The recommended approach is:
 7. Make one clear pivot commit before feature work begins.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
+
 This avoids a separate `TextForge2` repository while avoiding a confusing side-by-side codebase. The old implementation remains available through normal Git history, the archival branch, and the final tag. The new implementation receives a clean workspace, clean dependency tree, and clean package boundaries.
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
 
 ## 10. Companion roadmap set and authority split
 
-The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15b roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
+The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15d roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 Use the roadmap set as follows:
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 ```text
 roadmap/AGENTS_START_HERE.md
@@ -2199,7 +3252,13 @@ roadmap/packages/*.md
   Authoritative package-level phase ownership, dependency rules, and definition-of-done guidance.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
+
 When this whitepaper and the roadmap set overlap, the roadmap set is authoritative for implementation sequencing and package rollout. The correct fix for drift is to update or reduce the duplicate implementation text here, not to maintain a second phase plan inside the whitepaper.
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
 
 
 ## 11. Testing strategy
@@ -2207,6 +3266,9 @@ When this whitepaper and the roadmap set overlap, the roadmap set is authoritati
 ### 11.1 Unit tests
 
 Required:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 3.2 — Dexie workspace persistence recovery; Phase 8 — Lua automation, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/lua`, `@textforge/pipeline`.
+
 
 - workspace path normalization;
 - document versioning;
@@ -2220,9 +3282,15 @@ Required:
 - Lua bridge serialization;
 - source range mapping.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 2 — Source-editor coverage and language foundation; Phase 3.2 — Dexie workspace persistence recovery; Phase 8 — Lua automation, through `@textforge/core`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/lua`, `@textforge/pipeline`.
+
+
 ### 11.2 Parser/model tests
 
 Required:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 12 — Enterprise architecture and ArchiMate foundation, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/archimate`, `@textforge/tables`.
+
 
 - ITM include resolution from workspace;
 - missing include diagnostics;
@@ -2238,9 +3306,15 @@ Required:
 - ArchiMate exchange import/export fixtures;
 - lossy ArchiMate export diagnostics.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 12 — Enterprise architecture and ArchiMate foundation, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/archimate`, `@textforge/tables`.
+
+
 ### 11.3 UI tests
 
 Required:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/core`.
+
 
 - create/rename/delete/move in workspace tree;
 - tab reorder;
@@ -2253,13 +3327,22 @@ Required:
 - ArchiMate model explorer and matrix surfaces;
 - EA view generation and stale-state handling.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3.1 — React workbench shell and UI recovery; Phase 13 — Stage 2 advanced tabbed main surfaces, through `apps/textforge-web`, `@textforge/ui`, `@textforge/surfaces`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/core`.
+
+
 ### 11.4 Security and accreditation tests
 
 Security tests should be split into two groups.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
+
+
 #### 11.4.1 Reusable accreditation-envelope checks
 
 These are application-independent checks that can be reused across secure local-first web apps:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
 
 ```text
 CSP/static target:
@@ -2291,11 +3374,20 @@ Built artifacts:
   no external origins inconsistent with the declared profile
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
+
 These checks support accreditation because they verify browser-enforced safeguards and privileged browser API absence.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
 
 #### 11.4.2 TextForge project security tests
 
 These are ordinary project tests. They are useful, but they should not be confused with the reusable accreditation harness:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
 
 ```text
 Lua cannot access DOM/network/filesystem/browser globals.
@@ -2306,11 +3398,20 @@ Markdown/SVG rendering does not execute active content unexpectedly.
 Reference resolution stays inside the virtual workspace for local-only profiles.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
+
 The distinction matters. The reusable harness verifies the accredited browser envelope. TextForge tests verify that TextForge's own features are implemented well.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
 
 ### 11.5 Golden-output tests
 
 Required:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 7, Phase 9, Phase 11, and Phase 12, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/tables`, `@textforge/bpmn`, `@textforge/archimate`.
+
 
 - Markdown preview fixtures;
 - Markdown image-reference fixtures;
@@ -2327,11 +3428,17 @@ Required:
 - EA report block fixtures;
 - zip import/export roundtrip fixtures.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 7, Phase 9, Phase 11, and Phase 12, through `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/assets`, `@textforge/itm`, `@textforge/tables`, `@textforge/bpmn`, `@textforge/archimate`.
+
+
 ---
 
 ## 12. Files and documents to preserve, migrate, or recreate
 
 The rebuild should maintain the following source-of-truth documents or their updated equivalents.
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1, Phase 0, Phase 6, Phase 12, and Phase 19, through `@textforge/examples-docs`, `@textforge/security-profile`, `@textforge/itm`, `@textforge/archimate`, `@textforge/markdown`.
+
 
 ### 12.1 Product and architecture documents
 
@@ -2345,6 +3452,9 @@ The rebuild should maintain the following source-of-truth documents or their upd
 | secure webapp accreditation whitepaper | accreditation/security rationale | Defines the security claim, especially no network and no silent local file access/modification. |
 | workspace/security rationale with virtual workspace update | workspace rationale | Defines IndexedDB workspace, folder zip import/export, and no File System Access API. |
 
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
+
 ### 12.2 Format specifications
 
 | File | Preserve as | Reason |
@@ -2353,6 +3463,9 @@ The rebuild should maintain the following source-of-truth documents or their upd
 | `docs/itm-tree-style-support.md` | viewer style support reference | Required if tree styles are preserved. |
 | `docs/itm-mindmap-style-support.md` | viewer style support reference | Required for mindmap styling. |
 | `docs/itm-graph-style-support.md` | viewer style support reference | Required for graph styling. |
+
+**Reverse traceability:** Implemented wholly or in part by Phase 6 — ITM integration and model/report foundation; Phase 12 — Enterprise architecture and ArchiMate foundation, through `@textforge/itm`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/archimate`, `@textforge/tables`.
+
 
 ### 12.3 User-facing resources
 
@@ -2374,9 +3487,15 @@ The rebuild should maintain the following source-of-truth documents or their upd
 | Editor round-trip fixtures | bundled/test resource | Required for Markdown, BPMN, tables, Mermaid, and future visual editors. |
 | Dependency licensing policy | repository policy document | Required to keep TextForge open-source-compatible. |
 
+**Reverse traceability:** Implemented wholly or in part by Phase 4, Phase 8, Phase 10, Phase 12, Phase 17, and Phase 19, through `@textforge/markdown`, `@textforge/diagrams`, `@textforge/lua`, `@textforge/bpmn`, `@textforge/archimate`, `@textforge/assets`, `@textforge/examples-docs`.
+
+
 ### 12.4 Code assets to preserve conceptually
 
 Even in a full rewrite, preserve these conceptual assets:
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1, Phase 4, Phase 6, Phase 8, Phase 12, and Phase 19, through `@textforge/examples-docs`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/itm`, `@textforge/lua`, `@textforge/archimate`, `@textforge/security-profile`.
+
 
 | Existing or intended asset | Preserve concept |
 |---|---|
@@ -2392,11 +3511,17 @@ Even in a full rewrite, preserve these conceptual assets:
 | Markdown embedded artifact rendering | Mermaid, Graphviz, KaTeX, code highlighting, local image resolution, SVG popout/export, PNG storage |
 | security verification scripts | extend into browser no-network smoke and accreditation checks |
 
+**Reverse traceability:** Implemented wholly or in part by Phase -1, Phase 4, Phase 6, Phase 8, Phase 12, and Phase 19, through `@textforge/examples-docs`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/itm`, `@textforge/lua`, `@textforge/archimate`, `@textforge/security-profile`.
+
+
 ---
 
 ### 12.5 Security whitepaper integration notes
 
 When maintaining this rebuild document, preserve the distinction from the secure webapp accreditation whitepaper:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3 — ZIP workspace import/export; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/workspace`, `@textforge/examples-docs`.
+
 
 - the application-private workspace is allowed and can be persisted in IndexedDB;
 - the workspace is not a live local filesystem mirror;
@@ -2405,9 +3530,15 @@ When maintaining this rebuild document, preserve the distinction from the secure
 - the accreditation harness verifies browser-enforced safeguards and deployment artifacts;
 - the harness should remain reusable across apps and should not attempt to prove every internal TextForge gateway or layering rule.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy; Phase 3 — ZIP workspace import/export; Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/workspace`, `@textforge/examples-docs`.
+
+
 ## 13. Coding-agent implementation guidance
 
 This section records architecture-level guardrails for implementation work. Operational run instructions, current phase control, and repository-state handling belong to the roadmap set and RAPID log, not to this whitepaper.
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `@textforge/examples-docs`, `@textforge/core`, `@textforge/security-profile`.
+
 
 ### 13.1 General rules for the coding agent
 
@@ -2426,6 +3557,9 @@ This section records architecture-level guardrails for implementation work. Oper
 13. Do not add dependencies that violate the open-source dependency policy.
 14. Do not make rich Markdown editing the default until round-trip tests pass.
 15. Do not use React Flow as a large-graph viewer; use it only for controlled editing surfaces.
+
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/examples-docs`.
+
 
 ### 13.2 Preferred folder structure
 
@@ -2448,27 +3582,48 @@ src/
   tests/
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
+
 ### 13.3 Implementation sequencing authority
 
 This whitepaper must not maintain its own phase summary, phase-number mapping, or package rollout checklist. Those details change more frequently than the architectural doctrine in this paper and are therefore owned by the companion roadmap set.
 
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
+
 For implementation sequencing, always use:
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
 
 - `roadmap/00_package_aware_roadmap.md` for the authoritative phase order.
 - `roadmap/01_repository_and_package_strategy.md` for runnable-shell and repository-boundary rules.
 - `roadmap/packages/*.md` for package-specific phase participation.
 - `roadmap/RAPID.md` for the current active phase and execution state.
 
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
+
 When updating this whitepaper, keep only the architecture-level statements that remain valid across multiple roadmap revisions. If a change affects phase order, package creation timing, or current work sequencing, update the roadmap documents instead of adding another implementation summary here.
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
 
 ### 13.4 Cross-document maintenance rule
 
 If the whitepaper and the roadmap set ever diverge again, treat that as documentation drift:
 
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
+
 1. keep the architectural target state here;
 2. keep implementation order and current phase control in the roadmap set;
 3. remove or shorten duplicated implementation guidance in this whitepaper;
 4. record the correction in `roadmap/RAPID.md`.
+
+**Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
+
 
 ---
 
@@ -2476,6 +3631,9 @@ If the whitepaper and the roadmap set ever diverge again, treat that as document
 ### 13.8 Binary-resource and export completeness requirements
 
 The Surface-based workbench architecture must not remove the resource and export requirements. The following items remain mandatory:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3, Phase 3.2, Phase 4, Phase 9, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`, `apps/textforge-web`, `@textforge/ui`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/itm`.
+
 
 ```text
 Read-only binary workspace resources are first-class workspace files.
@@ -2492,11 +3650,20 @@ Markdown HTML-to-PDF remains late-stage and must not block the core report pipel
 Print-optimized HTML is the first reliable report-output path.
 ```
 
+**Reverse traceability:** Implemented wholly or in part by Phase 3, Phase 3.2, Phase 4, Phase 9, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`, `apps/textforge-web`, `@textforge/ui`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/itm`.
+
+
 The Surface architecture strengthens these requirements because images, SVGs, PDFs, and generated report previews become peer surfaces rather than popup-only side effects.
+
+**Reverse traceability:** Implemented wholly or in part by Phase 3, Phase 3.2, Phase 4, Phase 9, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/security-profile`, `@textforge/assets`, `apps/textforge-web`, `@textforge/ui`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`, `@textforge/itm`.
+
 
 ## 14. Definition of done
 
 The rebuild is successful when:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
 
 1. A user can maintain a multi-folder virtual workspace entirely in the browser.
 2. The workspace persists in IndexedDB and can be manually imported/exported as zip.
@@ -2517,11 +3684,17 @@ The rebuild is successful when:
 13. Reusable browser-envelope accreditation verification is part of the release check path.
 14. The app runs as a static local build and as a browser extension under the same security posture.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 19 — Release-envelope verification and accreditation evidence, through `@textforge/security-profile`, `@textforge/examples-docs`.
+
+
 ---
 
 ### 14.1 Editor-specific definition of done
 
 An editor contribution is done only when:
+
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 2, Phase 10, Phase 11, Phase 14, Phase 15, Phase 16, and Phase 17, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`, `@textforge/bpmn`, `@textforge/tables`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`, `@textforge/security-profile`, `@textforge/archimate`.
+
 
 1. it is registered as a Surface contribution;
 2. it declares whether it is source, rich-text, table, diagram, model, annotation, or hybrid;
@@ -2534,14 +3707,32 @@ An editor contribution is done only when:
 9. it has round-trip tests appropriate to its format;
 10. its dependencies pass the open-source licensing gate.
 
+**Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 2, Phase 10, Phase 11, Phase 14, Phase 15, Phase 16, and Phase 17, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/core`, `@textforge/bpmn`, `@textforge/tables`, `@textforge/markdown`, `@textforge/pipeline`, `@textforge/itm`, `@textforge/diagrams`, `@textforge/security-profile`, `@textforge/archimate`.
+
+
 ## 15. Final architectural position
 
 The rebuilt TextForge should be deliberately narrow in its security claim, React-based in its implementation posture, and deliberately broad in its structured-text usefulness.
 
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
+
 It should not claim to protect users from every malicious transformation. A Lua script or built-in transformation can still damage the text the user chooses to process. The stronger and more defensible claim is:
+
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
 
 > TextForge runs inside a browser-enforced local-first security envelope: no unapproved network egress, no remote code loading, no privileged silent local filesystem access, an application-private workspace, and manual user-mediated file import/export. The reusable accreditation harness verifies that envelope rather than attempting to prove all internal implementation layering.
 
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
+
 That claim is compatible with powerful local authoring, binary workspace resources, local image embedding, generated SVG/PNG assets, model transformation, enterprise architecture modelling, ArchiMate viewpoints, graph visualization, Markdown publishing, Lua automation, and controlled visual editing.
 
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+
+
 The result is not just an editor. It is a local, inspectable, accreditation-friendly workbench for text-based digital engineering artifacts, including enterprise architecture and process-modelling assets, where richer editors exist to forge canonical text and model resources rather than replace them.
+
+**Reverse traceability:** Implemented wholly or in part by all implementation phases, through `apps/textforge-web`, `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/pipeline`, `@textforge/security-profile`.
+

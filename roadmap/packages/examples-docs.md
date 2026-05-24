@@ -28,13 +28,31 @@ Resource-browser content, sample workspaces, fixtures, tutorials, package docs.
 
 ### Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-3.1-P01..P03`, `ARCH-3.2-P01..P03`, `ARCH-3.3-P01..P03`, `ARCH-5.5-P01..P09`, `ARCH-6.1-P01..P05`, `ARCH-6.17-P01..P04`, `ARCH-6.20-P01..P07`, `ARCH-10-P01..P04`, `ARCH-11.4-P01`.
+- pnpm packages: Phase 0: `pnpm --filter @textforge/examples-docs add @textforge/core@workspace:*`
+
+
 Create. Project docs index, sample workspace conventions, package documentation template.
 
 ### Phase 3.1–3.3 — Recovery-phase documentation alignment
 
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.1-P01..P06`, `ARCH-5.2-P01..P06`, `ARCH-6.1-P01..P05`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.5-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-5.8-P01..P05`, `ARCH-6.2-P01..P04`, `ARCH-6.4-P01..P04`, `ARCH-7.1-P01..P04`, `ARCH-11.1-P01..P02`, `ARCH-13.8-P01..P03`, `ARCH-6.7-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`.
+- pnpm packages: No direct package install in this compatibility phase; consume public contracts produced by the active phase packages.
+
+
 Update only if the recovery phases change user-facing onboarding, workspace storage wording, shell screenshots, or package contribution examples. Keep examples aligned with the React shell, Dexie persistence boundary, and command-palette flow once those phases land.
 
 ### Phase 19 — Release-envelope verification and accreditation evidence
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-3.1-P01..P03`, `ARCH-3.2-P01..P03`, `ARCH-3.3-P01..P03`, `ARCH-5.5-P01..P09`, `ARCH-6.20-P01..P07`, `ARCH-11.4-P01`, `ARCH-14-P01..P03`.
+- pnpm packages: Phase 19: No new package install.
+
 
 Update. Add release checklist, example accreditation output, sample build artifacts, and end-to-end tutorial workspace.
 
