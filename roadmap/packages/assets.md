@@ -79,6 +79,15 @@ Implementation anchors:
 
 Update only to expose existing asset viewer actions as command descriptors where they already exist. Do not add generated asset workflows early.
 
+### Phase 3.4 — Resource identity badges and workbench readability pass
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
+- pnpm packages: Phase 3.4: No new package install.
+
+Validate/update lightly. Ensure image, SVG, PDF, and binary viewer surfaces fit the cleaned workbench layout, present resource identity/state consistently through the common chrome, and avoid introducing editable-source affordances for read-only binary resources. Do not change binary resource semantics in this phase.
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 Implementation anchors:

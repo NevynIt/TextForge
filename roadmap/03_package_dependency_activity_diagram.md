@@ -105,14 +105,18 @@ sequenceDiagram
 
 
   rect rgb(250,250,235)
-    Note over WS,UI: Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+    Note over WS,UI: Phase 3.4 — resource identity badges and workbench readability pass
     WS->>Core: expose shared badge token type only if cross-package contract is needed
     WS->>UI: provide persisted badge assignments and collision-repair diagnostics
     Surf->>WS: carry source-resource badge metadata into session/tab models
-    UI->>Surf: render badges in tab and surface chrome
+    UI->>Surf: render badges and compact identity/state chrome in tabs and surfaces
+    UI->>Core: consume Phase 3.3 command contracts to calm toolbar/menu presentation
+    App->>UI: apply overflow-safe layout, compact header, stable utility drawer, inspector, active-resource states, and empty/error states
     App->>WS: display stable badges across workspace tree, active resource header, and main tabs
-    Sec->>UI: verify local deterministic badge rendering, no remote icon/image loading
-    Docs->>UI: document badge style and fixture expectations
+    Edit->>Surf: validate text-editor fit and metadata in cleaned shell chrome
+    Assets->>Surf: validate asset-viewer fit and metadata in cleaned shell chrome
+    Sec->>UI: verify local deterministic badge rendering and no remote icon/image loading
+    Docs->>UI: document badge/readability style and fixture expectations
   end
 
   rect rgb(250,240,255)

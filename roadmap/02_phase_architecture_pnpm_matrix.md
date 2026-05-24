@@ -100,19 +100,21 @@ Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P0
 | `@textforge/assets` | Expose existing asset viewer actions as command contributions. | No new package install. |
 | `apps/textforge-web` | Compose package commands in shell. | No new package install. |
 
-## Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+## Phase 3.4 — Resource identity badges and workbench readability pass
 
-Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.4-P02`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-12.4-P01..P02`
+Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`
 
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
-| `@textforge/core` | Add shared document-badge/resource-identity types only if cross-package contracts require them. | No new package install. |
+| `@textforge/core` | Shared badge/resource identity contracts only if required. | No new package install. |
 | `@textforge/workspace` | Deterministic badge identity, collision repair, persisted badge metadata, and import/restore uniqueness validation. | No new package install. |
-| `@textforge/ui` | Shapez.io-style geometric badge primitives for workspace tree rows, tabs, and compact resource labels. | No new package install. |
-| `@textforge/surfaces` | Badge metadata projection into surface sessions and tab/header chrome. | No new package install. |
-| `apps/textforge-web` | Badge wiring across workspace tree, active surface chrome, and main-session tab strip. | No new package install. |
-| `@textforge/security-profile` | Local deterministic rendering checks; no remote badge image/icon loading. | No new package install. |
-| `@textforge/examples-docs` | Badge style note, fixtures, and collision-repair examples. | No new package install. |
+| `@textforge/ui` | Badge primitives plus overflow-safe layout, compact chrome, grouped command/menu, utility drawer, inspector, active-state, and empty-state components. | No new package install. |
+| `@textforge/surfaces` | Badge metadata projection into surface sessions and tab/header chrome; common chrome state display. | No new package install. |
+| `@textforge/editors` | Text-editor fit/readability validation after shell layout cleanup. | No new package install. |
+| `@textforge/assets` | Asset-viewer fit/readability validation after shell layout cleanup. | No new package install. |
+| `apps/textforge-web` | Integrated readability pass: no global horizontal scroll, compact header/status area, calmer command surface, stable utility drawer, clearer tree/tabs/editor/inspector, badges, active-resource highlighting, and small empty/error/help states. | No new package install. |
+| `@textforge/security-profile` | Local deterministic rendering and browser-boundary checks; no remote icon/image loading or filesystem identity. | No new package install. |
+| `@textforge/examples-docs` | Badge/readability style note, fixtures, and collision-repair examples. | No new package install. |
 
 ## Phase 4 — Markdown, local assets, and generated diagram assets
 

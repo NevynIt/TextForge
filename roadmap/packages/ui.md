@@ -80,17 +80,16 @@ Update. Add the command palette, command search/filter/execute behaviour, and co
 
 This phase pulls forward only the shell-facing command UI from Phase 5. It must not add plugin management, diagnostics dashboards, deep context-menu proliferation, or full feature-package contribution UX.
 
-### Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+### Phase 3.4 — Resource identity badges and workbench readability pass
 
 Implementation anchors:
 
-- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.4-P02`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-12.4-P01..P02`.
+- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
 - pnpm packages: Phase 3.4: No new package install.
 
+Update. Implement the UI side of the single Phase 3.4 pass: compact Shapez.io-style geometric badge primitives, overflow-safe shell layout primitives, compact header/status treatments, grouped command/menu presentation that uses the Phase 3.3 command system, stable utility drawer chrome, clearer active-resource states, scannable inspector/card components, and small empty/error/help-state components.
 
-Update. Add compact Shapez.io-style geometric document badge primitives that can be rendered in workspace tree rows, main-session tabs, and resource headers. Badges should be deterministic from the supplied token, theme-safe, accessible by label/tooltip, and usable without introducing a heavy icon library or remote image assets.
-
-Do not add arbitrary icon pickers, semantic meaning encoded only by color, or Phase 13 tab-management behaviour.
+The priority is readability and orientation. Do not add arbitrary icon pickers, semantic meaning encoded only by color, a heavy icon library, saved layout/session restore, split panes, drag/drop tab management, or Phase 13 advanced tab-management behavior.
 
 
 ### Phase 5 — Contribution registries and package composition
@@ -125,7 +124,7 @@ Update. Add advanced tab chrome, group-aware keyboard navigation, movement affor
 
 ## Tests and definition of done
 
-Component tests, accessibility checks, keyboard navigation tests, command palette tests after Phase 3.3, document-badge rendering/accessibility tests after Phase 3.4, and shell-layout usability smoke tests where applicable.
+Component tests, accessibility checks, keyboard navigation tests, command palette tests after Phase 3.3, badge rendering/accessibility tests and shell-layout usability smoke tests after Phase 3.4.
 
 ## Non-goals
 

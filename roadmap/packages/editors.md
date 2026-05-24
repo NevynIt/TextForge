@@ -68,6 +68,15 @@ Implementation anchors:
 
 Update only to expose existing source-editor actions as command descriptors where they already exist. Do not add new editor behaviour simply to populate the command palette.
 
+### Phase 3.4 — Resource identity badges and workbench readability pass
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
+- pnpm packages: Phase 3.4: No new package install.
+
+Validate/update lightly. Ensure the text-editor surface fits the cleaned workbench layout, keeps the CodeMirror area readable, preserves existing editor ownership, and exposes only existing editor state/metadata needed by common chrome. Do not add rich editing, new document types, or new command semantics in this phase.
+
 ### Phase 6 — ITM integration and model/report foundation
 
 Implementation anchors:
@@ -98,9 +107,10 @@ Implementation anchors:
 
 Update. Define rich-editor capability and unsupported-construct warning conventions.
 
+
 ## Tests and definition of done
 
-Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests, React-shell mounting smoke tests after Phase 3.1, and command descriptor tests after Phase 3.3 where applicable.
+Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests, React-shell mounting smoke tests after Phase 3.1, command descriptor tests after Phase 3.3 where applicable, and text-editor fit/readability checks after Phase 3.4.
 
 ## Non-goals
 

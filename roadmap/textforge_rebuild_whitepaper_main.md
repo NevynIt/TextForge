@@ -3,7 +3,7 @@
 **Version:** 15d  
 **Purpose:** Standalone architecture blueprint for rebuilding TextForge from scratch as a React-based, local-first, text-first, secure browser workbench. The design centers on an application-private virtual workspace, ITM as the canonical structural model, explicit pipelines, restricted Lua automation, binary workspace resources, Markdown/report generation, enterprise architecture and ArchiMate support, browser-envelope accreditation, and a Surface-based UI where editors, rich editors, structured editors, viewers, consoles, inspectors, and generated previews are peers.
 
-This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15d roadmap documents under `roadmap/`.
+This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15f roadmap documents under `roadmap/`.
 
 ---
 
@@ -1255,7 +1255,7 @@ Forbidden:
 
 Responsibilities:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/surfaces`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/surfaces`, `@textforge/examples-docs`.
 
 
 - Dexie schema definition;
@@ -1265,12 +1265,12 @@ Responsibilities:
 - backup/export state;
 - uniqueness repair for document identities/badges after restore or batch upload.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/surfaces`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/surfaces`, `@textforge/examples-docs`.
 
 
 Suggested Dexie schema:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/surfaces`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/surfaces`, `@textforge/examples-docs`.
 
 
 ```ts
@@ -1284,7 +1284,7 @@ class TextForgeDb extends Dexie {
 }
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/surfaces`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.2 — Dexie workspace persistence recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `apps/textforge-web`, `@textforge/ui`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/surfaces`, `@textforge/examples-docs`.
 
 
 
@@ -2073,7 +2073,7 @@ Future expansions may add splits and detached windows, but those should not be p
 
 Shared chrome requirements:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`, `@textforge/workspace`.
 
 
 ```text
@@ -2090,7 +2090,7 @@ export/download where supported
 close
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `apps/textforge-web`, `@textforge/workspace`.
 
 
 Hosts:
@@ -2852,12 +2852,12 @@ The main surface is not synonymous with CodeMirror.
 
 Stage 2 is the target advanced workbench model, but it should be implemented later in the roadmap after the basic surface abstraction is stable. The roadmap may introduce a narrow Phase 3.1 main-session tab strip earlier for usability; that earlier strip is not the full Stage 2 tab-group model.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Shapez.io-style document badges and deterministic resource identity; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 Stage 2 adds a tabbed main surface group where editors and viewers are peers:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Shapez.io-style document badges and deterministic resource identity; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 ```text
@@ -2872,12 +2872,12 @@ Stage 2 adds a tabbed main surface group where editors and viewers are peers:
 +--------------------------------------------------------------------------------+
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Shapez.io-style document badges and deterministic resource identity; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 Tab requirements:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Shapez.io-style document badges and deterministic resource identity; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 - surface icon or type marker;
@@ -2890,12 +2890,12 @@ Tab requirements:
 - `Move to popup`;
 - later tab reorder via dnd-kit.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Shapez.io-style document badges and deterministic resource identity; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 Stage 2 should not introduce full split-pane complexity yet. It should simply allow multiple surfaces in the main area.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Shapez.io-style document badges and deterministic resource identity; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
+**Reverse traceability:** Implemented wholly or in part by Phase 3.4 — Resource identity badges and workbench readability pass; Phase 13 — Stage 2 advanced tabbed main surfaces, through `@textforge/surfaces`, `@textforge/ui`, `@textforge/core`, `@textforge/workspace`.
 
 
 ### 7.4 Future layout expansions
@@ -2923,7 +2923,7 @@ These are intentionally future expansions. The rebuild should design the Surface
 
 Use React Arborist for:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 - folders/files;
@@ -2938,12 +2938,12 @@ Use React Arborist for:
 - language/resource icons;
 - document badges.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 Required context menu actions:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 ```text
@@ -2963,7 +2963,7 @@ Open as Popup
 Copy Path
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Shapez.io-style document badges and deterministic resource identity, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 ### 7.6 Binary resource UI
@@ -3014,12 +3014,12 @@ The UI should avoid suggesting that PDFs and raster images are editable source f
 
 All surfaces should share a common outer chrome where practical.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 Common controls:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 ```text
@@ -3038,12 +3038,12 @@ Zoom/Fit, if supported
 Close
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 The chrome should adapt to capability flags. For example, a PDF surface shows page/zoom controls, while a CodeMirror surface shows editor actions and a generated report surface shows refresh/export/print controls.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.3 — Command palette and contribution-driven shell commands; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/core`.
 
 
 ### 7.8 Diagnostics UI
@@ -3225,7 +3225,7 @@ This avoids a separate `TextForge2` repository while avoiding a confusing side-b
 
 ## 10. Companion roadmap set and authority split
 
-The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15d roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
+The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15f roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
 
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
 

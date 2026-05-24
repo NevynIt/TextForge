@@ -46,15 +46,15 @@ Implementation anchors:
 
 Update only if the recovery phases change user-facing onboarding, workspace storage wording, shell screenshots, or package contribution examples. Keep examples aligned with the React shell, Dexie persistence boundary, and command-palette flow once those phases land.
 
-### Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+### Phase 3.4 — Resource identity badges and workbench readability pass
 
 Implementation anchors:
 
-- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.4-P02`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-12.4-P01..P02`.
+- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
 - pnpm packages: Phase 3.4: No new package install.
 
+Update. Add a short document-badge and workbench-readability style note. Include sample workspace fixtures or screenshots/checklists showing stable badges, duplicate-name handling, ZIP export/import preservation, deterministic collision repair after restore or batch import, no global horizontal scrolling, compact top chrome, active-resource highlighting, and utility-panel behavior.
 
-Update. Add a short document-badge style note and sample workspace fixtures showing stable badges, duplicate-name handling, ZIP export/import preservation, and deterministic collision repair after restore or batch import.
 
 ### Phase 19 — Release-envelope verification and accreditation evidence
 

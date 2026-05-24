@@ -6,7 +6,7 @@ This is the first document a coding agent must read before working on the TextFo
 
 The goal is to let any agent understand the architecture, locate the current phase, continue the next useful work, and leave the repository more understandable than it found it.
 
-TextForge is being rebuilt as a React-based, local-first, text-first workbench with a pnpm-workspace monorepo, package-level contribution boundaries, ITM as the canonical structural model, a virtual workspace, stable document identity badges, Surface-based editors/viewers, restricted Lua automation, Markdown/report generation, BPMN and enterprise architecture support, and a reusable browser-envelope security profile.
+TextForge is being rebuilt as a React-based, local-first, text-first workbench with a pnpm-workspace monorepo, package-level contribution boundaries, ITM as the canonical structural model, a virtual workspace, stable document identity badges, a readable overflow-safe workbench shell, Surface-based editors/viewers, restricted Lua automation, Markdown/report generation, BPMN and enterprise architecture support, and a reusable browser-envelope security profile.
 
 ## Repository-local roadmap folder
 
@@ -101,7 +101,7 @@ cat roadmap/02_phase_architecture_pnpm_matrix.md 2>/dev/null || true
 cat roadmap/03_package_dependency_activity_diagram.md 2>/dev/null || true
 ```
 
-If `roadmap/` does not exist yet, copy or merge the V15d `roadmap/` folder into the repository root. If the repository has not yet been pivoted, follow the Phase -1 instructions in `roadmap/00_package_aware_roadmap.md`, using Git history and the preserved RAPID record as the operational source.
+If `roadmap/` does not exist yet, copy or merge the latest `roadmap/` folder into the repository root. If the repository has not yet been pivoted, follow the Phase -1 instructions in `roadmap/00_package_aware_roadmap.md`, using Git history and the preserved RAPID record as the operational source.
 
 After the repository is initialized, use the available verification commands instead of inventing new ones. Typical commands will eventually be:
 

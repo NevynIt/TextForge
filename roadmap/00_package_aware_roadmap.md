@@ -1,4 +1,4 @@
-# TextForge V15e Package-Aware Roadmap
+# TextForge V15f Package-Aware Roadmap
 
 This roadmap interweaves the architecture milestones with the package split. It is intentionally package-oriented: every phase states which packages are created or updated and what each package receives.
 
@@ -30,7 +30,7 @@ The first stable user-facing checkpoint is the one where the app shell can launc
 - workspace tree or sidebar
 - main surface host area
 - toolbar or command entry points
-- status badges or equivalent shell feedback, including stable document identity badges after Phase 3.4
+- status badges or equivalent shell feedback, including stable document identity badges and a readable, overflow-safe workbench pass after Phase 3.4
 - contribution registration and open-with routing for the registered surfaces
 
 When that checkpoint must also remain runnable as a direct local `file://` artifact, do not define the shipped local path around `<script type="module">` and do not rely on post-build HTML rewriting to fix a generated module entry later. The runnable local artifact should be source-owned: a canonical file-launch HTML document, a dedicated loader entry, and focused checks that reject runtime ES module syntax in the emitted local bundle.
@@ -276,40 +276,57 @@ Scope boundary: no full pipeline contribution loading, no diagnostics aggregatio
 
 Implementation note: the delivered Phase 3.3 shell slice uses a local command registry and dispatcher in `@textforge/core`, contribution-driven toolbar/menu slots, and a local command palette. It does not introduce external package loading, remote command execution, or plugin-management UX.
 
-### Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+### Phase 3.4 — Resource identity badges and workbench readability pass
 
 #### Architecture and pnpm implementation anchors
 
-Architecture paragraphs to consider: `ARCH-5.7-P04`, `ARCH-6.4-P02`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-12.4-P01..P02`. Resolve these IDs through `roadmap/02_architecture_paragraph_reference_index.md`, which maps each anchor to the exact paragraph/block and line range in `roadmap/textforge_rebuild_whitepaper_main.md`.
+Architecture paragraphs to consider: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`. Resolve these IDs through `roadmap/02_architecture_paragraph_reference_index.md`, which maps each anchor to the exact paragraph/block and line range in `roadmap/textforge_rebuild_whitepaper_main.md`.
 
 Package dependency actions for this phase:
 
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
-| `@textforge/core` | Add shared document-badge/resource-identity types only if they must be consumed outside workspace/UI/surfaces. | No new package install. |
-| `@textforge/workspace` | Deterministic document badge identity, collision repair, persisted badge metadata, and restore/import uniqueness validation. | No new package install. |
-| `@textforge/ui` | Shapez.io-style geometric badge primitives for workspace tree rows, tabs, and compact resource labels. | No new package install. |
-| `@textforge/surfaces` | Project badge metadata from source resources into tab/session chrome without owning the badge-generation algorithm. | No new package install. |
-| `apps/textforge-web` | Wire workspace badge metadata into the tree, current resource header, and main-session tab strip. | No new package install. |
-| `@textforge/security-profile` | Verify badges remain local, deterministic UI metadata and do not introduce remote image/icon loading or filesystem identity assumptions. | No new package install. |
-| `@textforge/examples-docs` | Document the badge style, fixture expectations, and recovery/collision examples. | No new package install. |
+| `@textforge/core` | Shared document-badge/resource-identity types only if cross-package contracts require them. | No new package install. |
+| `@textforge/workspace` | Deterministic badge identity, collision repair, persisted badge metadata, and import/restore uniqueness validation. | No new package install. |
+| `@textforge/ui` | Badge primitives, layout hygiene primitives, compact command/menu presentation, panel/drawer chrome, typography/spacing cleanup, inspector/empty-state components. | No new package install. |
+| `@textforge/surfaces` | Badge metadata projection into surface sessions and tab/header chrome; active-surface/readability metadata for common surface chrome. | No new package install. |
+| `@textforge/editors` | Validate text-editor chrome/readability after shell layout changes; keep CodeMirror ownership unchanged. | No new package install. |
+| `@textforge/assets` | Validate asset-viewer chrome/readability after shell layout changes; keep binary viewer ownership unchanged. | No new package install. |
+| `apps/textforge-web` | Integrate the full workbench readability pass: no global horizontal scroll, compact header, stable utility drawer, clearer tree/tabs/editor/inspector layout, active-resource highlighting, badges, and small empty/error/help states. | No new package install. |
+| `@textforge/security-profile` | Verify readability/badge changes stay local and deterministic and do not introduce remote badge image/icon loading, filesystem identity assumptions, background sync, or silent local-file probing. | No new package install. |
+| `@textforge/examples-docs` | Document the badge style, layout/readability expectations, fixture expectations, and recovery/collision examples. | No new package install. |
 
+Safe follow-on phase after Phase 3.3. Implement this as one coherent Phase 3.4 pass, not as a set of explicit sub-phases. The goal is to turn the now-functional Phase 3.3 shell from a debug/workbench UI into a readable authoring workspace while restoring the old Shapez.io-style document badge idea as a deterministic identity/orientation feature.
 
-Safe follow-on phase. This restores the old Shapez.io-style document badge idea as an identity/orientation feature, not as a new modelling, rendering, or asset-management domain. It sits after Phase 3.3 so the command-palette work already in progress is not disrupted, and it uses the persistent workspace identity delivered in Phase 3.2.
+Recommended components of the single pass, in priority order:
+
+| Priority | Component | Implementation guidance |
+|---:|---|---|
+| 1 | Remove global horizontal scrolling | Ensure the app frame, sidebars, editor surface, inspector, utility panel, and status areas use `min-width: 0`, bounded flex/grid regions, and internal scrolling instead of page-level horizontal overflow. |
+| 2 | Compact the top header/status/debug area | Move low-value counters and verbose storage/debug chips out of prime header space; keep the main header readable and reserve detailed state for the utility panel or compact status strip. |
+| 3 | Normalize typography, spacing, and contrast | Apply a small shell-wide cleanup so labels, metadata, buttons, tabs, cards, and editor chrome have consistent readable sizing and spacing. |
+| 4 | Add deterministic document/resource badges | Generate stable local badge metadata and render compact Shapez.io-style badges in the workspace tree, main tabs, active resource chrome, and command/search results where useful. |
+| 5 | Strengthen active-resource highlighting | Make the same active document obvious in tree, tab strip, editor header, and inspector without relying only on text repetition. |
+| 6 | Use the Phase 3.3 command system to calm the toolbar | Keep only high-frequency actions visible and move lower-frequency actions into grouped command/menu affordances or the command palette. |
+| 7 | Make the utility area a stable drawer/panel | The utility panel must not disrupt the main layout or create horizontal overflow when opened. |
+| 8 | Simplify tree and inspector reading paths | Use badges and grouped cards so the left side answers "what resources exist and which is active" and the right side answers "what is this thing and what can I do with it". |
+| 9 | Add small empty/error/help states | Cover no document open, unsupported resource, empty workspace, import failure, storage unavailable, and dirty/unsaved indications where they belong. |
 
 | Package | Action | Content |
 |---|---|---|
-| `@textforge/core` | Update if needed | Add a minimal exported type for a document badge token only if multiple packages need a shared contract. Keep visual generation policy out of core. |
-| `@textforge/workspace` | Update | Generate stable badge seeds from resource identity, path/name, resource kind, and language ID; persist the seed/assigned badge; repair collisions after ZIP import, restore, duplication, or batch upload; expose diagnostics when identity repair changes a badge. |
-| `@textforge/ui` | Update | Add small Shapez.io-style geometric badge primitives: deterministic simple shapes, compact color/shape/mark combinations, accessible labels, and theme-safe rendering. Use them in workspace tree rows, tab labels, and compact resource headers. |
-| `@textforge/surfaces` | Update | Carry source-resource badge metadata into main-session tabs and surface headers while preserving popup/main placement rules. |
-| `apps/textforge-web` | Update | Display badges consistently in the workspace tree, active surface chrome, and main tab strip. Ensure reload/import keeps badges stable unless collision repair explicitly changes them. |
-| `@textforge/security-profile` | Update | Add or extend checks/documentation to confirm badge rendering does not use remote images, external icon fetches, File System Access API identity, directory handles, or silent local file probing. |
-| `@textforge/examples-docs` | Update | Add a short badge style note and sample workspace fixtures showing stable badges, duplicate-name handling, and post-import collision repair. |
+| `@textforge/core` | Update if needed | Add only the minimal exported badge/resource identity shape if several packages need the same contract. Keep visual generation policy, persistence, and shell layout out of core. |
+| `@textforge/workspace` | Update | Generate and persist stable badge seeds/assignments from resource identity, path/name, resource kind, and language ID. Preserve badges across reload and ZIP export/import where possible. Repair collisions deterministically after restore, duplication, batch upload, or ZIP import, and expose diagnostics when repair changes a badge. |
+| `@textforge/ui` | Update | Add compact Shapez.io-style geometric badge primitives and the small layout primitives needed for readability: overflow-safe app regions, compact status/header treatments, grouped command/menu presentation, stable utility drawer chrome, inspector cards, empty-state components, active-resource visual states, and accessible labels/tooltips. |
+| `@textforge/surfaces` | Update | Carry source-resource badge metadata into surface sessions, tab models, and surface headers without owning badge generation or persistence. Ensure common surface chrome can show compact identity/state indicators without pulling Phase 13 advanced tab management forward. |
+| `@textforge/editors` | Validate/update lightly | Ensure text-editor surfaces fit the cleaned shell, keep the editor area readable, preserve CodeMirror ownership, and expose only existing editor state/metadata needed by the chrome. |
+| `@textforge/assets` | Validate/update lightly | Ensure image/SVG/PDF/binary viewers fit the cleaned shell and present resource identity/state consistently without changing binary resource semantics. |
+| `apps/textforge-web` | Update | Apply the integrated readability pass in the actual shell: no page-level horizontal scrollbar at normal desktop widths, compact header/status rail, toolbar actions routed through Phase 3.3 command composition, badges in tree/tabs/header, clear active-resource state, stable utility drawer, scannable right inspector, and small empty/error/help states. |
+| `@textforge/security-profile` | Update | Add or extend checks/documentation to confirm badges and layout polish do not use remote images, external icon fetches, File System Access API identity, directory handles, background sync, remote sync, or silent local-file probing. |
+| `@textforge/examples-docs` | Update | Add a short badge/readability style note and sample workspace fixtures showing stable badges, duplicate-name handling, post-import collision repair, and expected shell layout behavior. |
 
-Acceptance criteria: badges are deterministic for a stable resource; visually compact; accessible through text labels/tooltips; stable across reload; preserved through ZIP export/import where possible; repaired deterministically when collisions occur; and covered by focused workspace/UI/shell tests.
+Acceptance criteria: Phase 3.4 is delivered in one coherent implementation pass; the shell has no global horizontal scrollbar at normal desktop widths; the top chrome is calmer and more compact; text, labels, buttons, panels, tabs, and cards are easier to scan; badges are deterministic for stable resources, visually compact, accessible through text labels/tooltips, stable across reload, preserved through ZIP export/import where possible, and repaired deterministically when collisions occur; the active document is visibly consistent across tree, tabs, editor/header, and inspector; the utility panel opens without disrupting the main layout; and focused workspace/UI/surface/app/security tests cover the changes.
 
-Scope boundary: no arbitrary user icon picker, no remote image badges, no heavy icon library, no semantic meaning encoded only by color, no document-type taxonomy expansion, no file-system-derived identity, and no Phase 13 advanced tab management.
+Scope boundary: no arbitrary user icon picker, no remote image badges, no heavy icon library, no semantic meaning encoded only by color, no document-type taxonomy expansion, no file-system-derived identity, no saved layout/session restore, no split panes, no drag/drop tab management, no Phase 13 advanced tab management, and no new plugin/package-management UX.
 
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 

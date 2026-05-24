@@ -69,15 +69,16 @@ Implementation anchors:
 
 Update. Expose existing surface actions as shell command contributions where applicable: open-with, close, refresh/current-state handling, move main/popup, and active-surface focus actions. Preserve capability filtering through public contracts.
 
-### Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+### Phase 3.4 — Resource identity badges and workbench readability pass
 
 Implementation anchors:
 
-- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.4-P02`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-12.4-P01..P02`.
+- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
 - pnpm packages: Phase 3.4: No new package install.
 
+Update. Carry source-resource badge metadata into surface sessions, tab models, and surface headers without owning badge generation or persistence. Ensure the common surface chrome can expose compact identity/state indicators, active-resource highlighting, and readable surface metadata while preserving the Phase 3.1 rule that popup sessions stay out of the main document strip.
 
-Update. Carry source-resource badge metadata into surface sessions, tab models, and surface headers without owning badge generation or persistence. Preserve the Phase 3.1 rule that popup sessions stay out of the main document strip.
+Do not pull Phase 13 advanced tab grouping, tab persistence, split panes, or drag/drop tab behavior forward.
 
 
 ### Phase 5 — Contribution registries and package composition
@@ -122,7 +123,7 @@ Update. Add tabbed main surface groups, tab movement, richer open-to-main/open-a
 
 ## Tests and definition of done
 
-Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests, React-shell host compatibility tests after Phase 3.1, command contribution tests after Phase 3.3, and badge metadata projection tests after Phase 3.4.
+Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests, React-shell host compatibility tests after Phase 3.1, command contribution tests after Phase 3.3, and badge metadata projection and chrome-readability tests after Phase 3.4.
 
 ## Non-goals
 
