@@ -80,6 +80,19 @@ Update. Add the command palette, command search/filter/execute behaviour, and co
 
 This phase pulls forward only the shell-facing command UI from Phase 5. It must not add plugin management, diagnostics dashboards, deep context-menu proliferation, or full feature-package contribution UX.
 
+### Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.4-P02`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-12.4-P01..P02`.
+- pnpm packages: Phase 3.4: No new package install.
+
+
+Update. Add compact Shapez.io-style geometric document badge primitives that can be rendered in workspace tree rows, main-session tabs, and resource headers. Badges should be deterministic from the supplied token, theme-safe, accessible by label/tooltip, and usable without introducing a heavy icon library or remote image assets.
+
+Do not add arbitrary icon pickers, semantic meaning encoded only by color, or Phase 13 tab-management behaviour.
+
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -112,7 +125,7 @@ Update. Add advanced tab chrome, group-aware keyboard navigation, movement affor
 
 ## Tests and definition of done
 
-Component tests, accessibility checks, keyboard navigation tests, command palette tests after Phase 3.3, and shell-layout usability smoke tests where applicable.
+Component tests, accessibility checks, keyboard navigation tests, command palette tests after Phase 3.3, document-badge rendering/accessibility tests after Phase 3.4, and shell-layout usability smoke tests where applicable.
 
 ## Non-goals
 

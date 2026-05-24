@@ -68,9 +68,22 @@ Implementation anchors:
 
 Update. Expose existing workspace actions as shell command contributions where applicable, including import/export, selected-folder ZIP export, new folder/resource, rename, delete, and storage reset/recovery actions. Do not add new workspace behaviours solely to populate the palette.
 
+### Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.4-P02`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-12.4-P01..P02`.
+- pnpm packages: Phase 3.4: No new package install.
+
+
+Update. Generate and persist stable document badge seeds/assignments from resource identity, path/name, resource kind, and language ID. Preserve badges across reload and ZIP export/import where possible. Repair collisions deterministically after restore, duplication, batch upload, or ZIP import, and expose diagnostics when repair changes a badge.
+
+This phase must not introduce real filesystem identity, remote sync identity, arbitrary user icon assets, or document-type taxonomy expansion.
+
+
 ## Tests and definition of done
 
-Persistence tests, Dexie schema/version tests after Phase 3.2, ZIP import/export tests, path normalization tests, binary resource round-trip tests, workspace manifest tests, and command contribution tests after Phase 3.3.
+Persistence tests, Dexie schema/version tests after Phase 3.2, ZIP import/export tests, path normalization tests, binary resource round-trip tests, workspace manifest tests, command contribution tests after Phase 3.3, and badge identity/collision-repair tests after Phase 3.4.
 
 ## Non-goals
 

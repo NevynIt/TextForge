@@ -103,6 +103,18 @@ sequenceDiagram
     App->>UI: replace hard-coded toolbar/menu behaviour with command palette and slots
   end
 
+
+  rect rgb(250,250,235)
+    Note over WS,UI: Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+    WS->>Core: expose shared badge token type only if cross-package contract is needed
+    WS->>UI: provide persisted badge assignments and collision-repair diagnostics
+    Surf->>WS: carry source-resource badge metadata into session/tab models
+    UI->>Surf: render badges in tab and surface chrome
+    App->>WS: display stable badges across workspace tree, active resource header, and main tabs
+    Sec->>UI: verify local deterministic badge rendering, no remote icon/image loading
+    Docs->>UI: document badge style and fixture expectations
+  end
+
   rect rgb(250,240,255)
     Note over Pipe,Diag: Phase 4 — Markdown, local assets, generated diagram assets
     Pipe->>Core: consume pipeline value, trace, diagnostics, generated resource contracts

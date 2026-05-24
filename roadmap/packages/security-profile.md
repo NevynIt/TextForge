@@ -76,6 +76,17 @@ Implementation anchors:
 
 Update only if command registration introduces new dependency or browser-envelope implications. The palette is a local command dispatcher, not an external plugin permission system.
 
+### Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.4-P02`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-12.4-P01..P02`.
+- pnpm packages: Phase 3.4: No new package install.
+
+
+Update. Extend the security-profile guidance/checks only as needed to keep badges local and deterministic: no remote badge images, no external icon fetches, no File System Access API identity, no directory handles, and no silent local-file probing. Badges are UI/resource metadata, not proof of external file identity.
+
+
 ### Phase 16 — ArchiMate visual editing investigation
 
 Implementation anchors:

@@ -100,6 +100,20 @@ Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P0
 | `@textforge/assets` | Expose existing asset viewer actions as command contributions. | No new package install. |
 | `apps/textforge-web` | Compose package commands in shell. | No new package install. |
 
+## Phase 3.4 — Shapez.io-style document badges and deterministic resource identity
+
+Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.4-P02`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-12.4-P01..P02`
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Add shared document-badge/resource-identity types only if cross-package contracts require them. | No new package install. |
+| `@textforge/workspace` | Deterministic badge identity, collision repair, persisted badge metadata, and import/restore uniqueness validation. | No new package install. |
+| `@textforge/ui` | Shapez.io-style geometric badge primitives for workspace tree rows, tabs, and compact resource labels. | No new package install. |
+| `@textforge/surfaces` | Badge metadata projection into surface sessions and tab/header chrome. | No new package install. |
+| `apps/textforge-web` | Badge wiring across workspace tree, active surface chrome, and main-session tab strip. | No new package install. |
+| `@textforge/security-profile` | Local deterministic rendering checks; no remote badge image/icon loading. | No new package install. |
+| `@textforge/examples-docs` | Badge style note, fixtures, and collision-repair examples. | No new package install. |
+
 ## Phase 4 — Markdown, local assets, and generated diagram assets
 
 Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P01..P06`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-11.5-P01..P03`, `ARCH-13.8-P01..P03`

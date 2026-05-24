@@ -6,7 +6,7 @@ This is the first document a coding agent must read before working on the TextFo
 
 The goal is to let any agent understand the architecture, locate the current phase, continue the next useful work, and leave the repository more understandable than it found it.
 
-TextForge is being rebuilt as a React-based, local-first, text-first workbench with a pnpm-workspace monorepo, package-level contribution boundaries, ITM as the canonical structural model, a virtual workspace, Surface-based editors/viewers, restricted Lua automation, Markdown/report generation, BPMN and enterprise architecture support, and a reusable browser-envelope security profile.
+TextForge is being rebuilt as a React-based, local-first, text-first workbench with a pnpm-workspace monorepo, package-level contribution boundaries, ITM as the canonical structural model, a virtual workspace, stable document identity badges, Surface-based editors/viewers, restricted Lua automation, Markdown/report generation, BPMN and enterprise architecture support, and a reusable browser-envelope security profile.
 
 ## Repository-local roadmap folder
 

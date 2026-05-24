@@ -39,7 +39,7 @@ render the app frame and brand
 show workspace/navigation chrome
 show the main surface region
 expose toolbar or command entry points
-show status badges or equivalent shell feedback
+show status badges and stable document identity badges or equivalent shell feedback
 route registered contributions through the shell
 ```
 

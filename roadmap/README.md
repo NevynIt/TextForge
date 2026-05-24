@@ -1,8 +1,8 @@
-# TextForge Rebuild Roadmap Package V15d
+# TextForge Rebuild Roadmap Package V15e
 
 This package is arranged as a single drop-in `roadmap/` folder for the TextForge repository. Copy or merge this folder into the repository root. After that, every coding agent should start from `roadmap/AGENTS_START_HERE.md`.
 
-The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15d keeps the Phase 3.1 React/UI recovery, Phase 3.2 Dexie persistence recovery, and Phase 3.3 shell command/palette pull-forward sequence, keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row, and adds reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
+The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15e keeps the Phase 3.1 React/UI recovery, Phase 3.2 Dexie persistence recovery, Phase 3.3 shell command/palette pull-forward sequence, and adds Phase 3.4 for Shapez.io-style document badges and deterministic resource identity, keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row, and adds reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
 
 The roadmap also includes exact architecture-reference anchors, a consolidated pnpm install matrix, and a phase-sequenced package dependency activity diagram that shows when each package starts depending on other packages and app surfaces across Phases -1 through 19.
 
@@ -23,7 +23,7 @@ Authority split:
 - `03_package_dependency_activity_diagram.md` — package dependency activity sequence diagram across roadmap phases.
 - `RAPID.md` — repository-local append-only RAPID log.
 - `textforge_rebuild_whitepaper_main.md` — main standalone architecture body; it deliberately does not own phase sequencing.
-- `packages/*.md` — one implementation guide per package, including Phase 3.1/3.2/3.3 recovery/pull-forward responsibilities or compatibility notes.
+- `packages/*.md` — one implementation guide per package, including Phase 3.1/3.2/3.3/3.4 recovery, pull-forward, and document-badge responsibilities or compatibility notes.
 
 ## How to use
 
