@@ -158,3 +158,7 @@ Focused `lint` and `test` checks pass for the package, and browser-level shell v
 ## Phase 3.3 closure note
 
 The package now contributes the base shell actions that operate on open surfaces: close, refresh, move between main and popup placement, focus main/popup sessions, and command descriptors for compatible open-with targets. Capability-aware surface routing still stays inside the public surface registry and host contracts; the phase does not pull broader package-composition or later surface contribution work forward.
+
+## Phase 3.5 closure note
+
+Popup sessions now stay separate from the main document strip and reopen through a real overlay host in the app shell rather than being treated as right-panel content. The package still limits itself to session and placement semantics: focus, close, move-to-main, move-to-popup, and compact surface metadata remain available without pulling Phase 13 tab-group or session-persistence behavior forward.

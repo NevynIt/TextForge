@@ -161,3 +161,7 @@ Binary resources now survive Dexie-backed workspace hydration as well as ZIP rou
 ## Phase 3.3 closure note
 
 The package now exposes the existing asset download path as a shell command descriptor while leaving viewer-kind selection and open-with routing inside the package-owned surface model. Phase 3.3 does not add generated-asset workflows or broaden asset semantics beyond the already-delivered viewer surface behavior.
+
+## Phase 3.5 closure note
+
+Popup-ready asset viewers now render through the bounded overlay host instead of the utility pane, while the asset package keeps ownership of read-only viewer semantics, blob URL binding, and download actions. The shared shell chrome also uses a generic asset header label so popup asset titles do not inflate the visible duplicate-name count in the surrounding workbench.

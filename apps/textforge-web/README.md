@@ -10,6 +10,8 @@ Phase 3.1 replaced the earlier imperative shell bootstrap with a React-rendered 
 
 Phase 3.4 turns that shell into the readable authoring workbench promised by the roadmap: deterministic placement-based resource badges, calmer contribution-driven command chrome, viewport-safe top-bar menus, explicit local scroll regions for the editor/sidebar/inspector surfaces, and a utility drawer that no longer disturbs the main layout. React icon usage stays centralized in `@textforge/ui` through `lucide-react`.
 
+Phase 3.5 finishes the next shell-usability pass: popup sessions render inside a bounded overlay host, the left workspace rail and right inspector/utility rail resize and collapse through `@textforge/ui`, the inspector stays in the resizable right panel, and repeated active-resource titles are trimmed so the shell does not waste central space. The app also exposes deterministic `?phase35=` validation presets and keeps browser-measured layout evidence under `roadmap/validation/`.
+
 ## Commands
 
 - `pnpm --filter @textforge/textforge-web build`

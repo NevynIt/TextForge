@@ -77,6 +77,16 @@ Implementation anchors:
 
 Validate/update lightly. Ensure the text-editor surface fits the cleaned workbench layout, keeps the CodeMirror area readable, preserves existing editor ownership, and exposes only existing editor state/metadata needed by common chrome. Do not add rich editing, new document types, or new command semantics in this phase.
 
+### Phase 3.5 â€” Popup usability, resizable panels, and chrome deduplication pass
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-4-P04..P06`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.6-P01..P05`, `ARCH-7.7-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.5: No new package install.
+
+
+Validate/update lightly. Keep the text-editor surface readable when shell side panels resize or collapse, and reduce duplicate editor-header identity where needed without changing CodeMirror ownership, language behavior, or the existing source-editor workflow.
+
 ### Phase 6 — ITM integration and model/report foundation
 
 Implementation anchors:
@@ -137,3 +147,7 @@ Browser validation of the recovered shell confirmed that the CodeMirror editor s
 ## Phase 3.3 closure note
 
 The package now exposes the existing source-editor language-mode changes as shell command descriptors rather than only through the surface-side select control. No new editor behavior was added to populate the palette; the command layer simply routes the already-supported language-mode change path through the shared shell command substrate.
+
+## Phase 3.5 closure note
+
+The editor surface keeps the same CodeMirror ownership and language workflow, but its shared header now uses a generic `Source editor` label so the surrounding shell can keep visible active-title repetition within the Phase 3.5 bounds. Browser validation at the required desktop states confirms the text surface remains the dominant region while the resized shell rails and popup overlay chrome stay outside the editor's behavior contract.

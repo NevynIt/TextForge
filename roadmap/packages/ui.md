@@ -161,3 +161,9 @@ The package now also provides the lightweight storage/recovery chrome needed by 
 ## Phase 3.3 closure note
 
 The package now renders the command-focused shell chrome promised for this phase: contribution-driven menu and toolbar presentation plus a local command palette with search, keyboard navigation, and execute flow. The Phase 3.3 UI remains intentionally narrow; it does not become a plugin manager, diagnostics dashboard, or full feature-package composition surface.
+
+## Phase 3.5 closure note
+
+The package now exports the bounded popup and shell-resize primitives promised for this phase. `TextForgeAppFrame` uses `react-resizable-panels` for the left workspace rail, main region, and right utility rail, while `TextForgePopupHost` restores popup sessions as real in-app overlays instead of side-panel content.
+
+The Phase 3.5 chrome also syncs collapse and expand state with real width release, keeps stable pane markers for validation, and leaves advanced tab movement, split panes, saved layouts, and other Phase 13 behavior out of scope.

@@ -92,3 +92,7 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Repository pivot responsibility
 
 This package also owns preserved tutorial/example material that is intentionally migrated from the previous implementation. During the pivot, selected legacy examples and fixtures should be moved here or under `fixtures/legacy` with clear provenance notes. It should not become a dump of the old implementation source tree.
+
+## Phase 3.5 closure note
+
+The roadmap package now carries the screenshot-review checklist together with browser-measured validation artifacts under `roadmap/validation/`. The Phase 3.5 evidence set explicitly records overflow, popup, duplicate-title, and resize-width checks in JSON so the shell-usability review remains auditable even though automated PNG capture was unreliable in this environment.
