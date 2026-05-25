@@ -25,7 +25,8 @@ test('ui package renders react shell primitives from chrome models', () => {
         id: 'resource-1',
         label: 'notes.md',
         path: '/docs/notes.md',
-        kind: 'text',
+        kind: 'resource',
+        representation: 'text',
         depth: 1,
         detail: 'MARKDOWN',
         badge: {

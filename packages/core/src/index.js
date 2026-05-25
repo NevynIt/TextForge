@@ -1,6 +1,7 @@
 export const severityLevels = ['hint', 'info', 'warning', 'error'];
 
-export const resourceKinds = ['text', 'binary', 'generated', 'virtual'];
+export const resourceKinds = ['resource', 'generated', 'virtual'];
+export const resourceRepresentations = ['text', 'bytes'];
 
 export const resourceBadgePlacements = ['center', 'top', 'right', 'bottom', 'left'];
 
@@ -45,8 +46,10 @@ function cloneCommandArrays(command) {
         ...command.when,
         runtimeStatuses: command.when.runtimeStatuses ?? [],
         selectionKinds: command.when.selectionKinds ?? [],
+        selectionRepresentations: command.when.selectionRepresentations ?? [],
         activeSurfacePlacements: command.when.activeSurfacePlacements ?? [],
         activeSurfaceResourceKinds: command.when.activeSurfaceResourceKinds ?? [],
+        activeSurfaceResourceRepresentations: command.when.activeSurfaceResourceRepresentations ?? [],
         activeSurfaceContributionIds: command.when.activeSurfaceContributionIds ?? [],
         availableSurfaceIds: command.when.availableSurfaceIds ?? [],
       }
@@ -135,9 +138,17 @@ export function createSourceRange(start, end) {
 }
 
 export function createResourceRef(resourceId, overrides = {}) {
+  const kind = overrides.kind === 'text' || overrides.kind === 'binary'
+    ? 'resource'
+    : overrides.kind;
+  const representation = overrides.representation
+    ?? (overrides.kind === 'text' ? 'text' : undefined)
+    ?? (overrides.kind === 'binary' ? 'bytes' : undefined);
   return {
     resourceId,
     ...overrides,
+    kind,
+    representation,
   };
 }
 
@@ -208,17 +219,43 @@ export function createCommandManifest(packageId, commands = []) {
 }
 
 export function createCommandContext(overrides = {}) {
+  const selection = overrides.selection
+    ? createResourceRef(overrides.selection.resourceId ?? '', overrides.selection)
+    : undefined;
+  const activeSurface = overrides.activeSurface
+    ? {
+      ...overrides.activeSurface,
+      resourceKind: overrides.activeSurface.resourceKind === 'text' || overrides.activeSurface.resourceKind === 'binary'
+        ? 'resource'
+        : overrides.activeSurface.resourceKind,
+      resourceRepresentation: overrides.activeSurface.resourceRepresentation
+        ?? (overrides.activeSurface.resourceKind === 'text' ? 'text' : undefined)
+        ?? (overrides.activeSurface.resourceKind === 'binary' ? 'bytes' : undefined),
+    }
+    : undefined;
   return {
     runtimeStatus: overrides.runtimeStatus ?? 'ready',
     workspaceReady: overrides.workspaceReady ?? (overrides.runtimeStatus ? overrides.runtimeStatus === 'ready' : true),
-    selection: overrides.selection
+    selection,
+    activeSurface,
+    target: overrides.target
       ? {
-        ...overrides.selection,
-      }
-      : undefined,
-    activeSurface: overrides.activeSurface
-      ? {
-        ...overrides.activeSurface,
+        selection: overrides.target.selection
+          ? createResourceRef(overrides.target.selection.resourceId ?? '', overrides.target.selection)
+          : undefined,
+        activeSurface: overrides.target.activeSurface
+          ? {
+            ...overrides.target.activeSurface,
+            resourceKind: overrides.target.activeSurface.resourceKind === 'text'
+              || overrides.target.activeSurface.resourceKind === 'binary'
+              ? 'resource'
+              : overrides.target.activeSurface.resourceKind,
+            resourceRepresentation: overrides.target.activeSurface.resourceRepresentation
+              ?? (overrides.target.activeSurface.resourceKind === 'text' ? 'text' : undefined)
+              ?? (overrides.target.activeSurface.resourceKind === 'binary' ? 'bytes' : undefined),
+          }
+          : undefined,
+        availableSurfaceIds: overrides.target.availableSurfaceIds ?? [],
       }
       : undefined,
     availableSurfaceIds: overrides.availableSurfaceIds ?? [],
@@ -228,6 +265,11 @@ export function createCommandContext(overrides = {}) {
 export function matchesCommandContext(command, context = {}) {
   const normalizedContext = createCommandContext(context);
   const when = command.when;
+  const effectiveSelection = normalizedContext.target?.selection ?? normalizedContext.selection;
+  const effectiveActiveSurface = normalizedContext.target?.activeSurface ?? normalizedContext.activeSurface;
+  const effectiveAvailableSurfaceIds = normalizedContext.target?.availableSurfaceIds?.length
+    ? normalizedContext.target.availableSurfaceIds
+    : normalizedContext.availableSurfaceIds;
   if (!when) {
     return true;
   }
@@ -240,44 +282,58 @@ export function matchesCommandContext(command, context = {}) {
     return false;
   }
 
-  if (when.selectionRequired && !normalizedContext.selection) {
+  if (when.selectionRequired && !effectiveSelection) {
     return false;
   }
 
   if (when.selectionKinds?.length > 0) {
-    const selectedKind = normalizedContext.selection?.kind;
+    const selectedKind = effectiveSelection?.kind;
     if (!selectedKind || !when.selectionKinds.includes(selectedKind)) {
       return false;
     }
   }
 
-  if (when.activeSurfaceRequired && !normalizedContext.activeSurface) {
+  if (when.selectionRepresentations?.length > 0) {
+    const selectedRepresentation = getResourceRepresentation(effectiveSelection);
+    if (!selectedRepresentation || !when.selectionRepresentations.includes(selectedRepresentation)) {
+      return false;
+    }
+  }
+
+  if (when.activeSurfaceRequired && !effectiveActiveSurface) {
     return false;
   }
 
   if (when.activeSurfacePlacements?.length > 0) {
-    const placement = normalizedContext.activeSurface?.placement;
+    const placement = effectiveActiveSurface?.placement;
     if (!placement || !when.activeSurfacePlacements.includes(placement)) {
       return false;
     }
   }
 
   if (when.activeSurfaceResourceKinds?.length > 0) {
-    const resourceKind = normalizedContext.activeSurface?.resourceKind;
+    const resourceKind = effectiveActiveSurface?.resourceKind;
     if (!resourceKind || !when.activeSurfaceResourceKinds.includes(resourceKind)) {
       return false;
     }
   }
 
+  if (when.activeSurfaceResourceRepresentations?.length > 0) {
+    const representation = effectiveActiveSurface?.resourceRepresentation;
+    if (!representation || !when.activeSurfaceResourceRepresentations.includes(representation)) {
+      return false;
+    }
+  }
+
   if (when.activeSurfaceContributionIds?.length > 0) {
-    const contributionId = normalizedContext.activeSurface?.contributionId;
+    const contributionId = effectiveActiveSurface?.contributionId;
     if (!contributionId || !when.activeSurfaceContributionIds.includes(contributionId)) {
       return false;
     }
   }
 
   if (when.availableSurfaceIds?.length > 0) {
-    const availableSurfaceIds = new Set(normalizedContext.availableSurfaceIds ?? []);
+    const availableSurfaceIds = new Set(effectiveAvailableSurfaceIds ?? []);
     if (!when.availableSurfaceIds.every((surfaceId) => availableSurfaceIds.has(surfaceId))) {
       return false;
     }
@@ -449,6 +505,70 @@ export function createCanonicalPatch(target, operations, overrides = {}) {
 
 export function getLanguageDefinition(languageId) {
   return languageDefinitions.find((definition) => definition.id === languageId);
+}
+
+export function getResourceRepresentation(resource) {
+  if (!resource) {
+    return undefined;
+  }
+
+  if (resource.representation === 'text' || resource.representation === 'bytes') {
+    return resource.representation;
+  }
+
+  if (resource.kind === 'text') {
+    return 'text';
+  }
+
+  if (resource.kind === 'binary') {
+    return 'bytes';
+  }
+
+  return undefined;
+}
+
+function canDecodeUtf8(bytes) {
+  try {
+    const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    return !text.includes('\u0000');
+  } catch {
+    return false;
+  }
+}
+
+export function inferResourceRepresentation({ path, mimeType, bytes, fallback = 'bytes' } = {}) {
+  const normalizedMimeType = mimeType?.toLowerCase();
+  const languageId = inferLanguageId({ path, mimeType, fallback: undefined });
+  const opaqueMimeTypes = new Set([
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'image/webp',
+    'image/gif',
+    'image/avif',
+  ]);
+
+  if (normalizedMimeType === 'image/svg+xml' || languageId === 'svg') {
+    return 'text';
+  }
+
+  if (opaqueMimeTypes.has(normalizedMimeType)) {
+    return 'bytes';
+  }
+
+  if (languageId) {
+    return 'text';
+  }
+
+  if (normalizedMimeType?.startsWith('text/')) {
+    return 'text';
+  }
+
+  if (bytes instanceof Uint8Array && canDecodeUtf8(bytes)) {
+    return 'text';
+  }
+
+  return fallback;
 }
 
 function extensionFromPath(path) {

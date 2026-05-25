@@ -4,10 +4,12 @@ import type {
   ContributionManifest,
   PipelineValue,
   ResourceBadgeToken,
+  ResourceRepresentation,
   ResourceRef,
 } from '@textforge/core';
 
-export type WorkspaceEntryKind = 'folder' | 'text' | 'binary';
+export type WorkspaceEntryKind = 'folder' | 'resource';
+export type WorkspaceResourceRepresentation = ResourceRepresentation;
 export type WorkspaceArchiveResourceEncoding = 'utf8' | 'binary';
 export type WorkspaceImportConflictPolicy = 'error' | 'replace' | 'skip';
 export type WorkspaceStorageKind = 'indexeddb';
@@ -36,17 +38,21 @@ export interface WorkspaceFolder extends WorkspaceEntryBase {
   readonly childIds: ReadonlyArray<string>;
 }
 
-export interface WorkspaceTextResource extends WorkspaceEntryBase {
-  readonly kind: 'text';
-  readonly text: string;
-  readonly languageId?: string;
+export interface WorkspaceResourceBase extends WorkspaceEntryBase {
+  readonly kind: 'resource';
+  readonly representation: WorkspaceResourceRepresentation;
   readonly mimeType?: string;
 }
 
-export interface WorkspaceBinaryResource extends WorkspaceEntryBase {
-  readonly kind: 'binary';
+export interface WorkspaceTextResource extends WorkspaceResourceBase {
+  readonly representation: 'text';
+  readonly text: string;
+  readonly languageId?: string;
+}
+
+export interface WorkspaceBinaryResource extends WorkspaceResourceBase {
+  readonly representation: 'bytes';
   readonly bytes: Uint8Array;
-  readonly mimeType?: string;
 }
 
 export type WorkspaceResource = WorkspaceTextResource | WorkspaceBinaryResource;
@@ -76,7 +82,8 @@ export interface WorkspaceArchiveFolderRecord {
 
 export interface WorkspaceArchiveResourceRecord {
   readonly id: string;
-  readonly kind: WorkspaceResource['kind'];
+  readonly kind: 'resource';
+  readonly representation: WorkspaceResourceRepresentation;
   readonly path: string;
   readonly parentId?: string;
   readonly metadata: WorkspaceMetadata;
@@ -123,6 +130,7 @@ export interface WorkspaceBadgeDiagnostic {
   readonly resourceId: string;
   readonly path: string;
   readonly kind: WorkspaceEntryKind;
+  readonly representation?: WorkspaceResourceRepresentation;
   readonly badge: ResourceBadgeToken;
   readonly previousKey: string;
   readonly nextKey: string;
@@ -133,6 +141,7 @@ export interface WorkspaceQuery {
   readonly path?: string;
   readonly resourceId?: string;
   readonly kind?: WorkspaceEntryKind;
+  readonly representation?: WorkspaceResourceRepresentation;
   readonly languageId?: string;
   readonly mimeType?: string;
   readonly parentId?: string;
@@ -145,8 +154,7 @@ export interface WorkspaceReferenceResolver {
 export interface WorkspaceDexieSchema {
   readonly system: string;
   readonly folders: string;
-  readonly textResources: string;
-  readonly binaryResources: string;
+  readonly resources: string;
   readonly manifests: string;
 }
 
@@ -170,6 +178,16 @@ export interface WorkspaceCreateBinaryInput {
   readonly mimeType?: string;
 }
 
+export interface WorkspaceCreateResourceTextInput extends WorkspaceCreateTextInput {
+  readonly representation: 'text';
+}
+
+export interface WorkspaceCreateResourceBinaryInput extends WorkspaceCreateBinaryInput {
+  readonly representation: 'bytes';
+}
+
+export type WorkspaceCreateResourceInput = WorkspaceCreateResourceTextInput | WorkspaceCreateResourceBinaryInput;
+
 export interface WorkspaceSaveTextInput {
   readonly resourceId: string;
   readonly text: string;
@@ -181,8 +199,19 @@ export interface WorkspaceSaveTextInput {
 export interface WorkspaceSaveBinaryInput {
   readonly resourceId: string;
   readonly bytes: Uint8Array;
+  readonly mimeType?: string;
   readonly updatedAt?: string;
 }
+
+export interface WorkspaceSaveResourceTextInput extends WorkspaceSaveTextInput {
+  readonly representation: 'text';
+}
+
+export interface WorkspaceSaveResourceBinaryInput extends WorkspaceSaveBinaryInput {
+  readonly representation: 'bytes';
+}
+
+export type WorkspaceSaveResourceInput = WorkspaceSaveResourceTextInput | WorkspaceSaveResourceBinaryInput;
 
 export interface WorkspaceMoveInput {
   readonly resourceId: string;
@@ -192,8 +221,10 @@ export interface WorkspaceMoveInput {
 
 export type WorkspaceMutation =
   | { readonly kind: 'create-folder'; readonly input: WorkspaceCreateFolderInput }
+  | { readonly kind: 'create-resource'; readonly input: WorkspaceCreateResourceInput }
   | { readonly kind: 'create-text'; readonly input: WorkspaceCreateTextInput }
   | { readonly kind: 'create-binary'; readonly input: WorkspaceCreateBinaryInput }
+  | { readonly kind: 'save-resource'; readonly input: WorkspaceSaveResourceInput }
   | { readonly kind: 'save-text'; readonly input: WorkspaceSaveTextInput }
   | { readonly kind: 'save-binary'; readonly input: WorkspaceSaveBinaryInput }
   | { readonly kind: 'rename'; readonly resourceId: string; readonly path: string }
@@ -208,8 +239,10 @@ export interface WorkspaceService {
   getEntryByPath(path: string): WorkspaceEntry | undefined;
   getManifest(): WorkspaceManifest;
   createFolder(input: WorkspaceCreateFolderInput): WorkspaceFolder;
+  createResource(input: WorkspaceCreateResourceInput): WorkspaceResource;
   createTextResource(input: WorkspaceCreateTextInput): WorkspaceTextResource;
   createBinaryResource(input: WorkspaceCreateBinaryInput): WorkspaceBinaryResource;
+  saveResource(input: WorkspaceSaveResourceInput): WorkspaceResource;
   saveTextResource(input: WorkspaceSaveTextInput): WorkspaceTextResource;
   saveBinaryResource(input: WorkspaceSaveBinaryInput): WorkspaceBinaryResource;
   renameEntry(resourceId: string, path: string): WorkspaceEntry | undefined;
@@ -291,6 +324,7 @@ export interface WorkspaceTreeItem {
   readonly label: string;
   readonly path: string;
   readonly kind: WorkspaceEntryKind;
+  readonly representation?: WorkspaceResourceRepresentation;
   readonly depth: number;
   readonly expanded: boolean;
   readonly active: boolean;
@@ -307,7 +341,7 @@ export interface WorkspaceCanonicalPatch extends CanonicalPatch {
   readonly target: ResourceRef;
 }
 
-export declare const workspaceDexieSchemaVersion: 1;
+export declare const workspaceDexieSchemaVersion: 2;
 export declare const defaultWorkspaceDexieDatabaseName: 'textforge-workspace';
 export declare const workspaceStorageErrorCodes: {
   readonly initializationFailed: 'workspace-storage-initialization-failed';

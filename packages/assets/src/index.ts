@@ -51,6 +51,10 @@ export interface AssetSurfaceContribution extends SurfaceContribution {
   readonly mimeTypes?: ReadonlyArray<string>;
 }
 
+export declare function createAssetViewerSurfaceContribution(
+  overrides: Omit<AssetSurfaceContribution, 'kind' | 'readOnly'>,
+): AssetSurfaceContribution;
+
 export interface AssetViewerRequest {
   readonly resource: ResourceRef;
   readonly workspaceResource?: WorkspaceResource;
@@ -91,48 +95,48 @@ export const assetSurfaceContributions: ReadonlyArray<AssetSurfaceContribution> 
   {
     id: '@textforge/assets/image',
     label: 'Image viewer',
-    description: 'Read-only image surface for workspace binary assets.',
+    description: 'Read-only image surface for workspace image resources.',
     kind: 'asset-viewer',
     viewerKind: 'image',
     readOnly: true,
     placements: ['main', 'popup', 'auxiliary'],
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['bytes'],
     mimeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'],
     openWithPriority: 80,
   },
   {
     id: '@textforge/assets/svg',
     label: 'SVG viewer',
-    description: 'Read-only SVG surface with workspace blob binding support.',
+    description: 'Read-only SVG surface with workspace blob binding support for text or byte resources.',
     kind: 'asset-viewer',
     viewerKind: 'svg',
     readOnly: true,
     placements: ['main', 'popup', 'auxiliary'],
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['text', 'bytes'],
     mimeTypes: ['image/svg+xml'],
     openWithPriority: 90,
   },
   {
     id: '@textforge/assets/pdf',
     label: 'PDF viewer',
-    description: 'Read-only PDF surface for workspace binary assets.',
+    description: 'Read-only PDF surface for workspace PDF resources.',
     kind: 'asset-viewer',
     viewerKind: 'pdf',
     readOnly: true,
     placements: ['main', 'popup'],
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['bytes'],
     mimeTypes: ['application/pdf'],
     openWithPriority: 70,
   },
   {
     id: '@textforge/assets/binary',
-    label: 'Binary viewer',
-    description: 'Fallback viewer for binary workspace resources.',
+    label: 'File viewer',
+    description: 'Fallback viewer for opaque byte-backed workspace resources.',
     kind: 'asset-viewer',
     viewerKind: 'binary',
     readOnly: true,
     placements: ['main', 'popup', 'auxiliary'],
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['bytes'],
     openWithPriority: 10,
   },
 ];

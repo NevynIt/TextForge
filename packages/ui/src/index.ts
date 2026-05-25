@@ -1,11 +1,11 @@
-import type { ResourceBadgeToken } from '@textforge/core';
+import type { ResourceBadgeToken, ResourceRepresentation } from '@textforge/core';
 import type { ReactNode } from 'react';
 
 export type ThemeMode = 'light' | 'dark' | 'system';
 export type ChromeDensity = 'compact' | 'comfortable';
 export type FrameRegionKind = 'toolbar' | 'sidebar' | 'main' | 'footer' | 'overlay';
 export type BadgeTone = 'neutral' | 'info' | 'success' | 'warning' | 'danger';
-export type WorkspaceTreeItemKind = 'folder' | 'text' | 'binary';
+export type WorkspaceTreeItemKind = 'folder' | 'resource';
 export type SurfaceTabLayout = 'single' | 'tabs';
 export type ResourceAttention = 'warning';
 export type IconName =
@@ -108,6 +108,7 @@ export interface WorkspaceTreeItem {
   readonly label: string;
   readonly path: string;
   readonly kind: WorkspaceTreeItemKind;
+  readonly representation?: ResourceRepresentation;
   readonly depth: number;
   readonly detail?: string;
   readonly expanded?: boolean;

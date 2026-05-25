@@ -13,7 +13,7 @@ import {
 } from '../src/index.js';
 
 const document = createTextEditorDocument(
-  { resourceId: 'resource-1', path: '/docs/notes.md', kind: 'text', languageId: 'markdown' },
+  { resourceId: 'resource-1', path: '/docs/notes.md', kind: 'resource', representation: 'text', languageId: 'markdown' },
   '# Notes\n',
   { selection: createTextEditorSelection(0, 7), languageId: 'markdown' },
 );
@@ -33,11 +33,11 @@ assert.equal(surface.model.languageMode.languageId, 'markdown');
 assert.equal(surface.model.languageMode.parserBacked, true);
 assert.equal(resolveTextEditorLanguageMode(document).label, 'Markdown');
 assert.equal(resolveTextEditorLanguageMode(createTextEditorDocument(
-  { resourceId: 'resource-2', path: '/docs/config.yaml', kind: 'text' },
+  { resourceId: 'resource-2', path: '/docs/config.yaml', kind: 'resource', representation: 'text' },
   'name: TextForge\n',
 )).parserBacked, true);
 assert.equal(resolveTextEditorLanguageMode(createTextEditorDocument(
-  { resourceId: 'resource-3', path: '/docs/diagram.mmd', kind: 'text' },
+  { resourceId: 'resource-3', path: '/docs/diagram.mmd', kind: 'resource', representation: 'text' },
   'graph TD',
 )).parserBacked, false);
 assert.equal(listTextEditorLanguageModes().length, 14);

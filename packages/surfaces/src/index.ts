@@ -2,7 +2,7 @@ import type {
   Capability,
   CommandContribution,
   ContributionManifest,
-  ResourceKind,
+  ResourceRepresentation,
   ResourceRef,
   SurfaceContribution as CoreSurfaceContribution,
 } from '@textforge/core';
@@ -15,8 +15,10 @@ export interface SurfaceContribution extends CoreSurfaceContribution {
   readonly label?: string;
   readonly description?: string;
   readonly placements?: ReadonlyArray<SurfacePlacement>;
-  readonly resourceKinds?: ReadonlyArray<ResourceKind>;
+  readonly resourceRepresentations?: ReadonlyArray<ResourceRepresentation>;
   readonly mimeTypes?: ReadonlyArray<string>;
+  readonly languageIds?: ReadonlyArray<string>;
+  readonly fileExtensions?: ReadonlyArray<string>;
   readonly allowPopup?: boolean;
   readonly openWithPriority?: number;
 }
@@ -127,6 +129,14 @@ export declare function createSurfaceContributionManifest(
   surfaceContributions?: ReadonlyArray<SurfaceContribution>,
 ): ContributionManifest;
 export const contributions: ContributionManifest;
+export declare function canOpenWithSurface(
+  contribution: SurfaceContribution,
+  request: SurfaceOpenRequest,
+): boolean;
+export declare function getDefaultSurfacePlacement(
+  registry: SurfaceRegistry,
+  request: SurfaceOpenRequest,
+): SurfacePlacement;
 
 export function createSequentialSessionIdFactory(prefix = 'surface-session'): () => string {
   let counter = 0;
@@ -139,15 +149,6 @@ export function createSequentialSessionIdFactory(prefix = 'surface-session'): ()
 function matchesPlacement(contribution: SurfaceContribution, placement: SurfacePlacement): boolean {
   const placements = contribution.placements ?? ['main', 'popup', 'auxiliary'];
   return placements.includes(placement);
-}
-
-function matchesResourceKind(contribution: SurfaceContribution, resourceKind: ResourceKind | undefined): boolean {
-  if (!resourceKind) {
-    return true;
-  }
-
-  const resourceKinds = contribution.resourceKinds ?? [];
-  return resourceKinds.length === 0 || resourceKinds.includes(resourceKind);
 }
 
 function matchesMimeType(contribution: SurfaceContribution, mimeType: string | undefined): boolean {
@@ -167,10 +168,6 @@ function matchesMimeType(contribution: SurfaceContribution, mimeType: string | u
 function matchesOpenRequest(contribution: SurfaceContribution, request: SurfaceOpenRequest): boolean {
   const requestedPlacement = request.placement ?? 'main';
   if (!matchesPlacement(contribution, requestedPlacement)) {
-    return false;
-  }
-
-  if (!matchesResourceKind(contribution, request.resource.kind)) {
     return false;
   }
 
@@ -394,6 +391,7 @@ export declare function createSourceEditorFallback(
 
 export declare function markSurfaceSessionStale(session: SurfaceSession, updatedAt: string): SurfaceSession;
 export declare function markSurfaceSessionCurrent(session: SurfaceSession, updatedAt: string): SurfaceSession;
+export declare function createSurfaceSessionTab(session: SurfaceSession): import('@textforge/ui').SurfaceTab;
 export declare function listOpenSurfaceSessions(
   sessions: ReadonlyArray<SurfaceSession>,
   placement?: SurfacePlacement,

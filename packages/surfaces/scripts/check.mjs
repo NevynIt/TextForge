@@ -19,7 +19,7 @@ const registry = createSurfaceRegistry([
     id: 'surface.editor',
     label: 'Editor',
     kind: 'text-editor',
-    resourceKinds: ['text'],
+    resourceRepresentations: ['text'],
     placements: ['main', 'popup'],
     openWithPriority: 100,
   },
@@ -27,7 +27,7 @@ const registry = createSurfaceRegistry([
     id: 'surface.svg',
     label: 'SVG viewer',
     kind: 'asset-viewer',
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['bytes'],
     mimeTypes: ['image/svg+xml'],
     placements: ['main', 'popup'],
     openWithPriority: 90,
@@ -36,7 +36,7 @@ const registry = createSurfaceRegistry([
     id: 'surface.asset',
     label: 'Asset',
     kind: 'asset-viewer',
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['bytes'],
     placements: ['main', 'popup'],
     openWithPriority: 80,
   },
@@ -59,11 +59,11 @@ assert.equal(contributions.id, '@textforge/surfaces');
 assert.equal(createOpenWithSurfaceCommand('surface.editor', 'Editor').id, 'open-with:surface.editor');
 
 const textSession = mainHost.open({
-  resource: { resourceId: 'resource-1', kind: 'text', path: '/docs/note.md' },
+  resource: { resourceId: 'resource-1', kind: 'resource', representation: 'text', path: '/docs/note.md' },
   title: 'notes.md',
 });
 const assetSession = popupHost.open({
-  resource: { resourceId: 'resource-2', kind: 'binary', path: '/docs/system.svg' },
+  resource: { resourceId: 'resource-2', kind: 'resource', representation: 'bytes', path: '/docs/system.svg' },
   placement: 'popup',
 });
 
@@ -76,11 +76,11 @@ assert.equal(createSurfaceSessionTab(textSession).resourceId, 'resource-1');
 assert.equal(createMainSessionTabStrip(mainHost.list(), { activeTabId: textSession.id }).tabs.length, 1);
 assert.equal(listOpenSurfaceSessions([...mainHost.list(), ...popupHost.list()], 'popup').length, 1);
 assert.equal(createOpenWithSelection(registry, {
-  resource: { resourceId: 'resource-3', kind: 'binary', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
+  resource: { resourceId: 'resource-3', kind: 'resource', representation: 'bytes', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
 }).selectedSurfaceId, 'surface.svg');
 assert.deepEqual(
   createOpenWithSelection(registry, {
-    resource: { resourceId: 'resource-4', kind: 'binary', path: '/docs/report.pdf', mimeType: 'application/pdf' },
+    resource: { resourceId: 'resource-4', kind: 'resource', representation: 'bytes', path: '/docs/report.pdf', mimeType: 'application/pdf' },
   }).candidates.map((candidate) => candidate.surfaceId),
   ['surface.asset'],
 );

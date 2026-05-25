@@ -14,15 +14,18 @@ import {
   languageDefinitions,
   createPipelineValue,
   createResourceRef,
+  inferResourceRepresentation,
   createSourcePosition,
   createSourceRange,
   createSurfaceContribution,
   severityLevels,
   resourceKinds,
+  resourceRepresentations,
 } from '../src/index.js';
 
 assert.deepEqual(severityLevels, ['hint', 'info', 'warning', 'error']);
-assert.deepEqual(resourceKinds, ['text', 'binary', 'generated', 'virtual']);
+assert.deepEqual(resourceKinds, ['resource', 'generated', 'virtual']);
+assert.deepEqual(resourceRepresentations, ['text', 'bytes']);
 assert.equal(languageDefinitions.length, 14);
 assert.equal(getLanguageDefinition('markdown')?.label, 'Markdown');
 assert.equal(inferLanguageId({ path: '/docs/process.bpmn', mimeType: 'application/bpmn+xml' }), 'bpmn-xml');
@@ -31,9 +34,10 @@ assert.equal(editorCapabilityIds.languageMode, 'editor.language-mode');
 assert.equal(contributionKinds.surfaces, 'surfaces');
 assert.equal(contributions.id, '@textforge/core');
 
-const ref = createResourceRef('resource-1', { path: '/docs/note.md', kind: 'text' });
+const ref = createResourceRef('resource-1', { path: '/docs/note.md', kind: 'resource', representation: 'text' });
 assert.equal(ref.resourceId, 'resource-1');
 assert.equal(ref.path, '/docs/note.md');
+assert.equal(inferResourceRepresentation({ path: '/docs/system.svg', mimeType: 'image/svg+xml' }), 'text');
 
 const range = createSourceRange(createSourcePosition(1, 1), createSourcePosition(1, 5, 4));
 const diagnostic = createDiagnostic('Example', 'warning', { source: range, resource: ref });

@@ -56,7 +56,7 @@ export function createSurfaceOpenWithCommands(surfaceContributions = []) {
       when: {
         workspaceReady: true,
         selectionRequired: true,
-        ...(contribution.resourceKinds?.length ? { selectionKinds: contribution.resourceKinds } : {}),
+        selectionKinds: ['resource'],
         availableSurfaceIds: [contribution.id],
       },
     }),
@@ -91,13 +91,19 @@ function matchesPlacement(contribution, placement) {
   return placements.includes(placement);
 }
 
-function matchesResourceKind(contribution, resourceKind) {
-  if (!resourceKind) {
+function extensionFromPath(path) {
+  const fileName = path?.split(/[\\/]/).pop() ?? '';
+  const index = fileName.lastIndexOf('.');
+  return index >= 0 ? fileName.slice(index + 1).toLowerCase() : '';
+}
+
+function matchesRepresentation(contribution, representation) {
+  if (!representation) {
     return true;
   }
 
-  const resourceKinds = contribution.resourceKinds ?? [];
-  return resourceKinds.length === 0 || resourceKinds.includes(resourceKind);
+  const resourceRepresentations = contribution.resourceRepresentations ?? [];
+  return resourceRepresentations.length === 0 || resourceRepresentations.includes(representation);
 }
 
 function matchesMimeType(contribution, mimeType) {
@@ -114,17 +120,52 @@ function matchesMimeType(contribution, mimeType) {
   return contributionMimeTypes.some((candidate) => candidate.toLowerCase() === normalizedMimeType);
 }
 
-function matchesOpenRequest(contribution, request) {
+function matchesLanguageId(contribution, languageId) {
+  const contributionLanguageIds = contribution.languageIds ?? [];
+  if (contributionLanguageIds.length === 0) {
+    return true;
+  }
+
+  if (!languageId) {
+    return false;
+  }
+
+  return contributionLanguageIds.includes(languageId);
+}
+
+function matchesPathExtension(contribution, path) {
+  const contributionExtensions = contribution.fileExtensions ?? [];
+  if (contributionExtensions.length === 0) {
+    return true;
+  }
+
+  const extension = extensionFromPath(path);
+  if (!extension) {
+    return false;
+  }
+
+  return contributionExtensions.includes(extension);
+}
+
+export function canOpenWithSurface(contribution, request) {
   const requestedPlacement = request.placement ?? 'main';
   if (!matchesPlacement(contribution, requestedPlacement)) {
     return false;
   }
 
-  if (!matchesResourceKind(contribution, request.resource.kind)) {
+  if (!matchesRepresentation(contribution, request.resource.representation)) {
     return false;
   }
 
   if (!matchesMimeType(contribution, request.resource.mimeType)) {
+    return false;
+  }
+
+  if (!matchesLanguageId(contribution, request.resource.languageId)) {
+    return false;
+  }
+
+  if (!matchesPathExtension(contribution, request.resource.path)) {
     return false;
   }
 
@@ -139,8 +180,21 @@ function matchesOpenRequest(contribution, request) {
   return true;
 }
 
+export function getDefaultSurfacePlacement(registry, request) {
+  for (const placement of ['main', 'popup', 'auxiliary']) {
+    const candidate = registry.list().some((contribution) =>
+      canOpenWithSurface(contribution, { ...request, placement }),
+    );
+    if (candidate) {
+      return placement;
+    }
+  }
+
+  return request.placement ?? 'main';
+}
+
 function chooseBestContribution(contributionsList, request) {
-  const matching = contributionsList.filter((contribution) => matchesOpenRequest(contribution, request));
+  const matching = contributionsList.filter((contribution) => canOpenWithSurface(contribution, request));
   const preferred = request.preferredSurfaceIds?.map((surfaceId) =>
     matching.find((contribution) => contribution.id === surfaceId),
   );
@@ -157,9 +211,9 @@ function chooseBestContribution(contributionsList, request) {
 }
 
 export function createOpenWithSelection(registry, request) {
-  const placement = request.placement ?? 'main';
+  const placement = request.placement ?? getDefaultSurfacePlacement(registry, request);
   const candidates = registry.list()
-    .filter((contribution) => matchesOpenRequest(contribution, request))
+    .filter((contribution) => canOpenWithSurface(contribution, { ...request, placement }))
     .sort((left, right) => (right.openWithPriority ?? 0) - (left.openWithPriority ?? 0));
   const selectedSurfaceId = request.preferredSurfaceIds?.find((surfaceId) =>
     candidates.some((candidate) => candidate.id === surfaceId),
@@ -231,7 +285,8 @@ export function createSurfaceRegistry(initialContributions = []) {
       return items.filter((contribution) => matchesPlacement(contribution, placement));
     },
     chooseForResource(request) {
-      return chooseBestContribution(items, request);
+      const placement = request.placement ?? getDefaultSurfacePlacement(registry, request);
+      return chooseBestContribution(items, { ...request, placement });
     },
   };
 

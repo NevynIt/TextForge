@@ -13,7 +13,7 @@ import {
 
 test('text editor selection and edit helpers preserve document metadata', () => {
   const document = createTextEditorDocument(
-    { resourceId: 'resource-1', path: '/docs/notes.md', kind: 'text' },
+    { resourceId: 'resource-1', path: '/docs/notes.md', kind: 'resource', representation: 'text' },
     'Hello world',
     { selection: createTextEditorSelection(0, 5) },
   );
@@ -28,7 +28,7 @@ test('text editor selection and edit helpers preserve document metadata', () => 
   assert.equal(resolveTextEditorLanguageMode(document).languageId, 'markdown');
   assert.equal(resolveTextEditorLanguageMode(document).parserBacked, true);
   assert.equal(resolveTextEditorLanguageMode(createTextEditorDocument(
-    { resourceId: 'resource-2', path: '/docs/chart.mmd', kind: 'text' },
+    { resourceId: 'resource-2', path: '/docs/chart.mmd', kind: 'resource', representation: 'text' },
     'graph TD',
   )).parserBacked, false);
   assert.equal(listTextEditorLanguageModes().some((mode) => mode.languageId === 'bpmn-xml'), true);

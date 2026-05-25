@@ -28,14 +28,14 @@ test('surface registry picks the highest-priority compatible contribution', () =
     {
       id: 'surface.editor',
       label: 'Editor',
-      resourceKinds: ['text'],
+      resourceRepresentations: ['text'],
       placements: ['main'],
       openWithPriority: 20,
     },
     {
       id: 'surface.svg',
       label: 'SVG viewer',
-      resourceKinds: ['binary'],
+      resourceRepresentations: ['bytes'],
       mimeTypes: ['image/svg+xml'],
       placements: ['main'],
       openWithPriority: 50,
@@ -43,7 +43,7 @@ test('surface registry picks the highest-priority compatible contribution', () =
     {
       id: 'surface.preview',
       label: 'Binary preview',
-      resourceKinds: ['binary'],
+      resourceRepresentations: ['bytes'],
       placements: ['main'],
       openWithPriority: 40,
     },
@@ -57,24 +57,24 @@ test('surface registry picks the highest-priority compatible contribution', () =
   });
 
   const session = host.open({
-    resource: { resourceId: 'resource-1', kind: 'binary', path: '/docs/system.svg', badge },
+    resource: { resourceId: 'resource-1', kind: 'resource', representation: 'bytes', path: '/docs/system.svg', badge },
   });
 
   assert.equal(session.contributionId, 'surface.preview');
   assert.equal(session.freshness, 'current');
 
   const svgSession = host.open({
-    resource: { resourceId: 'resource-2', kind: 'binary', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
+    resource: { resourceId: 'resource-2', kind: 'resource', representation: 'bytes', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
   });
   assert.equal(svgSession.contributionId, 'surface.svg');
 
   const selection = createOpenWithSelection(registry, {
-    resource: { resourceId: 'resource-3', kind: 'text', path: '/docs/notes.md' },
+    resource: { resourceId: 'resource-3', kind: 'resource', representation: 'text', path: '/docs/notes.md' },
   });
   assert.equal(selection.selectedSurfaceId, 'surface.editor');
 
   const svgSelection = createOpenWithSelection(registry, {
-    resource: { resourceId: 'resource-4', kind: 'binary', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
+    resource: { resourceId: 'resource-4', kind: 'resource', representation: 'bytes', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
   });
   assert.deepEqual(svgSelection.candidates.map((candidate) => candidate.surfaceId), ['surface.svg', 'surface.preview']);
 
@@ -95,13 +95,13 @@ test('surface command contributions include shell actions and open-with descript
     {
       id: 'surface.editor',
       label: 'Editor',
-      resourceKinds: ['text'],
+      resourceRepresentations: ['text'],
       placements: ['main'],
     },
     {
       id: 'surface.svg',
       label: 'SVG viewer',
-      resourceKinds: ['binary'],
+      resourceRepresentations: ['bytes'],
       mimeTypes: ['image/svg+xml'],
       placements: ['popup'],
     },

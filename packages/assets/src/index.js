@@ -108,40 +108,40 @@ export const assetSurfaceContributions = [
   createAssetViewerSurfaceContribution({
     id: '@textforge/assets/image',
     label: 'Image viewer',
-    description: 'Read-only image surface for workspace binary assets.',
+    description: 'Read-only image surface for workspace image resources.',
     viewerKind: 'image',
     placements: ['main', 'popup', 'auxiliary'],
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['bytes'],
     mimeTypes: ['image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/avif'],
     openWithPriority: 80,
   }),
   createAssetViewerSurfaceContribution({
     id: '@textforge/assets/svg',
     label: 'SVG viewer',
-    description: 'Read-only SVG surface with workspace blob binding support.',
+    description: 'Read-only SVG surface with workspace blob binding support for text or byte resources.',
     viewerKind: 'svg',
     placements: ['main', 'popup', 'auxiliary'],
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['text', 'bytes'],
     mimeTypes: ['image/svg+xml'],
     openWithPriority: 90,
   }),
   createAssetViewerSurfaceContribution({
     id: '@textforge/assets/pdf',
     label: 'PDF viewer',
-    description: 'Read-only PDF surface for workspace binary assets.',
+    description: 'Read-only PDF surface for workspace PDF resources.',
     viewerKind: 'pdf',
     placements: ['main', 'popup'],
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['bytes'],
     mimeTypes: ['application/pdf'],
     openWithPriority: 70,
   }),
   createAssetViewerSurfaceContribution({
     id: '@textforge/assets/binary',
-    label: 'Binary viewer',
-    description: 'Fallback viewer for binary workspace resources.',
+    label: 'File viewer',
+    description: 'Fallback viewer for opaque byte-backed workspace resources.',
     viewerKind: 'binary',
     placements: ['main', 'popup', 'auxiliary'],
-    resourceKinds: ['binary'],
+    resourceRepresentations: ['bytes'],
     openWithPriority: 10,
   }),
 ];
@@ -149,11 +149,16 @@ export const assetSurfaceContributions = [
 export const assetCommandContributions = [
   createCommand('asset.download-selected', 'Download selected asset', {
     category: 'asset',
-    description: 'Download the selected binary resource through the existing asset viewer path.',
-    keywords: ['asset', 'download', 'binary', 'viewer'],
+    description: 'Download the selected byte-backed resource through the existing asset viewer path.',
+    keywords: ['asset', 'download', 'file', 'viewer'],
     menu: { id: 'asset', label: 'Asset', groupOrder: 40, order: 10 },
     toolbar: { order: 90, kind: 'secondary' },
-    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['binary'] },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['resource'],
+      selectionRepresentations: ['bytes'],
+    },
   }),
 ];
 
@@ -236,9 +241,9 @@ export function createAssetViewerSurfaceModel(request, binding, lease) {
   const state = resolvedBinding.state;
   const blobUrl = resolvedBinding.blobUrl ?? lease?.url;
   const mimeType = resolvedBinding.mimeType ?? request.resource.mimeType ?? request.workspaceResource?.mimeType ?? 'application/octet-stream';
-  const resourceText = request.workspaceResource?.kind === 'binary'
+  const resourceText = request.workspaceResource?.representation === 'bytes'
     ? bytesToText(request.workspaceResource.bytes)
-    : request.workspaceResource?.kind === 'text'
+    : request.workspaceResource?.representation === 'text'
       ? request.workspaceResource.text
       : '';
 

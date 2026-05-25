@@ -6,6 +6,7 @@ import {
   createCommandRegistry,
   getLanguageDefinition,
   inferLanguageId,
+  inferResourceRepresentation,
 } from '@textforge/core';
 import {
   basenameWorkspacePath,
@@ -33,6 +34,7 @@ import {
   createPopupSurfaceHost,
   createSequentialSessionIdFactory,
   createSurfaceContributionManifest,
+  getDefaultSurfacePlacement,
   createSurfaceRegistry,
   createSurfaceSessionTab,
   listOpenSurfaceSessions,
@@ -218,6 +220,10 @@ function createZipFilename(label, fallback) {
   return `${sanitizeFilenameSegment(label, fallback)}.zip`;
 }
 
+function isWorkspaceResource(entry) {
+  return entry?.kind === 'resource';
+}
+
 function downloadBytes(filename, bytes, mimeType = 'application/octet-stream') {
   const blob = new Blob([bytes], { type: mimeType });
   const url = URL.createObjectURL(blob);
@@ -341,7 +347,7 @@ function resolveEntryIcon(entry) {
     return 'folder';
   }
 
-  if (entry.kind === 'text') {
+  if (entry.representation === 'text') {
     return 'fileText';
   }
 
@@ -512,9 +518,14 @@ function createTextForgeWorkbenchController() {
   }
 
   function createSurfaceOpenRequest(entry, options = {}) {
-    const placement = options.placement ?? (entry.kind === 'binary' ? 'popup' : 'main');
+    const resource = workspaceEntryToResourceRef(entry);
+    const placement = options.placement ?? getDefaultSurfacePlacement(surfaceRegistry, {
+      resource,
+      allowPopup: true,
+      preferredSurfaceIds: options.preferredSurfaceId ? [options.preferredSurfaceId] : undefined,
+    });
     return {
-      resource: workspaceEntryToResourceRef(entry),
+      resource,
       workspaceResource: entry,
       title: entry.metadata.title ?? entry.path,
       placement,
@@ -606,7 +617,13 @@ function createTextForgeWorkbenchController() {
     }
 
     const existingSession = findSessionForResource(entry.id);
-    const requestedPlacement = options.placement ?? existingSession?.placement ?? (entry.kind === 'binary' ? 'popup' : 'main');
+    const requestedPlacement = options.placement
+      ?? existingSession?.placement
+      ?? getDefaultSurfacePlacement(surfaceRegistry, {
+        resource: workspaceEntryToResourceRef(entry),
+        allowPopup: true,
+        preferredSurfaceIds: options.preferredSurfaceId ? [options.preferredSurfaceId] : undefined,
+      });
     const preferredSurfaceId = options.preferredSurfaceId;
     const forceReopen = options.forceReopen === true;
     if (
@@ -851,7 +868,7 @@ function createTextForgeWorkbenchController() {
     }
 
     const currentResource = workspace.getEntry(resourceId);
-    if (!currentResource || currentResource.kind !== 'text') {
+    if (!isWorkspaceResource(currentResource) || currentResource.representation !== 'text') {
       return;
     }
 
@@ -889,8 +906,9 @@ function createTextForgeWorkbenchController() {
     return getEntry(state.selectedWorkspaceItemId) ?? getDefaultSelection();
   }
 
-  function getSelectedFolderPath() {
-    const entry = getSelectedEntry();
+  function getSelectedFolderPath(commandContext) {
+    const targetEntry = resolveTargetEntryForCommands(commandContext);
+    const entry = targetEntry ?? getSelectedEntry();
     if (!entry) {
       return '/';
     }
@@ -924,12 +942,12 @@ function createTextForgeWorkbenchController() {
     return nextLanguageId && getLanguageDefinition(nextLanguageId) ? nextLanguageId : undefined;
   }
 
-  function shouldCreateTextResource(path, mimeType) {
-    if (inferImportedLanguageId(path, mimeType)) {
-      return true;
-    }
-
-    return String(mimeType ?? '').toLowerCase().startsWith('text/');
+  function shouldCreateTextResource(path, mimeType, bytes) {
+    return inferResourceRepresentation({
+      path,
+      mimeType,
+      bytes,
+    }) === 'text';
   }
 
   function ensureWorkspaceFolder(path) {
@@ -982,7 +1000,7 @@ function createTextForgeWorkbenchController() {
   function createWorkspaceResourceFromBytes(path, bytes, mimeType) {
     const nextPath = createAvailableWorkspacePath(path);
     const title = basenameWorkspacePath(nextPath);
-    if (shouldCreateTextResource(nextPath, mimeType)) {
+    if (shouldCreateTextResource(nextPath, mimeType, bytes)) {
       const languageId = inferImportedLanguageId(nextPath, mimeType) ?? 'plaintext';
       const languageDefinition = getLanguageDefinition(languageId);
       return workspace.createTextResource({
@@ -1071,7 +1089,7 @@ function createTextForgeWorkbenchController() {
 
   function getSelectedResourceEntry() {
     const selectedEntry = getSelectedEntry();
-    if (selectedEntry && selectedEntry.kind !== 'folder') {
+    if (isWorkspaceResource(selectedEntry)) {
       return selectedEntry;
     }
 
@@ -1081,7 +1099,59 @@ function createTextForgeWorkbenchController() {
     }
 
     const activeEntry = getEntry(activeSession.resource.resourceId);
-    return activeEntry?.kind === 'folder' ? undefined : activeEntry;
+    return isWorkspaceResource(activeEntry) ? activeEntry : undefined;
+  }
+
+  function createCommandSelection(entry) {
+    if (!entry) {
+      return undefined;
+    }
+
+    return {
+      resourceId: entry.id,
+      kind: entry.kind,
+      representation: isWorkspaceResource(entry) ? entry.representation : undefined,
+      path: entry.path,
+      mimeType: entry.kind === 'folder' ? undefined : entry.mimeType,
+      languageId: isWorkspaceResource(entry) && entry.representation === 'text'
+        ? entry.languageId
+        : undefined,
+    };
+  }
+
+  function createCommandSurfaceContext(session, entry) {
+    if (!session) {
+      return undefined;
+    }
+
+    return {
+      sessionId: session.id,
+      contributionId: session.contributionId,
+      placement: session.placement,
+      resourceId: session.resource.resourceId,
+      resourceKind: isWorkspaceResource(entry) ? 'resource' : session.resource.kind,
+      resourceRepresentation: isWorkspaceResource(entry)
+        ? entry.representation
+        : session.resource.representation,
+      freshness: session.freshness,
+    };
+  }
+
+  function listAvailableSurfaceIdsForEntry(entry, placement, preferredSurfaceIds) {
+    if (!entry) {
+      return [];
+    }
+
+    return createOpenWithSelection(surfaceRegistry, {
+      resource: workspaceEntryToResourceRef(entry),
+      placement: placement ?? getDefaultSurfacePlacement(surfaceRegistry, {
+        resource: workspaceEntryToResourceRef(entry),
+        allowPopup: true,
+        preferredSurfaceIds,
+      }),
+      allowPopup: true,
+      preferredSurfaceIds,
+    }).candidates.map((candidate) => candidate.surfaceId);
   }
 
   function buildCommandContext() {
@@ -1089,40 +1159,19 @@ function createTextForgeWorkbenchController() {
     const activeSession = runtime.status === 'ready' ? getActiveCommandSession() : undefined;
     const activeEntry = activeSession ? getEntry(activeSession.resource.resourceId) : undefined;
     const openWithTarget = selectedEntry?.kind === 'folder'
-      ? activeEntry?.kind === 'folder' ? undefined : activeEntry
+      ? isWorkspaceResource(activeEntry) ? activeEntry : undefined
       : selectedEntry;
-    const openWithPlacement = activeSession?.placement ?? (openWithTarget?.kind === 'binary' ? 'popup' : 'main');
-    const availableSurfaceIds = openWithTarget
-      ? createOpenWithSelection(surfaceRegistry, {
-        resource: workspaceEntryToResourceRef(openWithTarget),
-        placement: openWithPlacement,
-        allowPopup: true,
-        preferredSurfaceIds: activeSession ? [activeSession.contributionId] : undefined,
-      }).candidates.map((candidate) => candidate.surfaceId)
-      : [];
+    const availableSurfaceIds = listAvailableSurfaceIdsForEntry(
+      openWithTarget,
+      activeSession?.placement,
+      activeSession ? [activeSession.contributionId] : undefined,
+    );
 
     return {
       runtimeStatus: runtime.status,
       workspaceReady: runtime.status === 'ready',
-      selection: selectedEntry
-        ? {
-          resourceId: selectedEntry.id,
-          kind: selectedEntry.kind,
-          path: selectedEntry.path,
-          mimeType: selectedEntry.kind === 'folder' ? undefined : selectedEntry.mimeType,
-          languageId: selectedEntry.kind === 'text' ? selectedEntry.languageId : undefined,
-        }
-        : undefined,
-      activeSurface: activeSession
-        ? {
-          sessionId: activeSession.id,
-          contributionId: activeSession.contributionId,
-          placement: activeSession.placement,
-          resourceId: activeSession.resource.resourceId,
-          resourceKind: activeEntry?.kind ?? activeSession.resource.kind,
-          freshness: activeSession.freshness,
-        }
-        : undefined,
+      selection: createCommandSelection(selectedEntry),
+      activeSurface: createCommandSurfaceContext(activeSession, activeEntry),
       availableSurfaceIds,
     };
   }
@@ -1133,18 +1182,20 @@ function createTextForgeWorkbenchController() {
       return existing;
     }
 
-    if (resource.kind !== 'binary') {
+    const workspaceResource = workspace.getEntry(resource.resourceId);
+    if (!isWorkspaceResource(workspaceResource)) {
       return undefined;
     }
 
-    const workspaceResource = workspace.getEntry(resource.resourceId);
-    if (!workspaceResource || workspaceResource.kind !== 'binary') {
+    if (workspaceResource.representation === 'text' && workspaceResource.mimeType !== 'image/svg+xml') {
       return undefined;
     }
 
     const lease = blobLedger.acquire(resource, {
       type: workspaceResource.mimeType,
-      data: workspaceResource.bytes,
+      data: workspaceResource.representation === 'text'
+        ? textEncoder.encode(workspaceResource.text)
+        : workspaceResource.bytes,
     }, workspaceResource.mimeType);
     assetLeaseByResourceId.set(resource.resourceId, lease);
     return lease;
@@ -1209,7 +1260,7 @@ function createTextForgeWorkbenchController() {
     const badge = resource.metadata.badge;
     const icon = resolveEntryIcon(resource);
     const resourceTitle = resource.metadata.title ?? basenameWorkspacePath(resource.path) ?? resource.path;
-    if (resource.kind === 'text') {
+    if (session.contributionId === codeMirrorTextEditorSurfaceContribution.id && resource.representation === 'text') {
       const document = activeTextDocuments.get(resource.id) ?? createTextEditorDocument(
         workspaceEntryToResourceRef(resource),
         resource.text,
@@ -1347,9 +1398,9 @@ function createTextForgeWorkbenchController() {
       attention: entry.metadata.badge?.repairedFromKey ? 'warning' : undefined,
       detail: entry.kind === 'folder'
         ? 'Folder selection drives workspace-scoped commands like create, import, export, rename, and delete.'
-        : entry.kind === 'text'
-          ? 'Text resources open in the main workbench session strip and accept language-mode commands.'
-          : 'Binary resources open in popup sessions and expose the existing download action through shell commands.',
+        : entry.representation === 'text'
+          ? 'Text-backed resources can open as source and, where supported, in additional visual surfaces.'
+          : 'Byte-backed resources can open in compatible viewers and still download through existing shell commands.',
     };
   }
 
@@ -1392,7 +1443,7 @@ function createTextForgeWorkbenchController() {
       return undefined;
     }
 
-    const kindDetail = entry.kind === 'text'
+    const kindDetail = entry.representation === 'text'
       ? (entry.languageId ? entry.languageId.toUpperCase() : 'TEXT')
       : entry.mimeType === 'image/svg+xml'
         ? 'SVG'
@@ -1400,7 +1451,7 @@ function createTextForgeWorkbenchController() {
           ? 'PDF'
           : entry.mimeType?.startsWith('image/')
             ? 'IMAGE'
-            : 'BINARY';
+            : 'FILE';
     return {
       title: entry.metadata.title ?? basenameWorkspacePath(entry.path) ?? entry.path,
       detail: `${kindDetail} / ${activeSession?.placement === 'popup' ? 'Popup surface' : 'Main surface'}`,
@@ -1447,16 +1498,23 @@ function createTextForgeWorkbenchController() {
     state.selectedWorkspaceItemId = preferredEntry?.id ?? getDefaultSelection()?.id;
   }
 
-  function resolveTargetEntryForCommands() {
-    return getSelectedEntry();
+  function resolveTargetEntryForCommands(commandContext) {
+    const resourceId = commandContext?.target?.selection?.resourceId;
+    return resourceId ? getEntry(resourceId) : getSelectedEntry();
   }
 
-  function resolveTargetResourceForCommands() {
-    return getSelectedResourceEntry();
+  function resolveTargetResourceForCommands(commandContext) {
+    const entry = resolveTargetEntryForCommands(commandContext);
+    return isWorkspaceResource(entry) ? entry : getSelectedResourceEntry();
   }
 
-  async function createFolderCommand() {
-    const defaultPath = joinWorkspacePath(getSelectedFolderPath(), 'new-folder');
+  function resolveTargetSessionForCommands(commandContext) {
+    const sessionId = commandContext?.target?.activeSurface?.sessionId;
+    return sessionId ? findSessionById(sessionId) : getActiveCommandSession();
+  }
+
+  async function createFolderCommand(commandContext) {
+    const defaultPath = joinWorkspacePath(getSelectedFolderPath(commandContext), 'new-folder');
     const requestedPath = window.prompt('Folder path', defaultPath);
     if (!requestedPath) {
       return;
@@ -1473,18 +1531,18 @@ function createTextForgeWorkbenchController() {
     emit();
   }
 
-  async function createResourceCommand() {
-    const kind = window.prompt('Resource kind (text or binary)', 'text')?.trim().toLowerCase();
-    if (!kind) {
+  async function createResourceCommand(commandContext) {
+    const mode = window.prompt('Create resource mode (text or upload)', 'text')?.trim().toLowerCase();
+    if (!mode) {
       return;
     }
 
-    if (kind !== 'text' && kind !== 'binary') {
-      throw new Error(`Unsupported resource kind: ${kind}`);
+    if (mode !== 'text' && mode !== 'upload') {
+      throw new Error(`Unsupported resource mode: ${mode}`);
     }
 
-    if (kind === 'text') {
-      const defaultPath = joinWorkspacePath(getSelectedFolderPath(), 'new-resource.md');
+    if (mode === 'text') {
+      const defaultPath = joinWorkspacePath(getSelectedFolderPath(commandContext), 'new-resource.md');
       const requestedPath = window.prompt('Text resource path', defaultPath);
       if (!requestedPath) {
         return;
@@ -1511,22 +1569,21 @@ function createTextForgeWorkbenchController() {
       return;
     }
 
-    const defaultPath = joinWorkspacePath(getSelectedFolderPath(), file.name || 'resource.bin');
-    const requestedPath = window.prompt('Binary resource path', defaultPath);
+    const defaultPath = joinWorkspacePath(getSelectedFolderPath(commandContext), file.name || 'resource.bin');
+    const requestedPath = window.prompt('Uploaded resource path', defaultPath);
     if (!requestedPath) {
       return;
     }
 
     const nextPath = assertWorkspacePathAvailable(requestedPath);
-    const resource = workspace.createBinaryResource({
-      path: nextPath,
-      title: basenameWorkspacePath(nextPath),
-      bytes: await readFileBytes(file),
-      mimeType: file.type || 'application/octet-stream',
-    });
+    const resource = createWorkspaceResourceFromBytes(
+      nextPath,
+      await readFileBytes(file),
+      file.type || undefined,
+    );
     await persistWorkspace('workspace.new-resource');
     expandFolderAncestors(resource.path);
-    openResourceEntry(resource, { placement: 'popup' });
+    openResourceEntry(resource);
   }
 
   async function importWorkspaceCommand() {
@@ -1555,9 +1612,7 @@ function createTextForgeWorkbenchController() {
 
     const nextEntry = getSelectedEntry();
     if (nextEntry && nextEntry.kind !== 'folder') {
-      openResourceEntry(nextEntry, {
-        placement: nextEntry.kind === 'binary' ? 'popup' : 'main',
-      });
+      openResourceEntry(nextEntry);
       return;
     }
 
@@ -1570,19 +1625,19 @@ function createTextForgeWorkbenchController() {
     downloadBytes(createZipFilename(manifest.name, 'textforge-workspace'), bytes, 'application/zip');
   }
 
-  async function uploadFileCommand() {
+  async function uploadFileCommand(commandContext) {
     const file = await pickLocalFile();
     if (!file) {
       return;
     }
 
-    await uploadFilesIntoFolder(getSelectedFolderPath(), [file], {
+    await uploadFilesIntoFolder(getSelectedFolderPath(commandContext), [file], {
       reason: 'workspace.upload-file',
     });
   }
 
-  async function exportSelectedFolderCommand() {
-    const entry = resolveTargetEntryForCommands();
+  async function exportSelectedFolderCommand(commandContext) {
+    const entry = resolveTargetEntryForCommands(commandContext);
     if (!entry || entry.kind !== 'folder') {
       return;
     }
@@ -1591,7 +1646,7 @@ function createTextForgeWorkbenchController() {
     downloadBytes(createZipFilename(entry.metadata.title ?? basenameWorkspacePath(entry.path), 'workspace-folder'), bytes, 'application/zip');
   }
 
-  async function importFolderZipCommand() {
+  async function importFolderZipCommand(commandContext) {
     const file = await pickLocalFile({ accept: '.zip,application/zip' });
     if (!file) {
       return;
@@ -1601,7 +1656,7 @@ function createTextForgeWorkbenchController() {
       file.name.replace(/\.zip$/i, ''),
       'imported-folder',
     );
-    const defaultPath = joinWorkspacePath(getSelectedFolderPath(), suggestedFolderName);
+    const defaultPath = joinWorkspacePath(getSelectedFolderPath(commandContext), suggestedFolderName);
     const requestedPath = window.prompt('Folder import path', defaultPath);
     if (!requestedPath) {
       return;
@@ -1612,14 +1667,14 @@ function createTextForgeWorkbenchController() {
     await importFolderArchiveIntoPath(targetFolderPath, archive);
   }
 
-  async function downloadSelectedFileCommand() {
-    const entry = resolveTargetResourceForCommands();
+  async function downloadSelectedFileCommand(commandContext) {
+    const entry = resolveTargetResourceForCommands(commandContext);
     if (!entry) {
       return;
     }
 
     const filename = basenameWorkspacePath(entry.path) || entry.metadata.title || 'workspace-file';
-    if (entry.kind === 'text') {
+    if (entry.representation === 'text') {
       downloadBytes(filename, textEncoder.encode(entry.text), entry.mimeType || 'text/plain');
       return;
     }
@@ -1627,8 +1682,8 @@ function createTextForgeWorkbenchController() {
     downloadBytes(filename, entry.bytes, entry.mimeType || 'application/octet-stream');
   }
 
-  async function renameSelectedEntryCommand() {
-    const entry = resolveTargetEntryForCommands();
+  async function renameSelectedEntryCommand(commandContext) {
+    const entry = resolveTargetEntryForCommands(commandContext);
     if (!entry) {
       return;
     }
@@ -1662,8 +1717,8 @@ function createTextForgeWorkbenchController() {
     emit();
   }
 
-  async function deleteSelectedEntryCommand() {
-    const entry = resolveTargetEntryForCommands();
+  async function deleteSelectedEntryCommand(commandContext) {
+    const entry = resolveTargetEntryForCommands(commandContext);
     if (!entry) {
       return;
     }
@@ -1691,8 +1746,8 @@ function createTextForgeWorkbenchController() {
     await retryStorageInitialization();
   }
 
-  async function closeActiveSurfaceCommand() {
-    const session = getActiveCommandSession();
+  async function closeActiveSurfaceCommand(commandContext) {
+    const session = resolveTargetSessionForCommands(commandContext);
     if (session) {
       closeSession(session.id);
     }
@@ -1704,8 +1759,8 @@ function createTextForgeWorkbenchController() {
     }
   }
 
-  async function refreshActiveSurfaceCommand() {
-    const session = getActiveCommandSession();
+  async function refreshActiveSurfaceCommand(commandContext) {
+    const session = resolveTargetSessionForCommands(commandContext);
     if (!session) {
       return;
     }
@@ -1720,8 +1775,8 @@ function createTextForgeWorkbenchController() {
     }
   }
 
-  async function moveActiveSurfaceCommand(targetPlacement) {
-    const session = getActiveCommandSession();
+  async function moveActiveSurfaceCommand(targetPlacement, commandContext) {
+    const session = resolveTargetSessionForCommands(commandContext);
     if (!session || session.placement === targetPlacement) {
       return;
     }
@@ -1736,13 +1791,25 @@ function createTextForgeWorkbenchController() {
     }
   }
 
-  async function focusMainSurfaceCommand() {
+  async function focusMainSurfaceCommand(commandContext) {
+    const targetSession = resolveTargetSessionForCommands(commandContext);
+    if (targetSession?.placement === 'main') {
+      focusMainSession(targetSession.id);
+      return;
+    }
+
     if (state.activeMainSessionId) {
       focusMainSession(state.activeMainSessionId);
     }
   }
 
-  async function focusPopupSurfaceCommand() {
+  async function focusPopupSurfaceCommand(commandContext) {
+    const targetSession = resolveTargetSessionForCommands(commandContext);
+    if (targetSession?.placement === 'popup') {
+      focusPopupSession(targetSession.id);
+      return;
+    }
+
     if (state.activePopupSessionId) {
       focusPopupSession(state.activePopupSessionId);
     } else {
@@ -1752,17 +1819,21 @@ function createTextForgeWorkbenchController() {
     }
   }
 
-  async function openWithSurfaceCommand(commandId) {
+  async function openWithSurfaceCommand(commandId, commandContext) {
     const surfaceId = commandId.slice('surface.open-with:'.length);
-    const resource = resolveTargetResourceForCommands();
+    const resource = resolveTargetResourceForCommands(commandContext);
     if (!resource) {
       return;
     }
 
-    const activeSession = getActiveCommandSession();
+    const activeSession = resolveTargetSessionForCommands(commandContext);
     const placement = activeSession?.resource.resourceId === resource.id
       ? activeSession.placement
-      : resource.kind === 'binary' ? 'popup' : 'main';
+      : getDefaultSurfacePlacement(surfaceRegistry, {
+        resource: workspaceEntryToResourceRef(resource),
+        allowPopup: true,
+        preferredSurfaceIds: [surfaceId],
+      });
     openResourceEntry(resource, {
       placement,
       preferredSurfaceId: surfaceId,
@@ -1770,19 +1841,19 @@ function createTextForgeWorkbenchController() {
     });
   }
 
-  async function setEditorLanguageCommand(commandId) {
+  async function setEditorLanguageCommand(commandId, commandContext) {
     const languageId = commandId.slice('editor.set-language:'.length);
-    const resource = resolveTargetResourceForCommands();
-    if (!resource || resource.kind !== 'text') {
+    const resource = resolveTargetResourceForCommands(commandContext);
+    if (!resource || resource.representation !== 'text') {
       return;
     }
 
     updateTextResourceLanguage(resource.id, languageId);
   }
 
-  async function downloadSelectedAssetCommand() {
-    const resource = resolveTargetResourceForCommands();
-    if (!resource || resource.kind !== 'binary') {
+  async function downloadSelectedAssetCommand(commandContext) {
+    const resource = resolveTargetResourceForCommands(commandContext);
+    if (!resource || resource.representation !== 'bytes') {
       return;
     }
 
@@ -1818,37 +1889,39 @@ function createTextForgeWorkbenchController() {
 
   function registerCommandHandlers() {
     commandDispatcher
-      .register('workspace.new-folder', createFolderCommand)
-      .register('workspace.new-resource', createResourceCommand)
-      .register('workspace.upload-file', uploadFileCommand)
+      .register('workspace.new-folder', ({ context }) => createFolderCommand(context))
+      .register('workspace.new-resource', ({ context }) => createResourceCommand(context))
+      .register('workspace.upload-file', ({ context }) => uploadFileCommand(context))
       .register('workspace.import-workspace', importWorkspaceCommand)
-      .register('workspace.import-folder-zip', importFolderZipCommand)
+      .register('workspace.import-folder-zip', ({ context }) => importFolderZipCommand(context))
       .register('workspace.export-workspace', exportWorkspaceCommand)
-      .register('workspace.export-selected-folder', exportSelectedFolderCommand)
-      .register('workspace.download-selected-file', downloadSelectedFileCommand)
-      .register('workspace.rename-selected', renameSelectedEntryCommand)
-      .register('workspace.delete-selected', deleteSelectedEntryCommand)
+      .register('workspace.export-selected-folder', ({ context }) => exportSelectedFolderCommand(context))
+      .register('workspace.download-selected-file', ({ context }) => downloadSelectedFileCommand(context))
+      .register('workspace.rename-selected', ({ context }) => renameSelectedEntryCommand(context))
+      .register('workspace.delete-selected', ({ context }) => deleteSelectedEntryCommand(context))
       .register('workspace.reset-storage', requestWorkspaceResetCommand)
       .register('workspace.retry-storage', retryWorkspaceLoadCommand)
-      .register('surface.close-active', closeActiveSurfaceCommand)
-      .register('surface.refresh-active', refreshActiveSurfaceCommand)
-      .register('surface.move-active-to-main', () => moveActiveSurfaceCommand('main'))
-      .register('surface.move-active-to-popup', () => moveActiveSurfaceCommand('popup'))
-      .register('surface.focus-main-session', focusMainSurfaceCommand)
-      .register('surface.focus-popup-session', focusPopupSurfaceCommand)
-      .register('asset.download-selected', downloadSelectedAssetCommand);
+      .register('surface.close-active', ({ context }) => closeActiveSurfaceCommand(context))
+      .register('surface.refresh-active', ({ context }) => refreshActiveSurfaceCommand(context))
+      .register('surface.move-active-to-main', ({ context }) => moveActiveSurfaceCommand('main', context))
+      .register('surface.move-active-to-popup', ({ context }) => moveActiveSurfaceCommand('popup', context))
+      .register('surface.focus-main-session', ({ context }) => focusMainSurfaceCommand(context))
+      .register('surface.focus-popup-session', ({ context }) => focusPopupSurfaceCommand(context))
+      .register('asset.download-selected', ({ context }) => downloadSelectedAssetCommand(context));
 
     for (const surfaceContribution of surfaceRegistry.list()) {
-      commandDispatcher.register(`surface.open-with:${surfaceContribution.id}`, ({ command }) => openWithSurfaceCommand(command.id));
+      commandDispatcher.register(`surface.open-with:${surfaceContribution.id}`, ({ command, context }) =>
+        openWithSurfaceCommand(command.id, context));
     }
 
     for (const languageMode of languageModes) {
-      commandDispatcher.register(`editor.set-language:${languageMode.languageId}`, ({ command }) => setEditorLanguageCommand(command.id));
+      commandDispatcher.register(`editor.set-language:${languageMode.languageId}`, ({ command, context }) =>
+        setEditorLanguageCommand(command.id, context));
     }
   }
 
-  async function executeCommand(commandId) {
-    const result = await commandDispatcher.execute(commandId);
+  async function executeCommand(commandId, commandContext) {
+    const result = await commandDispatcher.execute(commandId, commandContext ? { context: commandContext } : undefined);
     if (!result.handled && !commandRegistry.get(commandId)) {
       throw new Error(`Unknown shell command: ${commandId}`);
     }
@@ -1899,7 +1972,7 @@ function createTextForgeWorkbenchController() {
 
       if (initialEntry && initialEntry.kind !== 'folder' && listMainSessions().length === 0 && listPopupSessions().length === 0) {
         openResourceEntry(initialEntry, {
-          placement: screenshotPreset.openPlacement ?? (initialEntry.kind === 'binary' ? 'popup' : 'main'),
+          placement: screenshotPreset.openPlacement,
         });
       } else {
         emit();
@@ -2495,7 +2568,7 @@ function PopupSessionsView({ controller, popupFrame }) {
       children: element(
         'p',
         null,
-        'Open a binary resource from the workspace tree or run an asset command to mount it here.',
+        'Open a viewer-compatible resource from the workspace tree or run an asset command to mount it here.',
       ),
     });
   }

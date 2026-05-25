@@ -95,7 +95,7 @@ function resolveWorkspaceItemIcon(item) {
     return 'fileImage';
   }
 
-  return item.kind === 'text' ? 'fileText' : 'fileBinary';
+  return item.representation === 'text' ? 'fileText' : 'fileBinary';
 }
 
 function describeBadgeTitle(badge, label) {

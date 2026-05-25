@@ -1,4 +1,12 @@
-import type { CommandContribution, ContributionManifest, Diagnostic, LanguageId, ResourceRef, SourceRange } from '@textforge/core';
+import type {
+  CommandContribution,
+  ContributionManifest,
+  Diagnostic,
+  LanguageId,
+  ResourceRef,
+  SourceRange,
+} from '@textforge/core';
+import { languageDefinitions } from '@textforge/core';
 import type { SurfaceContribution, SurfacePlacement, SurfaceOpenRequest } from '@textforge/surfaces';
 
 export type TextEditOperation =
@@ -95,7 +103,7 @@ export const codeMirrorTextEditorSurfaceContribution: TextEditorSurfaceContribut
   sourceRangeAware: true,
   languageIds: languageDefinitions.map((definition) => definition.id),
   placements: ['main', 'popup', 'auxiliary'],
-  resourceKinds: ['text'],
+  resourceRepresentations: ['text'],
   openWithPriority: 100,
 };
 

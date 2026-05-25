@@ -22,9 +22,10 @@ import {
 } from '../../workspace/src/index.js';
 
 const request = {
-  resource: { resourceId: 'resource-1', path: '/docs/system.svg', kind: 'binary', mimeType: 'image/svg+xml' },
+  resource: { resourceId: 'resource-1', path: '/docs/system.svg', kind: 'resource', representation: 'bytes', mimeType: 'image/svg+xml' },
   workspaceResource: {
-    kind: 'binary',
+    kind: 'resource',
+    representation: 'bytes',
     bytes: new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
   },
   provenance: 'generated',
@@ -60,9 +61,10 @@ const workspace = createWorkspaceService({
   now: () => '2026-05-23T00:00:00.000Z',
 });
 workspace.createFolder({ path: '/docs' });
-workspace.createBinaryResource({
+workspace.createTextResource({
   path: '/docs/system.svg',
-  bytes: new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>'),
+  text: '<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>',
+  languageId: 'svg',
   mimeType: 'image/svg+xml',
   title: 'system.svg',
 });
@@ -74,7 +76,8 @@ const restoredWorkspace = createWorkspaceService({
 });
 const restoredSvg = restoredWorkspace.getEntryByPath('/docs/system.svg');
 
-assert.equal(restoredSvg?.kind, 'binary');
+assert.equal(restoredSvg?.kind, 'resource');
+assert.equal(restoredSvg?.representation, 'text');
 assert.equal(selectAssetViewerKind({
   resource: workspaceEntryToResourceRef(restoredSvg),
   workspaceResource: restoredSvg,

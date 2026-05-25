@@ -175,7 +175,7 @@ export const codeMirrorTextEditorSurfaceContribution = {
   sourceRangeAware: true,
   languageIds: languageDefinitions.map((definition) => definition.id),
   placements: ['main', 'popup', 'auxiliary'],
-  resourceKinds: ['text'],
+  resourceRepresentations: ['text'],
   openWithPriority: 100,
 };
 
@@ -188,7 +188,12 @@ export function createEditorCommandContributions(languageModes = listTextEditorL
         : `Set the selected text resource to ${mode.label}; this format remains metadata-only in Phase 3.3.`,
       keywords: ['editor', 'language', 'mode', mode.languageId, mode.label],
       menu: { id: 'editor', label: 'Editor', groupOrder: 30, order: 10 },
-      when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['text'] },
+      when: {
+        workspaceReady: true,
+        selectionRequired: true,
+        selectionKinds: ['resource'],
+        selectionRepresentations: ['text'],
+      },
     }),
   );
 }
@@ -383,7 +388,7 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
 
 export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], onChange } = {}) {
   const baseDocument = document ?? createTextEditorDocument(
-    { resourceId: 'text-editor-document', kind: 'text' },
+    { resourceId: 'text-editor-document', kind: 'resource', representation: 'text' },
     '',
   );
   const model = createTextEditorSurfaceModel(baseDocument, diagnostics);

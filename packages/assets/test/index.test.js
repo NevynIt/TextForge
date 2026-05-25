@@ -29,9 +29,10 @@ const fixedNow = () => '2026-05-24T00:00:00.000Z';
 
 test('asset viewer helpers select and bind viewer kinds', () => {
   const request = {
-    resource: { resourceId: 'resource-1', path: '/docs/system.svg', kind: 'binary', mimeType: 'image/svg+xml' },
+    resource: { resourceId: 'resource-1', path: '/docs/system.svg', kind: 'resource', representation: 'bytes', mimeType: 'image/svg+xml' },
     workspaceResource: {
-      kind: 'binary',
+      kind: 'resource',
+      representation: 'bytes',
       bytes: new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
     },
   };
@@ -59,17 +60,18 @@ test('asset viewer helpers select and bind viewer kinds', () => {
   assert.equal(markAssetBindingReleased(binding).state, 'released');
 });
 
-test('binary workspace assets survive workspace zip round-trip', () => {
+test('text-stored SVG resources survive workspace zip round-trip and stay previewable', () => {
   const workspace = createWorkspaceService({
     workspaceId: 'asset-archive-test',
     idFactory: createSequentialIdFactory('entry'),
     now: () => '2026-05-23T00:00:00.000Z',
   });
   workspace.createFolder({ path: '/docs' });
-  const svgBytes = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>');
-  const svg = workspace.createBinaryResource({
+  const svgText = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="10" height="10"/></svg>';
+  const svg = workspace.createTextResource({
     path: '/docs/system.svg',
-    bytes: svgBytes,
+    text: svgText,
+    languageId: 'svg',
     mimeType: 'image/svg+xml',
     title: 'system.svg',
   });
@@ -82,8 +84,9 @@ test('binary workspace assets survive workspace zip round-trip', () => {
   });
   const restoredSvg = restoredWorkspace.getEntryByPath('/docs/system.svg');
 
-  assert.equal(restoredSvg?.kind, 'binary');
-  assert.deepEqual(restoredSvg?.bytes, svgBytes);
+  assert.equal(restoredSvg?.kind, 'resource');
+  assert.equal(restoredSvg?.representation, 'text');
+  assert.equal(restoredSvg?.text, svgText);
   assert.equal(selectAssetViewerKind({
     resource: workspaceEntryToResourceRef(restoredSvg),
     workspaceResource: restoredSvg,
@@ -95,7 +98,7 @@ test('binary workspace assets survive workspace zip round-trip', () => {
   }).viewerKind, 'svg');
 });
 
-test('binary workspace assets rehydrate correctly through persisted Dexie workspace storage', async () => {
+test('text-stored SVG resources rehydrate correctly through persisted Dexie workspace storage', async () => {
   const databaseName = `asset-persisted-${Math.random().toString(16).slice(2)}`;
   await resetWorkspaceDexieStorage({ databaseName });
 
@@ -105,10 +108,11 @@ test('binary workspace assets rehydrate correctly through persisted Dexie worksp
     now: fixedNow,
   });
   seededWorkspace.createFolder({ path: '/docs' });
-  const svgBytes = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"><rect width="20" height="20"/></svg>');
-  seededWorkspace.createBinaryResource({
+  const svgText = '<svg xmlns="http://www.w3.org/2000/svg"><rect width="20" height="20"/></svg>';
+  seededWorkspace.createTextResource({
     path: '/docs/system.svg',
-    bytes: svgBytes,
+    text: svgText,
+    languageId: 'svg',
     mimeType: 'image/svg+xml',
     title: 'system.svg',
   });
@@ -127,8 +131,9 @@ test('binary workspace assets rehydrate correctly through persisted Dexie worksp
   });
   const restoredSvg = restored.workspace.getEntryByPath('/docs/system.svg');
 
-  assert.equal(restoredSvg?.kind, 'binary');
-  assert.deepEqual(restoredSvg?.bytes, svgBytes);
+  assert.equal(restoredSvg?.kind, 'resource');
+  assert.equal(restoredSvg?.representation, 'text');
+  assert.equal(restoredSvg?.text, svgText);
   assert.equal(selectAssetViewerKind({
     resource: workspaceEntryToResourceRef(restoredSvg),
     workspaceResource: restoredSvg,

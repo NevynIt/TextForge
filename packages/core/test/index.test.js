@@ -54,13 +54,25 @@ test('command registry filters context-sensitive commands and dispatches local h
     runtimeStatus: 'ready',
     workspaceReady: true,
     selection: { resourceId: 'folder-1', kind: 'folder' },
-    activeSurface: { sessionId: 'surface-1', contributionId: '@textforge/editors/code-mirror-text', placement: 'main', resourceKind: 'text' },
+    activeSurface: {
+      sessionId: 'surface-1',
+      contributionId: '@textforge/editors/code-mirror-text',
+      placement: 'main',
+      resourceKind: 'resource',
+      resourceRepresentation: 'text',
+    },
   };
   const textContext = {
     runtimeStatus: 'ready',
     workspaceReady: true,
-    selection: { resourceId: 'resource-1', kind: 'text' },
-    activeSurface: { sessionId: 'surface-1', contributionId: '@textforge/editors/code-mirror-text', placement: 'main', resourceKind: 'text' },
+    selection: { resourceId: 'resource-1', kind: 'resource', representation: 'text' },
+    activeSurface: {
+      sessionId: 'surface-1',
+      contributionId: '@textforge/editors/code-mirror-text',
+      placement: 'main',
+      resourceKind: 'resource',
+      resourceRepresentation: 'text',
+    },
   };
 
   assert.deepEqual(

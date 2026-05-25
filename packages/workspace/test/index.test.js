@@ -46,10 +46,16 @@ function createSeedWorkspaceState() {
     languageId: 'markdown',
     mimeType: 'text/markdown',
   });
-  workspace.createBinaryResource({
+  workspace.createTextResource({
     path: '/docs/system.svg',
-    bytes: textEncoder.encode('<svg xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16"/></svg>'),
+    text: '<svg xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16"/></svg>',
+    languageId: 'svg',
     mimeType: 'image/svg+xml',
+  });
+  workspace.createBinaryResource({
+    path: '/docs/report.pdf',
+    bytes: textEncoder.encode('%PDF-1.7'),
+    mimeType: 'application/pdf',
   });
 
   return workspace.snapshot();
@@ -187,11 +193,18 @@ test('workspace archives round-trip full workspace state through zip', () => {
     languageId: 'markdown',
     mimeType: 'text/markdown',
   });
-  const binaryBytes = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>');
-  workspace.createBinaryResource({
+  const svgText = '<svg xmlns="http://www.w3.org/2000/svg"></svg>';
+  workspace.createTextResource({
     path: '/docs/system.svg',
-    bytes: binaryBytes,
+    text: svgText,
+    languageId: 'svg',
     mimeType: 'image/svg+xml',
+  });
+  const pdfBytes = textEncoder.encode('%PDF-1.7');
+  workspace.createBinaryResource({
+    path: '/docs/report.pdf',
+    bytes: pdfBytes,
+    mimeType: 'application/pdf',
   });
 
   const manifest = createWorkspaceArchiveManifest(workspace, { exportedAt: '2026-05-23T00:00:00.000Z' });
@@ -206,10 +219,14 @@ test('workspace archives round-trip full workspace state through zip', () => {
   assert.equal(manifest.format, 'textforge-workspace-archive');
   assert.equal(manifest.resources.find((resource) => resource.id === notes.id)?.encoding, 'utf8');
   assert.equal(imported.state.manifest.workspaceId, 'workspace-archive-test');
-  assert.equal(restoredWorkspace.getEntryByPath('/docs/notes.md')?.kind, 'text');
+  assert.equal(restoredWorkspace.getEntryByPath('/docs/notes.md')?.kind, 'resource');
+  assert.equal(restoredWorkspace.getEntryByPath('/docs/notes.md')?.representation, 'text');
   assert.equal(restoredWorkspace.getEntryByPath('/docs/notes.md')?.text, '# Notes\n');
   assert.equal(restoredWorkspace.getEntryByPath('/docs/notes.md')?.metadata.badge?.key, notes.metadata.badge?.key);
-  assert.deepEqual(restoredWorkspace.getEntryByPath('/docs/system.svg')?.bytes, binaryBytes);
+  assert.equal(restoredWorkspace.getEntryByPath('/docs/system.svg')?.representation, 'text');
+  assert.equal(restoredWorkspace.getEntryByPath('/docs/system.svg')?.text, svgText);
+  assert.equal(restoredWorkspace.getEntryByPath('/docs/report.pdf')?.representation, 'bytes');
+  assert.deepEqual(restoredWorkspace.getEntryByPath('/docs/report.pdf')?.bytes, pdfBytes);
 });
 
 test('selected folder export rebases a nested folder subtree at archive root', () => {
@@ -283,7 +300,7 @@ test('workspace import conflict policies are explicit when merging imported arch
   }).state.resources.some((resource) => resource.path === '/guides/new.md'), true);
 });
 
-test('persisted workspace service hydrates through Dexie and preserves IDs, selection, and binary content', async () => {
+test('persisted workspace service hydrates through Dexie and preserves IDs, selection, and resource content', async () => {
   const databaseName = createDatabaseName('workspace-dexie-hydrate');
   await resetWorkspaceDexieStorage({ databaseName });
 
@@ -303,10 +320,16 @@ test('persisted workspace service hydrates through Dexie and preserves IDs, sele
     languageId: 'text',
     mimeType: 'text/plain',
   });
-  const createdBinary = firstPass.workspace.createBinaryResource({
+  const createdSvg = firstPass.workspace.createTextResource({
     path: '/docs/diagram.svg',
-    bytes: textEncoder.encode('<svg xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6"/></svg>'),
+    text: '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6"/></svg>',
+    languageId: 'svg',
     mimeType: 'image/svg+xml',
+  });
+  const createdPdf = firstPass.workspace.createBinaryResource({
+    path: '/docs/reference.pdf',
+    bytes: textEncoder.encode('%PDF-1.7 reference'),
+    mimeType: 'application/pdf',
   });
   await firstPass.workspace.whenIdle();
   firstPass.workspace.disposePersistence();
@@ -324,7 +347,10 @@ test('persisted workspace service hydrates through Dexie and preserves IDs, sele
     restored.workspace.getEntryByPath('/docs/followup.md')?.metadata.badge?.key,
     createdText.metadata.badge?.key,
   );
-  assert.deepEqual(restored.workspace.getEntryByPath('/docs/diagram.svg')?.bytes, createdBinary.bytes);
+  assert.equal(restored.workspace.getEntryByPath('/docs/diagram.svg')?.representation, 'text');
+  assert.equal(restored.workspace.getEntryByPath('/docs/diagram.svg')?.text, createdSvg.text);
+  assert.equal(restored.workspace.getEntryByPath('/docs/reference.pdf')?.representation, 'bytes');
+  assert.deepEqual(restored.workspace.getEntryByPath('/docs/reference.pdf')?.bytes, createdPdf.bytes);
 
   const postHydration = restored.workspace.createTextResource({
     path: '/docs/post-hydration.md',
@@ -334,7 +360,8 @@ test('persisted workspace service hydrates through Dexie and preserves IDs, sele
   });
 
   assert.notEqual(postHydration.id, createdText.id);
-  assert.notEqual(postHydration.id, createdBinary.id);
+  assert.notEqual(postHydration.id, createdSvg.id);
+  assert.notEqual(postHydration.id, createdPdf.id);
   await restored.workspace.whenIdle();
   restored.workspace.disposePersistence();
   await resetWorkspaceDexieStorage({ databaseName });
@@ -370,7 +397,80 @@ test('workspace Dexie storage detects corrupted records and explicit reset recov
   });
 
   assert.equal(recovered.hydrationSource, 'seed');
-  assert.equal(recovered.workspace.getEntryByPath('/docs/notes.md')?.kind, 'text');
+  assert.equal(recovered.workspace.getEntryByPath('/docs/notes.md')?.kind, 'resource');
+  assert.equal(recovered.workspace.getEntryByPath('/docs/notes.md')?.representation, 'text');
   recovered.workspace.disposePersistence();
+  await resetWorkspaceDexieStorage({ databaseName });
+});
+
+test('workspace Dexie storage migrates legacy textResources and binaryResources into unified resources', async () => {
+  const databaseName = createDatabaseName('workspace-dexie-migrate');
+  await resetWorkspaceDexieStorage({ databaseName });
+
+  const legacyDatabase = new Dexie(databaseName);
+  legacyDatabase.version(1).stores({
+    system: 'key',
+    folders: 'id, path, parentId, metadata.createdAt, metadata.updatedAt',
+    textResources: 'id, path, parentId, languageId, mimeType, metadata.createdAt, metadata.updatedAt',
+    binaryResources: 'id, path, parentId, mimeType, metadata.createdAt, metadata.updatedAt',
+    manifests: 'workspaceId, name, rootPath, createdAt, updatedAt, selectedResourceId',
+  });
+  await legacyDatabase.open();
+  await legacyDatabase.table('system').bulkPut([
+    { key: 'workspace-schema-version', value: 1 },
+    { key: 'workspace-last-saved-at', value: fixedNow() },
+  ]);
+  await legacyDatabase.table('manifests').put(createWorkspaceManifest({
+    workspaceId: 'legacy-workspace',
+    name: 'Legacy workspace',
+    now: fixedNow,
+  }));
+  await legacyDatabase.table('folders').put({
+    kind: 'folder',
+    id: 'folder-1',
+    path: '/docs',
+    parentId: 'root',
+    metadata: {
+      title: 'docs',
+      createdAt: fixedNow(),
+      updatedAt: fixedNow(),
+    },
+    childIds: [],
+  });
+  await legacyDatabase.table('textResources').put({
+    kind: 'text',
+    id: 'text-1',
+    path: '/docs/notes.md',
+    parentId: 'folder-1',
+    metadata: {
+      title: 'notes.md',
+      createdAt: fixedNow(),
+      updatedAt: fixedNow(),
+    },
+    text: '# Legacy notes\n',
+    languageId: 'markdown',
+    mimeType: 'text/markdown',
+  });
+  await legacyDatabase.table('binaryResources').put({
+    kind: 'binary',
+    id: 'binary-1',
+    path: '/docs/report.pdf',
+    parentId: 'folder-1',
+    metadata: {
+      title: 'report.pdf',
+      createdAt: fixedNow(),
+      updatedAt: fixedNow(),
+    },
+    bytes: textEncoder.encode('%PDF-legacy'),
+    mimeType: 'application/pdf',
+  });
+  legacyDatabase.close();
+
+  const storage = await openWorkspaceDexieStorage({ databaseName });
+  const state = await storage.loadState();
+  storage.close();
+
+  assert.equal(state?.resources.find((resource) => resource.path === '/docs/notes.md')?.representation, 'text');
+  assert.equal(state?.resources.find((resource) => resource.path === '/docs/report.pdf')?.representation, 'bytes');
   await resetWorkspaceDexieStorage({ databaseName });
 });

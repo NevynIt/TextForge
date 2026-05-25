@@ -12,6 +12,7 @@ import {
   dirnameWorkspacePath,
   exportWorkspaceToZip,
   exportWorkspaceFolderToZip,
+  importWorkspaceFolderFromZip,
   importWorkspaceFromZip,
   joinWorkspacePath,
   listWorkspaceBadgeDiagnostics,
@@ -49,15 +50,22 @@ const workspace = createWorkspaceService({
 
 const folder = workspace.createFolder({ path: '/docs', title: 'docs' });
 const text = workspace.createTextResource({ path: '/docs/notes.md', text: 'hello', languageId: 'markdown' });
-const binary = workspace.createBinaryResource({
+const svg = workspace.createTextResource({
   path: '/docs/system.svg',
-  bytes: new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"></svg>'),
+  text: '<svg xmlns="http://www.w3.org/2000/svg"></svg>',
+  languageId: 'svg',
   mimeType: 'image/svg+xml',
+});
+const binary = workspace.createBinaryResource({
+  path: '/docs/report.pdf',
+  bytes: new TextEncoder().encode('%PDF-1.7'),
+  mimeType: 'application/pdf',
 });
 
 assert.equal(workspace.getEntry(folder.id)?.path, '/docs');
 assert.equal(workspace.getEntry(text.id)?.path, '/docs/notes.md');
-assert.equal(workspace.getEntry(binary.id)?.mimeType, 'image/svg+xml');
+assert.equal(workspace.getEntry(svg.id)?.mimeType, 'image/svg+xml');
+assert.equal(workspace.getEntry(binary.id)?.mimeType, 'application/pdf');
 assert.equal(workspace.saveTextResource({
   resourceId: text.id,
   text: 'hello: world',
@@ -76,7 +84,8 @@ const moved = workspace.moveEntry({ resourceId: text.id, parentPath: '/docs', ti
 assert.equal(moved?.path, '/docs/guide.md');
 
 const ref = workspaceEntryToResourceRef(binary);
-assert.equal(ref.kind, 'binary');
+assert.equal(ref.kind, 'resource');
+assert.equal(ref.representation, 'bytes');
 
 const archiveManifest = createWorkspaceArchiveManifest(workspace, { exportedAt: '2026-05-23T00:00:00.000Z' });
 const archiveBytes = exportWorkspaceToZip(workspace, { exportedAt: '2026-05-23T00:00:00.000Z' });
@@ -88,11 +97,15 @@ const restoredWorkspace = createWorkspaceService({
 });
 
 assert.equal(archiveManifest.format, 'textforge-workspace-archive');
-assert.equal(archiveManifest.resources.find((resource) => resource.path === '/docs/system.svg')?.encoding, 'binary');
+assert.equal(archiveManifest.resources.find((resource) => resource.path === '/docs/system.svg')?.encoding, 'utf8');
+assert.equal(archiveManifest.resources.find((resource) => resource.path === '/docs/report.pdf')?.encoding, 'binary');
 assert.equal(imported.state.manifest.workspaceId, 'workspace-check');
-assert.equal(restoredWorkspace.getEntryByPath('/docs/guide.md')?.kind, 'text');
+assert.equal(restoredWorkspace.getEntryByPath('/docs/guide.md')?.kind, 'resource');
+assert.equal(restoredWorkspace.getEntryByPath('/docs/guide.md')?.representation, 'text');
 assert.equal(restoredWorkspace.getEntryByPath('/docs/guide.md')?.text, 'hello: world');
 assert.equal(restoredWorkspace.getEntryByPath('/docs/system.svg')?.mimeType, 'image/svg+xml');
+assert.equal(restoredWorkspace.getEntryByPath('/docs/system.svg')?.representation, 'text');
+assert.equal(restoredWorkspace.getEntryByPath('/docs/report.pdf')?.representation, 'bytes');
 
 const nestedWorkspace = createWorkspaceService({
   workspaceId: 'workspace-folder-check',
@@ -108,9 +121,21 @@ nestedWorkspace.createTextResource({
   mimeType: 'text/markdown',
 });
 const folderArchive = exportWorkspaceFolderToZip(nestedWorkspace, guidesFolder.path, { exportedAt: '2026-05-23T00:00:00.000Z' });
-const importedFolderArchive = importWorkspaceFromZip(folderArchive);
-assert.equal(importedFolderArchive.state.folders.some((folderEntry) => folderEntry.path === '/guides'), true);
-assert.equal(importedFolderArchive.state.resources.some((resourceEntry) => resourceEntry.path === '/guides/intro.md'), true);
+const importedFolderArchive = importWorkspaceFolderFromZip(folderArchive);
+assert.deepEqual(importedFolderArchive.folders, []);
+assert.equal(importedFolderArchive.files.some((resourceEntry) => resourceEntry.path === 'intro.md'), true);
+const importedFolderWorkspace = createWorkspaceService({
+  workspaceId: 'workspace-folder-import-check',
+  idFactory: createSequentialIdFactory('folder-import'),
+  now: () => '2026-05-23T00:00:00.000Z',
+});
+importedFolderWorkspace.createFolder({ path: '/guides' });
+importedFolderWorkspace.createTextResource({
+  path: '/guides/intro.md',
+  text: '# Intro\n',
+  languageId: 'markdown',
+  mimeType: 'text/markdown',
+});
 
 const conflictTarget = createWorkspaceService({
   workspaceId: 'workspace-conflict-target',
@@ -119,13 +144,12 @@ const conflictTarget = createWorkspaceService({
 });
 conflictTarget.createFolder({ path: '/guides' });
 conflictTarget.createTextResource({ path: '/guides/old.md', text: '# Old\n', languageId: 'markdown', mimeType: 'text/markdown' });
-assert.equal(mergeImportedWorkspaceState(conflictTarget.snapshot(), importedFolderArchive.state, {
+assert.equal(mergeImportedWorkspaceState(conflictTarget.snapshot(), importedFolderWorkspace.snapshot(), {
   conflictPolicy: 'replace',
 }).resources.some((resourceEntry) => resourceEntry.path === '/guides/intro.md'), true);
 
 assert.equal(typeof workspaceDexieSchema.system, 'string');
-assert.equal(typeof workspaceDexieSchema.textResources, 'string');
-assert.equal(typeof workspaceDexieSchema.binaryResources, 'string');
+assert.equal(typeof workspaceDexieSchema.resources, 'string');
 
 const databaseName = `workspace-check-${Math.random().toString(16).slice(2)}`;
 await resetWorkspaceDexieStorage({ databaseName });
@@ -153,7 +177,8 @@ const restored = await createPersistedWorkspaceService({
 });
 assert.equal(restored.hydrationSource, 'storage');
 assert.equal(restored.workspace.getManifest().selectedResourceId, text.id);
-assert.equal(restored.workspace.getEntryByPath('/docs/persisted.md')?.kind, 'text');
+assert.equal(restored.workspace.getEntryByPath('/docs/persisted.md')?.kind, 'resource');
+assert.equal(restored.workspace.getEntryByPath('/docs/persisted.md')?.representation, 'text');
 restored.workspace.disposePersistence();
 await resetWorkspaceDexieStorage({ databaseName });
 

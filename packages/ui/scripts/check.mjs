@@ -33,7 +33,8 @@ const chrome = createWorkbenchChromeModel({
       id: 'resource-1',
       label: 'notes.md',
       path: '/docs/notes.md',
-      kind: 'text',
+      kind: 'resource',
+      representation: 'text',
       depth: 1,
       detail: 'MARKDOWN',
       badge: {

@@ -15,8 +15,9 @@ const workspaceArchiveVersion = 1;
 const workspaceArchiveManifestPath = 'textforge-workspace.json';
 const workspaceSystemTableName = 'system';
 const workspaceFoldersTableName = 'folders';
-const workspaceTextResourcesTableName = 'textResources';
-const workspaceBinaryResourcesTableName = 'binaryResources';
+const workspaceResourcesTableName = 'resources';
+const workspaceLegacyTextResourcesTableName = 'textResources';
+const workspaceLegacyBinaryResourcesTableName = 'binaryResources';
 const workspaceManifestsTableName = 'manifests';
 const workspaceSchemaRecordKey = 'workspace-schema-version';
 const workspaceSavedAtRecordKey = 'workspace-last-saved-at';
@@ -25,7 +26,15 @@ const resourceBadgeAccents = ['teal', 'amber', 'sky', 'coral', 'lime', 'slate', 
 const resourceBadgeMarks = ['dot', 'bar', 'split', 'ring', 'corner', 'stack', 'plus', 'slash'];
 const resourceBadgePlacements = ['center', 'top', 'right', 'bottom', 'left'];
 
-export const workspaceDexieSchemaVersion = 1;
+const legacyWorkspaceDexieSchema = {
+  system: 'key',
+  folders: 'id, path, parentId, metadata.createdAt, metadata.updatedAt',
+  textResources: 'id, path, parentId, languageId, mimeType, metadata.createdAt, metadata.updatedAt',
+  binaryResources: 'id, path, parentId, mimeType, metadata.createdAt, metadata.updatedAt',
+  manifests: 'workspaceId, name, rootPath, createdAt, updatedAt, selectedResourceId',
+};
+
+export const workspaceDexieSchemaVersion = 2;
 export const defaultWorkspaceDexieDatabaseName = 'textforge-workspace';
 export const workspaceStorageErrorCodes = {
   initializationFailed: 'workspace-storage-initialization-failed',
@@ -40,8 +49,7 @@ export const workspaceStorageErrorCodes = {
 export const workspaceDexieSchema = {
   system: 'key',
   folders: 'id, path, parentId, metadata.createdAt, metadata.updatedAt',
-  textResources: 'id, path, parentId, languageId, mimeType, metadata.createdAt, metadata.updatedAt',
-  binaryResources: 'id, path, parentId, mimeType, metadata.createdAt, metadata.updatedAt',
+  resources: 'id, path, parentId, representation, languageId, mimeType, metadata.createdAt, metadata.updatedAt',
   manifests: 'workspaceId, name, rootPath, createdAt, updatedAt, selectedResourceId',
 };
 
@@ -105,21 +113,21 @@ export const workspaceCommandContributions = [
     description: 'Download the selected workspace file directly without exporting the whole workspace.',
     keywords: ['workspace', 'download', 'export', 'file'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 55 },
-    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['text', 'binary'] },
+    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['resource'] },
   }),
   createCommand('workspace.rename-selected', 'Rename selected item...', {
     category: 'workspace',
     description: 'Rename the currently selected folder or resource.',
     keywords: ['workspace', 'rename', 'selected'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 60 },
-    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder', 'text', 'binary'] },
+    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder', 'resource'] },
   }),
   createCommand('workspace.delete-selected', 'Delete selected item...', {
     category: 'workspace',
     description: 'Delete the currently selected folder or resource.',
     keywords: ['workspace', 'delete', 'remove', 'selected'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 70 },
-    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder', 'text', 'binary'] },
+    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder', 'resource'] },
   }),
   createCommand('workspace.reset-storage', 'Reset browser workspace...', {
     category: 'workspace',
@@ -286,13 +294,14 @@ function createWorkspaceArchiveFolderRecord(folder) {
 function createWorkspaceArchiveResourceRecord(resource) {
   return {
     id: resource.id,
-    kind: resource.kind,
+    kind: 'resource',
+    representation: resource.representation,
     path: normalizeWorkspacePath(resource.path),
     parentId: resource.parentId,
     metadata: cloneMetadata(resource.metadata),
     archivePath: toArchiveResourcePath(resource.path),
-    encoding: resource.kind === 'text' ? 'utf8' : 'binary',
-    languageId: resource.kind === 'text' ? resource.languageId : undefined,
+    encoding: resource.representation === 'text' ? 'utf8' : 'binary',
+    languageId: resource.representation === 'text' ? resource.languageId : undefined,
     mimeType: resource.mimeType,
   };
 }
@@ -323,16 +332,26 @@ function cloneWorkspaceFolder(folder) {
 }
 
 function cloneWorkspaceResource(resource) {
-  return resource.kind === 'text'
-    ? {
+  const representation = resource.representation
+    ?? (resource.kind === 'text' ? 'text' : undefined)
+    ?? (resource.kind === 'binary' ? 'bytes' : undefined);
+  if (representation === 'text') {
+    return {
       ...resource,
+      kind: 'resource',
+      representation: 'text',
       metadata: cloneMetadata(resource.metadata),
-    }
-    : {
-      ...resource,
-      metadata: cloneMetadata(resource.metadata),
-      bytes: cloneBytes(resource.bytes),
+      text: resource.text ?? '',
     };
+  }
+
+  return {
+    ...resource,
+    kind: 'resource',
+    representation: 'bytes',
+    metadata: cloneMetadata(resource.metadata),
+    bytes: cloneBytes(resource.bytes ?? new Uint8Array()),
+  };
 }
 
 function cloneWorkspaceEntry(entry) {
@@ -352,9 +371,10 @@ function createWorkspaceBadgeFingerprint(entry) {
   return JSON.stringify({
     id: entry.id,
     kind: entry.kind,
+    representation: entry.kind === 'resource' ? entry.representation : undefined,
     path: normalizeWorkspacePath(entry.path),
     title: entry.metadata?.title ?? '',
-    languageId: entry.kind === 'text' ? entry.languageId ?? '' : '',
+    languageId: entry.kind === 'resource' && entry.representation === 'text' ? entry.languageId ?? '' : '',
     mimeType: entry.kind !== 'folder' ? entry.mimeType ?? '' : '',
   });
 }
@@ -572,15 +592,31 @@ function getWorkspaceDexieTables(database) {
   return {
     system: database.table(workspaceSystemTableName),
     folders: database.table(workspaceFoldersTableName),
-    textResources: database.table(workspaceTextResourcesTableName),
-    binaryResources: database.table(workspaceBinaryResourcesTableName),
+    resources: database.table(workspaceResourcesTableName),
     manifests: database.table(workspaceManifestsTableName),
   };
 }
 
 function createWorkspaceDexieDatabase(databaseName = defaultWorkspaceDexieDatabaseName) {
   const database = new Dexie(databaseName);
-  database.version(workspaceDexieSchemaVersion).stores(workspaceDexieSchema);
+  database.version(1).stores(legacyWorkspaceDexieSchema);
+  database.version(workspaceDexieSchemaVersion).stores(workspaceDexieSchema).upgrade(async (transaction) => {
+    const legacyTextResources = await transaction.table(workspaceLegacyTextResourcesTableName).toArray();
+    const legacyBinaryResources = await transaction.table(workspaceLegacyBinaryResourcesTableName).toArray();
+    const resources = [
+      ...legacyTextResources.map((resource) => cloneWorkspaceResource(resource)),
+      ...legacyBinaryResources.map((resource) => cloneWorkspaceResource(resource)),
+    ];
+
+    if (resources.length > 0) {
+      await transaction.table(workspaceResourcesTableName).bulkPut(resources);
+    }
+
+    await transaction.table(workspaceSystemTableName).put({
+      key: workspaceSchemaRecordKey,
+      value: workspaceDexieSchemaVersion,
+    });
+  });
   return database;
 }
 
@@ -713,7 +749,7 @@ function createWorkspaceFolderZipEntries(input, folderPath) {
 
   for (const resource of descendants.filter((entry) => entry.kind !== 'folder')) {
     const relativePath = rebaseWorkspacePath(resource.path, normalizedFolderPath).split('/').filter(Boolean).join('/');
-    archiveEntries[relativePath] = resource.kind === 'text'
+    archiveEntries[relativePath] = resource.representation === 'text'
       ? textEncoder.encode(resource.text)
       : cloneBytes(resource.bytes);
   }
@@ -756,11 +792,15 @@ function matchesWorkspaceQuery(entry, query) {
     return false;
   }
 
+  if (query.representation && entry.kind === 'resource' && entry.representation !== query.representation) {
+    return false;
+  }
+
   if (query.parentId && entry.parentId !== query.parentId) {
     return false;
   }
 
-  if (query.languageId && entry.kind === 'text' && entry.languageId !== query.languageId) {
+  if (query.languageId && entry.kind === 'resource' && entry.representation === 'text' && entry.languageId !== query.languageId) {
     return false;
   }
 
@@ -796,7 +836,8 @@ function createFolderEntry(input, now, idFactory, parentId) {
 function createTextEntry(input, now, idFactory, parentId) {
   const title = input.title ?? (basenameWorkspacePath(input.path) || 'Untitled text');
   return {
-    kind: 'text',
+    kind: 'resource',
+    representation: 'text',
     id: idFactory(),
     path: normalizeWorkspacePath(input.path),
     parentId,
@@ -808,9 +849,10 @@ function createTextEntry(input, now, idFactory, parentId) {
 }
 
 function createBinaryEntry(input, now, idFactory, parentId) {
-  const title = input.title ?? (basenameWorkspacePath(input.path) || 'Untitled binary');
+  const title = input.title ?? (basenameWorkspacePath(input.path) || 'Untitled file');
   return {
-    kind: 'binary',
+    kind: 'resource',
+    representation: 'bytes',
     id: idFactory(),
     path: normalizeWorkspacePath(input.path),
     parentId,
@@ -862,9 +904,10 @@ function collectDescendants(entries, parentId) {
 function toResourceRef(entry) {
   return createResourceRef(entry.id, {
     path: entry.path,
-    kind: entry.kind === 'folder' ? 'virtual' : entry.kind,
+    kind: entry.kind === 'folder' ? 'virtual' : 'resource',
+    representation: entry.kind === 'resource' ? entry.representation : undefined,
     mimeType: 'mimeType' in entry ? entry.mimeType : undefined,
-    languageId: entry.kind === 'text' ? entry.languageId : undefined,
+    languageId: entry.kind === 'resource' && entry.representation === 'text' ? entry.languageId : undefined,
     parentResourceId: entry.parentId,
     badge: entry.metadata?.badge,
   });
@@ -880,7 +923,7 @@ function describeWorkspaceEntryDetail(entry) {
     return `${childCount} item${childCount === 1 ? '' : 's'}`;
   }
 
-  if (entry.kind === 'text') {
+  if (entry.representation === 'text') {
     return entry.languageId ? entry.languageId.toUpperCase() : 'TEXT';
   }
 
@@ -896,7 +939,7 @@ function describeWorkspaceEntryDetail(entry) {
     return 'PDF';
   }
 
-  return 'BINARY';
+  return 'FILE';
 }
 
 export function listWorkspaceBadgeDiagnostics(input) {
@@ -935,7 +978,7 @@ export function exportWorkspaceToZip(input, options = {}) {
   };
 
   for (const resource of state.resources) {
-    archiveEntries[toArchiveResourcePath(resource.path)] = resource.kind === 'text'
+    archiveEntries[toArchiveResourcePath(resource.path)] = resource.representation === 'text'
       ? textEncoder.encode(resource.text)
       : cloneBytes(resource.bytes);
   }
@@ -1011,11 +1054,16 @@ export function importWorkspaceFromZip(bytes, options = {}) {
       throw new Error(`Workspace archive is missing ${archivePath}`);
     }
 
+    const representation = resourceRecord.representation
+      ?? (resourceRecord.kind === 'text' ? 'text' : undefined)
+      ?? (resourceRecord.kind === 'binary' ? 'bytes' : undefined)
+      ?? (resourceRecord.encoding === 'utf8' ? 'text' : 'bytes');
     const metadata = cloneMetadata(resourceRecord.metadata);
     const normalizedPath = normalizeWorkspacePath(resourceRecord.path);
-    if (resourceRecord.kind === 'text') {
+    if (representation === 'text') {
       return {
-        kind: 'text',
+        kind: 'resource',
+        representation: 'text',
         id: resourceRecord.id,
         path: normalizedPath,
         parentId: resourceRecord.parentId,
@@ -1026,9 +1074,10 @@ export function importWorkspaceFromZip(bytes, options = {}) {
       };
     }
 
-    if (resourceRecord.kind === 'binary') {
+    if (representation === 'bytes') {
       return {
-        kind: 'binary',
+        kind: 'resource',
+        representation: 'bytes',
         id: resourceRecord.id,
         path: normalizedPath,
         parentId: resourceRecord.parentId,
@@ -1038,7 +1087,7 @@ export function importWorkspaceFromZip(bytes, options = {}) {
       };
     }
 
-    throw new Error(`Unsupported workspace resource kind in archive: ${resourceRecord.kind}`);
+    throw new Error(`Unsupported workspace resource representation in archive: ${representation}`);
   });
 
   const folders = manifest.folders.map((folderRecord) => ({
@@ -1090,6 +1139,9 @@ export function importWorkspaceFromZip(bytes, options = {}) {
       })),
       resources: manifest.resources.map((resourceRecord) => ({
         ...resourceRecord,
+        representation: resourceRecord.representation
+          ?? (resourceRecord.kind === 'text' ? 'text' : undefined)
+          ?? (resourceRecord.kind === 'binary' ? 'bytes' : undefined),
         path: normalizeWorkspacePath(resourceRecord.path),
         metadata: cloneMetadata(resourceRecord.metadata),
         archivePath: normalizeArchiveEntryPath(resourceRecord.archivePath),
@@ -1168,15 +1220,13 @@ export async function openWorkspaceDexieStorage(options = {}) {
         tables.system,
         tables.manifests,
         tables.folders,
-        tables.textResources,
-        tables.binaryResources,
+        tables.resources,
         async () => ({
           schemaRecord: await tables.system.get(workspaceSchemaRecordKey),
           lastSavedAtRecord: await tables.system.get(workspaceSavedAtRecordKey),
           manifestRecords: await tables.manifests.toArray(),
           folderRecords: await tables.folders.toArray(),
-          textResourceRecords: await tables.textResources.toArray(),
-          binaryResourceRecords: await tables.binaryResources.toArray(),
+          resourceRecords: await tables.resources.toArray(),
         }),
       );
     } catch (cause) {
@@ -1190,8 +1240,7 @@ export async function openWorkspaceDexieStorage(options = {}) {
     const hasAnyRecords = Boolean(records.schemaRecord || records.lastSavedAtRecord)
       || records.manifestRecords.length > 0
       || records.folderRecords.length > 0
-      || records.textResourceRecords.length > 0
-      || records.binaryResourceRecords.length > 0;
+      || records.resourceRecords.length > 0;
     if (!hasAnyRecords) {
       return undefined;
     }
@@ -1223,22 +1272,14 @@ export async function openWorkspaceDexieStorage(options = {}) {
         ...cloneWorkspaceFolder(folder),
         childIds: [],
       })),
-      [
-        ...records.textResourceRecords.map((resource) => cloneWorkspaceResource(resource)),
-        ...records.binaryResourceRecords.map((resource) => cloneWorkspaceResource(resource)),
-      ],
+      records.resourceRecords.map((resource) => cloneWorkspaceResource(resource)),
     );
   }
 
   async function saveState(input) {
     const state = cloneWorkspaceState(snapshotWorkspaceState(input));
     const savedAt = state.manifest.updatedAt;
-    const textResources = state.resources
-      .filter((resource) => resource.kind === 'text')
-      .map((resource) => cloneWorkspaceResource(resource));
-    const binaryResources = state.resources
-      .filter((resource) => resource.kind === 'binary')
-      .map((resource) => cloneWorkspaceResource(resource));
+    const resources = state.resources.map((resource) => cloneWorkspaceResource(resource));
 
     try {
       await database.transaction(
@@ -1246,15 +1287,13 @@ export async function openWorkspaceDexieStorage(options = {}) {
         tables.system,
         tables.manifests,
         tables.folders,
-        tables.textResources,
-        tables.binaryResources,
+        tables.resources,
         async () => {
           await Promise.all([
             tables.system.clear(),
             tables.manifests.clear(),
             tables.folders.clear(),
-            tables.textResources.clear(),
-            tables.binaryResources.clear(),
+            tables.resources.clear(),
           ]);
           await tables.system.bulkPut([
             { key: workspaceSchemaRecordKey, value: workspaceDexieSchemaVersion },
@@ -1264,11 +1303,8 @@ export async function openWorkspaceDexieStorage(options = {}) {
           if (state.folders.length > 0) {
             await tables.folders.bulkPut(state.folders.map((folder) => cloneWorkspaceFolder(folder)));
           }
-          if (textResources.length > 0) {
-            await tables.textResources.bulkPut(textResources);
-          }
-          if (binaryResources.length > 0) {
-            await tables.binaryResources.bulkPut(binaryResources);
+          if (resources.length > 0) {
+            await tables.resources.bulkPut(resources);
           }
         },
       );
@@ -1290,15 +1326,13 @@ export async function openWorkspaceDexieStorage(options = {}) {
         tables.system,
         tables.manifests,
         tables.folders,
-        tables.textResources,
-        tables.binaryResources,
+        tables.resources,
         async () => {
           await Promise.all([
             tables.system.clear(),
             tables.manifests.clear(),
             tables.folders.clear(),
-            tables.textResources.clear(),
-            tables.binaryResources.clear(),
+            tables.resources.clear(),
           ]);
         },
       );
@@ -1457,8 +1491,10 @@ export function createPersistentWorkspaceService(baseWorkspace, storage, options
     getEntryByPath: (path) => baseWorkspace.getEntryByPath(path),
     getManifest: () => baseWorkspace.getManifest(),
     createFolder: wrapMutation('createFolder', 'create-folder'),
+    createResource: wrapMutation('createResource', 'create-resource'),
     createTextResource: wrapMutation('createTextResource', 'create-text'),
     createBinaryResource: wrapMutation('createBinaryResource', 'create-binary'),
+    saveResource: wrapMutation('saveResource', 'save-resource'),
     saveTextResource: wrapMutation('saveTextResource', 'save-text'),
     saveBinaryResource: wrapMutation('saveBinaryResource', 'save-binary'),
     renameEntry: wrapMutation('renameEntry', 'rename-entry'),
@@ -1542,6 +1578,7 @@ export function createWorkspaceTreeItems(state) {
       label: entry.metadata.title ?? basenameWorkspacePath(entry.path) ?? entry.path,
       path: entry.path,
       kind: entry.kind,
+      representation: entry.kind === 'resource' ? entry.representation : undefined,
       depth,
       expanded: entry.kind === 'folder' ? (entry.childIds.length > 0) : false,
       active: state.manifest.selectedResourceId === entry.id,
@@ -1663,34 +1700,66 @@ export function createWorkspaceService(options = {}) {
     return getEntry(nextFolder.id);
   }
 
-  function createTextResource(input) {
+  function createResource(input) {
     const parent = resolveParentFolder(input.path);
-    const nextResource = createTextEntry(input, now, createUniqueId, parent?.id);
+    const nextResource = input.representation === 'text'
+      ? createTextEntry(input, now, createUniqueId, parent?.id)
+      : createBinaryEntry(input, now, createUniqueId, parent?.id);
     resources = [...resources, nextResource];
     touchManifest(nextResource.metadata.updatedAt);
     refreshStructure();
     return getEntry(nextResource.id);
+  }
+
+  function createTextResource(input) {
+    return createResource({
+      ...input,
+      representation: 'text',
+    });
   }
 
   function createBinaryResource(input) {
-    const parent = resolveParentFolder(input.path);
-    const nextResource = createBinaryEntry(input, now, createUniqueId, parent?.id);
-    resources = [...resources, nextResource];
-    touchManifest(nextResource.metadata.updatedAt);
-    refreshStructure();
-    return getEntry(nextResource.id);
+    return createResource({
+      ...input,
+      representation: 'bytes',
+    });
   }
 
-  function saveTextResource(input) {
-    const current = resources.find((entry) => entry.id === input.resourceId && entry.kind === 'text');
+  function saveResource(input) {
+    const current = resources.find((entry) => entry.id === input.resourceId && entry.kind === 'resource');
     if (!current) {
-      throw new Error(`Unknown text resource: ${input.resourceId}`);
+      throw new Error(`Unknown workspace resource: ${input.resourceId}`);
+    }
+
+    if (input.representation === 'text') {
+      if (current.representation !== 'text') {
+        throw new Error(`Workspace resource ${input.resourceId} is not text-backed.`);
+      }
+
+      const nextResource = {
+        ...current,
+        text: input.text,
+        languageId: input.languageId ?? current.languageId,
+        mimeType: input.mimeType ?? current.mimeType,
+        metadata: {
+          ...current.metadata,
+          updatedAt: input.updatedAt ?? now(),
+        },
+      };
+
+      resources = replaceById(resources, nextResource);
+      touchManifest(nextResource.metadata.updatedAt);
+      refreshStructure();
+      return getEntry(nextResource.id);
+    }
+
+    if (current.representation !== 'bytes') {
+      throw new Error(`Workspace resource ${input.resourceId} is not byte-backed.`);
     }
 
     const nextResource = {
       ...current,
-      text: input.text,
-      languageId: input.languageId ?? current.languageId,
+      bytes: cloneBytes(input.bytes),
       mimeType: input.mimeType ?? current.mimeType,
       metadata: {
         ...current.metadata,
@@ -1704,25 +1773,18 @@ export function createWorkspaceService(options = {}) {
     return getEntry(nextResource.id);
   }
 
+  function saveTextResource(input) {
+    return saveResource({
+      ...input,
+      representation: 'text',
+    });
+  }
+
   function saveBinaryResource(input) {
-    const current = resources.find((entry) => entry.id === input.resourceId && entry.kind === 'binary');
-    if (!current) {
-      throw new Error(`Unknown binary resource: ${input.resourceId}`);
-    }
-
-    const nextResource = {
-      ...current,
-      bytes: cloneBytes(input.bytes),
-      metadata: {
-        ...current.metadata,
-        updatedAt: input.updatedAt ?? now(),
-      },
-    };
-
-    resources = replaceById(resources, nextResource);
-    touchManifest(nextResource.metadata.updatedAt);
-    refreshStructure();
-    return getEntry(nextResource.id);
+    return saveResource({
+      ...input,
+      representation: 'bytes',
+    });
   }
 
   function renameEntry(resourceId, path) {
@@ -1848,10 +1910,14 @@ export function createWorkspaceService(options = {}) {
     switch (mutation.kind) {
       case 'create-folder':
         return createFolder(mutation.input);
+      case 'create-resource':
+        return createResource(mutation.input);
       case 'create-text':
         return createTextResource(mutation.input);
       case 'create-binary':
         return createBinaryResource(mutation.input);
+      case 'save-resource':
+        return saveResource(mutation.input);
       case 'save-text':
         return saveTextResource(mutation.input);
       case 'save-binary':
@@ -1875,8 +1941,10 @@ export function createWorkspaceService(options = {}) {
     getEntryByPath,
     getManifest,
     createFolder,
+    createResource,
     createTextResource,
     createBinaryResource,
+    saveResource,
     saveTextResource,
     saveBinaryResource,
     renameEntry,

@@ -11,7 +11,8 @@ export interface SourceRange {
   readonly end: SourcePosition;
 }
 
-export type ResourceKind = 'text' | 'binary' | 'generated' | 'virtual';
+export type ResourceKind = 'resource' | 'generated' | 'virtual';
+export type ResourceRepresentation = 'text' | 'bytes';
 export type LanguageId =
   | 'plaintext'
   | 'markdown'
@@ -39,6 +40,7 @@ export interface ResourceRef {
   readonly resourceId: string;
   readonly path?: string;
   readonly kind?: ResourceKind;
+  readonly representation?: ResourceRepresentation;
   readonly mimeType?: string;
   readonly languageId?: LanguageId | string;
   readonly parentResourceId?: string;
@@ -117,6 +119,7 @@ export interface CommandMenuPresentation {
 export interface CommandContextSelection {
   readonly resourceId?: string;
   readonly kind?: string;
+  readonly representation?: ResourceRepresentation | string;
   readonly path?: string;
   readonly mimeType?: string;
   readonly languageId?: string;
@@ -128,7 +131,14 @@ export interface CommandContextSurface {
   readonly placement?: string;
   readonly resourceId?: string;
   readonly resourceKind?: ResourceKind | string;
+  readonly resourceRepresentation?: ResourceRepresentation | string;
   readonly freshness?: string;
+}
+
+export interface CommandContextTarget {
+  readonly selection?: CommandContextSelection;
+  readonly activeSurface?: CommandContextSurface;
+  readonly availableSurfaceIds?: ReadonlyArray<string>;
 }
 
 export interface CommandContext {
@@ -136,6 +146,7 @@ export interface CommandContext {
   readonly workspaceReady?: boolean;
   readonly selection?: CommandContextSelection;
   readonly activeSurface?: CommandContextSurface;
+  readonly target?: CommandContextTarget;
   readonly availableSurfaceIds?: ReadonlyArray<string>;
 }
 
@@ -144,9 +155,11 @@ export interface CommandWhen {
   readonly workspaceReady?: boolean;
   readonly selectionRequired?: boolean;
   readonly selectionKinds?: ReadonlyArray<string>;
+  readonly selectionRepresentations?: ReadonlyArray<string>;
   readonly activeSurfaceRequired?: boolean;
   readonly activeSurfacePlacements?: ReadonlyArray<string>;
   readonly activeSurfaceResourceKinds?: ReadonlyArray<string>;
+  readonly activeSurfaceResourceRepresentations?: ReadonlyArray<string>;
   readonly activeSurfaceContributionIds?: ReadonlyArray<string>;
   readonly availableSurfaceIds?: ReadonlyArray<string>;
 }
@@ -268,6 +281,8 @@ export const contributionKinds: {
 };
 
 export const languageDefinitions: ReadonlyArray<LanguageDefinition>;
+export const resourceKinds: ReadonlyArray<ResourceKind>;
+export const resourceRepresentations: ReadonlyArray<ResourceRepresentation>;
 export const resourceBadgePlacements: ReadonlyArray<'center' | 'top' | 'right' | 'bottom' | 'left'>;
 
 export const editorCapabilityIds: {
@@ -324,11 +339,18 @@ export declare function createCanonicalPatch(
   overrides?: Partial<CanonicalPatch>,
 ): CanonicalPatch;
 export declare function getLanguageDefinition(languageId: LanguageId | string | undefined): LanguageDefinition | undefined;
+export declare function getResourceRepresentation(resource?: Partial<ResourceRef> & { readonly kind?: string }): ResourceRepresentation | undefined;
 export declare function inferLanguageId(input: {
   readonly path?: string;
   readonly mimeType?: string;
   readonly fallback?: LanguageId;
 }): LanguageId;
+export declare function inferResourceRepresentation(input: {
+  readonly path?: string;
+  readonly mimeType?: string;
+  readonly bytes?: Uint8Array;
+  readonly fallback?: ResourceRepresentation;
+}): ResourceRepresentation;
 
 export declare const defaultContributionManifest: ContributionManifest;
 
