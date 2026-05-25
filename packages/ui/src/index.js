@@ -680,6 +680,7 @@ export function TextForgeWorkspaceSidebar({
   collapsed = false,
   footer,
   onDropFilesToFolder,
+  onRequestItemContextMenu,
   onSelectItem,
   onToggleFolder,
   workspaceTree,
@@ -710,7 +711,26 @@ export function TextForgeWorkspaceSidebar({
             'data-item-id': item.id,
             'data-workspace-folder-drop': item.kind === 'folder' ? item.id : undefined,
             onClick: () => onSelectItem?.(item.id),
-            onKeyDown: (event) => handleWorkspaceTreeItemKeyDown(event, item, onSelectItem, onToggleFolder),
+            onContextMenu: (event) => {
+              event.preventDefault();
+              onRequestItemContextMenu?.(item.id, {
+                x: event.clientX,
+                y: event.clientY,
+              });
+            },
+            onKeyDown: (event) => {
+              if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                event.preventDefault();
+                const rect = event.currentTarget.getBoundingClientRect();
+                onRequestItemContextMenu?.(item.id, {
+                  x: rect.left + (rect.width / 2),
+                  y: rect.top + 12,
+                });
+                return;
+              }
+
+              handleWorkspaceTreeItemKeyDown(event, item, onSelectItem, onToggleFolder);
+            },
             title: item.path,
             style: { '--depth': item.depth },
           },
@@ -789,6 +809,7 @@ export function TextForgeSessionTabStrip({
   frameModel,
   onCloseTab,
   onDropFiles,
+  onRequestTabContextMenu,
   onSelectTab,
 }) {
   const tabs = frameModel.tabs ?? [];
@@ -822,7 +843,26 @@ export function TextForgeSessionTabStrip({
             className: 'tf-tab__button',
             'data-item-id': tab.id,
             onClick: () => onSelectTab?.(tab.id),
-            onKeyDown: (event) => handleHorizontalTabsKeyDown(event, onSelectTab),
+            onContextMenu: (event) => {
+              event.preventDefault();
+              onRequestTabContextMenu?.(tab.id, {
+                x: event.clientX,
+                y: event.clientY,
+              });
+            },
+            onKeyDown: (event) => {
+              if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+                event.preventDefault();
+                const rect = event.currentTarget.getBoundingClientRect();
+                onRequestTabContextMenu?.(tab.id, {
+                  x: rect.left + (rect.width / 2),
+                  y: rect.bottom,
+                });
+                return;
+              }
+
+              handleHorizontalTabsKeyDown(event, onSelectTab);
+            },
             title: tab.title,
           },
           tab.badge
@@ -855,6 +895,137 @@ export function TextForgeSessionTabStrip({
             element('span', { className: 'tf-visually-hidden' }, 'Close'),
           )
           : null,
+      )),
+  );
+}
+
+export function TextForgeContextMenu({
+  items = [],
+  onClose,
+  onCommandPress,
+  open = false,
+  position,
+  title = 'Context menu',
+}) {
+  const rootRef = React.useRef(null);
+  const previousFocusRef = React.useRef(null);
+  const itemRefs = React.useRef([]);
+  const [activeIndex, setActiveIndex] = React.useState(0);
+
+  React.useEffect(() => {
+    if (!open) {
+      if (previousFocusRef.current?.focus) {
+        previousFocusRef.current.focus();
+      }
+      return undefined;
+    }
+
+    previousFocusRef.current = document.activeElement;
+    setActiveIndex(0);
+    const handle = window.setTimeout(() => {
+      itemRefs.current[0]?.focus?.();
+    }, 0);
+
+    function handlePointerDown(event) {
+      if (!rootRef.current?.contains(event.target)) {
+        onClose?.();
+      }
+    }
+
+    function handleKeyDown(event) {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose?.();
+      }
+    }
+
+    window.addEventListener('mousedown', handlePointerDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.clearTimeout(handle);
+      window.removeEventListener('mousedown', handlePointerDown);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [open, onClose]);
+
+  if (!open || items.length === 0) {
+    return null;
+  }
+
+  function commit(item) {
+    if (!item || item.disabled) {
+      return;
+    }
+
+    onCommandPress?.(item.commandId);
+    onClose?.();
+  }
+
+  function focusItem(index) {
+    const boundedIndex = ((index % items.length) + items.length) % items.length;
+    setActiveIndex(boundedIndex);
+    itemRefs.current[boundedIndex]?.focus?.();
+  }
+
+  return element(
+    'div',
+    {
+      ref: rootRef,
+      className: 'tf-context-menu',
+      role: 'menu',
+      'aria-label': title,
+      style: {
+        left: `${position?.x ?? 24}px`,
+        top: `${position?.y ?? 24}px`,
+      },
+    },
+    ...items.map((item, index) =>
+      element(
+        'button',
+        {
+          key: item.commandId,
+          ref: (node) => {
+            itemRefs.current[index] = node;
+          },
+          type: 'button',
+          role: 'menuitem',
+          className: classNames('tf-context-menu__item', activeIndex === index && 'is-active'),
+          disabled: item.disabled,
+          onMouseEnter: () => setActiveIndex(index),
+          onClick: () => commit(item),
+          onKeyDown: (event) => {
+            switch (event.key) {
+              case 'ArrowDown':
+                event.preventDefault();
+                focusItem(index + 1);
+                break;
+              case 'ArrowUp':
+                event.preventDefault();
+                focusItem(index - 1);
+                break;
+              case 'Home':
+                event.preventDefault();
+                focusItem(0);
+                break;
+              case 'End':
+                event.preventDefault();
+                focusItem(items.length - 1);
+                break;
+              case 'Enter':
+              case ' ':
+                event.preventDefault();
+                commit(item);
+                break;
+              default:
+                break;
+            }
+          },
+          title: item.description ?? item.label,
+        },
+        item.icon
+          ? element(IconGlyph, { className: 'tf-context-menu__icon', name: item.icon, size: 14.5 })
+          : null,
+        element('span', { className: 'tf-context-menu__label' }, item.label),
       )),
   );
 }
@@ -940,6 +1111,9 @@ export function TextForgeUtilityPane({
 export function TextForgePopupHost({
   children,
   frameModel,
+  onCloseTab,
+  onRequestTabContextMenu,
+  onSelectTab,
   onClose,
   title = 'Popup surface',
 }) {
@@ -1164,7 +1338,18 @@ export function TextForgePopupHost({
           )
           : null,
       ),
-      element('div', { className: 'tf-popup-host__body' }, children),
+      element(
+        'div',
+        { className: 'tf-popup-host__body' },
+        element(TextForgeSessionTabStrip, {
+          emptyLabel: 'No popup sessions are open',
+          frameModel,
+          onCloseTab,
+          onRequestTabContextMenu,
+          onSelectTab,
+        }),
+        children,
+      ),
       element('div', {
         className: 'tf-popup-host__resize-handle',
         onPointerDown: handleResizePointerDown,

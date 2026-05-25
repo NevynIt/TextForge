@@ -2417,7 +2417,56 @@ body {
     left: 12px;
   }
 
-  .tf-shell-statusbar .tf-status-rail {
-    justify-content: flex-start;
+.tf-shell-statusbar .tf-status-rail {
+  justify-content: flex-start;
   }
+}
+
+.tf-context-menu {
+  position: fixed;
+  z-index: 1200;
+  min-width: 220px;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 14px;
+  background: rgba(8, 15, 30, 0.96);
+  box-shadow: 0 22px 48px rgba(2, 6, 23, 0.46);
+  backdrop-filter: blur(14px);
+}
+
+.tf-context-menu__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #e6edf7;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tf-context-menu__item:hover,
+.tf-context-menu__item.is-active {
+  background: rgba(47, 143, 136, 0.18);
+}
+
+.tf-context-menu__item:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tf-context-menu__icon {
+  color: #8fa0b8;
+}
+
+.tf-context-menu__label {
+  flex: 1;
 }

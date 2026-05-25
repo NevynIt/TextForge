@@ -1,8 +1,8 @@
-# TextForge Rebuild Roadmap Package V15k
+# TextForge Rebuild Roadmap Package V15l
 
 This package is arranged as a single drop-in `roadmap/` folder for the TextForge repository. Copy or merge this folder into the repository root. After that, every coding agent should start from `roadmap/AGENTS_START_HERE.md`.
 
-The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, reference specifications, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15k keeps Phase 3.5 as completed, records Phase 3.6 as implemented, leaves Phase 3.7 as the active pre-Phase-4 shell correction, and keeps the Phase 4 TF-MD baseline gated behind the unified resource model plus target-aware command affordances. It keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row, and keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
+The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, reference specifications, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15l keeps Phases 3.5, 3.6, and 3.7 as completed, moves the next implementation step to the Phase 4 TF-MD baseline after the unified resource model plus target-aware command affordances, and keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row. It also keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
 
 The roadmap also includes exact architecture-reference anchors, a consolidated pnpm install matrix, and a phase-sequenced package dependency activity diagram that shows when each package starts depending on other packages and app surfaces across Phases -1 through 19, including the new 3.6/3.7 pre-Phase-4 corrections.
 

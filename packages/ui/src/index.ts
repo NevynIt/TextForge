@@ -243,6 +243,7 @@ export interface TextForgeWorkspaceSidebarProps {
   readonly collapsed?: boolean;
   readonly footer?: ReactNode;
   readonly onDropFilesToFolder?: (itemId: string, files: ReadonlyArray<File>) => void;
+  readonly onRequestItemContextMenu?: (itemId: string, anchor: ContextMenuAnchor) => void;
   readonly onSelectItem?: (itemId: string) => void;
   readonly onToggleFolder?: (itemId: string) => void;
   readonly workspaceTree: WorkspaceTreeFrame;
@@ -253,7 +254,22 @@ export interface TextForgeSessionTabStripProps {
   readonly frameModel: SurfaceFrame;
   readonly onCloseTab?: (tabId: string) => void;
   readonly onDropFiles?: (files: ReadonlyArray<File>) => void;
+  readonly onRequestTabContextMenu?: (tabId: string, anchor: ContextMenuAnchor) => void;
   readonly onSelectTab?: (tabId: string) => void;
+}
+
+export interface ContextMenuAnchor {
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface TextForgeContextMenuProps {
+  readonly items?: ReadonlyArray<CommandMenuItem>;
+  readonly onClose?: () => void;
+  readonly onCommandPress?: (commandId: string) => void;
+  readonly open?: boolean;
+  readonly position?: ContextMenuAnchor;
+  readonly title?: string;
 }
 
 export interface SelectFieldOption {
@@ -296,6 +312,7 @@ export interface TextForgePopupHostProps {
   readonly frameModel: SurfaceFrame;
   readonly onClose?: () => void;
   readonly onCloseTab?: (tabId: string) => void;
+  readonly onRequestTabContextMenu?: (tabId: string, anchor: ContextMenuAnchor) => void;
   readonly onSelectTab?: (tabId: string) => void;
   readonly subtitle?: string;
   readonly title?: string;
@@ -378,6 +395,7 @@ export declare function TextForgeStatusRail(props: TextForgeStatusRailProps): un
 export declare function TextForgeTopBar(props: TextForgeTopBarProps): unknown;
 export declare function TextForgeWorkspaceSidebar(props: TextForgeWorkspaceSidebarProps): unknown;
 export declare function TextForgeSessionTabStrip(props: TextForgeSessionTabStripProps): unknown;
+export declare function TextForgeContextMenu(props: TextForgeContextMenuProps): unknown;
 export declare function TextForgeSelectField(props: TextForgeSelectFieldProps): unknown;
 export declare function TextForgeUtilityPane(props: TextForgeUtilityPaneProps): unknown;
 export declare function TextForgePopupHost(props: TextForgePopupHostProps): unknown;

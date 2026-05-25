@@ -62,6 +62,7 @@ import {
   TextForgeAppFrame,
   TextForgeCallout,
   TextForgeCommandPalette,
+  TextForgeContextMenu,
   TextForgeEmptyState,
   TextForgeInspectorCard,
   TextForgePopupHost,
@@ -151,6 +152,38 @@ const phase35ScreenshotPresets = {
     workspaceTreeCollapsed: false,
   },
 };
+
+const workspaceFolderContextCommandIds = [
+  'workspace.new-folder',
+  'workspace.new-resource',
+  'workspace.upload-file',
+  'workspace.import-folder-zip',
+  'workspace.export-selected-folder',
+  'workspace.rename-selected',
+  'workspace.delete-selected',
+];
+
+const workspaceResourceContextCommandIds = [
+  'workspace.download-selected-file',
+  'workspace.rename-selected',
+  'workspace.delete-selected',
+];
+
+const mainSessionContextCommandIds = [
+  'surface.focus-main-session',
+  'surface.refresh-active',
+  'surface.move-active-to-popup',
+  'surface.close-active',
+  'workspace.download-selected-file',
+];
+
+const popupSessionContextCommandIds = [
+  'surface.focus-popup-session',
+  'surface.refresh-active',
+  'surface.move-active-to-main',
+  'surface.close-active',
+  'workspace.download-selected-file',
+];
 
 function readPhase35ScreenshotPreset() {
   if (typeof window === 'undefined') {
@@ -453,6 +486,7 @@ function createTextForgeWorkbenchController() {
     workspaceTreeCollapsed: screenshotPreset.workspaceTreeCollapsed,
     storageResetPending: false,
     surfaceFocusPlacement: 'main',
+    contextMenu: undefined,
   };
   const runtime = {
     status: 'loading',
@@ -467,6 +501,15 @@ function createTextForgeWorkbenchController() {
     for (const listener of listeners) {
       listener();
     }
+  }
+
+  function closeContextMenu() {
+    if (!state.contextMenu) {
+      return;
+    }
+
+    state.contextMenu = undefined;
+    emit();
   }
 
   function subscribe(listener) {
@@ -1154,6 +1197,10 @@ function createTextForgeWorkbenchController() {
     }).candidates.map((candidate) => candidate.surfaceId);
   }
 
+  function createTargetCommandContext(target) {
+    return target ? { target } : {};
+  }
+
   function buildCommandContext() {
     const selectedEntry = runtime.status === 'ready' ? getSelectedEntry() : undefined;
     const activeSession = runtime.status === 'ready' ? getActiveCommandSession() : undefined;
@@ -1498,6 +1545,45 @@ function createTextForgeWorkbenchController() {
     state.selectedWorkspaceItemId = preferredEntry?.id ?? getDefaultSelection()?.id;
   }
 
+  function createContextMenuModel(kind, targetId, x, y) {
+    return {
+      kind,
+      targetId,
+      x,
+      y,
+    };
+  }
+
+  function createWorkspaceItemTarget(itemId) {
+    const entry = getEntry(itemId);
+    if (!entry) {
+      return undefined;
+    }
+
+    return {
+      selection: createCommandSelection(entry),
+      availableSurfaceIds: isWorkspaceResource(entry)
+        ? listAvailableSurfaceIdsForEntry(entry, undefined, undefined)
+        : [],
+    };
+  }
+
+  function createSessionTarget(sessionId) {
+    const session = findSessionById(sessionId);
+    if (!session) {
+      return undefined;
+    }
+
+    const entry = getEntry(session.resource.resourceId);
+    return {
+      selection: createCommandSelection(entry),
+      activeSurface: createCommandSurfaceContext(session, entry),
+      availableSurfaceIds: isWorkspaceResource(entry)
+        ? listAvailableSurfaceIdsForEntry(entry, session.placement, [session.contributionId])
+        : [],
+    };
+  }
+
   function resolveTargetEntryForCommands(commandContext) {
     const resourceId = commandContext?.target?.selection?.resourceId;
     return resourceId ? getEntry(resourceId) : getSelectedEntry();
@@ -1511,6 +1597,65 @@ function createTextForgeWorkbenchController() {
   function resolveTargetSessionForCommands(commandContext) {
     const sessionId = commandContext?.target?.activeSurface?.sessionId;
     return sessionId ? findSessionById(sessionId) : getActiveCommandSession();
+  }
+
+  function openContextMenu(model) {
+    state.contextMenu = model;
+    emit();
+  }
+
+  function openWorkspaceItemContextMenu(itemId, anchor) {
+    openContextMenu(createContextMenuModel('workspace-item', itemId, anchor.x, anchor.y));
+  }
+
+  function openMainTabContextMenu(sessionId, anchor) {
+    openContextMenu(createContextMenuModel('main-session', sessionId, anchor.x, anchor.y));
+  }
+
+  function openPopupSessionContextMenu(sessionId, anchor) {
+    openContextMenu(createContextMenuModel('popup-session', sessionId, anchor.x, anchor.y));
+  }
+
+  function isOpenWithCommand(commandId) {
+    return commandId.startsWith('surface.open-with:');
+  }
+
+  function buildContextMenuCommands(model) {
+    if (!model || runtime.status !== 'ready') {
+      return undefined;
+    }
+
+    const target = model.kind === 'workspace-item'
+      ? createWorkspaceItemTarget(model.targetId)
+      : createSessionTarget(model.targetId);
+    if (!target) {
+      return undefined;
+    }
+
+    const commandContext = {
+      ...buildCommandContext(),
+      ...createTargetCommandContext(target),
+    };
+    const visibleCommands = commandRegistry.resolve(commandContext).filter((command) => command.visible);
+    const allowedIds = model.kind === 'workspace-item'
+      ? (target.selection?.kind === 'folder' ? workspaceFolderContextCommandIds : workspaceResourceContextCommandIds)
+      : (model.kind === 'main-session' ? mainSessionContextCommandIds : popupSessionContextCommandIds);
+    const items = visibleCommands.filter((command) =>
+      allowedIds.includes(command.id) || isOpenWithCommand(command.id),
+    );
+
+    return {
+      x: model.x,
+      y: model.y,
+      context: commandContext,
+      items: items.map((command) => ({
+        commandId: command.id,
+        label: command.label,
+        description: command.description,
+        icon: resolveCommandIcon(command.id),
+        disabled: !command.enabled,
+      })),
+    };
   }
 
   async function createFolderCommand(commandContext) {
@@ -1921,6 +2066,7 @@ function createTextForgeWorkbenchController() {
   }
 
   async function executeCommand(commandId, commandContext) {
+    closeContextMenu();
     const result = await commandDispatcher.execute(commandId, commandContext ? { context: commandContext } : undefined);
     if (!result.handled && !commandRegistry.get(commandId)) {
       throw new Error(`Unknown shell command: ${commandId}`);
@@ -2060,6 +2206,7 @@ function createTextForgeWorkbenchController() {
         disabled: !command.enabled,
         keywords: command.keywords,
       }));
+    const contextMenu = buildContextMenuCommands(state.contextMenu);
     const mainFrame = createMainSessionTabStrip(mainSessions.map((session) => ({
       ...session,
       title: getEntry(session.resource.resourceId)?.metadata.title ?? getEntry(session.resource.resourceId)?.path ?? session.title,
@@ -2154,6 +2301,7 @@ function createTextForgeWorkbenchController() {
       chromeModel,
       commandMenus,
       commandPaletteEntries,
+      contextMenu,
       contributionPacks,
       badgeDiagnostics,
       popupFrame,
@@ -2196,6 +2344,7 @@ function createTextForgeWorkbenchController() {
     actions: {
       cancelStorageReset,
       closeActivePopupSurface,
+      closeContextMenu,
       closeSession,
       confirmStorageReset,
       dropFilesOnTabStrip,
@@ -2203,6 +2352,9 @@ function createTextForgeWorkbenchController() {
       executeCommand,
       focusMainSession,
       focusPopupSession,
+      openMainTabContextMenu,
+      openPopupSessionContextMenu,
+      openWorkspaceItemContextMenu,
       requestStorageReset,
       retryStorageInitialization,
       selectWorkspaceItem,
@@ -2623,7 +2775,10 @@ function TextForgeWorkbenchApp({ controller }) {
       TextForgePopupHost,
       {
         frameModel: snapshot.popupFrame,
+        onCloseTab: controller.actions.closeSession,
         onClose: controller.actions.closeActivePopupSurface,
+        onRequestTabContextMenu: controller.actions.openPopupSessionContextMenu,
+        onSelectTab: controller.actions.focusPopupSession,
         title: snapshot.activePopupView.title,
       },
       element(SurfaceMount, { view: snapshot.activePopupView }),
@@ -2731,6 +2886,7 @@ function TextForgeWorkbenchApp({ controller }) {
         sidebar: element(TextForgeWorkspaceSidebar, {
           collapsed: snapshot.state.workspaceTreeCollapsed,
           onDropFilesToFolder: controller.actions.dropFilesOnWorkspaceFolder,
+          onRequestItemContextMenu: controller.actions.openWorkspaceItemContextMenu,
           onSelectItem: controller.actions.selectWorkspaceItem,
           onToggleFolder: controller.actions.toggleWorkspaceFolder,
           workspaceTree: snapshot.chromeModel.workspaceTree,
@@ -2779,6 +2935,7 @@ function TextForgeWorkbenchApp({ controller }) {
           frameModel: snapshot.chromeModel.surfaceFrame,
           onCloseTab: controller.actions.closeSession,
           onDropFiles: controller.actions.dropFilesOnTabStrip,
+          onRequestTabContextMenu: controller.actions.openMainTabContextMenu,
           onSelectTab: controller.actions.focusMainSession,
         }),
         element(
@@ -2812,6 +2969,14 @@ function TextForgeWorkbenchApp({ controller }) {
       open: commandPaletteOpen,
       placeholder: 'Search command labels, groups, and keywords',
       title: 'Command palette',
+    }),
+    element(TextForgeContextMenu, {
+      items: snapshot.contextMenu?.items,
+      onClose: controller.actions.closeContextMenu,
+      onCommandPress: (commandId) => void controller.actions.executeCommand(commandId, snapshot.contextMenu?.context),
+      open: Boolean(snapshot.contextMenu?.items?.length),
+      position: snapshot.contextMenu ? { x: snapshot.contextMenu.x, y: snapshot.contextMenu.y } : undefined,
+      title: 'Context menu',
     }),
   );
 }
