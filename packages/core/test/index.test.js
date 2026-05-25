@@ -5,21 +5,27 @@ import {
   createCommand,
   createCommandDispatcher,
   createCommandRegistry,
+  createContributionRegistry,
   createContributionManifest,
   createDiagnostic,
+  createMarkdownFenceHandlerContribution,
+  createResourceFacts,
+  createResourcePredicate,
   createResourceRef,
   createSourcePosition,
   createSourceRange,
   inferLanguageId,
+  matchesResourcePredicate,
 } from '../src/index.js';
 
 test('core constructors build stable value objects', () => {
   const ref = createResourceRef('resource-1', { path: '/docs/note.md' });
   const range = createSourceRange(createSourcePosition(1, 1), createSourcePosition(1, 4, 3));
-  const diagnostic = createDiagnostic('Missing heading', 'warning', { resource: ref, source: range });
+  const diagnostic = createDiagnostic('Missing heading', 'info', { resource: ref, source: range });
   const manifest = createContributionManifest('@textforge/core');
 
   assert.equal(ref.resourceId, 'resource-1');
+  assert.equal(diagnostic.severity, 'information');
   assert.equal(diagnostic.source?.end.offset, 3);
   assert.equal(inferLanguageId({ path: '/docs/notes.md' }), 'markdown');
   assert.equal(manifest.packageId, '@textforge/core');
@@ -104,4 +110,59 @@ test('command registry filters context-sensitive commands and dispatches local h
   assert.equal(result.handled, true);
   assert.deepEqual(calls, [{ id: 'workspace.export', kind: 'folder' }]);
   assert.equal((await dispatcher.execute('surface.close')).handled, false);
+});
+
+test('contribution registry resolves active fence handlers and emits active conflict diagnostics', () => {
+  const registry = createContributionRegistry([
+    createContributionManifest('@textforge/markdown', {
+      capabilities: [
+        { id: '@textforge/markdown/capability/json', defaultActive: true },
+      ],
+      markdownFenceHandlers: [
+        createMarkdownFenceHandlerContribution('@textforge/markdown/json', {
+          fenceNames: ['json'],
+          capabilities: ['@textforge/markdown/capability/json'],
+          defaultActive: true,
+          render() {
+            return { html: '<pre>{}</pre>' };
+          },
+        }),
+      ],
+    }),
+    createContributionManifest('@textforge/custom', {
+      capabilities: [
+        { id: '@textforge/custom/capability/json', defaultActive: true },
+      ],
+      markdownFenceHandlers: [
+        createMarkdownFenceHandlerContribution('@textforge/custom/json', {
+          fenceNames: ['json'],
+          capabilities: ['@textforge/custom/capability/json'],
+          defaultActive: true,
+          render() {
+            return { html: '<pre>[]</pre>' };
+          },
+        }),
+      ],
+    }),
+  ]);
+
+  const resolved = registry.resolve();
+  assert.equal(resolved.markdownFenceHandlers.length, 0);
+  assert.equal(resolved.diagnostics[0]?.code, 'registry.active-conflict');
+
+  const predicate = createResourcePredicate({
+    representations: ['text'],
+    mimeTypes: ['image/svg+xml'],
+    fileExtensions: ['svg'],
+  });
+  const resourceFacts = createResourceFacts({
+    resourceId: 'resource-2',
+    path: '/docs/diagram.svg',
+    kind: 'resource',
+    representation: 'text',
+    mimeType: 'image/svg+xml',
+    languageId: 'svg',
+  });
+
+  assert.equal(matchesResourcePredicate(predicate, resourceFacts), true);
 });

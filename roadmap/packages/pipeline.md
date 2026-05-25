@@ -123,3 +123,7 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Phase 4 closure note
 
 The package now exposes the Phase 4 baseline runtime: generated-resource descriptors, a minimal contribution manifest shape, a registry for pipeline steps, and a runner/trace contract that the Markdown and diagrams packages can compose without importing app-shell internals. The implementation stays intentionally small so Phase 5 can replace ad hoc registration with broader contribution-pack composition instead of undoing a heavier first pass.
+
+## Phase 4.1 closure note
+
+The package now aligns step identity and failure reporting with the shared diagnostic contract. Missing or failing pipeline steps emit structured diagnostics with machine-readable codes and origin metadata instead of relying only on raw thrown errors, while the package also exposes its runtime as a default-active pipeline capability ready for Phase 5 composition.

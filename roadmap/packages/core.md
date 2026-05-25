@@ -148,3 +148,7 @@ The package now defines stable source-editor language IDs, language metadata for
 ## Phase 3.3 closure note
 
 The package now owns the minimal shell-command substrate promised for Phase 3.3: command contribution descriptors, command-context filtering, a command registry, grouped toolbar/menu resolution, and a local command dispatcher contract. The delivered substrate is intentionally limited to bundled shell commands so later Phase 5 work can extend the contribution-pack system without reworking the local command palette contract.
+
+## Phase 4.1 closure note
+
+The package now owns the stabilized Phase 4.1 foundation contracts: normalized `observation`/`information`/`warning`/`error` diagnostics with origin metadata, resource facts plus resource predicates, default Markdown fence-handler contribution metadata, and a lightweight contribution registry that can report active/available capability state and emit active short-name conflict diagnostics before Phase 5 expands package composition.

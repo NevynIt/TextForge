@@ -1,27 +1,53 @@
 import mermaid from 'mermaid';
 import { instance as createViz } from '@viz-js/viz';
-import { createContributionManifest } from '@textforge/core';
+import {
+  createCapability,
+  createContributionManifest,
+  createMarkdownFenceHandlerContribution,
+} from '@textforge/core';
 import { createGeneratedResourceDescriptor } from '@textforge/pipeline';
 
 let mermaidCounter = 0;
 let vizInstancePromise;
 let mermaidInitialized = false;
 
+export const diagramCapabilities = [
+  createCapability('@textforge/diagrams/capability/mermaid', {
+    description: 'Render Mermaid fenced blocks into SVG or PNG diagram assets.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/diagrams/capability/graphviz', {
+    description: 'Render Graphviz DOT fenced blocks into SVG or PNG diagram assets.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+];
+
 export const diagramPipelineContributions = [
   {
     id: '@textforge/diagrams/mermaid-svg',
+    localName: 'mermaid-svg',
+    capabilities: ['@textforge/diagrams/capability/mermaid'],
+    defaultActive: true,
     inputKind: 'text',
     outputKind: 'svg',
     description: 'Render Mermaid source to SVG.',
   },
   {
     id: '@textforge/diagrams/graphviz-svg',
+    localName: 'graphviz-svg',
+    capabilities: ['@textforge/diagrams/capability/graphviz'],
+    defaultActive: true,
     inputKind: 'text',
     outputKind: 'svg',
     description: 'Render Graphviz DOT source to SVG.',
   },
   {
     id: '@textforge/diagrams/svg-png',
+    localName: 'svg-png',
+    capabilities: ['@textforge/diagrams/capability/mermaid', '@textforge/diagrams/capability/graphviz'],
+    defaultActive: true,
     inputKind: 'svg',
     outputKind: 'png',
     description: 'Rasterize generated SVG into PNG bytes locally.',
@@ -261,18 +287,46 @@ export function createGraphvizFenceHandler(pipelineId = '@textforge/diagrams/gra
   };
 }
 
+export const diagramFenceHandlerContributions = [
+  createMarkdownFenceHandlerContribution('@textforge/diagrams/fence-handler/mermaid', {
+    label: 'Mermaid fenced block renderer',
+    description: 'Render Mermaid fenced blocks through the diagrams package.',
+    localName: 'mermaid',
+    capabilities: ['@textforge/diagrams/capability/mermaid'],
+    defaultActive: true,
+    provisional: true,
+    localArtifactCompatible: true,
+    fenceNames: ['mermaid'],
+    render: createMermaidFenceHandler(),
+  }),
+  createMarkdownFenceHandlerContribution('@textforge/diagrams/fence-handler/graphviz', {
+    label: 'Graphviz fenced block renderer',
+    description: 'Render DOT and Graphviz fenced blocks through the diagrams package.',
+    localName: 'graphviz',
+    capabilities: ['@textforge/diagrams/capability/graphviz'],
+    defaultActive: true,
+    provisional: true,
+    localArtifactCompatible: true,
+    fenceNames: ['dot', 'graphviz'],
+    render: createGraphvizFenceHandler(),
+  }),
+];
+
 export function createDiagramFenceHandlers() {
-  const graphviz = createGraphvizFenceHandler();
-  return {
-    mermaid: createMermaidFenceHandler(),
-    dot: graphviz,
-    graphviz,
-  };
+  const handlers = {};
+  for (const contribution of diagramFenceHandlerContributions) {
+    for (const fenceName of contribution.fenceNames ?? []) {
+      handlers[fenceName] = contribution.render;
+    }
+  }
+  return handlers;
 }
 
 export function createDiagramContributionManifest() {
   return createContributionManifest('@textforge/diagrams', {
+    capabilities: diagramCapabilities,
     pipelines: diagramPipelineContributions,
+    markdownFenceHandlers: diagramFenceHandlerContributions,
   });
 }
 

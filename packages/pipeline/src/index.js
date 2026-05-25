@@ -1,4 +1,4 @@
-import { createContributionManifest, createDiagnostic } from '@textforge/core';
+import { createCapability, createContributionManifest, createDiagnostic } from '@textforge/core';
 
 export const pipelineValueKinds = [
   'text',
@@ -12,6 +12,25 @@ export const pipelineValueKinds = [
 ];
 
 export const generatedResourceFormats = ['svg', 'png', 'html'];
+export const pipelineCapabilities = [
+  createCapability('@textforge/pipeline/capability/run', {
+    description: 'Run local pipeline steps over bundled TextForge values.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+];
+
+function createPipelineDiagnostic(code, message, severity = 'information', overrides = {}) {
+  return createDiagnostic(message, severity, {
+    code,
+    origin: {
+      packageId: '@textforge/pipeline',
+      subsystem: 'pipeline',
+      ...overrides.origin,
+    },
+    ...overrides,
+  });
+}
 
 export function createGeneratedResourceDescriptor(input = {}) {
   if (!input.path) {
@@ -56,6 +75,9 @@ export function createPipelineStep(id, overrides = {}) {
   return {
     id,
     contributionId: overrides.contributionId ?? id,
+    localName: overrides.localName,
+    capabilities: overrides.capabilities ?? ['@textforge/pipeline/capability/run'],
+    defaultActive: overrides.defaultActive ?? true,
     inputKind: overrides.inputKind ?? 'text',
     outputKind: overrides.outputKind ?? 'html',
     description: overrides.description,
@@ -110,16 +132,48 @@ export function createPipelineRunner(options = {}) {
       let current = input;
       let failed = false;
 
-      const steps = (runOptions.steps ?? []).map((step) => {
+      const steps = (runOptions.steps ?? []).flatMap((step) => {
         if (typeof step === 'string') {
           const resolved = registry.get(step);
           if (!resolved) {
-            throw new Error(`Unknown pipeline step: ${step}`);
+            diagnostics.push(createPipelineDiagnostic(
+              'pipeline.step.missing',
+              `Unknown pipeline step: ${step}`,
+              'error',
+              {
+                origin: {
+                  pipelineStepId: step,
+                },
+              },
+            ));
+            failed = true;
+            trace.push({
+              stepId: step,
+              contributionId: step,
+              inputKind: inferValueKind(current, 'text'),
+              outputKind: inferValueKind(current, 'text'),
+              startedAt: now(),
+              finishedAt: now(),
+              status: 'failed',
+              diagnosticsCount: 1,
+              generatedResourceCount: 0,
+            });
+            return [];
           }
-          return resolved;
+          return [resolved];
         }
-        return createPipelineStep(step.id, step);
+        return [createPipelineStep(step.id, step)];
       });
+
+      if (failed && stopOnError) {
+        return {
+          ok: false,
+          value: current,
+          diagnostics,
+          generatedResources,
+          trace,
+        };
+      }
 
       for (const step of steps) {
         const startedAt = now();
@@ -152,7 +206,17 @@ export function createPipelineRunner(options = {}) {
           current = nextOutput;
         } catch (error) {
           failed = true;
-          diagnostics.push(createDiagnostic(error?.message ?? `Pipeline step failed: ${step.id}`, 'error'));
+          diagnostics.push(createPipelineDiagnostic(
+            'pipeline.step.failed',
+            error?.message ?? `Pipeline step failed: ${step.id}`,
+            'error',
+            {
+              origin: {
+                contributionId: step.contributionId ?? step.id,
+                pipelineStepId: step.id,
+              },
+            },
+          ));
           trace.push({
             stepId: step.id,
             contributionId: step.contributionId ?? step.id,
@@ -183,6 +247,7 @@ export function createPipelineRunner(options = {}) {
 
 export function createPipelineContributionManifest(pipelines = []) {
   return createContributionManifest('@textforge/pipeline', {
+    capabilities: pipelineCapabilities,
     pipelines: pipelines.map((step) => createPipelineStep(step.id, step)),
   });
 }

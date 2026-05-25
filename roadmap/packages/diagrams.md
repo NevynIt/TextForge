@@ -115,3 +115,7 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Phase 4 closure note
 
 The package now owns the Phase 4 diagram baseline: Mermaid and Graphviz fenced-block renderers, text-stored generated SVG outputs, browser-side SVG-to-PNG rasterization, and Markdown-callable handler exports that the shell can use to materialize generated diagram resources in the workspace. This keeps diagram generation package-owned while leaving richer contribution registration and visual editing for later phases.
+
+## Phase 4.1 closure note
+
+The package now registers Mermaid and Graphviz fenced-block renderers as default contributions with stable IDs, default-active capability associations, and local-artifact compatibility. The diagram package therefore enters Phase 5 with package-owned handler metadata instead of a shell-owned dispatch table, while preserving the current browser-only rendering and rasterization boundary.

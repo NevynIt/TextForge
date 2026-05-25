@@ -10,8 +10,8 @@ function createResult(checkId, kind, diagnostics, summary) {
     severity: diagnostics.some((diagnostic) => diagnostic.severity === 'error')
       ? 'error'
       : diagnostics.some((diagnostic) => diagnostic.severity === 'warning')
-        ? 'warning'
-        : 'info',
+      ? 'warning'
+        : 'information',
     diagnostics,
     summary,
   };

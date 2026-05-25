@@ -159,3 +159,7 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## Phase 4 closure note
 
 The package now delivers the Phase 4 TF-MD baseline: a Markdown preview surface, `%metadata` and `%style` control-block parsing, explicit heading anchors plus heading/paragraph/inline style references, workspace-relative image resolution against unified resources, provisional fenced-block dispatch for the known local block set, and print-optimized HTML export. Unknown fences are still preserved as code, while `%include`, `%repository`, `%require`, and ITM publication remain deferred to their planned later phases.
+
+## Phase 4.1 closure note
+
+The package now keeps the fenced-block dispatcher explicitly provisional by shaping its built-ins as default contribution records with stable IDs, capability associations, and structured diagnostics. Markdown preview resolution now consumes the shared contribution registry for active fence handlers, reports active handler conflicts or unavailable registered handlers through the shared diagnostic shape, and preserves the local-artifact-safe preview path.

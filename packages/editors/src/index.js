@@ -7,7 +7,27 @@ import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/
 import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua';
 import { tags } from '@lezer/highlight';
 import { EditorView, lineNumbers } from '@codemirror/view';
-import { createCommand, createContributionManifest, getLanguageDefinition, inferLanguageId, languageDefinitions } from '@textforge/core';
+import {
+  createCapability,
+  createCommand,
+  createContributionManifest,
+  getLanguageDefinition,
+  inferLanguageId,
+  languageDefinitions,
+} from '@textforge/core';
+
+export const editorCapabilities = [
+  createCapability('@textforge/editors/capability/source', {
+    description: 'Open text-backed workspace resources in the CodeMirror source editor.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/editors/capability/language-mode', {
+    description: 'Switch the language mode for text-backed workspace resources.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+];
 
 const parserBackedLanguageFactories = {
   markdown: () => markdownLanguage(),
@@ -171,6 +191,9 @@ export const codeMirrorTextEditorSurfaceContribution = {
   label: 'Text editor',
   description: 'Generic source editor surface for plain text resources.',
   kind: 'text-editor',
+  localName: 'source',
+  capabilities: ['@textforge/editors/capability/source'],
+  defaultActive: true,
   editable: true,
   sourceRangeAware: true,
   languageIds: languageDefinitions.map((definition) => definition.id),
@@ -183,6 +206,7 @@ export function createEditorCommandContributions(languageModes = listTextEditorL
   return languageModes.map((mode) =>
     createCommand(`editor.set-language:${mode.languageId}`, `Set language: ${mode.label}`, {
       category: 'editor',
+      capabilities: ['@textforge/editors/capability/language-mode'],
       description: mode.parserBacked
         ? `Set the selected text resource to ${mode.label} using the parser-backed source editor mode.`
         : `Set the selected text resource to ${mode.label}; this format remains metadata-only in Phase 3.3.`,
@@ -200,6 +224,7 @@ export function createEditorCommandContributions(languageModes = listTextEditorL
 
 export function createEditorContributionManifest(languageModes = listTextEditorLanguageModes()) {
   return createContributionManifest('@textforge/editors', {
+    capabilities: editorCapabilities,
     commands: createEditorCommandContributions(languageModes),
     surfaces: [codeMirrorTextEditorSurfaceContribution],
   });

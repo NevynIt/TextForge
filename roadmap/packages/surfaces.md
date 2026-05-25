@@ -195,3 +195,7 @@ The package now contributes the base shell actions that operate on open surfaces
 ## Phase 3.5 closure note
 
 Popup sessions now stay separate from the main document strip and reopen through a real overlay host in the app shell rather than being treated as right-panel content. The package still limits itself to session and placement semantics: focus, close, move-to-main, move-to-popup, and compact surface metadata remain available without pulling Phase 13 tab-group or session-persistence behavior forward.
+
+## Phase 4.1 closure note
+
+The package now resolves open-with compatibility through shared resource predicates over representation, MIME type, language ID, and extension facts, and it emits a structured diagnostic when no registered surface can open a resource. The context-menu and surface-command projection remains on the single command spine, while the app-shell surface-mount adapter is explicitly marked as temporary Phase 5 follow-up work rather than hidden shell coupling.

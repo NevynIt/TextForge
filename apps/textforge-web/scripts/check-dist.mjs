@@ -46,6 +46,16 @@ if (!distStyleCss.trim()) {
   throw new Error('dist/assets/textforge.css must not be empty');
 }
 
+for (const [label, source, pattern] of [
+  ['dist/index.html', distIndexHtml, /\b(?:src|href)\s*=\s*["']https?:\/\//i],
+  ['dist/assets/textforge.css', distStyleCss, /url\(\s*["']?https?:\/\//i],
+  ['dist/assets/textforge-loader.js', distScriptJs, /\b(?:fetch|XMLHttpRequest|WebSocket|EventSource|sendBeacon|import)\s*\(\s*["']https?:\/\//i],
+]) {
+  if (pattern.test(source)) {
+    throw new Error(`${label} must not require remote or CDN asset URLs for the shipped local artifact`);
+  }
+}
+
 console.info('TextForge dist file:// checks passed.');
 
 function hasEsModuleSyntax(source) {

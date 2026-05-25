@@ -1,4 +1,4 @@
-export type Severity = 'hint' | 'info' | 'warning' | 'error';
+export type Severity = 'observation' | 'information' | 'warning' | 'error';
 
 export interface SourcePosition {
   readonly line: number;
@@ -66,12 +66,25 @@ export interface DiagnosticRelatedInformation {
   readonly resource?: ResourceRef;
 }
 
+export interface DiagnosticOrigin {
+  readonly packageId?: string;
+  readonly contributionId?: string;
+  readonly capabilityId?: string;
+  readonly actionId?: string;
+  readonly pipelineStepId?: string;
+  readonly ruleId?: string;
+  readonly directive?: string;
+  readonly fenceName?: string;
+  readonly subsystem?: string;
+}
+
 export interface Diagnostic {
   readonly severity: Severity;
   readonly message: string;
   readonly code?: string;
   readonly source?: SourceRange;
   readonly resource?: ResourceRef;
+  readonly origin?: DiagnosticOrigin;
   readonly related?: ReadonlyArray<DiagnosticRelatedInformation>;
 }
 
@@ -94,6 +107,8 @@ export interface Capability {
   readonly description?: string;
   readonly resourceKinds?: ReadonlyArray<ResourceKind>;
   readonly editable?: boolean;
+  readonly defaultActive?: boolean;
+  readonly scope?: 'document' | 'workspace' | 'session';
 }
 
 export interface Command {
@@ -229,14 +244,95 @@ export interface CommandDispatcher {
 
 export interface SurfaceContribution {
   readonly id: string;
+  readonly label?: string;
+  readonly description?: string;
   readonly role?: 'main' | 'popup' | 'auxiliary';
   readonly capabilities?: ReadonlyArray<Capability['id']>;
+  readonly localName?: string;
+  readonly defaultActive?: boolean;
+  readonly resourcePredicate?: ResourcePredicate;
 }
 
 export interface PipelineContribution {
   readonly id: string;
+  readonly label?: string;
+  readonly description?: string;
   readonly input?: string;
   readonly output?: string;
+  readonly capabilities?: ReadonlyArray<Capability['id']>;
+  readonly localName?: string;
+  readonly defaultActive?: boolean;
+}
+
+export interface MarkdownFenceHandlerContribution {
+  readonly id: string;
+  readonly label?: string;
+  readonly description?: string;
+  readonly capabilities?: ReadonlyArray<Capability['id']>;
+  readonly localName?: string;
+  readonly defaultActive?: boolean;
+  readonly provisional?: boolean;
+  readonly localArtifactCompatible?: boolean;
+  readonly fenceNames?: ReadonlyArray<string>;
+  readonly render?: (execution: unknown) => unknown | Promise<unknown>;
+}
+
+export interface ResourceFacts {
+  readonly resourceId: string;
+  readonly kind?: ResourceKind;
+  readonly representation?: ResourceRepresentation;
+  readonly path?: string;
+  readonly mimeType?: string;
+  readonly languageId?: LanguageId | string;
+  readonly fileExtension?: string;
+}
+
+export interface ResourcePredicate {
+  readonly representations?: ReadonlyArray<ResourceRepresentation>;
+  readonly mimeTypes?: ReadonlyArray<string>;
+  readonly languageIds?: ReadonlyArray<LanguageId | string>;
+  readonly fileExtensions?: ReadonlyArray<string>;
+}
+
+export interface ResolvedCapability extends Capability {
+  readonly status: 'available' | 'active' | 'disabled' | 'missing' | 'failed';
+}
+
+export interface ResolvedContribution<TContribution> extends TContribution {
+  readonly packageId: string;
+  readonly status: 'available' | 'active' | 'disabled' | 'missing' | 'failed';
+}
+
+export interface ContributionRegistryResolution {
+  readonly manifests: ReadonlyArray<ContributionManifest>;
+  readonly capabilities: ReadonlyArray<ResolvedCapability>;
+  readonly commands: ReadonlyArray<ResolvedContribution<CommandContribution>>;
+  readonly surfaces: ReadonlyArray<ResolvedContribution<SurfaceContribution>>;
+  readonly pipelines: ReadonlyArray<ResolvedContribution<PipelineContribution>>;
+  readonly markdownFenceHandlers: ReadonlyArray<ResolvedContribution<MarkdownFenceHandlerContribution>>;
+  readonly diagnostics: ReadonlyArray<Diagnostic>;
+}
+
+export interface ContributionRegistryContext {
+  readonly activeCapabilityIds?: ReadonlyArray<string>;
+  readonly disabledCapabilityIds?: ReadonlyArray<string>;
+  readonly failedCapabilityIds?: ReadonlyArray<string>;
+  readonly packageStatuses?: Readonly<Record<string, 'available' | 'disabled' | 'failed'>>;
+}
+
+export interface ContributionRegistry {
+  registerManifest(manifest: ContributionManifest | { readonly id?: string; readonly packageId?: string }): ContributionRegistry;
+  listManifests(): ReadonlyArray<ContributionManifest>;
+  listCapabilities(): ReadonlyArray<Capability>;
+  listCommands(): ReadonlyArray<CommandContribution>;
+  listSurfaces(): ReadonlyArray<SurfaceContribution>;
+  listPipelines(): ReadonlyArray<PipelineContribution>;
+  listMarkdownFenceHandlers(): ReadonlyArray<MarkdownFenceHandlerContribution>;
+  resolve(context?: ContributionRegistryContext): ContributionRegistryResolution;
+  createMarkdownFenceHandlerMap(context?: ContributionRegistryContext): {
+    readonly diagnostics: ReadonlyArray<Diagnostic>;
+    readonly handlers: Readonly<Record<string, ResolvedContribution<MarkdownFenceHandlerContribution>>>;
+  };
 }
 
 export interface ContributionManifest {
@@ -250,6 +346,7 @@ export interface ContributionManifest {
   readonly commands?: ReadonlyArray<CommandContribution>;
   readonly surfaces?: ReadonlyArray<SurfaceContribution>;
   readonly pipelines?: ReadonlyArray<PipelineContribution>;
+  readonly markdownFenceHandlers?: ReadonlyArray<MarkdownFenceHandlerContribution>;
 }
 
 export interface PipelineValue<TValue = unknown> {
@@ -278,12 +375,14 @@ export const contributionKinds: {
   readonly commands: 'commands';
   readonly surfaces: 'surfaces';
   readonly pipelines: 'pipelines';
+  readonly markdownFenceHandlers: 'markdown-fence-handlers';
 };
 
 export const languageDefinitions: ReadonlyArray<LanguageDefinition>;
 export const resourceKinds: ReadonlyArray<ResourceKind>;
 export const resourceRepresentations: ReadonlyArray<ResourceRepresentation>;
 export const resourceBadgePlacements: ReadonlyArray<'center' | 'top' | 'right' | 'bottom' | 'left'>;
+export const capabilityStates: ReadonlyArray<'available' | 'active' | 'disabled' | 'missing' | 'failed'>;
 
 export const editorCapabilityIds: {
   readonly source: 'editor.source';
@@ -324,6 +423,10 @@ export declare function createCommandDispatcher(options?: {
 }): CommandDispatcher;
 export declare function createSurfaceContribution(id: string, overrides?: Partial<SurfaceContribution>): SurfaceContribution;
 export declare function createPipelineContribution(id: string, overrides?: Partial<PipelineContribution>): PipelineContribution;
+export declare function createMarkdownFenceHandlerContribution(
+  id: string,
+  overrides?: Partial<MarkdownFenceHandlerContribution>,
+): MarkdownFenceHandlerContribution;
 export declare function createContributionManifest(
   packageId: string,
   overrides?: Partial<ContributionManifest>,
@@ -338,6 +441,12 @@ export declare function createCanonicalPatch(
   operations: ReadonlyArray<CanonicalPatchOperation>,
   overrides?: Partial<CanonicalPatch>,
 ): CanonicalPatch;
+export declare function createResourceFacts(input?: Partial<ResourceRef> & { readonly id?: string }): ResourceFacts;
+export declare function createResourcePredicate(overrides?: Partial<ResourcePredicate>): ResourcePredicate;
+export declare function matchesResourcePredicate(
+  predicate: ResourcePredicate,
+  input?: Partial<ResourceRef> & { readonly id?: string },
+): boolean;
 export declare function getLanguageDefinition(languageId: LanguageId | string | undefined): LanguageDefinition | undefined;
 export declare function getResourceRepresentation(resource?: Partial<ResourceRef> & { readonly kind?: string }): ResourceRepresentation | undefined;
 export declare function inferLanguageId(input: {
@@ -351,6 +460,9 @@ export declare function inferResourceRepresentation(input: {
   readonly bytes?: Uint8Array;
   readonly fallback?: ResourceRepresentation;
 }): ResourceRepresentation;
+export declare function createContributionRegistry(
+  initialManifests?: ReadonlyArray<ContributionManifest>,
+): ContributionRegistry;
 
 export declare const defaultContributionManifest: ContributionManifest;
 

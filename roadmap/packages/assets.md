@@ -202,3 +202,7 @@ Popup-ready asset viewers now render through the bounded overlay host instead of
 ## Phase 4 closure note
 
 The package now surfaces generated-asset provenance and stale-state cues through the read-only asset model and exposes explicit SVG/PNG export commands for selected generated diagram resources. The generated-asset metadata remains compatibility-focused and works with the unified resource model delivered in Phase 3.6 instead of restoring the old text/binary split.
+
+## Phase 4.1 closure note
+
+The package now exposes its viewers and asset commands as default-active contributions with stable capability IDs, while the package checks also validate public-entrypoint consumption instead of cross-package `src/` imports. SVG remains the key dual-eligibility case: the same text-stored resource can still route to source editing and to the registered SVG viewer without reviving a hard storage-based split.

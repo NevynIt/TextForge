@@ -1,4 +1,27 @@
-import { createCommand, createContributionManifest } from '@textforge/core';
+import { createCapability, createCommand, createContributionManifest } from '@textforge/core';
+
+export const assetCapabilities = [
+  createCapability('@textforge/assets/capability/image', {
+    description: 'Open image resources through the image viewer surface.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/assets/capability/svg', {
+    description: 'Open SVG resources through the SVG viewer surface.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/assets/capability/pdf', {
+    description: 'Open PDF resources through the PDF viewer surface.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/assets/capability/binary', {
+    description: 'Open opaque byte resources through the generic file viewer surface.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+];
 
 export function createAssetViewerSurfaceContribution(overrides) {
   return {
@@ -109,6 +132,9 @@ export const assetSurfaceContributions = [
     id: '@textforge/assets/image',
     label: 'Image viewer',
     description: 'Read-only image surface for workspace image resources.',
+    localName: 'image',
+    capabilities: ['@textforge/assets/capability/image'],
+    defaultActive: true,
     viewerKind: 'image',
     placements: ['main', 'popup', 'auxiliary'],
     resourceRepresentations: ['bytes'],
@@ -119,6 +145,9 @@ export const assetSurfaceContributions = [
     id: '@textforge/assets/svg',
     label: 'SVG viewer',
     description: 'Read-only SVG surface with workspace blob binding support for text or byte resources.',
+    localName: 'svg',
+    capabilities: ['@textforge/assets/capability/svg'],
+    defaultActive: true,
     viewerKind: 'svg',
     placements: ['main', 'popup', 'auxiliary'],
     resourceRepresentations: ['text', 'bytes'],
@@ -129,6 +158,9 @@ export const assetSurfaceContributions = [
     id: '@textforge/assets/pdf',
     label: 'PDF viewer',
     description: 'Read-only PDF surface for workspace PDF resources.',
+    localName: 'pdf',
+    capabilities: ['@textforge/assets/capability/pdf'],
+    defaultActive: true,
     viewerKind: 'pdf',
     placements: ['main', 'popup'],
     resourceRepresentations: ['bytes'],
@@ -139,6 +171,9 @@ export const assetSurfaceContributions = [
     id: '@textforge/assets/binary',
     label: 'File viewer',
     description: 'Fallback viewer for opaque byte-backed workspace resources.',
+    localName: 'binary',
+    capabilities: ['@textforge/assets/capability/binary'],
+    defaultActive: true,
     viewerKind: 'binary',
     placements: ['main', 'popup', 'auxiliary'],
     resourceRepresentations: ['bytes'],
@@ -149,6 +184,7 @@ export const assetSurfaceContributions = [
 export const assetCommandContributions = [
   createCommand('asset.download-selected', 'Download selected asset', {
     category: 'asset',
+    capabilities: ['@textforge/assets/capability/image', '@textforge/assets/capability/svg', '@textforge/assets/capability/pdf', '@textforge/assets/capability/binary'],
     description: 'Download the selected byte-backed resource through the existing asset viewer path.',
     keywords: ['asset', 'download', 'file', 'viewer'],
     menu: { id: 'asset', label: 'Asset', groupOrder: 40, order: 10 },
@@ -162,6 +198,7 @@ export const assetCommandContributions = [
   }),
   createCommand('asset.export-selected-svg', 'Export selected SVG', {
     category: 'asset',
+    capabilities: ['@textforge/assets/capability/svg'],
     description: 'Export the selected SVG resource as an SVG file through the asset workflow.',
     keywords: ['asset', 'svg', 'export', 'download'],
     menu: { id: 'asset', label: 'Asset', groupOrder: 40, order: 20 },
@@ -174,6 +211,7 @@ export const assetCommandContributions = [
   }),
   createCommand('asset.export-selected-png', 'Export selected SVG as PNG', {
     category: 'asset',
+    capabilities: ['@textforge/assets/capability/svg'],
     description: 'Rasterize the selected SVG resource locally and export it as PNG.',
     keywords: ['asset', 'svg', 'png', 'export', 'rasterize'],
     menu: { id: 'asset', label: 'Asset', groupOrder: 40, order: 30 },
@@ -188,6 +226,7 @@ export const assetCommandContributions = [
 
 export function createAssetContributionManifest() {
   return createContributionManifest('@textforge/assets', {
+    capabilities: assetCapabilities,
     commands: assetCommandContributions,
     surfaces: assetSurfaceContributions,
   });

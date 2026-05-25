@@ -82,6 +82,7 @@ for (const requiredReactSignal of [
   "from 'react'",
   "from 'react-dom/client'",
   'useSyncExternalStore',
+  'createContributionRegistry',
   'createCommandRegistry',
   'createCommandDispatcher',
   'TextForgeAppFrame',
@@ -110,8 +111,14 @@ for (const requiredPhase34Signal of ['TextForgeResourceBadge', 'TextForgeInspect
   }
 }
 
-if (!workbenchJs.includes('createWorkspaceContributionManifest') || !workbenchJs.includes('createSurfaceContributionManifest') || !workbenchJs.includes('createEditorContributionManifest') || !workbenchJs.includes('createAssetContributionManifest')) {
-  throw new Error('workbench.js must build the shell command registry from package contribution manifests');
+if (!workbenchJs.includes('createContributionRegistry') || !workbenchJs.includes('createSurfaceContributionManifest')) {
+  throw new Error('workbench.js must build the shell command registry from registered package contribution manifests');
+}
+
+for (const forbiddenPhase41Bypass of ['createWorkspaceContributionManifest', 'createEditorContributionManifest', 'createAssetContributionManifest', 'createMarkdownContributionManifest', 'createDiagramFenceHandlers']) {
+  if (workbenchJs.includes(forbiddenPhase41Bypass)) {
+    throw new Error(`workbench.js must not bypass the Phase 4.1 registration path with ${forbiddenPhase41Bypass}`);
+  }
 }
 
 if (!workbenchJs.includes('createPersistedWorkspaceService') || !workbenchJs.includes('resetWorkspaceDexieStorage')) {

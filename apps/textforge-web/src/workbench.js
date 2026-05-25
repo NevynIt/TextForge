@@ -4,6 +4,7 @@ import {
   contributions as coreContributions,
   createCommandDispatcher,
   createCommandRegistry,
+  createContributionRegistry,
   getLanguageDefinition,
   inferLanguageId,
   inferResourceRepresentation,
@@ -12,7 +13,7 @@ import {
   basenameWorkspacePath,
   createPersistedWorkspaceService,
   createSequentialIdFactory,
-  createWorkspaceContributionManifest,
+  contributions as workspaceContributionPack,
   createWorkspaceService,
   listWorkspaceBadgeDiagnostics,
   createWorkspaceTreeItems,
@@ -40,15 +41,14 @@ import {
   listOpenSurfaceSessions,
 } from '@textforge/surfaces';
 import {
+  contributions as editorContributionPack,
   codeMirrorTextEditorSurfaceContribution,
   createCodeMirrorTextEditorSurface,
-  createEditorContributionManifest,
   createTextEditorDocument,
   listTextEditorLanguageModes,
 } from '@textforge/editors';
 import {
-  assetSurfaceContributions,
-  createAssetContributionManifest,
+  contributions as assetContributionPack,
   createAssetProvenanceLabel,
   createAssetViewerSurface,
   createBinaryAssetViewerSurface,
@@ -65,16 +65,18 @@ import {
 } from '@textforge/pipeline';
 import {
   contributions as diagramContributionPack,
-  createDiagramFenceHandlers,
   rasterizeSvgToPngBytes,
 } from '@textforge/diagrams';
 import {
-  createMarkdownContributionManifest,
+  contributions as markdownContributionPack,
   createMarkdownPreviewSurface,
   createMarkdownSnippet,
   markdownPreviewSurfaceContribution,
   renderMarkdownDocument,
 } from '@textforge/markdown';
+import {
+  contributions as securityProfileContributionPack,
+} from '@textforge/security-profile';
 import {
   TextForgeAppFrame,
   TextForgeCallout,
@@ -217,6 +219,9 @@ const assetSurfaceFactoryByContributionId = {
   '@textforge/assets/pdf': createPdfAssetViewerSurface,
   '@textforge/assets/binary': createBinaryAssetViewerSurface,
 };
+// Phase 4.1 explicitly keeps this as a temporary runtime adapter.
+// Contribution metadata, capability state, and open-with resolution are now package-registered,
+// but the shell still owns the final mount function lookup until Phase 5 grows a runtime contribution executor.
 
 function createTimestampFactory() {
   return () => new Date().toISOString();
@@ -349,20 +354,6 @@ function splitFilename(name) {
   };
 }
 
-function createContributionPacks({ languageModes, surfaceContributions }) {
-  return [
-    coreContributions,
-    createWorkspaceContributionManifest(),
-    createSurfaceContributionManifest(surfaceContributions),
-    createEditorContributionManifest(languageModes),
-    createAssetContributionManifest(),
-    pipelineContributionPack,
-    diagramContributionPack,
-    createMarkdownContributionManifest(),
-    uiContributionPack,
-  ];
-}
-
 function resolveCommandIcon(commandId) {
   if (commandId.startsWith('workspace.import')) {
     return 'import';
@@ -489,17 +480,24 @@ function createTextForgeWorkbenchController() {
   let storageFailure;
   const blobLedger = createBlobUrlLedger(createBlobUrlDriver());
   const languageModes = listTextEditorLanguageModes();
-  const diagramFenceHandlers = createDiagramFenceHandlers();
-  const surfaceRegistry = createSurfaceRegistry([
-    codeMirrorTextEditorSurfaceContribution,
-    markdownPreviewSurfaceContribution,
-    ...assetSurfaceContributions,
+  const contributionRegistry = createContributionRegistry([
+    coreContributions,
+    workspaceContributionPack,
+    editorContributionPack,
+    assetContributionPack,
+    pipelineContributionPack,
+    diagramContributionPack,
+    markdownContributionPack,
+    uiContributionPack,
+    securityProfileContributionPack,
   ]);
-  const contributionPacks = createContributionPacks({
-    languageModes,
-    surfaceContributions: surfaceRegistry.list(),
-  });
-  const commandRegistry = createCommandRegistry(contributionPacks);
+  const resolvedDefaultContributions = contributionRegistry.resolve();
+  const surfaceRegistry = createSurfaceRegistry(
+    resolvedDefaultContributions.surfaces.filter((contribution) => contribution.status === 'active'),
+  );
+  contributionRegistry.registerManifest(createSurfaceContributionManifest(surfaceRegistry.list()));
+  const commandRegistry = createCommandRegistry(contributionRegistry.listManifests());
+  const contributionPacks = contributionRegistry.listManifests();
   const mainHost = createMainSurfaceHost({
     hostId: 'main',
     registry: surfaceRegistry,
@@ -1337,7 +1335,7 @@ function createTextForgeWorkbenchController() {
       resource: workspaceEntryToResourceRef(resource),
       sourceUpdatedAt: resource.metadata.updatedAt,
       resolveAssetReference: resolveMarkdownAssetReference,
-      fenceHandlers: diagramFenceHandlers,
+      contributionRegistry,
       fenceExecutionOptions: {
         document: globalThis.document,
         ...options.fenceExecutionOptions,
@@ -1587,6 +1585,7 @@ function createTextForgeWorkbenchController() {
     const badge = resource.metadata.badge;
     const icon = resolveEntryIcon(resource);
     const resourceTitle = resource.metadata.title ?? basenameWorkspacePath(resource.path) ?? resource.path;
+    // Temporary Phase 4.1 adapter: the shell still mounts the registered surface implementations here.
     if (session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(resource)) {
       const previewState = requestMarkdownPreview(resource);
       if (previewState.status === 'ready' && previewState.result) {
@@ -1670,6 +1669,7 @@ function createTextForgeWorkbenchController() {
       };
     }
 
+    // Temporary Phase 4.1 adapter: the shell still wires editor persistence callbacks around the registered editor contribution.
     if (session.contributionId === codeMirrorTextEditorSurfaceContribution.id && resource.representation === 'text') {
       const document = activeTextDocuments.get(resource.id) ?? createTextEditorDocument(
         workspaceEntryToResourceRef(resource),
@@ -1729,6 +1729,8 @@ function createTextForgeWorkbenchController() {
     });
     const readyBindingBase = lease ? markAssetBindingReady(binding, lease.url) : binding;
     const readyBinding = generatedResource.stale ? markAssetBindingStale(readyBindingBase) : readyBindingBase;
+    // Temporary Phase 4.1 adapter: asset viewers are discovered through registration, but the final
+    // contributionId-to-mount-function lookup stays local until Phase 5 replaces it with package runtime execution.
     const createAssetSurface = assetSurfaceFactoryByContributionId[session.contributionId] ?? createAssetViewerSurface;
     const surface = createAssetSurface(
       {

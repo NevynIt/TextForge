@@ -1,7 +1,13 @@
-export const severityLevels = ['hint', 'info', 'warning', 'error'];
+export const severityLevels = ['observation', 'information', 'warning', 'error'];
+
+export const legacySeverityAliases = {
+  hint: 'observation',
+  info: 'information',
+};
 
 export const resourceKinds = ['resource', 'generated', 'virtual'];
 export const resourceRepresentations = ['text', 'bytes'];
+export const capabilityStates = ['available', 'active', 'disabled', 'missing', 'failed'];
 
 export const resourceBadgePlacements = ['center', 'top', 'right', 'bottom', 'left'];
 
@@ -35,7 +41,48 @@ export const contributionKinds = {
   commands: 'commands',
   surfaces: 'surfaces',
   pipelines: 'pipelines',
+  markdownFenceHandlers: 'markdown-fence-handlers',
 };
+
+function normalizeSeverity(severity = 'information') {
+  const normalized = legacySeverityAliases[severity] ?? severity;
+  return severityLevels.includes(normalized) ? normalized : 'information';
+}
+
+function extensionFromPath(path) {
+  const fileName = path?.split(/[\\/]/).pop() ?? '';
+  const index = fileName.lastIndexOf('.');
+  return index >= 0 ? fileName.slice(index + 1).toLowerCase() : '';
+}
+
+function normalizeContributionCapabilities(contribution) {
+  return contribution.capabilities ?? contribution.capabilityIds ?? [];
+}
+
+function normalizeResourcePredicate(input = {}) {
+  return {
+    representations: input.representations ?? input.resourceRepresentations ?? [],
+    mimeTypes: input.mimeTypes ?? [],
+    languageIds: input.languageIds ?? [],
+    fileExtensions: input.fileExtensions ?? [],
+  };
+}
+
+function normalizeCapability(capability) {
+  return {
+    defaultActive: false,
+    scope: 'document',
+    ...capability,
+  };
+}
+
+function normalizeIdSet(values = []) {
+  return new Set(
+    values
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean),
+  );
+}
 
 function cloneCommandArrays(command) {
   return {
@@ -179,18 +226,29 @@ export function createResourceBadgeToken(overrides = {}) {
 }
 
 export function createDiagnostic(message, severity = 'info', overrides = {}) {
+  const normalizedSeverity = normalizeSeverity(overrides.severity ?? severity);
   return {
-    severity,
     message,
     ...overrides,
+    severity: normalizedSeverity,
+    origin: overrides.origin
+      ? {
+        ...overrides.origin,
+      }
+      : undefined,
+    related: overrides.related
+      ? overrides.related.map((entry) => ({
+        ...entry,
+      }))
+      : undefined,
   };
 }
 
 export function createCapability(id, overrides = {}) {
-  return {
+  return normalizeCapability({
     id,
     ...overrides,
-  };
+  });
 }
 
 export function createCommand(id, label, overrides = {}) {
@@ -455,6 +513,16 @@ export function createCommandDispatcher(options = {}) {
 export function createSurfaceContribution(id, overrides = {}) {
   return {
     id,
+    capabilities: normalizeContributionCapabilities(overrides),
+    localName: overrides.localName,
+    defaultActive: overrides.defaultActive ?? false,
+    resourcePredicate: normalizeResourcePredicate({
+      ...overrides.resourcePredicate,
+      resourceRepresentations: overrides.resourceRepresentations,
+      mimeTypes: overrides.mimeTypes,
+      languageIds: overrides.languageIds,
+      fileExtensions: overrides.fileExtensions,
+    }),
     ...overrides,
   };
 }
@@ -462,7 +530,25 @@ export function createSurfaceContribution(id, overrides = {}) {
 export function createPipelineContribution(id, overrides = {}) {
   return {
     id,
+    capabilities: normalizeContributionCapabilities(overrides),
+    localName: overrides.localName,
+    defaultActive: overrides.defaultActive ?? false,
     ...overrides,
+  };
+}
+
+export function createMarkdownFenceHandlerContribution(id, overrides = {}) {
+  return {
+    id,
+    label: overrides.label ?? id,
+    description: overrides.description,
+    capabilities: normalizeContributionCapabilities(overrides),
+    localName: overrides.localName,
+    defaultActive: overrides.defaultActive ?? false,
+    provisional: overrides.provisional ?? false,
+    localArtifactCompatible: overrides.localArtifactCompatible !== false,
+    fenceNames: [...(overrides.fenceNames ?? [])],
+    render: overrides.render,
   };
 }
 
@@ -478,12 +564,17 @@ export function createContributionManifest(packageId, overrides = {}) {
     commands: [],
     surfaces: [],
     pipelines: [],
+    markdownFenceHandlers: [],
     ...overrides,
-    dependencies: overrides.dependencies ?? [],
-    capabilities: overrides.capabilities ?? [],
+    dependencies: [...(overrides.dependencies ?? [])],
+    capabilities: (overrides.capabilities ?? []).map((capability) => normalizeCapability(capability)),
     commands: (overrides.commands ?? []).map((command) => normalizeCommand(command, packageId)),
-    surfaces: overrides.surfaces ?? [],
-    pipelines: overrides.pipelines ?? [],
+    surfaces: (overrides.surfaces ?? []).map((contribution) =>
+      createSurfaceContribution(contribution.id, contribution)),
+    pipelines: (overrides.pipelines ?? []).map((contribution) =>
+      createPipelineContribution(contribution.id, contribution)),
+    markdownFenceHandlers: (overrides.markdownFenceHandlers ?? []).map((contribution) =>
+      createMarkdownFenceHandlerContribution(contribution.id, contribution)),
   };
 }
 
@@ -525,6 +616,55 @@ export function getResourceRepresentation(resource) {
   }
 
   return undefined;
+}
+
+export function createResourceFacts(input = {}) {
+  const resourceId = input.resourceId ?? input.id ?? '';
+  return {
+    resourceId,
+    kind: input.kind === 'text' || input.kind === 'binary' ? 'resource' : input.kind,
+    representation: getResourceRepresentation(input),
+    path: input.path,
+    mimeType: input.mimeType,
+    languageId: input.languageId,
+    fileExtension: extensionFromPath(input.path),
+  };
+}
+
+export function createResourcePredicate(overrides = {}) {
+  return normalizeResourcePredicate(overrides);
+}
+
+export function matchesResourcePredicate(predicate = {}, input = {}) {
+  const normalizedPredicate = normalizeResourcePredicate(predicate);
+  const resourceFacts = createResourceFacts(input);
+
+  if (normalizedPredicate.representations.length > 0) {
+    if (!resourceFacts.representation || !normalizedPredicate.representations.includes(resourceFacts.representation)) {
+      return false;
+    }
+  }
+
+  if (normalizedPredicate.mimeTypes.length > 0) {
+    const normalizedMimeType = resourceFacts.mimeType?.toLowerCase();
+    if (!normalizedMimeType || !normalizedPredicate.mimeTypes.some((candidate) => candidate.toLowerCase() === normalizedMimeType)) {
+      return false;
+    }
+  }
+
+  if (normalizedPredicate.languageIds.length > 0) {
+    if (!resourceFacts.languageId || !normalizedPredicate.languageIds.includes(resourceFacts.languageId)) {
+      return false;
+    }
+  }
+
+  if (normalizedPredicate.fileExtensions.length > 0) {
+    if (!resourceFacts.fileExtension || !normalizedPredicate.fileExtensions.includes(resourceFacts.fileExtension)) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 function canDecodeUtf8(bytes) {
@@ -571,12 +711,6 @@ export function inferResourceRepresentation({ path, mimeType, bytes, fallback = 
   return fallback;
 }
 
-function extensionFromPath(path) {
-  const fileName = path?.split(/[\\/]/).pop() ?? '';
-  const index = fileName.lastIndexOf('.');
-  return index >= 0 ? fileName.slice(index + 1).toLowerCase() : '';
-}
-
 export function inferLanguageId({ path, mimeType, fallback = 'plaintext' } = {}) {
   const normalizedMimeType = mimeType?.toLowerCase();
   const byMime = languageDefinitions.find((definition) =>
@@ -589,6 +723,207 @@ export function inferLanguageId({ path, mimeType, fallback = 'plaintext' } = {})
   const extension = extensionFromPath(path);
   const byExtension = languageDefinitions.find((definition) => definition.extensions.includes(extension));
   return byExtension?.id ?? fallback;
+}
+
+function collectManifestContributions(manifests, propertyName) {
+  return manifests.flatMap((manifest) =>
+    (manifest[propertyName] ?? []).map((contribution) => ({
+      ...contribution,
+      packageId: contribution.packageId ?? manifest.packageId,
+    })));
+}
+
+function resolveCapabilityState(capability, context = {}) {
+  const disabledCapabilityIds = normalizeIdSet(context.disabledCapabilityIds);
+  const failedCapabilityIds = normalizeIdSet(context.failedCapabilityIds);
+  const activeCapabilityIds = new Set([
+    ...(context.activeCapabilityIds ?? []),
+    ...(capability.defaultActive ? [capability.id] : []),
+  ]);
+
+  if (failedCapabilityIds.has(capability.id)) {
+    return 'failed';
+  }
+
+  if (disabledCapabilityIds.has(capability.id)) {
+    return 'disabled';
+  }
+
+  if (activeCapabilityIds.has(capability.id)) {
+    return 'active';
+  }
+
+  return 'available';
+}
+
+function resolveContributionState(contribution, capabilityStateById, context = {}) {
+  const packageStatus = context.packageStatuses?.[contribution.packageId] ?? 'available';
+  if (packageStatus === 'failed') {
+    return 'failed';
+  }
+
+  if (packageStatus === 'disabled') {
+    return 'disabled';
+  }
+
+  const capabilityIds = normalizeContributionCapabilities(contribution);
+  if (capabilityIds.length === 0) {
+    return contribution.defaultActive === false ? 'available' : 'active';
+  }
+
+  if (capabilityIds.some((capabilityId) => capabilityStateById.get(capabilityId)?.status === 'failed')) {
+    return 'failed';
+  }
+
+  if (capabilityIds.some((capabilityId) => capabilityStateById.get(capabilityId)?.status === 'disabled')) {
+    return 'disabled';
+  }
+
+  if (capabilityIds.some((capabilityId) => capabilityStateById.get(capabilityId)?.status === 'active')) {
+    return 'active';
+  }
+
+  return 'available';
+}
+
+function createRegistryConflictDiagnostic(name, contributions, kind) {
+  return createDiagnostic(
+    `Active ${kind} contributions conflict on short name "${name}".`,
+    'error',
+    {
+      code: 'registry.active-conflict',
+      origin: {
+        packageId: '@textforge/core',
+        subsystem: 'contribution-registry',
+        ruleId: `${kind}:${name}`,
+      },
+      related: contributions.map((contribution) => ({
+        message: `${contribution.id} from ${contribution.packageId}`,
+      })),
+    },
+  );
+}
+
+export function createContributionRegistry(initialManifests = []) {
+  const manifests = new Map();
+
+  const registry = {
+    registerManifest(manifest) {
+      const normalizedManifest = createContributionManifest(
+        manifest.packageId ?? manifest.id ?? '@textforge/unknown',
+        manifest,
+      );
+      manifests.set(normalizedManifest.packageId, normalizedManifest);
+      return registry;
+    },
+    listManifests() {
+      return [...manifests.values()];
+    },
+    listCapabilities() {
+      return registry.listManifests().flatMap((manifest) => manifest.capabilities ?? []);
+    },
+    listCommands() {
+      return collectManifestContributions(registry.listManifests(), 'commands');
+    },
+    listSurfaces() {
+      return collectManifestContributions(registry.listManifests(), 'surfaces');
+    },
+    listPipelines() {
+      return collectManifestContributions(registry.listManifests(), 'pipelines');
+    },
+    listMarkdownFenceHandlers() {
+      return collectManifestContributions(registry.listManifests(), 'markdownFenceHandlers');
+    },
+    resolve(context = {}) {
+      const capabilities = registry.listCapabilities().map((capability) => ({
+        ...capability,
+        status: resolveCapabilityState(capability, context),
+      }));
+      const capabilityStateById = new Map(capabilities.map((capability) => [capability.id, capability]));
+      const resolvedCommands = registry.listCommands().map((command) => ({
+        ...command,
+        status: resolveContributionState(command, capabilityStateById, context),
+      }));
+      const resolvedSurfaces = registry.listSurfaces().map((surface) => ({
+        ...surface,
+        status: resolveContributionState(surface, capabilityStateById, context),
+      }));
+      const resolvedPipelines = registry.listPipelines().map((pipeline) => ({
+        ...pipeline,
+        status: resolveContributionState(pipeline, capabilityStateById, context),
+      }));
+      const resolvedMarkdownFenceHandlers = registry.listMarkdownFenceHandlers().map((handler) => ({
+        ...handler,
+        status: resolveContributionState(handler, capabilityStateById, context),
+      }));
+
+      const diagnostics = [];
+      const activeFenceHandlers = resolvedMarkdownFenceHandlers.filter((handler) => handler.status === 'active');
+      const fenceNameOwners = new Map();
+      for (const handler of activeFenceHandlers) {
+        for (const fenceName of handler.fenceNames ?? []) {
+          const normalizedFenceName = String(fenceName).trim().toLowerCase();
+          if (!normalizedFenceName) {
+            continue;
+          }
+
+          const currentOwners = fenceNameOwners.get(normalizedFenceName) ?? [];
+          currentOwners.push(handler);
+          fenceNameOwners.set(normalizedFenceName, currentOwners);
+        }
+      }
+
+      for (const [fenceName, owners] of fenceNameOwners.entries()) {
+        if (owners.length > 1) {
+          diagnostics.push(createRegistryConflictDiagnostic(fenceName, owners, 'markdown fence handler'));
+        }
+      }
+
+      const conflictingFenceNames = new Set(
+        [...fenceNameOwners.entries()]
+          .filter(([, owners]) => owners.length > 1)
+          .map(([fenceName]) => fenceName),
+      );
+      const markdownFenceHandlers = activeFenceHandlers.filter((handler) =>
+        !(handler.fenceNames ?? []).some((fenceName) => conflictingFenceNames.has(String(fenceName).trim().toLowerCase())));
+
+      return {
+        manifests: registry.listManifests(),
+        capabilities,
+        commands: resolvedCommands,
+        surfaces: resolvedSurfaces,
+        pipelines: resolvedPipelines,
+        markdownFenceHandlers,
+        diagnostics,
+      };
+    },
+    createMarkdownFenceHandlerMap(context = {}) {
+      const resolved = registry.resolve(context);
+      const handlers = {};
+      const knownFenceNames = new Set();
+      for (const contribution of registry.listMarkdownFenceHandlers()) {
+        for (const fenceName of contribution.fenceNames ?? []) {
+          knownFenceNames.add(String(fenceName).trim().toLowerCase());
+        }
+      }
+      for (const contribution of resolved.markdownFenceHandlers) {
+        for (const fenceName of contribution.fenceNames ?? []) {
+          handlers[String(fenceName).trim().toLowerCase()] = contribution;
+        }
+      }
+      return {
+        diagnostics: resolved.diagnostics,
+        knownFenceNames,
+        handlers,
+      };
+    },
+  };
+
+  for (const manifest of initialManifests) {
+    registry.registerManifest(manifest);
+  }
+
+  return registry;
 }
 
 export const defaultContributionManifest = createContributionManifest('@textforge/core');

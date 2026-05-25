@@ -2,17 +2,68 @@ import MarkdownIt from 'markdown-it';
 import markdownItAnchor from 'markdown-it-anchor';
 import markdownItFootnote from 'markdown-it-footnote';
 import markdownItKatex from 'markdown-it-katex';
-import { createCommand, createContributionManifest, createDiagnostic } from '@textforge/core';
+import {
+  createCapability,
+  createCommand,
+  createContributionManifest,
+  createDiagnostic,
+  createMarkdownFenceHandlerContribution,
+} from '@textforge/core';
 
 export const tfmdFenceAliases = ['tf-md', 'tfmd', 'textforge-md', 'textforge-markdown'];
+export const markdownCapabilities = [
+  createCapability('@textforge/markdown/capability/preview', {
+    description: 'Render Markdown and TF-MD source through the package preview surface.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/markdown/capability/local-assets', {
+    description: 'Resolve local workspace asset references inside Markdown content.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/markdown/capability/math', {
+    description: 'Render inline and block KaTeX markup in the Markdown preview.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/markdown/capability/fence-svg', {
+    description: 'Render inline SVG fenced blocks in the Markdown preview.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/markdown/capability/fence-json', {
+    description: 'Render JSON fenced blocks in the Markdown preview.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+  createCapability('@textforge/markdown/capability/fence-yaml', {
+    description: 'Render YAML fenced blocks in the Markdown preview.',
+    defaultActive: true,
+    scope: 'document',
+  }),
+];
 
-const knownFenceKinds = new Set(['mermaid', 'dot', 'graphviz', 'svg', 'json', 'yaml']);
+function createMarkdownDiagnostic(code, message, severity = 'information', overrides = {}) {
+  return createDiagnostic(message, severity, {
+    code,
+    origin: {
+      packageId: '@textforge/markdown',
+      subsystem: 'tfmd',
+      ...overrides.origin,
+    },
+    ...overrides,
+  });
+}
 
 export const markdownPreviewSurfaceContribution = {
   id: '@textforge/markdown/preview',
   label: 'Markdown preview',
   description: 'Render TF-MD and Markdown resources through the package-owned preview surface.',
   kind: 'markdown-preview',
+  localName: 'preview',
+  capabilities: ['@textforge/markdown/capability/preview'],
+  defaultActive: true,
   placements: ['main', 'popup', 'auxiliary'],
   resourceRepresentations: ['text'],
   languageIds: ['markdown'],
@@ -24,6 +75,7 @@ export const markdownPreviewSurfaceContribution = {
 export const markdownCommandContributions = [
   createCommand('markdown.insert-image-reference', 'Insert image reference', {
     category: 'markdown',
+    capabilities: ['@textforge/markdown/capability/preview', '@textforge/markdown/capability/local-assets'],
     description: 'Insert a workspace-relative Markdown image reference into the selected TF-MD source.',
     keywords: ['markdown', 'image', 'tf-md', 'snippet'],
     menu: { id: 'markdown', label: 'Markdown', groupOrder: 35, order: 10 },
@@ -37,6 +89,7 @@ export const markdownCommandContributions = [
   }),
   createCommand('markdown.insert-mermaid-block', 'Insert Mermaid block', {
     category: 'markdown',
+    capabilities: ['@textforge/markdown/capability/preview'],
     description: 'Insert a Mermaid fenced block template into the selected TF-MD source.',
     keywords: ['markdown', 'mermaid', 'diagram', 'tf-md'],
     menu: { id: 'markdown', label: 'Markdown', groupOrder: 35, order: 20 },
@@ -50,6 +103,7 @@ export const markdownCommandContributions = [
   }),
   createCommand('markdown.insert-graphviz-block', 'Insert Graphviz block', {
     category: 'markdown',
+    capabilities: ['@textforge/markdown/capability/preview'],
     description: 'Insert a Graphviz DOT fenced block template into the selected TF-MD source.',
     keywords: ['markdown', 'graphviz', 'dot', 'diagram', 'tf-md'],
     menu: { id: 'markdown', label: 'Markdown', groupOrder: 35, order: 30 },
@@ -63,6 +117,7 @@ export const markdownCommandContributions = [
   }),
   createCommand('markdown.export-print-html', 'Export print HTML', {
     category: 'markdown',
+    capabilities: ['@textforge/markdown/capability/preview'],
     description: 'Render the selected Markdown resource into print-optimized HTML and download it.',
     keywords: ['markdown', 'html', 'print', 'export'],
     menu: { id: 'markdown', label: 'Markdown', groupOrder: 35, order: 40 },
@@ -75,6 +130,7 @@ export const markdownCommandContributions = [
   }),
   createCommand('markdown.export-generated-diagrams', 'Export generated diagrams', {
     category: 'markdown',
+    capabilities: ['@textforge/markdown/capability/preview'],
     description: 'Render Mermaid and Graphviz blocks from the selected Markdown resource into generated SVG and PNG workspace assets.',
     keywords: ['markdown', 'diagram', 'svg', 'png', 'export'],
     menu: { id: 'markdown', label: 'Markdown', groupOrder: 35, order: 50 },
@@ -88,17 +144,91 @@ export const markdownCommandContributions = [
   }),
 ];
 
+export const markdownFenceHandlerContributions = [
+  createMarkdownFenceHandlerContribution('@textforge/markdown/fence-handler/svg', {
+    label: 'Inline SVG fenced block renderer',
+    description: 'Render inline SVG fenced blocks directly inside the Markdown preview.',
+    localName: 'svg',
+    capabilities: ['@textforge/markdown/capability/fence-svg'],
+    defaultActive: true,
+    provisional: true,
+    localArtifactCompatible: true,
+    fenceNames: ['svg'],
+    render({ content }) {
+      return {
+        html: renderInlineSvgBlock(content),
+        diagnostics: [],
+        generatedResources: [],
+      };
+    },
+  }),
+  createMarkdownFenceHandlerContribution('@textforge/markdown/fence-handler/json', {
+    label: 'JSON fenced block renderer',
+    description: 'Render JSON fenced blocks through the provisional Markdown preview dispatcher.',
+    localName: 'json',
+    capabilities: ['@textforge/markdown/capability/fence-json'],
+    defaultActive: true,
+    provisional: true,
+    localArtifactCompatible: true,
+    fenceNames: ['json'],
+    render({ content }) {
+      const diagnostics = [];
+      try {
+        JSON.parse(content);
+      } catch (error) {
+        diagnostics.push(createMarkdownDiagnostic(
+          'tfmd.fence.json-invalid',
+          error?.message ?? 'Invalid JSON fenced block.',
+          'warning',
+          {
+            origin: {
+              fenceName: 'json',
+            },
+          },
+        ));
+      }
+      return {
+        html: renderStaticDataBlock('json', content),
+        diagnostics,
+        generatedResources: [],
+      };
+    },
+  }),
+  createMarkdownFenceHandlerContribution('@textforge/markdown/fence-handler/yaml', {
+    label: 'YAML fenced block renderer',
+    description: 'Render YAML fenced blocks through the provisional Markdown preview dispatcher.',
+    localName: 'yaml',
+    capabilities: ['@textforge/markdown/capability/fence-yaml'],
+    defaultActive: true,
+    provisional: true,
+    localArtifactCompatible: true,
+    fenceNames: ['yaml'],
+    render({ content }) {
+      return {
+        html: renderStaticDataBlock('yaml', content),
+        diagnostics: [],
+        generatedResources: [],
+      };
+    },
+  }),
+];
+
 export function createMarkdownContributionManifest() {
   return createContributionManifest('@textforge/markdown', {
+    capabilities: markdownCapabilities,
     commands: markdownCommandContributions,
     surfaces: [markdownPreviewSurfaceContribution],
     pipelines: [
       {
         id: '@textforge/markdown/preview-html',
+        localName: 'preview-html',
+        capabilities: ['@textforge/markdown/capability/preview'],
+        defaultActive: true,
         input: 'text',
         output: 'html',
       },
     ],
+    markdownFenceHandlers: markdownFenceHandlerContributions,
   });
 }
 
@@ -180,13 +310,21 @@ function parseControlBlock(blockSource, diagnostics) {
     }
 
     if (!line.startsWith('%')) {
-      diagnostics.push(createDiagnostic(`Invalid TF-MD directive line: ${line}`, 'error'));
+      diagnostics.push(createMarkdownDiagnostic(
+        'tfmd.directive.invalid-line',
+        `Invalid TF-MD directive line: ${line}`,
+        'error',
+      ));
       continue;
     }
 
     const match = line.match(/^%([A-Za-z][A-Za-z0-9_-]*)(?:\s+([^{]+?))?\s*(\{)?\s*$/);
     if (!match) {
-      diagnostics.push(createDiagnostic(`Invalid TF-MD directive syntax: ${line}`, 'error'));
+      diagnostics.push(createMarkdownDiagnostic(
+        'tfmd.directive.invalid-syntax',
+        `Invalid TF-MD directive syntax: ${line}`,
+        'error',
+      ));
       continue;
     }
 
@@ -222,11 +360,29 @@ function parseControlBlock(blockSource, diagnostics) {
           break;
         }
         default:
-          diagnostics.push(createDiagnostic(`Unsupported TF-MD directive: %${directiveName}`, 'warning'));
+          diagnostics.push(createMarkdownDiagnostic(
+            'tfmd.directive.unsupported',
+            `Unsupported TF-MD directive: %${directiveName}`,
+            'warning',
+            {
+              origin: {
+                directive: directiveName,
+              },
+            },
+          ));
           break;
       }
     } catch (error) {
-      diagnostics.push(createDiagnostic(error?.message ?? `Failed to parse %${directiveName}`, 'error'));
+      diagnostics.push(createMarkdownDiagnostic(
+        'tfmd.directive.parse-failed',
+        error?.message ?? `Failed to parse %${directiveName}`,
+        'error',
+        {
+          origin: {
+            directive: directiveName,
+          },
+        },
+      ));
     }
   }
 
@@ -369,7 +525,11 @@ function createMarkdownProcessor(environment) {
         if (openToken.type === 'heading_open') {
           openToken.attrSet('id', extracted.anchor);
         } else {
-          env.diagnostics.push(createDiagnostic(`Paragraph attribute anchors are not supported in the TF-MD baseline: ${extracted.anchor}`, 'warning'));
+          env.diagnostics.push(createMarkdownDiagnostic(
+            'tfmd.anchor.paragraph-unsupported',
+            `Paragraph attribute anchors are not supported in the TF-MD baseline: ${extracted.anchor}`,
+            'warning',
+          ));
         }
       }
 
@@ -392,7 +552,16 @@ function createMarkdownProcessor(environment) {
       token.attrSet('src', resolved.resolvedSrc);
       env.referencedAssets.push(resolved);
     } else {
-      env.diagnostics.push(createDiagnostic(`Unable to resolve Markdown asset reference: ${href}`, 'warning'));
+      env.diagnostics.push(createMarkdownDiagnostic(
+        'tfmd.asset.unresolved',
+        `Unable to resolve Markdown asset reference: ${href}`,
+        'warning',
+        {
+          origin: {
+            subsystem: 'asset-resolution',
+          },
+        },
+      ));
     }
 
     return defaultImageRenderer(tokens, idx, options, env, self);
@@ -401,15 +570,7 @@ function createMarkdownProcessor(environment) {
   return markdown;
 }
 
-function renderStaticDataBlock(kind, content, diagnostics) {
-  if (kind === 'json') {
-    try {
-      JSON.parse(content);
-    } catch (error) {
-      diagnostics.push(createDiagnostic(error?.message ?? 'Invalid JSON fenced block.', 'warning'));
-    }
-  }
-
+function renderStaticDataBlock(kind, content) {
   return `
 <div class="tfmd-block tfmd-block--${kind}">
   <pre><code class="language-${kind}">${escapeHtml(content)}</code></pre>
@@ -434,6 +595,10 @@ function renderDiagramBlock(kind, html, blockId) {
 }
 
 async function resolveKnownFencedBlocks(source, options, environment) {
+  const fenceHandlerRegistry = resolveMarkdownFenceHandlerRegistry(options);
+  if (fenceHandlerRegistry.diagnostics?.length) {
+    environment.diagnostics.push(...fenceHandlerRegistry.diagnostics);
+  }
   const fencePattern = /```([^\n]+)\r?\n([\s\S]*?)\r?\n```/g;
   let output = '';
   let blockCounter = 0;
@@ -446,31 +611,32 @@ async function resolveKnownFencedBlocks(source, options, environment) {
     output += source.slice(lastIndex, blockIndex);
     lastIndex = blockIndex + rawFence.length;
 
-    if (tfmdFenceAliases.includes(kind) || !knownFenceKinds.has(kind)) {
+    if (tfmdFenceAliases.includes(kind)) {
+      output += rawFence;
+      continue;
+    }
+
+    const handlerContribution = fenceHandlerRegistry.handlers[kind];
+    if (!handlerContribution?.render) {
+      if (fenceHandlerRegistry.knownFenceNames?.has(kind)) {
+        environment.diagnostics.push(createMarkdownDiagnostic(
+          'tfmd.fence.handler-unavailable',
+          `No active renderer is available for the ${kind} fenced block.`,
+          'warning',
+          {
+            origin: {
+              fenceName: kind,
+            },
+          },
+        ));
+      }
       output += rawFence;
       continue;
     }
 
     const blockId = `tfmd-block-${++blockCounter}`;
-    if (kind === 'svg') {
-      output += renderInlineSvgBlock(blockContent);
-      continue;
-    }
-
-    if (kind === 'json' || kind === 'yaml') {
-      output += renderStaticDataBlock(kind, blockContent, environment.diagnostics);
-      continue;
-    }
-
-    const handler = options.fenceHandlers?.[kind];
-    if (!handler) {
-      environment.diagnostics.push(createDiagnostic(`No renderer is available for the ${kind} fenced block.`, 'warning'));
-      output += rawFence;
-      continue;
-    }
-
     try {
-      const result = await handler({
+      const result = await handlerContribution.render({
         content: blockContent,
         blockId,
         blockKind: kind,
@@ -488,13 +654,56 @@ async function resolveKnownFencedBlocks(source, options, environment) {
       }
       output += renderDiagramBlock(kind, result.html, blockId);
     } catch (error) {
-      environment.diagnostics.push(createDiagnostic(error?.message ?? `Failed to render ${kind} block.`, 'warning'));
+      environment.diagnostics.push(createMarkdownDiagnostic(
+        'tfmd.fence.render-failed',
+        error?.message ?? `Failed to render ${kind} block.`,
+        'warning',
+        {
+          origin: {
+            contributionId: handlerContribution.id,
+            fenceName: kind,
+          },
+        },
+      ));
       output += rawFence;
     }
   }
 
   output += source.slice(lastIndex);
   return output;
+}
+
+function resolveMarkdownFenceHandlerRegistry(options = {}) {
+  if (options.contributionRegistry?.createMarkdownFenceHandlerMap) {
+    return options.contributionRegistry.createMarkdownFenceHandlerMap(options.contributionContext);
+  }
+
+  const compatibilityHandlers = Object.entries(options.fenceHandlers ?? {}).reduce((accumulator, [fenceName, handler]) => {
+    accumulator[String(fenceName).trim().toLowerCase()] = {
+      id: `compatibility:${fenceName}`,
+      render: handler,
+    };
+    return accumulator;
+  }, {});
+
+  const builtInHandlers = markdownFenceHandlerContributions.reduce((accumulator, contribution) => {
+    for (const fenceName of contribution.fenceNames ?? []) {
+      accumulator[String(fenceName).trim().toLowerCase()] = contribution;
+    }
+    return accumulator;
+  }, {});
+
+  return {
+    diagnostics: [],
+    knownFenceNames: new Set(Object.keys({
+      ...builtInHandlers,
+      ...compatibilityHandlers,
+    })),
+    handlers: {
+      ...builtInHandlers,
+      ...compatibilityHandlers,
+    },
+  };
 }
 
 function createTfmdStyleSheet(styles) {

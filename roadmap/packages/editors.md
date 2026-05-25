@@ -184,3 +184,7 @@ The package now exposes the existing source-editor language-mode changes as shel
 ## Phase 3.5 closure note
 
 The editor surface keeps the same CodeMirror ownership and language workflow, but its shared header now uses a generic `Source editor` label so the surrounding shell can keep visible active-title repetition within the Phase 3.5 bounds. Browser validation at the required desktop states confirms the text surface remains the dominant region while the resized shell rails and popup overlay chrome stay outside the editor's behavior contract.
+
+## Phase 4.1 closure note
+
+The package now exposes the CodeMirror source editor and language-mode actions as default-active contributions with stable capability IDs so the shell can consume them through registration rather than bespoke editor lists. The runtime persistence wiring in the app remains an explicitly marked temporary adapter for Phase 5, but the editor-facing metadata and selection of active built-ins is now package-registered.

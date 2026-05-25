@@ -20,7 +20,7 @@ import {
   exportWorkspaceToZip,
   importWorkspaceFromZip,
   workspaceEntryToResourceRef,
-} from '../../workspace/src/index.js';
+} from '@textforge/workspace';
 
 const request = {
   resource: { resourceId: 'resource-1', path: '/docs/system.svg', kind: 'resource', representation: 'bytes', mimeType: 'image/svg+xml' },

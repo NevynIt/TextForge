@@ -6,7 +6,7 @@ import {
   createContributionManifest,
   createResourceBadgeToken,
   createResourceRef,
-} from '../../core/src/index.js';
+} from '@textforge/core';
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();

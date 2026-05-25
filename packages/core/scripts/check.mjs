@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import {
   contributionKinds,
@@ -7,23 +10,28 @@ import {
   createCanonicalPatch,
   createCommand,
   createContributionManifest,
+  createContributionRegistry,
   createDiagnostic,
-  editorCapabilityIds,
-  getLanguageDefinition,
-  inferLanguageId,
-  languageDefinitions,
+  createMarkdownFenceHandlerContribution,
   createPipelineValue,
+  createResourceFacts,
+  createResourcePredicate,
   createResourceRef,
-  inferResourceRepresentation,
   createSourcePosition,
   createSourceRange,
   createSurfaceContribution,
-  severityLevels,
+  editorCapabilityIds,
+  getLanguageDefinition,
+  inferLanguageId,
+  inferResourceRepresentation,
+  languageDefinitions,
+  matchesResourcePredicate,
   resourceKinds,
   resourceRepresentations,
+  severityLevels,
 } from '../src/index.js';
 
-assert.deepEqual(severityLevels, ['hint', 'info', 'warning', 'error']);
+assert.deepEqual(severityLevels, ['observation', 'information', 'warning', 'error']);
 assert.deepEqual(resourceKinds, ['resource', 'generated', 'virtual']);
 assert.deepEqual(resourceRepresentations, ['text', 'bytes']);
 assert.equal(languageDefinitions.length, 14);
@@ -32,6 +40,7 @@ assert.equal(inferLanguageId({ path: '/docs/process.bpmn', mimeType: 'applicatio
 assert.equal(inferLanguageId({ path: '/docs/model.yaml' }), 'yaml');
 assert.equal(editorCapabilityIds.languageMode, 'editor.language-mode');
 assert.equal(contributionKinds.surfaces, 'surfaces');
+assert.equal(contributionKinds.markdownFenceHandlers, 'markdown-fence-handlers');
 assert.equal(contributions.id, '@textforge/core');
 
 const ref = createResourceRef('resource-1', { path: '/docs/note.md', kind: 'resource', representation: 'text' });
@@ -40,8 +49,8 @@ assert.equal(ref.path, '/docs/note.md');
 assert.equal(inferResourceRepresentation({ path: '/docs/system.svg', mimeType: 'image/svg+xml' }), 'text');
 
 const range = createSourceRange(createSourcePosition(1, 1), createSourcePosition(1, 5, 4));
-const diagnostic = createDiagnostic('Example', 'warning', { source: range, resource: ref });
-assert.equal(diagnostic.severity, 'warning');
+const diagnostic = createDiagnostic('Example', 'info', { source: range, resource: ref });
+assert.equal(diagnostic.severity, 'information');
 assert.equal(diagnostic.source?.end.offset, 4);
 
 const manifest = createContributionManifest('@textforge/example', { commands: [createCommand('noop', 'No-op')] });
@@ -57,5 +66,46 @@ assert.equal(pipelineValue.kind, 'workspace');
 
 const patch = createCanonicalPatch(ref, [{ op: 'replace', path: '/title', value: 'Updated' }]);
 assert.equal(patch.operations[0].op, 'replace');
+
+const predicate = createResourcePredicate({
+  representations: ['text'],
+  mimeTypes: ['image/svg+xml'],
+  fileExtensions: ['svg'],
+});
+assert.equal(matchesResourcePredicate(predicate, createResourceFacts({
+  resourceId: 'resource-2',
+  path: '/docs/diagram.svg',
+  kind: 'resource',
+  representation: 'text',
+  mimeType: 'image/svg+xml',
+})), true);
+
+const contributionRegistry = createContributionRegistry([
+  createContributionManifest('@textforge/markdown', {
+    capabilities: [createCapability('@textforge/markdown/capability/json', { defaultActive: true })],
+    markdownFenceHandlers: [
+      createMarkdownFenceHandlerContribution('@textforge/markdown/json', {
+        fenceNames: ['json'],
+        capabilities: ['@textforge/markdown/capability/json'],
+        defaultActive: true,
+      }),
+    ],
+  }),
+]);
+assert.equal(contributionRegistry.createMarkdownFenceHandlerMap().handlers.json.id, '@textforge/markdown/json');
+
+const workspaceRoot = fileURLToPath(new URL('..\\..\\..', import.meta.url));
+const auditedFiles = [
+  'packages/workspace/src/index.js',
+  'packages/assets/scripts/check.mjs',
+  'packages/assets/test/index.test.js',
+];
+
+for (const filePath of auditedFiles) {
+  const contents = await readFile(resolve(workspaceRoot, filePath), 'utf8');
+  if (/@textforge\/.*\/src\//.test(contents) || /\.\.\/\.\.\/(?:[^"'`]+)src\/index\.js/.test(contents)) {
+    throw new Error(`Phase 4.1 public API audit failed: ${filePath} still uses a cross-package src import.`);
+  }
+}
 
 console.info('core package checks passed');

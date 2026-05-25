@@ -1,4 +1,9 @@
-import { createCommand, createContributionManifest } from '@textforge/core';
+import {
+  createCommand,
+  createContributionManifest,
+  createDiagnostic,
+  matchesResourcePredicate,
+} from '@textforge/core';
 
 export const surfaceCommandContributions = [
   createCommand('surface.close-active', 'Close active surface', {
@@ -91,81 +96,13 @@ function matchesPlacement(contribution, placement) {
   return placements.includes(placement);
 }
 
-function extensionFromPath(path) {
-  const fileName = path?.split(/[\\/]/).pop() ?? '';
-  const index = fileName.lastIndexOf('.');
-  return index >= 0 ? fileName.slice(index + 1).toLowerCase() : '';
-}
-
-function matchesRepresentation(contribution, representation) {
-  if (!representation) {
-    return true;
-  }
-
-  const resourceRepresentations = contribution.resourceRepresentations ?? [];
-  return resourceRepresentations.length === 0 || resourceRepresentations.includes(representation);
-}
-
-function matchesMimeType(contribution, mimeType) {
-  const contributionMimeTypes = contribution.mimeTypes ?? [];
-  if (contributionMimeTypes.length === 0) {
-    return true;
-  }
-
-  if (!mimeType) {
-    return false;
-  }
-
-  const normalizedMimeType = mimeType.toLowerCase();
-  return contributionMimeTypes.some((candidate) => candidate.toLowerCase() === normalizedMimeType);
-}
-
-function matchesLanguageId(contribution, languageId) {
-  const contributionLanguageIds = contribution.languageIds ?? [];
-  if (contributionLanguageIds.length === 0) {
-    return true;
-  }
-
-  if (!languageId) {
-    return false;
-  }
-
-  return contributionLanguageIds.includes(languageId);
-}
-
-function matchesPathExtension(contribution, path) {
-  const contributionExtensions = contribution.fileExtensions ?? [];
-  if (contributionExtensions.length === 0) {
-    return true;
-  }
-
-  const extension = extensionFromPath(path);
-  if (!extension) {
-    return false;
-  }
-
-  return contributionExtensions.includes(extension);
-}
-
 export function canOpenWithSurface(contribution, request) {
   const requestedPlacement = request.placement ?? 'main';
   if (!matchesPlacement(contribution, requestedPlacement)) {
     return false;
   }
 
-  if (!matchesRepresentation(contribution, request.resource.representation)) {
-    return false;
-  }
-
-  if (!matchesMimeType(contribution, request.resource.mimeType)) {
-    return false;
-  }
-
-  if (!matchesLanguageId(contribution, request.resource.languageId)) {
-    return false;
-  }
-
-  if (!matchesPathExtension(contribution, request.resource.path)) {
+  if (!matchesResourcePredicate(contribution.resourcePredicate ?? contribution, request.resource)) {
     return false;
   }
 
@@ -222,6 +159,22 @@ export function createOpenWithSelection(registry, request) {
   return {
     resource: request.resource,
     placement,
+    diagnostics: candidates.length === 0
+      ? [
+        createDiagnostic(
+          `No registered surface can open ${request.resource.path ?? request.resource.resourceId}.`,
+          'warning',
+          {
+            code: 'surface.unavailable',
+            origin: {
+              packageId: '@textforge/surfaces',
+              subsystem: 'open-with',
+            },
+            resource: request.resource,
+          },
+        ),
+      ]
+      : [],
     candidates: candidates.map((contribution) => ({
       surfaceId: contribution.id,
       label: contribution.label ?? contribution.id,

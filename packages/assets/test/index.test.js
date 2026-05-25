@@ -24,7 +24,7 @@ import {
   importWorkspaceFromZip,
   resetWorkspaceDexieStorage,
   workspaceEntryToResourceRef,
-} from '../../workspace/src/index.js';
+} from '@textforge/workspace';
 
 const fixedNow = () => '2026-05-24T00:00:00.000Z';
 

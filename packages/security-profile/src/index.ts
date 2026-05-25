@@ -160,7 +160,7 @@ function createResult(
       ? 'error'
       : diagnostics.some((diagnostic) => diagnostic.severity === 'warning')
         ? 'warning'
-        : 'info',
+        : 'information',
     diagnostics,
     summary,
   };
