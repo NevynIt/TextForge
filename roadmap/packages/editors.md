@@ -109,6 +109,17 @@ Implementation anchors:
 
 Update only as needed to let existing editor commands resolve against an explicit context target when the target is a text-representation resource or active text surface. Do not add rich editing, source transformations, or new language behavior in this phase.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update. Audit CodeMirror source editor surfaces and language support as default contribution candidates with stable contribution IDs and capability associations. Ensure source-editor eligibility is based on resource facts and capability predicates rather than app-shell file-type branches.
+
 ### Phase 6 — ITM integration and model/report foundation
 
 Implementation anchors:
@@ -142,7 +153,7 @@ Update. Define rich-editor capability and unsupported-construct warning conventi
 
 ## Tests and definition of done
 
-Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests, React-shell mounting smoke tests after Phase 3.1, command descriptor tests after Phase 3.3 where applicable, text-editor fit/readability checks after Phase 3.4, screenshot/layout checks after Phase 3.5, text-representation compatibility tests after Phase 3.6, and context-target editor command checks after Phase 3.7.
+Include Phase 4.1 stabilization audit checks where this package is in scope. Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests, React-shell mounting smoke tests after Phase 3.1, command descriptor tests after Phase 3.3 where applicable, text-editor fit/readability checks after Phase 3.4, screenshot/layout checks after Phase 3.5, text-representation compatibility tests after Phase 3.6, and context-target editor command checks after Phase 3.7.
 
 ## Non-goals
 

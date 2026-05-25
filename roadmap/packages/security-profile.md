@@ -116,6 +116,28 @@ Implementation anchors:
 
 Update. Confirm context menus are local UI affordances over the existing command dispatcher. They must not introduce native OS shell integration, additional browser permissions, remote command dispatch, external plugin loading, filesystem access, or privileged clipboard/file APIs beyond the existing explicit upload/download flows.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update. Reassert the local/extension-hosted artifact contract: the shipped local path must be source-owned, must not rely on dev-server semantics, root-relative assets, remote/CDN imports, or module-script behavior that breaks direct local or extension-hosted execution. Add or maintain checks that catch these regressions before Phase 5.
+
+### Phase 5 — Contribution registries and package composition
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`.
+- Grilling record: `roadmap/grilling/phase-5-grilling.md`.
+- pnpm packages: Phase 5: No new package install.
+
+
+Update. Verify that Phase 5 package composition is static and bundled, and that `%require` is only a capability activation/check directive. It must not fetch, install, import, or load remote code, and must not introduce repository, marketplace, or runtime plugin-loading behavior.
+
 ### Phase 16 — ArchiMate visual editing investigation
 
 Implementation anchors:
@@ -138,7 +160,7 @@ Update. Finalize reusable browser-envelope checks for static/extension/PWA targe
 
 ## Tests and definition of done
 
-Browser-envelope checks for CSP, manifests, service workers, remote assets, forbidden privileged APIs, browser-managed storage boundaries, command-palette local execution assumptions, deterministic local badge/icon checks, popup/resize local-state checks, local-only resource classification checks after Phase 3.6, local context-menu command projection checks after Phase 3.7, and dependency licenses.
+Include Phase 4.1 stabilization audit checks where this package is in scope. Browser-envelope checks for CSP, manifests, service workers, remote assets, forbidden privileged APIs, browser-managed storage boundaries, command-palette local execution assumptions, deterministic local badge/icon checks, popup/resize local-state checks, local-only resource classification checks after Phase 3.6, local context-menu command projection checks after Phase 3.7, and dependency licenses.
 
 ## Non-goals
 

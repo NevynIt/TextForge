@@ -63,6 +63,17 @@ Implementation anchors:
 
 Create. TF-MD baseline processor and markdown-it preview surface: Markdown-compatible reader, explicit heading anchors, heading/paragraph/inline style references, `tf-md` control block scanner, `%metadata`, `%style`, diagnostics, workspace-relative image resolver, Markdown toolbar for inserting workspace images/diagram blocks, print-optimized HTML baseline, and provisional fenced-block dispatch for known local block types. Preserve unknown fenced blocks as code.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update. Keep the Phase 4 fenced-block dispatcher explicitly provisional. Isolate hardcoded handlers and shape built-in Markdown, Mermaid, DOT/Graphviz, math, SVG/JSON/YAML, and local asset behaviors as default contributions with stable IDs, capability associations, shared diagnostics, and local-artifact compatibility notes.
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -71,7 +82,7 @@ Implementation anchors:
 - pnpm packages: Phase 5: No new package install.
 
 
-Update. Replace the Phase 4 provisional fenced-block dispatcher with contribution/capability-aware block-handler registration. Add `%require` parsing/diagnostics for missing Markdown processors, renderers, profiles, or block handlers. Do not implement `%include`, `%repository`, or ITM publication in this phase.
+Update. Parse `%require` as capability activation/check only against bundled registered capabilities. Replace the Phase 4 provisional fenced-block dispatcher with capability-aware block-handler contributions resolved through the document capability context. Use the default Markdown capability profile for base Markdown, Mermaid, math, and Graphviz; preserve unknown fenced blocks where appropriate; emit source-identifiable diagnostics for missing processors, renderers, profiles, or block handlers. Do not implement `%include`, `%repository`, remote package loading, or ITM publication in this phase.
 
 ### Phase 6 — ITM integration and model/report foundation
 
@@ -135,7 +146,7 @@ Update. Evaluate local Markdown/HTML-to-PDF pipeline after print HTML stabilizes
 
 ## Tests and definition of done
 
-Markdown rendering tests, TF-MD profile fixture tests, `tf-md` directive diagnostics, workspace image resolution tests against Phase 3.6 unified resources, fenced-block preservation tests, `%require` capability diagnostics after Phase 5, `itm`/`itm-pub` integration tests after Phase 6, include/resolved Markdown/report pipeline tests after Phase 9, and rich-editor round-trip tests after Phase 14.
+Include Phase 4.1 stabilization audit checks where this package is in scope. Markdown rendering tests, TF-MD profile fixture tests, `tf-md` directive diagnostics, workspace image resolution tests against Phase 3.6 unified resources, fenced-block preservation tests, `%require` capability diagnostics after Phase 5, `itm`/`itm-pub` integration tests after Phase 6, include/resolved Markdown/report pipeline tests after Phase 9, and rich-editor round-trip tests after Phase 14.
 
 ## Non-goals
 

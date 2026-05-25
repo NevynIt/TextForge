@@ -88,6 +88,17 @@ Implementation anchors:
 
 Update. Add concise usage notes or screenshots showing workspace tree and tab/session context menus. Document that context menu entries are projections of the same command registry used by the toolbar, top menu, and command palette.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update only if stabilization changes examples, fixtures, onboarding docs, or visible package/status concepts. Keep `roadmap/grilling/` records and the reusable grilling prompt discoverable from the roadmap README; do not duplicate phase grilling content into examples unless it becomes user-facing tutorial material.
+
 ### Phase 19 — Release-envelope verification and accreditation evidence
 
 Implementation anchors:
@@ -100,7 +111,7 @@ Update. Add release checklist, example accreditation output, sample build artifa
 
 ## Tests and definition of done
 
-Resource browser smoke tests, example workspace load tests, tutorial freshness checks, SVG-as-text/open-with fixtures after Phase 3.6, and context-menu documentation checks after Phase 3.7.
+Include Phase 4.1 stabilization audit checks where this package is in scope. Resource browser smoke tests, example workspace load tests, tutorial freshness checks, SVG-as-text/open-with fixtures after Phase 3.6, and context-menu documentation checks after Phase 3.7.
 
 ## Non-goals
 

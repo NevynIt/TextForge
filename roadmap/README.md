@@ -1,10 +1,10 @@
-# TextForge Rebuild Roadmap Package V15m
+# TextForge Rebuild Roadmap Package V15n
 
 This package is arranged as a single drop-in `roadmap/` folder for the TextForge repository. Copy or merge this folder into the repository root. After that, every coding agent should start from `roadmap/AGENTS_START_HERE.md`.
 
-The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, reference specifications, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15m marks Phase 4 as completed, moves the next implementation step to the Phase 5 contribution-registry and package-composition pass, and keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row. It also keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
+The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, reference specifications, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15n marks Phase 4 as completed, inserts Phase 4.1 as the mandatory foundation-stabilization gate before Phase 5, and keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row. It also keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
 
-The roadmap also includes exact architecture-reference anchors, a consolidated pnpm install matrix, and a phase-sequenced package dependency activity diagram that shows when each package starts depending on other packages and app surfaces across Phases -1 through 19, including the new 3.6/3.7 pre-Phase-4 corrections.
+The roadmap also includes exact architecture-reference anchors, a consolidated pnpm install matrix, and a phase-sequenced package dependency activity diagram that shows when each package starts depending on other packages and app surfaces across Phases -1 through 19, including the 3.6/3.7 pre-Phase-4 corrections and the new Phase 4.1 pre-Phase-5 stabilization gate.
 
 For runnable local artifacts, the live instruction set now assumes a source-owned bootstrap path: a canonical file-launch HTML document plus a deterministic classic loader bundle, not a shipped module-script HTML entry repaired by post-build rewriting.
 
@@ -22,6 +22,9 @@ Authority split:
 - `02_phase_architecture_pnpm_matrix.md` - consolidated phase/package architecture references and pnpm install commands.
 - `03_package_dependency_activity_diagram.md` - package dependency activity sequence diagram across roadmap phases.
 - `04_phase_3_5_screenshot_validation_checklist.md` - screenshot-based validation checklist for Phase 3.5 shell usability.
+- `grilling/README.md` - reusable phase-grilling prompt, usage rules, and index of phase grilling records.
+- `grilling/phase-4.1-grilling.md` - accepted grilling record that introduced Phase 4.1 as the pre-Phase-5 foundation stabilization gate.
+- `grilling/phase-5-grilling.md` - accepted Phase 5 contribution/capability registry grilling record.
 - `specs/textforge_markdown_profile.md` - TF-MD source specification used to phase Markdown-profile implementation across Phases 4, 5, 6, 9, and 14.
 - `validation/phase-3-5-reference-antipattern.png` - reference screenshot showing the layout anti-patterns Phase 3.5 must eliminate.
 - `validation/phase-3-5-validation-report.json` - browser-measured Phase 3.5 layout, overflow, popup, and duplicate-title metrics at the required desktop states.
@@ -36,10 +39,11 @@ Authority split:
 2. Start with `roadmap/AGENTS_START_HERE.md`.
 3. If the repository has not yet been pivoted, use Phase -1 in `roadmap/00_package_aware_roadmap.md` together with `roadmap/01_repository_and_package_strategy.md`.
 4. Use `roadmap/00_package_aware_roadmap.md` to determine the current phase.
-5. Use `roadmap/02_phase_architecture_pnpm_matrix.md` to confirm the active phase's exact architecture anchors and pnpm dependency commands.
-6. Use `roadmap/03_package_dependency_activity_diagram.md` to understand cross-package dependency activation for the current and next phases.
-7. Maintain `roadmap/RAPID.md` continuously. Historical RAPID rows are append-only and must always be appended at the end of the file; add superseding or correction rows instead of editing old entries or regrouping rows by type.
-8. Commit roadmap/RAPID updates together with implementation changes.
+5. If `roadmap/grilling/phase-[PHASE-NUMBER]-grilling.md` exists for the active phase, read it before implementation.
+6. Use `roadmap/02_phase_architecture_pnpm_matrix.md` to confirm the active phase's exact architecture anchors and pnpm dependency commands.
+7. Use `roadmap/03_package_dependency_activity_diagram.md` to understand cross-package dependency activation for the current and next phases.
+8. Maintain `roadmap/RAPID.md` continuously. Historical RAPID rows are append-only and must always be appended at the end of the file; add superseding or correction rows instead of editing old entries or regrouping rows by type.
+9. Commit roadmap/RAPID updates together with implementation changes.
 
 ## Repository-local structure after upload
 
@@ -55,6 +59,10 @@ roadmap/
   textforge_rebuild_whitepaper_main.md
   specs/
     textforge_markdown_profile.md
+  grilling/
+    README.md
+    phase-4.1-grilling.md
+    phase-5-grilling.md
   packages/
     core.md
     workspace.md

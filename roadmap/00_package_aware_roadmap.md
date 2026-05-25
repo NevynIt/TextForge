@@ -1,8 +1,8 @@
-# TextForge V15j Package-Aware Roadmap
+# TextForge V15n Package-Aware Roadmap
 
 This roadmap interweaves the architecture milestones with the package split. It is intentionally package-oriented: every phase states which packages are created or updated and what each package receives.
 
-For a phase-sequenced cross-package dependency view, see `roadmap/03_package_dependency_activity_diagram.md`.
+For a phase-sequenced cross-package dependency view, see `roadmap/03_package_dependency_activity_diagram.md`. Phase-specific grilling records live under `roadmap/grilling/` and must be consulted when they exist for the active phase.
 
 Architecture references in this roadmap use anchor IDs from `roadmap/02_architecture_paragraph_reference_index.md`. Each anchor maps to an exact paragraph or paragraph-like block and line range in `roadmap/textforge_rebuild_whitepaper_main.md`. Dependency rows use executable pnpm commands whenever a package needs a new workspace or third-party dependency.
 
@@ -28,6 +28,7 @@ The TextForge Markdown Profile source specification lives at `roadmap/specs/text
 |---|---|---|
 | Phase 2 | Markdown remains a source-editor language mode only. No TF-MD semantic claim. | Pre-profile editing support. |
 | Phase 4 | Establish the TF-MD baseline in `@textforge/markdown`: Markdown-compatible reading, explicit heading anchors, style references, `tf-md` control block scanning, `%metadata`, `%style`, initial diagnostics, local images, and a provisional fenced-block dispatcher for Mermaid, DOT/Graphviz, SVG, JSON, and YAML. | Claims Level 1 and Level 2; preserves unknown fenced blocks. |
+| Phase 4.1 | Stabilize the shared diagnostic contract, default-contribution shape, command/action spine, public package API boundaries, and resource-fact/surface-predicate seam that Phase 5 will use. | No new TF-MD conformance level; mandatory stabilization before the Level 4 machinery is implemented. |
 | Phase 5 | Replace provisional block dispatch with contribution/capability-aware registration and `%require` diagnostics using package manifests. | Adds Level 4 machinery, but cumulative conformance is not claimed past Level 2 until Phase 9 completes composition. |
 | Phase 6 | Add model-aware Markdown by connecting `itm` and `itm-pub` fenced blocks to the ITM parser, diagnostics, model fragments, and publication views. | Adds Level 5 local model-aware capability, while cumulative conformance still waits for Phase 9 Level 3 composition. |
 | Phase 9 | Add `%include`, `%repository`, repository-qualified references, circular-include diagnostics, resolved Markdown output, and report-generation behavior. | Completes Level 3 and makes resolved Markdown/report output a first-class pipeline value. |
@@ -486,6 +487,51 @@ Package dependency actions for this phase:
 
 Phase 4 scope boundary: do not implement `%include`, `%repository`, full `%require` capability resolution, `itm`/`itm-pub` model-aware rendering, or rich Markdown editing here. Phase 4 should preserve unknown fenced blocks as code, emit diagnostics for unsupported known blocks when the selected output needs them, and keep TF-MD runtime/security policy outside the Markdown profile implementation.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+#### Architecture and pnpm implementation anchors
+
+Architecture paragraphs to consider: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`. Resolve these IDs through `roadmap/02_architecture_paragraph_reference_index.md`, which maps each anchor to the exact paragraph/block and line range in `roadmap/textforge_rebuild_whitepaper_main.md`.
+
+Required grilling record: read `roadmap/grilling/phase-4.1-grilling.md` before implementation. Phase 4.1 is a mandatory stabilization gate created from accepted grilling decisions. It converts foundation corrections from implemented Phases 0–4 into implementation contracts, audit checks, and validation gates before Phase 5 expands contribution registries and package composition.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Stabilize shared diagnostic, command/action, contribution/default-contribution, capability-state, and public API boundary contracts. | No new package install. |
+| `@textforge/workspace` | Align resource identity/content facts and import diagnostics with contribution-driven surface eligibility. | No new package install. |
+| `@textforge/surfaces` | Audit and adapt surface eligibility/open-with routing to resource facts and active capability predicates. | No new package install. |
+| `@textforge/pipeline` | Audit Phase 4 pipeline registry/trace/diagnostics against the shared diagnostic and active-capability lookup contracts. | No new package install. |
+| `@textforge/markdown` | Isolate the Phase 4 provisional dispatcher and shape built-in Markdown block handlers as default contributions. | No new package install. |
+| `@textforge/assets` | Treat asset viewers, generated asset actions, and SVG visual/source eligibility as default contribution candidates. | No new package install. |
+| `@textforge/editors` | Treat source editors and language support as default contribution candidates. | No new package install. |
+| `@textforge/diagrams` | Treat Mermaid and Graphviz handlers/renderers as default contributions ready for Phase 5 manifests. | No new package install. |
+| `@textforge/ui` | Audit toolbar/context-menu/surface actions as projections of one command/action spine. | No new package install. |
+| `@textforge/security-profile` | Preserve the local artifact contract: source-owned local launch path, no remote/CDN imports, no module-script regression for the shipped local artifact. | No new package install. |
+| `apps/textforge-web` | Remove or explicitly mark temporary shell-owned feature logic before Phase 5. | No new package install. |
+| `roadmap/` | Store grilling records, update roadmap/package guidance, and append RAPID entries. | No pnpm package install. |
+
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/core` | Update | Define or consolidate the shared `Diagnostic` shape, severity set, diagnostic source identity rules, command/action metadata contract, default-contribution manifest minimum, active/available/disabled/missing/failed capability states, short-name conflict rules, and public package API boundary expectations. |
+| `@textforge/workspace` | Update | Ensure resources expose stable identity and content facts separately from viewer/editor eligibility; import/detection problems should use shared diagnostics. |
+| `@textforge/surfaces` | Update | Route open-with and surface eligibility through resource facts plus capability predicates, not hard text/binary partitions or shell special cases. |
+| `@textforge/pipeline` | Update | Align pipeline step identity, diagnostics, trace entries, and generated/intermediate value metadata with the shared contracts Phase 5 will consume. |
+| `@textforge/markdown` | Update | Keep Phase 4 block dispatch explicitly provisional, isolate hardcoded handlers, and prepare Mermaid/DOT/math/default Markdown handlers to be registered as default contributions in Phase 5. |
+| `@textforge/assets` | Update | Audit asset viewer and generated asset actions as default contributions; validate SVG can be opened as both source text and visual image where facts allow. |
+| `@textforge/editors` | Update | Audit CodeMirror/language surfaces as default contributions and avoid shell-owned language routing. |
+| `@textforge/diagrams` | Update | Audit Mermaid and Graphviz rendering handlers as default contributions with stable contribution IDs and shared diagnostics. |
+| `@textforge/ui` | Update | Confirm toolbar, context menu, surface action, and command-palette invocations use the same command/action model or a documented temporary adapter. |
+| `@textforge/security-profile` | Update | Verify the shipped local artifact path remains source-owned and does not depend on dev-server semantics, root-relative assets, remote/CDN imports, or module-script behavior that breaks local/extension execution. |
+| `apps/textforge-web` | Update | Perform a focused migration audit for shell-owned handler tables, feature-specific routing, duplicate command/action concepts, and direct cross-package `src/` imports. |
+| `roadmap/` | Update | Keep `roadmap/grilling/phase-4.1-grilling.md` and `roadmap/grilling/phase-5-grilling.md`; append RAPID rows for the new gate and Phase 5 grilling decisions. |
+
+Acceptance criteria: Phase 4.1 is complete when the roadmap points to Phase 4.1 as the next gate after Phase 4; Phase 5 explicitly depends on Phase 4.1 closure; shared diagnostics, command/action metadata, default contribution shape, active capability scope, resource fact/surface predicate separation, public package API boundaries, and local artifact validation are defined or consciously adapted; implemented Phase 0–4 code has been audited for blocking shell coupling, hard resource partitions, duplicate command systems, ad hoc diagnostics, and cross-package source imports; blocking findings are fixed or consciously deferred with RAPID entries; and the validation checks from `roadmap/grilling/phase-4.1-grilling.md` are satisfied or explicitly recorded as remaining gaps.
+
+Scope boundary: Phase 4.1 is not a new product-feature phase. Do not implement runtime plugin loading, remote package fetching, `%include`, `%repository`, ITM publication, a package marketplace, advanced package configuration UI, or broad visual-editor work here. Its job is to stabilize the contracts and implementation seams that Phase 5 will use.
+
 ### Phase 5 — Contribution registries and package composition
 
 #### Architecture and pnpm implementation anchors
@@ -496,22 +542,32 @@ Package dependency actions for this phase:
 
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
-| `@textforge/core` | Full contribution-pack manifests and dependency/capability declarations. | No new package install. |
-| `@textforge/surfaces` | Package-provided surface registration. | No new package install. |
-| `@textforge/pipeline` | Step contribution loading, diagnostics aggregation, intermediate reopening. | No new package install. |
-| `@textforge/ui` | Feature package status and diagnostics/package-composition feedback. | No new package install. |
-| `@textforge/markdown` | TF-MD `%require` and fenced-block handler composition through package capabilities. | No new package install. |
+| `@textforge/core` | Canonical manifests, package/capability/contribution identities, status model, pure document resolver, deterministic ordering, diagnostic source identity, and registry/context read model. | No new package install. |
+| `@textforge/surfaces` | Package-provided surface registration, active-context compatibility, and intermediate reopening surface selection. | No new package install. |
+| `@textforge/pipeline` | Active-capability-scoped step loading, short/qualified-name resolution, conflict diagnostics, intermediate metadata, and golden resolver fixtures. | No new package install. |
+| `@textforge/ui` | Minimal package/capability inspector, grouped diagnostics, deterministic package/status views. | No new package install. |
+| `@textforge/markdown` | `%require` as activation/check only, default Markdown capabilities, capability-aware fenced-block handlers, and source-identifiable diagnostics. | No new package install. |
+| `@textforge/security-profile` | Verify static bundled package composition and confirm `%require` cannot fetch, install, import, or load remote code. | No new package install. |
 
 
-Phase 5 extends the Phase 3.3 shell-command substrate into the broader package contribution system. Do not reimplement the command palette here; use Phase 5 to add the remaining contribution kinds and package-composition rules.
+Precondition: Phase 4.1 must be closed before Phase 5 starts. Read `roadmap/grilling/phase-5-grilling.md` before implementation.
+
+Phase 5 extends the Phase 3.3 shell-command substrate and the Phase 4 provisional Markdown/diagram dispatch into the broader package contribution system. Do not reimplement the command palette here; use Phase 5 to add the remaining contribution kinds and package-composition rules through a canonical contribution/capability model, document-scoped active capability resolver, deterministic resolution, shared diagnostics, and fixture-driven validation.
+
+Phase 5 is limited to static composition of trusted bundled workspace packages. `%require` is an activation/check directive against available bundled capabilities; it must not fetch, install, import, or load remote code.
 
 | Package | Action | Content |
 |---|---|---|
-| `@textforge/core` | Update | Update. Extend the Phase 3.3 command contracts into the full contribution pack manifest shape, dependency declarations, capability declarations, and package composition rules. |
-| `@textforge/surfaces` | Update | Update. Add package-provided surface registration and capability-filtered commands beyond the base shell actions delivered in Phase 3.3. |
-| `@textforge/pipeline` | Update | Update. Add step contribution loading, diagnostics aggregation, intermediate value reopening. |
-| `@textforge/ui` | Update | Update. Extend contribution-driven menu/toolbar slots for feature packages, diagnostics, and package-composition feedback without broadening Phase 3.3 retroactively. |
-| `@textforge/markdown` | Update | Update. Replace the Phase 4 provisional fenced-block dispatcher with contribution/capability-aware block-handler registration and `%require` diagnostics for missing Markdown processors/renderers, without implementing includes or ITM publication yet. |
+| `@textforge/core` | Update | Update. Define the canonical contribution manifest, package identity, capability identity, contribution local names, derived canonical contribution IDs, contribution/package status model, document-scoped pure resolver, deterministic ordering, diagnostic source identity rules, and UI-friendly registry/context read model. |
+| `@textforge/surfaces` | Update | Update. Add package-provided surface registration and active-document-context surface compatibility, including surface selection for reopening pipeline intermediate values and safe fallback diagnostics. |
+| `@textforge/pipeline` | Update | Update. Add active-capability-scoped step contribution loading, short-name and qualified-name resolution, conflict diagnostics, deterministic resolver fixture coverage, intermediate value representation metadata, and reopening through active compatible surfaces. |
+| `@textforge/ui` | Update | Update. Add a minimal package/capability inspector showing package status, provided capabilities, active document capabilities, exposed contributions, conflicts, and grouped diagnostics; keep package installation/configuration out of scope. |
+| `@textforge/markdown` | Update | Update. Parse `%require` as capability activation/check only, use the default Markdown capability profile, replace the provisional fenced-block dispatcher with capability-aware block-handler contributions, preserve unknown fenced blocks where appropriate, and emit source-identifiable diagnostics for missing processors/renderers/profiles/block handlers. |
+| `@textforge/security-profile` | Update | Update. Add or confirm checks/documentation proving Phase 5 package composition is static/bundled and `%require` has no network, remote import, install, repository, or package-loading behavior. |
+
+Phase 5 acceptance criteria: every Phase 5 contribution registers through the canonical core manifest shape; composed packages are bundled workspace packages only; active capabilities are resolved per document through one pure resolver; Markdown activates base Markdown, Mermaid, math, and Graphviz by default; non-default capabilities are inactive unless explicitly activated; capability and contribution identities remain separate; short names resolve only when unambiguous in the active context; qualified references bind to a specific implementation; active short-name conflicts produce blocking diagnostics while inactive conflicts do not; resolver output is deterministic regardless of import order; fenced-block handlers use the contribution/capability-aware contract; `%require` diagnostics are source-identifiable; `%require` cannot fetch or load code; the package inspector exposes package/capability/contribution status; intermediate values reopen through active compatible surfaces or safe fallback; golden fixture packages/documents cover inactive availability, activation, missing capability, inactive conflict, active conflict, qualified binding, disabled package, and inspector read-model determinism.
+
+Phase 5 scope boundary: keep `%include`, `%repository`, remote package loading, ITM publication, runtime plugin installation, package marketplace behavior, and editable package configuration out of this phase.
 
 ### Phase 6 — ITM integration and model/report foundation
 

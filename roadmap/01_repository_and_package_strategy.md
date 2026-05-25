@@ -1,4 +1,4 @@
-# TextForge V15c Repository and Package Strategy
+# TextForge V15n Repository and Package Strategy
 
 ## Purpose
 
@@ -371,7 +371,13 @@ Phase 3.6: unified workspace resources and representation-based surface routing 
 Phase 3.7: context menus as thin command projections across @textforge/core, @textforge/ui, @textforge/workspace, @textforge/surfaces, @textforge/editors, @textforge/assets, @textforge/security-profile, @textforge/examples-docs, and apps/textforge-web. It may add a small target-aware command-context contract, but it must reuse the existing command registry/dispatcher.
 ```
 
-Phase 3.3 creates the shell command substrate only. Phase 3.4 may use that substrate to simplify visible toolbar/menu chrome, but it must not broaden it into the full contribution-pack system. Phase 3.5 may use `react-resizable-panels` for bounded side-panel resizing and may restore popup placement as an in-app overlay, but it must not broaden into Phase 13 advanced tab groups, tab drag/reorder, saved layouts, split panes, detached windows, or deep session persistence. Phase 3.6 corrects the resource model before Phase 4 local assets and generated SVGs depend on it: SVG should be stored as text, opaque assets should stay byte-stored, and surface compatibility should be computed from minimal facts. Phase 3.7 adds context menus only as target-aware projections of existing commands. Phase 5 remains responsible for full contribution-pack loading, pipeline contribution loading, diagnostics aggregation, and broad package composition.
+Phase 3.3 creates the shell command substrate only. Phase 3.4 may use that substrate to simplify visible toolbar/menu chrome, but it must not broaden it into the full contribution-pack system. Phase 3.5 may use `react-resizable-panels` for bounded side-panel resizing and may restore popup placement as an in-app overlay, but it must not broaden into Phase 13 advanced tab groups, tab drag/reorder, saved layouts, split panes, detached windows, or deep session persistence. Phase 3.6 corrects the resource model before Phase 4 local assets and generated SVGs depend on it: SVG should be stored as text, opaque assets should stay byte-stored, and surface compatibility should be computed from minimal facts. Phase 3.7 adds context menus only as target-aware projections of existing commands. Phase 4.1 then stabilizes the foundation before the full contribution-pack system starts. Phase 5 remains responsible for full contribution-pack loading, pipeline contribution loading, diagnostics aggregation, and broad package composition, but only after Phase 4.1 closes.
+
+### Phase 4.1 stabilization implication
+
+Phase 4.1 is inserted between Phase 4 and Phase 5 as a package-boundary stabilization gate. It should not add new product features or remote/plugin behavior. It should stabilize the public contracts that Phase 5 needs: shared diagnostics, command/action metadata, default-contribution manifests, active capability scope, resource facts versus surface predicates, public package API boundaries, and the local artifact packaging contract.
+
+The implementation audit should explicitly look for shell-owned handler tables, feature-specific routing in `apps/textforge-web`, direct cross-package `src/` imports, ad hoc diagnostic strings, duplicate command/action systems, and built-ins that are not shaped like default contributions. Blocking findings must be fixed before Phase 5 or consciously deferred with RAPID entries.
 
 Every roadmap phase should say which packages are created or updated. A phase is not only a feature phase; it is also a package-boundary validation phase.
 

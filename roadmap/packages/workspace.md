@@ -104,9 +104,20 @@ Implementation anchors:
 
 Update only as needed to let existing workspace commands execute against an explicit context target supplied by a tree-item context menu. Reuse current commands for new folder/resource, upload/import into folder, export selected folder, download selected file, rename, and delete. Do not add separate context-menu-only business logic.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update. Ensure workspace resources expose stable identity and content facts separately from viewer/editor eligibility. Import, detection, migration, and resource-state problems should use the shared diagnostic shape. Confirm there is no reintroduced hard text/binary surface-routing partition and that SVG remains valid as both source-openable text and visual-viewable image where facts allow.
+
 ## Tests and definition of done
 
-Persistence tests, Dexie schema/version tests after Phase 3.2, ZIP import/export tests, path normalization tests, byte-resource round-trip tests, workspace manifest tests, command contribution tests after Phase 3.3, badge identity/collision-repair tests after Phase 3.4, unified-resource/SVG-as-text tests after Phase 3.6, context-menu target tests after Phase 3.7, plus screenshot/layout checks after Phase 3.5.
+Include Phase 4.1 stabilization audit checks where this package is in scope. Persistence tests, Dexie schema/version tests after Phase 3.2, ZIP import/export tests, path normalization tests, byte-resource round-trip tests, workspace manifest tests, command contribution tests after Phase 3.3, badge identity/collision-repair tests after Phase 3.4, unified-resource/SVG-as-text tests after Phase 3.6, context-menu target tests after Phase 3.7, plus screenshot/layout checks after Phase 3.5.
 
 ## Non-goals
 

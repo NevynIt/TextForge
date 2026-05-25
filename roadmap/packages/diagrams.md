@@ -59,6 +59,17 @@ Implementation anchors:
 
 Create. Mermaid and Graphviz rendering pipelines, generated SVG resource creation, SVG-to-PNG rasterization pipeline, and Markdown-callable handlers for `mermaid`, `dot`, and `graphviz` fenced blocks.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update. Audit Mermaid and Graphviz renderers, Markdown-callable handlers, generated SVG/PNG outputs, and diagnostics as default contribution candidates with stable IDs and capability associations. Ensure they can be consumed by the Phase 5 manifest/resolver without special shell logic.
+
 ### Phase 7 — ITM visual projections
 
 Implementation anchors:
@@ -91,7 +102,7 @@ Update. Add React Flow adapter for controlled graph/flowchart/layout-delta editi
 
 ## Tests and definition of done
 
-Mermaid/DOT render tests, Markdown fenced-block handler tests, text-stored SVG output tests against Phase 3.6 unified resources, SVG-to-PNG rasterization tests, generated asset stale-state tests.
+Include Phase 4.1 stabilization audit checks where this package is in scope. Mermaid/DOT render tests, Markdown fenced-block handler tests, text-stored SVG output tests against Phase 3.6 unified resources, SVG-to-PNG rasterization tests, generated asset stale-state tests.
 
 ## Non-goals
 

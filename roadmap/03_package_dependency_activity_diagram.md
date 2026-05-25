@@ -175,14 +175,32 @@ sequenceDiagram
     Assets->>Pipe: display generated asset provenance and stale state
   end
 
+  rect rgb(255,245,235)
+    Note over Core,App: Phase 4.1 — foundation stabilization before contribution registries
+    Core->>Core: stabilize diagnostic, action, contribution, capability-state, and public API contracts
+    WS->>Core: align resource facts and import diagnostics with shared contracts
+    Surf->>Core: route eligibility through resource facts and capability predicates
+    Pipe->>Core: audit step identity, trace, diagnostics, and intermediate metadata contracts
+    MD->>Core: isolate provisional block dispatch and prepare default block-handler contributions
+    Assets->>Surf: validate SVG source/visual dual eligibility and default viewer contributions
+    Edit->>Surf: audit source editor and language contributions as default contributions
+    Diag->>Pipe: audit Mermaid/Graphviz handlers as default contributions with shared diagnostics
+    UI->>Core: ensure toolbar, context menu, and surface actions project one command/action spine
+    Sec->>App: preserve source-owned local artifact path and local/extension launch checks
+    App->>Core: remove or document temporary shell-owned feature routing before Phase 5
+    Docs->>Docs: store grilling records and append RAPID decisions
+  end
+
   rect rgb(240,240,255)
     Note over Core,UI: Phase 5 — contribution registries and package composition
-    Surf->>Core: consume full contribution-pack manifests and dependency declarations
-    Pipe->>Core: consume step contribution loading and diagnostics aggregation contracts
-    UI->>Core: render feature-package menu/toolbar slots and package-composition feedback
-    MD->>Core: consume capability declarations for TF-MD %require diagnostics
+    Core->>Core: own canonical contribution manifests, IDs, statuses, and pure document resolver
+    Surf->>Core: consume active document contribution context for compatible surfaces
+    Pipe->>Core: resolve step contributions through active capabilities with deterministic diagnostics
+    UI->>Core: render package/capability inspector and deterministic package status views
+    MD->>Core: parse %require as capability activation/check against bundled capabilities
     MD->>Pipe: register fenced-block handlers through contribution manifests
-    App->>Core: compose package contribution manifests instead of owning feature logic
+    App->>Core: compose bundled package manifests without remote loading or shell feature logic
+    Sec->>App: verify static bundled composition and %require no-fetch/no-load behavior
   end
 
   rect rgb(245,245,245)

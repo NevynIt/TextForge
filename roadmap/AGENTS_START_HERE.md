@@ -26,6 +26,10 @@ roadmap/
   textforge_rebuild_whitepaper_main.md
   specs/
     textforge_markdown_profile.md
+  grilling/
+    README.md
+    phase-4.1-grilling.md
+    phase-5-grilling.md
   packages/
     core.md
     workspace.md
@@ -54,13 +58,14 @@ Before changing code, do the following:
 1. Read `roadmap/AGENTS_START_HERE.md`.
 2. Read `roadmap/RAPID.md`.
 3. Read `roadmap/00_package_aware_roadmap.md`.
-4. Read `roadmap/02_phase_architecture_pnpm_matrix.md` for the active phase's architecture anchors and pnpm dependency commands.
-5. Read `roadmap/03_package_dependency_activity_diagram.md` for cross-package phase sequencing context.
-6. For Markdown work, read `roadmap/specs/textforge_markdown_profile.md` before implementing any TF-MD parsing, directive, include, block-registry, or rich-editor behavior.
-7. Inspect `git status`, current branch, recent commits, and package structure.
-8. Determine the current phase and the next incomplete step.
-9. Check whether the roadmap still matches the repository reality.
-10. Proceed only within the next coherent phase or phase slice.
+4. If `roadmap/grilling/phase-[PHASE-NUMBER]-grilling.md` exists for the active phase, read it as binding decision guidance after checking `RAPID.md` and the main roadmap entry.
+5. Read `roadmap/02_phase_architecture_pnpm_matrix.md` for the active phase's architecture anchors and pnpm dependency commands.
+6. Read `roadmap/03_package_dependency_activity_diagram.md` for cross-package phase sequencing context.
+7. For Markdown work, read `roadmap/specs/textforge_markdown_profile.md` before implementing any TF-MD parsing, directive, include, block-registry, or rich-editor behavior.
+8. Inspect `git status`, current branch, recent commits, and package structure.
+9. Determine the current phase and the next incomplete step.
+10. Check whether the roadmap still matches the repository reality.
+11. Proceed only within the next coherent phase or phase slice.
 
 Do not start by guessing from file names alone. The RAPID log and roadmap are the authoritative operational context.
 
@@ -243,10 +248,11 @@ Use this order:
 1. Check the active branch.
 2. Read the latest entries in `roadmap/RAPID.md`.
 3. Identify the current phase from `roadmap/00_package_aware_roadmap.md`.
-4. Check package-specific guides under `roadmap/packages/` if they exist in the repo.
-5. Run the existing verification command if available.
-6. Continue with the next smallest coherent task that advances the current phase.
-7. Re-run the narrowest relevant verification after each coherent slice and before any phase-slice commit.
+4. Check `roadmap/grilling/` for a phase-specific grilling document and apply accepted decisions.
+5. Check package-specific guides under `roadmap/packages/` if they exist in the repo.
+6. Run the existing verification command if available.
+7. Continue with the next smallest coherent task that advances the current phase.
+8. Re-run the narrowest relevant verification after each coherent slice and before any phase-slice commit.
 
 ## Phase 3 recovery and pre-Phase-4 correction sequence
 
@@ -267,6 +273,14 @@ Treat Phase 3.1 and Phase 3.2 as recovery phases for promised work that was prev
 Phase 3.3 is not permission to pull the whole Phase 5 contribution system forward. Phase 3.5 is not permission to pull Phase 13 forward. Phase 3.6 is not permission to introduce a larger persistent file-type taxonomy: remove or deprecate `text`/`binary` as public resource kinds, keep SVG as text, and compute open-with compatibility from minimal facts. Phase 3.7 is not permission to create a second command system or broad plugin UX: context menus must resolve existing commands against explicit targets. Do not implement pipeline contribution loading, diagnostics aggregation UI, plugin management, later domain package work, advanced tab groups, tab drag/reorder, saved layouts, detached browser windows, split panes, or broad contribution-pack behavior in these recovery/correction phases.
 
 Each of these phases must update the central roadmap, the affected package guide, and `RAPID.md` in the same commit as the implementation slice. Phase 3.5 also requires screenshot evidence against `roadmap/04_phase_3_5_screenshot_validation_checklist.md` or an explicit RAPID note explaining any validation gap.
+
+## Phase 4.1 stabilization gate before Phase 5
+
+After Phase 4 closes, do not jump directly to Phase 5. The roadmap now inserts Phase 4.1 as a mandatory foundation-stabilization gate before contribution registries and package composition.
+
+Read `roadmap/grilling/phase-4.1-grilling.md` before implementing Phase 4.1. The phase stabilizes local artifact invariants, phase-closure rules, resource facts versus surface eligibility, shared diagnostics, the single command/action spine, default contributions, active capability scope, public package API boundaries, and migration-audit checks for implemented Phase 0–4 code.
+
+Only after Phase 4.1 closes should Phase 5 start. Read `roadmap/grilling/phase-5-grilling.md` before implementing Phase 5.
 
 ## Package-boundary rules
 

@@ -130,6 +130,17 @@ Implementation anchors:
 
 Update. Add generated asset provenance, stale-state display, SVG/PNG export actions.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update. Audit image, SVG, PDF, generic asset viewers, generated asset provenance actions, and export actions as default contribution candidates. Validate that SVG resources remain eligible for both source editing and visual viewing when their resource facts support both. Use the shared diagnostic shape for unsupported or stale asset states.
+
 ### Phase 17 — Sketch and annotation resources
 
 Implementation anchors:
@@ -152,7 +163,7 @@ Update. Optional PDF annotation layer over PDF.js; store annotations as separate
 
 ## Tests and definition of done
 
-Image/SVG/PDF viewing tests, blob URL lifecycle tests, React-shell mounting smoke tests after Phase 3.1, persisted byte-resource rehydration tests after Phase 3.2, command descriptor tests after Phase 3.3 where applicable, SVG-as-text visual preview tests after Phase 3.6, context-target asset command checks after Phase 3.7, and generated asset provenance tests.
+Image/SVG/PDF viewing tests, blob URL lifecycle tests, React-shell mounting smoke tests after Phase 3.1, persisted byte-resource rehydration tests after Phase 3.2, command descriptor tests after Phase 3.3 where applicable, SVG-as-text visual preview tests after Phase 3.6, context-target asset command checks after Phase 3.7, and generated asset provenance tests, and Phase 4.1 default-contribution/SVG-dual-eligibility audit checks.
 
 ## Non-goals
 

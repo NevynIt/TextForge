@@ -98,6 +98,17 @@ Implementation anchors:
 
 Update only if the existing command context cannot target the right-clicked workspace item, tab, or popup/session independently from the global selection. Add the smallest target-aware command-context shape needed, then keep context menus as ordinary command registry/dispatcher consumers. Do not create a second command model or plugin permission system.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update. Stabilize the shared diagnostic contract, severity set, diagnostic source identity rules, command/action metadata contract, default-contribution manifest minimum, active/available/disabled/missing/failed capability states, short-name conflict behavior, resolver seam, and public package API boundary rules. Add or adapt tests so Phase 5 cannot start with duplicate command systems, ad hoc diagnostics, or source-layout package dependencies hidden in the foundation.
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -106,7 +117,7 @@ Implementation anchors:
 - pnpm packages: Phase 5: No new package install.
 
 
-Update. Extend the Phase 3.3 shell-command substrate into the full contribution pack manifest shape, dependency declarations, capability declarations, and package composition rules for all contribution kinds.
+Update. Own the canonical contribution manifest, package identity, capability identity, contribution local names, derived canonical contribution IDs, contribution/package status model, document-scoped pure resolver, deterministic ordering, diagnostic source identity rules, and UI-friendly registry/context read model. Phase 5 must consume the Phase 4.1 stabilization contracts rather than creating package-local registries.
 
 ### Phase 13 — Stage 2 advanced tabbed main surfaces
 
@@ -120,7 +131,7 @@ Update. Add stable session persistence types if needed for advanced tab groups a
 
 ## Tests and definition of done
 
-Type-level tests, compatibility tests for public contracts, command registry tests after Phase 3.3, resource representation contract tests after Phase 3.6, target-aware command-context tests after Phase 3.7, and no feature dependency leakage.
+Include Phase 4.1 stabilization audit checks where this package is in scope. Type-level tests, compatibility tests for public contracts, command registry tests after Phase 3.3, resource representation contract tests after Phase 3.6, target-aware command-context tests after Phase 3.7, and no feature dependency leakage.
 
 ## Non-goals
 

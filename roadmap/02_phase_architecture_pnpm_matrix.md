@@ -174,17 +174,41 @@ Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P
 | `@textforge/diagrams` | Mermaid and Graphviz rendering pipelines. | `pnpm --filter @textforge/diagrams add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* mermaid @viz-js/viz` |
 | `@textforge/assets` | Generated asset provenance/stale display. | No new package install. |
 
+## Phase 4.1 — Foundation stabilization before contribution registries
+
+Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`
+
+Required grilling record: `roadmap/grilling/phase-4.1-grilling.md`
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Stabilize shared diagnostic, command/action, contribution/default-contribution, capability-state, resolver-seam, and public API boundary contracts. | No new package install. |
+| `@textforge/workspace` | Align resource identity/content facts and import diagnostics with contribution-driven surface eligibility. | No new package install. |
+| `@textforge/surfaces` | Audit and adapt surface eligibility/open-with routing to resource facts and active capability predicates. | No new package install. |
+| `@textforge/pipeline` | Audit Phase 4 pipeline registry/trace/diagnostics against shared diagnostics and active-capability lookup contracts. | No new package install. |
+| `@textforge/markdown` | Isolate provisional block dispatch and shape built-in handlers as default contributions. | No new package install. |
+| `@textforge/assets` | Audit asset viewers/generated asset actions and SVG dual eligibility as default contribution candidates. | No new package install. |
+| `@textforge/editors` | Audit source editors/language support as default contribution candidates. | No new package install. |
+| `@textforge/diagrams` | Audit Mermaid/Graphviz handlers/renderers as default contributions with stable IDs and shared diagnostics. | No new package install. |
+| `@textforge/ui` | Audit toolbar/context-menu/surface actions against the single command/action spine. | No new package install. |
+| `@textforge/security-profile` | Preserve source-owned local artifact validation and reject remote/CDN/module-script regressions in the shipped local path. | No new package install. |
+| `apps/textforge-web` | Audit shell-owned feature logic, duplicate command/action concepts, and cross-package `src/` imports before Phase 5. | No new package install. |
+| `roadmap/` | Store grilling records and append RAPID decisions/progress. | No pnpm package install. |
+
 ## Phase 5 — Contribution registries and package composition
+
+Precondition: Phase 4.1 closure. Required grilling record: `roadmap/grilling/phase-5-grilling.md`.
 
 Architecture paragraphs: `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`
 
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
-| `@textforge/core` | Full contribution-pack manifests and dependency/capability declarations. | No new package install. |
-| `@textforge/surfaces` | Package-provided surface registration. | No new package install. |
-| `@textforge/pipeline` | Step contribution loading, diagnostics aggregation, intermediate reopening. | No new package install. |
-| `@textforge/ui` | Feature package status and diagnostics/package-composition feedback. | No new package install. |
-| `@textforge/markdown` | TF-MD `%require` and fenced-block handler composition through package capabilities. | No new package install. |
+| `@textforge/core` | Canonical manifests, package/capability/contribution identities, status model, pure document resolver, deterministic ordering, diagnostic source identity, and registry/context read model. | No new package install. |
+| `@textforge/surfaces` | Package-provided surface registration, active-context compatibility, and intermediate reopening surface selection. | No new package install. |
+| `@textforge/pipeline` | Active-capability-scoped step loading, short/qualified-name resolution, conflict diagnostics, intermediate metadata, and golden resolver fixtures. | No new package install. |
+| `@textforge/ui` | Minimal package/capability inspector, grouped diagnostics, deterministic package/status views. | No new package install. |
+| `@textforge/markdown` | `%require` as activation/check only, default Markdown capabilities, capability-aware fenced-block handlers, and source-identifiable diagnostics. | No new package install. |
+| `@textforge/security-profile` | Verify static bundled package composition and `%require` no-fetch/no-load behavior. | No new package install. |
 
 ## Phase 6 — ITM integration and model/report foundation
 

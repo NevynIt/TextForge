@@ -47,6 +47,17 @@ Implementation anchors:
 
 Create. Minimal pipeline contribution registry, pipeline runner, trace, generated resource output type.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update. Audit the Phase 4 pipeline registry, runner, trace model, generated-resource outputs, and diagnostics against the shared Phase 4.1 contracts. Pipeline step identity and intermediate value metadata should be ready to participate in active-capability-scoped resolution in Phase 5 without creating a second registry.
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -55,7 +66,7 @@ Implementation anchors:
 - pnpm packages: Phase 5: No new package install.
 
 
-Update. Add step contribution loading, diagnostics aggregation, intermediate value reopening using the broader contribution-pack system that extends Phase 3.3. Expose enough handler metadata for `@textforge/markdown` to replace its Phase 4 provisional fenced-block dispatcher with contribution-registered handlers and `%require` diagnostics.
+Update. Add active-capability-scoped step contribution loading, short-name and qualified-name resolution, conflict diagnostics, deterministic resolver fixture coverage, diagnostics aggregation, intermediate representation metadata, and intermediate value reopening through active compatible surfaces. Expose handler metadata for `@textforge/markdown` through the canonical contribution manifest rather than a pipeline-local registry.
 
 ### Phase 6 — ITM integration and model/report foundation
 
@@ -99,7 +110,7 @@ Update. Add visual pipeline editor schema and controlled write-back patches.
 
 ## Tests and definition of done
 
-Pipeline execution tests, trace tests, diagnostics aggregation tests, intermediate reopening tests, patch/write-back tests.
+Include Phase 4.1 stabilization audit checks where this package is in scope. Pipeline execution tests, trace tests, diagnostics aggregation tests, intermediate reopening tests, patch/write-back tests.
 
 ## Non-goals
 

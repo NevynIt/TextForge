@@ -115,6 +115,17 @@ Implementation anchors:
 
 Update only as needed so tab/session/popup context menus can target a specific surface session and reuse existing surface commands: focus, close, refresh, move to main/popup, and open-with. Do not introduce advanced tab management, drag/reorder, saved layouts, or a second command system.
 
+### Phase 4.1 — Foundation stabilization before contribution registries
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P01..P07`, `ARCH-6.17-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-8-P01..P02`, `ARCH-13.8-P01..P03`.
+- Grilling record: `roadmap/grilling/phase-4.1-grilling.md`.
+- pnpm packages: Phase 4.1: No new package install.
+
+
+Update. Audit open-with routing and surface eligibility so they depend on resource facts plus capability predicates, not shell file-type logic. Confirm context-menu and surface actions are projections of the shared command/action spine. Identify any temporary adapters that Phase 5 must consume or remove.
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -123,7 +134,7 @@ Implementation anchors:
 - pnpm packages: Phase 5: No new package install.
 
 
-Update. Add package-provided surface registration and capability-filtered commands beyond the base shell actions delivered in Phase 3.3.
+Update. Add package-provided surface registration and active-document-context compatibility. Surface selection, including pipeline intermediate reopening, must use the resolved document contribution context and produce shared diagnostics when no active compatible surface exists.
 
 ### Phase 7 — ITM visual projections
 
@@ -157,7 +168,7 @@ Update. Add tabbed main surface groups, tab movement, richer open-to-main/open-a
 
 ## Tests and definition of done
 
-Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests, React-shell host compatibility tests after Phase 3.1, command contribution tests after Phase 3.3, badge metadata projection and chrome-readability tests after Phase 3.4, screenshot/layout checks after Phase 3.5, representation-based compatibility tests after Phase 3.6, and context-target command tests after Phase 3.7.
+Include Phase 4.1 stabilization audit checks where this package is in scope. Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests, React-shell host compatibility tests after Phase 3.1, command contribution tests after Phase 3.3, badge metadata projection and chrome-readability tests after Phase 3.4, screenshot/layout checks after Phase 3.5, representation-based compatibility tests after Phase 3.6, and context-target command tests after Phase 3.7.
 
 ## Non-goals
 
