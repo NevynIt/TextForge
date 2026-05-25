@@ -239,5 +239,80 @@
       "height": 909,
       "width": 421
     }
+  },
+  "followUpRefinement2026-05-25": {
+    "previewUrl": "http://127.0.0.1:4174",
+    "layoutWide": {
+      "topbarHeight": 59,
+      "sidebarPanelWidth": 316,
+      "sidebarContentWidth": 316,
+      "treeWidth": 315,
+      "treeRowWidth": 286,
+      "treeRowsPinnedTop": [
+        120,
+        170
+      ],
+      "surfaceViewportWidth": 610,
+      "surfaceMountWidth": 577,
+      "editorWidth": 577,
+      "topbarHasStatusRail": false,
+      "floatingStatusBarPresent": true
+    },
+    "editorExpansionAfterUtilityCollapse": {
+      "before": {
+        "editorWidth": 577,
+        "mountWidth": 577,
+        "utilityWidth": 271,
+        "viewportWidth": 610
+      },
+      "after": {
+        "editorWidth": 843,
+        "mountWidth": 843,
+        "utilityWidth": 5,
+        "viewportWidth": 875
+      }
+    },
+    "commandPalette": {
+      "dialogWidth": 720,
+      "searchWidth": 686,
+      "inputWidth": 636
+    },
+    "headerStabilityAfterEdit": {
+      "beforeTopbarHeight": 59,
+      "afterTopbarHeight": 59,
+      "topbarHasSaving": false
+    },
+    "defaultStartupCollapsed": {
+      "editorWidth": 876,
+      "sidebarWidth": 0,
+      "topbarHeight": 59,
+      "treeVisible": false,
+      "utilityWidth": 0,
+      "viewportWidth": 909
+    },
+    "popup": {
+      "before": {
+        "height": 446,
+        "left": 262,
+        "top": 83,
+        "width": 586
+      },
+      "afterDrag": {
+        "height": 446,
+        "left": 262,
+        "top": 123,
+        "width": 586
+      },
+      "afterResize": {
+        "height": 502,
+        "left": 262,
+        "top": 123,
+        "width": 586
+      },
+      "closeWorked": true,
+      "inspectorHasAssetRows": true,
+      "oldTextsPresent": [],
+      "resizeHandleWorked": true
+    }
   }
 }
