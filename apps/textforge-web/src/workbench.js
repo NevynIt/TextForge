@@ -65,6 +65,7 @@ import {
   TextForgeResourceBadge,
   TextForgeSelectField,
   TextForgeSessionTabStrip,
+  TextForgeStatusRail,
   TextForgeToolbarButton,
   TextForgeTopBar,
   TextForgeUtilityPane,
@@ -461,6 +462,7 @@ function createTextForgeWorkbenchController() {
   const state = {
     activeMainSessionId: undefined,
     activePopupSessionId: undefined,
+    expandedFolderIds: [],
     selectedWorkspaceItemId: undefined,
     utilityPaneOpen: screenshotPreset.utilityPaneOpen,
     utilitySectionId: screenshotPreset.utilitySectionId,
@@ -734,11 +736,32 @@ function createTextForgeWorkbenchController() {
     }
 
     if (entry.kind === 'folder') {
+      toggleWorkspaceFolder(itemId);
       emit();
       return;
     }
 
     openResourceEntry(entry);
+  }
+
+  function toggleWorkspaceFolder(folderId) {
+    if (runtime.status !== 'ready') {
+      return;
+    }
+
+    const folder = getEntry(folderId);
+    if (!folder || folder.kind !== 'folder') {
+      return;
+    }
+
+    const expandedFolderIds = new Set(state.expandedFolderIds);
+    if (expandedFolderIds.has(folderId)) {
+      expandedFolderIds.delete(folderId);
+    } else {
+      expandedFolderIds.add(folderId);
+    }
+    state.expandedFolderIds = [...expandedFolderIds];
+    emit();
   }
 
   function toggleWorkspaceTree() {
@@ -758,6 +781,68 @@ function createTextForgeWorkbenchController() {
       state.surfaceFocusPlacement = 'popup';
     }
     emit();
+  }
+
+  function setWorkspaceTreeCollapsed(collapsed) {
+    if (state.workspaceTreeCollapsed === collapsed) {
+      return;
+    }
+
+    state.workspaceTreeCollapsed = collapsed;
+    emit();
+  }
+
+  function setUtilityPaneCollapsed(collapsed) {
+    const nextOpen = !collapsed;
+    if (state.utilityPaneOpen === nextOpen) {
+      return;
+    }
+
+    state.utilityPaneOpen = nextOpen;
+    emit();
+  }
+
+  function expandFolderAncestors(path) {
+    if (!path || path === '/') {
+      return;
+    }
+
+    const nextExpandedIds = new Set(state.expandedFolderIds);
+    let currentPath = dirnameWorkspacePath(path);
+    while (currentPath && currentPath !== '/') {
+      const folder = workspace.getEntryByPath(currentPath);
+      if (folder?.kind === 'folder') {
+        nextExpandedIds.add(folder.id);
+      }
+      currentPath = dirnameWorkspacePath(currentPath);
+    }
+    state.expandedFolderIds = [...nextExpandedIds];
+  }
+
+  function createVisibleTreeItems(allTreeItems) {
+    const folderIdByPath = new Map(
+      allTreeItems
+        .filter((item) => item.kind === 'folder')
+        .map((item) => [item.path, item.id]),
+    );
+
+    return allTreeItems
+      .filter((item) => {
+        let parentPath = dirnameWorkspacePath(item.path);
+        while (parentPath && parentPath !== '/') {
+          const parentId = folderIdByPath.get(parentPath);
+          if (parentId && !state.expandedFolderIds.includes(parentId)) {
+            return false;
+          }
+          parentPath = dirnameWorkspacePath(parentPath);
+        }
+        return true;
+      })
+      .map((item) => ({
+        ...item,
+        hasChildren: item.kind === 'folder' ? item.expanded : false,
+        expanded: item.kind === 'folder' ? state.expandedFolderIds.includes(item.id) : false,
+      }));
   }
 
   function updateTextResourceLanguage(resourceId, languageId) {
@@ -1002,6 +1087,7 @@ function createTextForgeWorkbenchController() {
         placement: session.placement,
         detail: surface.model.languageLabel,
         readOnly: false,
+        inspectorSections: [],
         controls: [...controls, createLanguageControl(resource, surface.model)],
         surface,
       };
@@ -1043,6 +1129,19 @@ function createTextForgeWorkbenchController() {
       placement: session.placement,
       detail: surface.model.mimeType,
       readOnly: true,
+      inspectorSections: [
+        {
+          eyebrow: 'Resource binding',
+          icon: 'fileImage',
+          title: 'Asset state',
+          rows: [
+            { label: 'State', value: surface.model.state },
+            { label: 'Source', value: surface.model.provenance },
+            { label: 'Blob URL', value: surface.model.blobUrl ? 'bound' : 'unbound' },
+            { label: 'Action', value: surface.model.blobUrl ? 'Download asset' : 'No download link' },
+          ],
+        },
+      ],
       controls,
       surface,
     };
@@ -1211,6 +1310,7 @@ function createTextForgeWorkbenchController() {
       title: basenameWorkspacePath(nextPath),
     });
     await persistWorkspace('workspace.new-folder');
+    expandFolderAncestors(folder.path);
     rememberSelection(folder.id);
     emit();
   }
@@ -1243,6 +1343,7 @@ function createTextForgeWorkbenchController() {
         mimeType: languageDefinition?.mimeTypes[0] ?? 'text/plain',
       });
       await persistWorkspace('workspace.new-resource');
+      expandFolderAncestors(resource.path);
       openResourceEntry(resource, { placement: 'main' });
       return;
     }
@@ -1266,6 +1367,7 @@ function createTextForgeWorkbenchController() {
       mimeType: file.type || 'application/octet-stream',
     });
     await persistWorkspace('workspace.new-resource');
+    expandFolderAncestors(resource.path);
     openResourceEntry(resource, { placement: 'popup' });
   }
 
@@ -1610,7 +1712,9 @@ function createTextForgeWorkbenchController() {
 
   function buildSnapshot() {
     normalizeActiveSessions();
-    const treeItems = runtime.status === 'ready' ? createWorkspaceTreeItems(workspace.snapshot()) : [];
+    const treeItems = runtime.status === 'ready'
+      ? createVisibleTreeItems(createWorkspaceTreeItems(workspace.snapshot()))
+      : [];
     const mainSessions = listMainSessions();
     const popupSessions = listPopupSessions();
     const persistenceStatus = runtime.status === 'ready'
@@ -1679,20 +1783,7 @@ function createTextForgeWorkbenchController() {
       ? listWorkspaceBadgeDiagnostics(workspace.snapshot())
       : [];
     const activeResource = describeActiveResource();
-    const workspaceStatusLabel = runtime.status === 'loading'
-      ? 'Opening workspace'
-      : runtime.status === 'error'
-        ? 'Recovery required'
-        : `${treeItems.length} resources`;
-    const workspaceStatusTone = runtime.status === 'error'
-      ? 'warning'
-      : runtime.status === 'loading'
-        ? 'info'
-        : 'success';
     const chromeModel = createWorkbenchChromeModel({
-      subtitle: runtime.status === 'ready'
-        ? 'Resizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace'
-        : 'Browser-managed workspace recovery',
       workspaceTree: createWorkspaceTreeFrameModel({
         items: treeItems,
         rootLabel: runtime.status === 'ready'
@@ -1713,28 +1804,6 @@ function createTextForgeWorkbenchController() {
           shortcut: command.hotkey,
         })),
       statusBadges: [
-        createStatusBadge({
-          id: 'workspace-status',
-          label: workspaceStatusLabel,
-          tone: workspaceStatusTone,
-          icon: runtime.status === 'error' ? 'warning' : runtime.status === 'loading' ? 'info' : 'success',
-          detail: 'The workspace is private browser storage, not a live local folder.',
-        }),
-        activeResource
-          ? createStatusBadge({
-            id: 'resource-status',
-            label: activeResource.placement === 'popup' ? 'Popup surface active' : 'Main surface active',
-            tone: activeResource.attention ? 'warning' : 'info',
-            icon: activeResource.icon,
-            detail: `${activeResource.title} / ${activeResource.detail}`,
-          })
-          : createStatusBadge({
-            id: 'resource-status',
-            label: 'No document open',
-            tone: 'neutral',
-            icon: 'info',
-            detail: 'Open a text or binary resource from the workspace tree to focus it here.',
-          }),
         ...(popupSessions.length > 0
           ? [
             createStatusBadge({
@@ -1831,7 +1900,10 @@ function createTextForgeWorkbenchController() {
       requestStorageReset,
       retryStorageInitialization,
       selectWorkspaceItem,
+      setUtilityPaneCollapsed,
+      setWorkspaceTreeCollapsed,
       setUtilitySection,
+      toggleWorkspaceFolder,
       toggleUtilityPane,
       toggleWorkspaceTree,
     },
@@ -2012,6 +2084,27 @@ function SurfaceDetails({ view }) {
         title: 'No extra controls',
         children: element('p', { className: 'tf-empty' }, 'This surface is readable without additional switches.'),
       }),
+    ...(view.inspectorSections ?? []).map((section) =>
+      element(
+        TextForgeInspectorCard,
+        {
+          key: section.title,
+          eyebrow: section.eyebrow,
+          icon: section.icon,
+          title: section.title,
+        },
+        element(
+          'dl',
+          { className: 'tf-meta-list' },
+          ...section.rows.map((row) =>
+            element(
+              'div',
+              { key: row.label },
+              element('dt', null, row.label),
+              element('dd', null, row.value),
+            )),
+        ),
+      )),
     view.badge?.repairedFromKey
       ? element(
         TextForgeInspectorCard,
@@ -2030,34 +2123,18 @@ function SurfaceDetails({ view }) {
   );
 }
 
-function WorkspaceSelectionFooter({ selectedEntry }) {
-  const folderPath = selectedEntry.kind === 'folder'
-    ? selectedEntry.path
-    : dirnameWorkspacePath(selectedEntry.path);
+function WorkbenchDetailsCard() {
   return element(
     TextForgeInspectorCard,
     {
-      eyebrow: 'Workspace',
-      icon: selectedEntry.icon,
-      title: selectedEntry.kind === 'folder' ? 'Current folder' : 'Current selection',
+      eyebrow: 'Workbench',
+      icon: 'status',
+      title: 'Shell context',
     },
     element(
-      'div',
-      { className: 'tf-selection' },
-      selectedEntry.badge
-        ? element(TextForgeResourceBadge, {
-          attention: selectedEntry.attention,
-          badge: selectedEntry.badge,
-          label: `${selectedEntry.title} badge`,
-          size: 'regular',
-        })
-        : null,
-      element(
-        'div',
-        { className: 'tf-selection__copy' },
-        element('span', { className: 'tf-selection__path' }, folderPath),
-        element('p', { className: 'tf-selection__detail' }, selectedEntry.detail),
-      ),
+      'p',
+      { className: 'tf-surface-details__summary' },
+      'Resizable shell rails and the resizable right panel keep popup overlays and local ui state inside the browser-managed Dexie workspace.',
     ),
   );
 }
@@ -2196,13 +2273,6 @@ function PopupSessionsView({ controller, popupFrame }) {
             }),
           ],
         },
-        element(
-          'p',
-          { className: 'tf-selection__detail' },
-          tab.id === popupFrame.activeTabId
-            ? 'This popup is mounted as a floating overlay above the main surface.'
-            : 'Focus this popup to bring its floating overlay to the front.',
-        ),
       )),
   );
 }
@@ -2216,28 +2286,19 @@ function TextForgeWorkbenchApp({ controller }) {
   const showInspectorPane = snapshot.state.utilitySectionId === 'inspector';
   const showPopupSessions = snapshot.state.utilitySectionId === 'popups';
   const showStoragePane = snapshot.state.utilitySectionId === 'storage';
+  const activeUtilitySection = snapshot.utilitySections.find((section) => section.id === snapshot.state.utilitySectionId);
   const inspectorView = snapshot.state.surfaceFocusPlacement === 'popup'
     ? snapshot.activePopupView
     : mainView.kind === 'surface'
       ? mainView
       : undefined;
-  const utilitySubtitle = showInspectorPane
-    ? 'Inspector details stay in the resizable right panel so the editor remains the dominant region.'
-    : showPopupSessions
-      ? 'Popup surfaces stay in their own overlay while this panel provides session summary and focus controls.'
-      : showStoragePane
-        ? 'Browser storage state and recovery stay visible without squeezing the main document area.'
-        : 'Contribution visibility and shell diagnostics stay out of the main document strip.';
   const popupOverlay = snapshot.popupFrame.tabs.length > 0 && snapshot.activePopupView
     ? element(
       TextForgePopupHost,
       {
         frameModel: snapshot.popupFrame,
         onClose: controller.actions.closeActivePopupSurface,
-        onCloseTab: controller.actions.closeSession,
-        onSelectTab: controller.actions.focusPopupSession,
-        subtitle: 'Popup sessions float above the main surface and stay separate from the document tab strip.',
-        title: 'Popup surfaces',
+        title: snapshot.activePopupView.title,
       },
       element(SurfaceMount, { view: snapshot.activePopupView }),
     )
@@ -2283,10 +2344,6 @@ function TextForgeWorkbenchApp({ controller }) {
     element(
       TextForgeAppFrame,
       {
-        footer: [
-          element('span', { key: 'phase' }, 'Phase 3.5 Popup usability, resizable panels, and chrome deduplication pass'),
-          element('span', { key: 'detail' }, 'Resizable side rails, popup overlays, and deduplicated shell chrome over a browser-managed IndexedDB workspace'),
-        ],
         header: element(TextForgeTopBar, {
           brandTitle: snapshot.chromeModel.brandTitle,
           commandPaletteLabel: 'Commands',
@@ -2294,47 +2351,39 @@ function TextForgeWorkbenchApp({ controller }) {
           menuGroups: snapshot.commandMenus,
           onCommandPress: handleCommandPress,
           onOpenCommandPalette: () => setCommandPaletteOpen(true),
-          onToggleSidebar: controller.actions.toggleWorkspaceTree,
-          onToggleUtility: controller.actions.toggleUtilityPane,
-          sidebarCollapsed: snapshot.state.workspaceTreeCollapsed,
-          statusBadges: snapshot.chromeModel.statusBadges,
-          subtitle: snapshot.chromeModel.subtitle,
           toolbarSlots: snapshot.chromeModel.toolbarSlots,
-          utilityToggleLabel: 'Panel',
-          utilityOpen,
         }),
         sidebar: element(TextForgeWorkspaceSidebar, {
           collapsed: snapshot.state.workspaceTreeCollapsed,
-          footer: element(WorkspaceSelectionFooter, { selectedEntry: snapshot.selectedEntry }),
           onSelectItem: controller.actions.selectWorkspaceItem,
-          onToggleCollapsed: controller.actions.toggleWorkspaceTree,
+          onToggleFolder: controller.actions.toggleWorkspaceFolder,
           workspaceTree: snapshot.chromeModel.workspaceTree,
         }),
+        onSidebarCollapsedChange: controller.actions.setWorkspaceTreeCollapsed,
+        onUtilityCollapsedChange: controller.actions.setUtilityPaneCollapsed,
         panelLayout: screenshotPreset.panelLayout,
         sidebarCollapsed: snapshot.state.workspaceTreeCollapsed,
         utility: element(
           TextForgeUtilityPane,
           {
             activeSectionId: snapshot.state.utilitySectionId,
-            onClose: controller.actions.toggleUtilityPane,
             onSelectSection: controller.actions.setUtilitySection,
             sections: snapshot.utilitySections,
-            subtitle: utilitySubtitle,
-            title: 'Inspector & Utility',
+            title: activeUtilitySection?.label ?? 'Inspector',
           },
           showInspectorPane
-            ? inspectorView
-              ? element(SurfaceDetails, { view: inspectorView })
-              : element(TextForgeEmptyState, {
-                eyebrow: 'Inspector',
-                icon: 'info',
-                title: 'No active surface selected',
-                children: element(
-                  'p',
-                  null,
-                  'Open or focus a document to inspect its surface state, open-with target, and control affordances here.',
-                ),
-              })
+            ? element(
+              React.Fragment,
+              null,
+              inspectorView
+                ? element(SurfaceDetails, { view: inspectorView })
+                : element(TextForgeEmptyState, {
+                  eyebrow: 'Inspector',
+                  icon: 'info',
+                  title: 'No active surface selected',
+                }, element('p', null, 'Open or focus a document to inspect it here.')),
+              element(WorkbenchDetailsCard),
+            )
             : showPopupSessions
             ? element(PopupSessionsView, {
               controller,
@@ -2349,28 +2398,6 @@ function TextForgeWorkbenchApp({ controller }) {
       element(
         'section',
         { className: 'tf-surface-frame' },
-        element(
-          'div',
-          { className: 'tf-pane__header' },
-          element(
-            'div',
-            { className: 'tf-surface-frame__headline' },
-            element(
-              'div',
-              null,
-              element(
-                'h2',
-                { className: 'tf-pane__title' },
-                'Main surface',
-              ),
-              element(
-                'p',
-                { className: 'tf-pane__subtitle' },
-                'Primary document tabs stay central while the inspector and utility details live in the resizable right panel.',
-              ),
-            ),
-          ),
-        ),
         element(TextForgeSessionTabStrip, {
           emptyLabel: 'No documents are open',
           frameModel: snapshot.chromeModel.surfaceFrame,
@@ -2388,6 +2415,14 @@ function TextForgeWorkbenchApp({ controller }) {
         ),
         popupOverlay,
       ),
+    ),
+    element(
+      'div',
+      {
+        className: 'tf-shell-statusbar',
+        'aria-live': 'polite',
+      },
+      element(TextForgeStatusRail, { badges: snapshot.chromeModel.statusBadges }),
     ),
     element(TextForgeCommandPalette, {
       entries: snapshot.commandPaletteEntries,

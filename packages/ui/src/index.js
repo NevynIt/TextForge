@@ -7,6 +7,7 @@ import {
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Command,
@@ -42,6 +43,8 @@ const iconRegistry = {
   export: HardDriveDownload,
   collapse: ChevronLeft,
   expand: ChevronRight,
+  disclosureClosed: ChevronRight,
+  disclosureOpen: ChevronDown,
   close: X,
   utility: SquareTerminal,
   status: Sparkles,
@@ -76,7 +79,7 @@ function IconGlyph({ className, name, size = 16, strokeWidth = 1.9 }) {
 
 function resolveWorkspaceItemIcon(item) {
   if (item.kind === 'folder') {
-    return item.active ? 'folderOpen' : 'folder';
+    return item.expanded ? 'folderOpen' : 'folder';
   }
 
   if (item.detail === 'SVG' || item.detail === 'IMAGE' || item.detail === 'PDF') {
@@ -170,6 +173,24 @@ function handleTreeKeyDown(event, onSelect) {
   if (nextId) {
     onSelect?.(nextId);
   }
+}
+
+function handleWorkspaceTreeItemKeyDown(event, item, onSelect, onToggleFolder) {
+  if (item.kind === 'folder' && item.hasChildren) {
+    if (event.key === 'ArrowRight' && !item.expanded) {
+      event.preventDefault();
+      onToggleFolder?.(item.id);
+      return;
+    }
+
+    if (event.key === 'ArrowLeft' && item.expanded) {
+      event.preventDefault();
+      onToggleFolder?.(item.id);
+      return;
+    }
+  }
+
+  handleTreeKeyDown(event, onSelect);
 }
 
 function matchesCommandPaletteEntry(entry, query) {
@@ -470,6 +491,10 @@ export function TextForgeEmptyState({
 }
 
 export function TextForgeStatusRail({ badges = [] }) {
+  if (badges.length === 0) {
+    return null;
+  }
+
   return element(
     'div',
     { className: 'tf-status-rail', 'aria-label': 'Workbench status' },
@@ -575,32 +600,17 @@ function TextForgeCommandMenuBar({ groups = [], onCommandPress }) {
 }
 
 export function TextForgeTopBar({
-  activeResource,
   brandTitle,
   commandPaletteLabel = 'Commands',
   commandPaletteShortcut = 'Ctrl+K',
   menuGroups = [],
   onCommandPress,
   onOpenCommandPalette,
-  onToggleSidebar,
-  onToggleUtility,
-  sidebarCollapsed = false,
   statusBadges = [],
   subtitle,
   toolbarSlots = [],
-  utilityToggleLabel = 'Panel',
-  utilityOpen = false,
 }) {
   const actions = [
-    element(TextForgeToolbarButton, {
-      key: 'toggle-sidebar',
-      active: !sidebarCollapsed,
-      ariaLabel: sidebarCollapsed ? 'Show workspace tree' : 'Hide workspace tree',
-      icon: sidebarCollapsed ? 'expand' : 'collapse',
-      kind: 'toggle',
-      label: sidebarCollapsed ? 'Show Tree' : 'Hide Tree',
-      onPress: onToggleSidebar,
-    }),
     element(TextForgeCommandMenuBar, {
       key: 'command-menus',
       groups: menuGroups,
@@ -628,15 +638,6 @@ export function TextForgeTopBar({
         title: commandPaletteShortcut ? `Open command palette (${commandPaletteShortcut})` : 'Open command palette',
       })
       : null,
-    element(TextForgeToolbarButton, {
-      key: 'toggle-utility',
-      active: utilityOpen,
-      ariaLabel: utilityOpen ? `Hide ${utilityToggleLabel}` : `Show ${utilityToggleLabel}`,
-      icon: utilityOpen ? 'close' : 'utility',
-      kind: 'toggle',
-      label: utilityOpen ? `Hide ${utilityToggleLabel}` : `Show ${utilityToggleLabel}`,
-      onPress: onToggleUtility,
-    }),
   ].filter(Boolean);
 
   return element(
@@ -656,39 +657,6 @@ export function TextForgeTopBar({
           subtitle ? element('span', null, subtitle) : null,
         ),
       ),
-      activeResource
-        ? element(
-          'div',
-          {
-            className: classNames(
-              'tf-topbar__resource',
-              activeResource.attention && `is-${activeResource.attention}`,
-            ),
-          },
-          element(TextForgeResourceBadge, {
-            active: true,
-            attention: activeResource.attention,
-            badge: activeResource.badge,
-            label: activeResource.title,
-            size: 'regular',
-          }),
-          element(
-            'div',
-            { className: 'tf-topbar__resource-copy' },
-            element(
-              'div',
-              { className: 'tf-topbar__resource-line' },
-              activeResource.icon
-                ? element(IconGlyph, { className: 'tf-topbar__resource-icon', name: activeResource.icon, size: 15 })
-                : null,
-              element('strong', null, activeResource.title),
-            ),
-            activeResource.detail
-              ? element('span', { className: 'tf-topbar__resource-detail' }, activeResource.detail)
-              : null,
-          ),
-        )
-        : null,
       element(TextForgeStatusRail, { badges: statusBadges }),
     ),
     element(
@@ -703,7 +671,7 @@ export function TextForgeWorkspaceSidebar({
   collapsed = false,
   footer,
   onSelectItem,
-  onToggleCollapsed,
+  onToggleFolder,
   workspaceTree,
 }) {
   const selectedIndex = workspaceTree.items.findIndex((item) => item.id === workspaceTree.selectedResourceId);
@@ -711,22 +679,7 @@ export function TextForgeWorkspaceSidebar({
   const header = element(
     'div',
     { className: 'tf-pane__header' },
-    element(
-      'div',
-      null,
-      element('h2', { className: 'tf-pane__title' }, workspaceTree.title),
-      element('p', { className: 'tf-pane__subtitle' }, workspaceTree.rootLabel),
-    ),
-    onToggleCollapsed
-      ? element(TextForgeToolbarButton, {
-        active: !collapsed,
-        ariaLabel: collapsed ? 'Expand workspace tree' : 'Collapse workspace tree',
-        icon: collapsed ? 'expand' : 'collapse',
-        kind: 'toggle',
-        label: collapsed ? 'Expand' : 'Collapse',
-        onPress: onToggleCollapsed,
-      })
-      : null,
+    element('h2', { className: 'tf-pane__title' }, workspaceTree.title),
   );
 
   const items = collapsed
@@ -746,10 +699,28 @@ export function TextForgeWorkspaceSidebar({
             tabIndex: index === fallbackIndex ? 0 : -1,
             'data-item-id': item.id,
             onClick: () => onSelectItem?.(item.id),
-            onKeyDown: (event) => handleTreeKeyDown(event, onSelectItem),
+            onKeyDown: (event) => handleWorkspaceTreeItemKeyDown(event, item, onSelectItem, onToggleFolder),
             title: item.path,
             style: { '--depth': item.depth },
           },
+          item.kind === 'folder' && item.hasChildren
+            ? element(
+              'span',
+              {
+                className: 'tf-tree__toggle',
+                'aria-hidden': 'true',
+                onClick: (event) => {
+                  event.stopPropagation();
+                  onToggleFolder?.(item.id);
+                },
+              },
+              element(IconGlyph, {
+                className: 'tf-tree__toggle-icon',
+                name: item.expanded ? 'disclosureOpen' : 'disclosureClosed',
+                size: 14,
+              }),
+            )
+            : element('span', { className: 'tf-tree__toggle tf-tree__toggle--placeholder', 'aria-hidden': 'true' }),
           element(IconGlyph, {
             className: 'tf-tree__icon',
             name: resolveWorkspaceItemIcon(item),
@@ -787,11 +758,7 @@ export function TextForgeWorkspaceSidebar({
     },
     header,
     collapsed
-      ? element(
-        'div',
-        { className: 'tf-sidebar__collapsed-note' },
-        `${workspaceTree.items.length} items`,
-      )
+      ? null
       : element(
         'ul',
         {
@@ -909,10 +876,8 @@ export function TextForgeSelectField({ control }) {
 export function TextForgeUtilityPane({
   activeSectionId,
   children,
-  onClose,
   onSelectSection,
   sections = [],
-  subtitle,
   title = 'Utility',
 }) {
   return element(
@@ -924,21 +889,7 @@ export function TextForgeUtilityPane({
     element(
       'div',
       { className: 'tf-pane__header' },
-      element(
-        'div',
-        null,
-        element('h2', { className: 'tf-pane__title' }, title),
-        subtitle ? element('p', { className: 'tf-pane__subtitle' }, subtitle) : null,
-      ),
-      onClose
-        ? element(TextForgeToolbarButton, {
-          ariaLabel: 'Hide utility pane',
-          icon: 'close',
-          kind: 'toggle',
-          label: 'Hide',
-          onPress: onClose,
-        })
-        : null,
+      element('h2', { className: 'tf-pane__title' }, title),
     ),
     sections.length > 0
       ? element(
@@ -976,54 +927,234 @@ export function TextForgePopupHost({
   children,
   frameModel,
   onClose,
-  onCloseTab,
-  onSelectTab,
-  subtitle,
-  title = 'Popup surfaces',
+  title = 'Popup surface',
 }) {
   if ((frameModel?.tabs ?? []).length === 0) {
     return null;
   }
 
+  const hostRef = React.useRef(null);
+  const scrimRef = React.useRef(null);
+  const dragStateRef = React.useRef(null);
+  const resizeStateRef = React.useRef(null);
+  function getInitialPopupSize() {
+    if (typeof window === 'undefined') {
+      return { width: 760, height: 420 };
+    }
+
+    return {
+      width: Math.min(760, Math.max(320, window.innerWidth - 48)),
+      height: Math.min(Math.max(240, Math.round(window.innerHeight * 0.7)), Math.max(240, window.innerHeight - 24)),
+    };
+  }
+
+  const [size, setSize] = React.useState(() => getInitialPopupSize());
+  const [position, setPosition] = React.useState(() => {
+    if (typeof window === 'undefined') {
+      return { left: 24, top: 24 };
+    }
+
+    const { width } = getInitialPopupSize();
+    return {
+      left: Math.max(12, window.innerWidth - width - 24),
+      top: 24,
+    };
+  });
+
+  function getPopupBounds() {
+    const rect = scrimRef.current?.getBoundingClientRect();
+    if (rect) {
+      return rect;
+    }
+
+    return {
+      left: 0,
+      top: 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+    };
+  }
+
+  React.useEffect(() => {
+    function stopPointerInteraction() {
+      if (!dragStateRef.current && !resizeStateRef.current) {
+        return;
+      }
+
+      dragStateRef.current = null;
+      resizeStateRef.current = null;
+      document.body.style.removeProperty('user-select');
+    }
+
+    function handlePointerMove(event) {
+      if (resizeStateRef.current) {
+        const bounds = getPopupBounds();
+        const maxWidth = Math.max(320, bounds.width - resizeStateRef.current.left - 12);
+        const maxHeight = Math.max(240, bounds.height - resizeStateRef.current.top - 12);
+        const nextWidth = Math.min(
+          Math.max(320, resizeStateRef.current.startWidth + (event.clientX - resizeStateRef.current.startX)),
+          maxWidth,
+        );
+        const nextHeight = Math.min(
+          Math.max(240, resizeStateRef.current.startHeight + (event.clientY - resizeStateRef.current.startY)),
+          maxHeight,
+        );
+        setSize({ width: nextWidth, height: nextHeight });
+        return;
+      }
+
+      if (!dragStateRef.current || !hostRef.current) {
+        return;
+      }
+
+      const rect = hostRef.current.getBoundingClientRect();
+      const bounds = getPopupBounds();
+      const maxLeft = Math.max(12, bounds.width - rect.width - 12);
+      const maxTop = Math.max(12, bounds.height - rect.height - 12);
+      const nextLeft = Math.min(Math.max(12, event.clientX - bounds.left - dragStateRef.current.offsetX), maxLeft);
+      const nextTop = Math.min(Math.max(12, event.clientY - bounds.top - dragStateRef.current.offsetY), maxTop);
+      setPosition({ left: nextLeft, top: nextTop });
+    }
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', stopPointerInteraction);
+    window.addEventListener('pointercancel', stopPointerInteraction);
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', stopPointerInteraction);
+      window.removeEventListener('pointercancel', stopPointerInteraction);
+      document.body.style.removeProperty('user-select');
+    };
+  }, []);
+
+  React.useEffect(() => {
+    function clampPopupBounds() {
+      if (typeof window === 'undefined') {
+        return;
+      }
+
+      const bounds = getPopupBounds();
+      const maxWidth = Math.max(320, bounds.width - 24);
+      const maxHeight = Math.max(240, bounds.height - 24);
+      setSize((current) => {
+        const nextWidth = Math.min(current.width, maxWidth);
+        const nextHeight = Math.min(current.height, maxHeight);
+        if (nextWidth === current.width && nextHeight === current.height) {
+          return current;
+        }
+
+        return { width: nextWidth, height: nextHeight };
+      });
+      setPosition((current) => {
+        const width = Math.min(size.width, maxWidth);
+        const height = Math.min(size.height, maxHeight);
+        const maxLeft = Math.max(12, bounds.width - width - 12);
+        const maxTop = Math.max(12, bounds.height - height - 12);
+        const nextLeft = Math.min(Math.max(12, current.left), maxLeft);
+        const nextTop = Math.min(Math.max(12, current.top), maxTop);
+        if (nextLeft === current.left && nextTop === current.top) {
+          return current;
+        }
+
+        return { left: nextLeft, top: nextTop };
+      });
+    }
+
+    clampPopupBounds();
+    window.addEventListener('resize', clampPopupBounds);
+    return () => window.removeEventListener('resize', clampPopupBounds);
+  }, [size.height, size.width]);
+
+  function handleHeaderPointerDown(event) {
+    if (event.button !== 0 || event.target.closest('button, a, input, select, textarea')) {
+      return;
+    }
+
+    const rect = hostRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
+
+    dragStateRef.current = {
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+    document.body.style.setProperty('user-select', 'none');
+  }
+
+  function handleResizePointerDown(event) {
+    if (event.button !== 0) {
+      return;
+    }
+
+    const rect = hostRef.current?.getBoundingClientRect();
+    if (!rect) {
+      return;
+    }
+
+    const bounds = getPopupBounds();
+
+    event.stopPropagation();
+    resizeStateRef.current = {
+      left: rect.left - bounds.left,
+      top: rect.top - bounds.top,
+      startWidth: rect.width,
+      startHeight: rect.height,
+      startX: event.clientX,
+      startY: event.clientY,
+    };
+    document.body.style.setProperty('user-select', 'none');
+  }
+
   return element(
     'div',
-    { className: 'tf-popup-host__scrim' },
+    { ref: scrimRef, className: 'tf-popup-host__scrim' },
     element(
       'section',
       {
+        ref: hostRef,
         className: 'tf-popup-host',
         role: 'dialog',
         'aria-modal': 'false',
         'aria-label': title,
         'data-pane': 'popup',
+        style: {
+          height: `${size.height}px`,
+          left: `${position.left}px`,
+          top: `${position.top}px`,
+          width: `${size.width}px`,
+        },
       },
       element(
         'div',
-        { className: 'tf-popup-host__header' },
+        {
+          className: 'tf-popup-host__header',
+          onPointerDown: handleHeaderPointerDown,
+        },
         element(
           'div',
           { className: 'tf-popup-host__copy' },
-          element('span', { className: 'tf-popup-host__eyebrow' }, 'Popup surfaces'),
           element('h2', { className: 'tf-popup-host__title' }, title),
-          subtitle ? element('p', { className: 'tf-popup-host__subtitle' }, subtitle) : null,
         ),
         onClose
-          ? element(TextForgeToolbarButton, {
-            ariaLabel: 'Close active popup surface',
-            icon: 'close',
-            kind: 'secondary',
-            label: 'Close popup',
-            onPress: onClose,
-          })
+          ? element(
+            'button',
+            {
+              type: 'button',
+              className: 'tf-popup-host__close',
+              'aria-label': `Close ${title}`,
+              onClick: onClose,
+            },
+            element(IconGlyph, { className: 'tf-popup-host__close-icon', name: 'close', size: 14 }),
+            element('span', { className: 'tf-visually-hidden' }, 'Close'),
+          )
           : null,
       ),
-      element(TextForgeSessionTabStrip, {
-        emptyLabel: 'No popup sessions',
-        frameModel,
-        onCloseTab,
-        onSelectTab,
-      }),
       element('div', { className: 'tf-popup-host__body' }, children),
+      element('div', {
+        className: 'tf-popup-host__resize-handle',
+        onPointerDown: handleResizePointerDown,
+      }),
     ),
   );
 }
@@ -1208,6 +1339,8 @@ export function TextForgeAppFrame({
   children,
   footer,
   header,
+  onSidebarCollapsedChange,
+  onUtilityCollapsedChange,
   panelLayout,
   sidebar,
   sidebarCollapsed = false,
@@ -1218,13 +1351,13 @@ export function TextForgeAppFrame({
   const utilityPanelRef = React.useRef(null);
   const sidebarConfig = normalizePanelConfig(panelLayout?.sidebar, {
     defaultSize: '22',
-    minSize: '16',
+    minSize: '0',
     maxSize: '30',
-    collapsedSize: '6',
+    collapsedSize: '0',
   });
   const utilityConfig = normalizePanelConfig(panelLayout?.utility, {
     defaultSize: '24',
-    minSize: '18',
+    minSize: '0',
     maxSize: '34',
     collapsedSize: '0',
   });
@@ -1290,12 +1423,14 @@ export function TextForgeAppFrame({
                 className: classNames('tf-panel', 'tf-panel--sidebar', sidebarCollapsed && 'is-collapsed'),
                 collapsible: true,
                 collapsedSize: sidebarConfig.collapsedSize,
-                defaultSize: sidebarCollapsed ? sidebarConfig.collapsedSize : sidebarConfig.defaultSize,
-                minSize: sidebarConfig.minSize,
-                maxSize: sidebarConfig.maxSize,
-                order: 1,
-              },
-              sidebar,
+              defaultSize: sidebarCollapsed ? sidebarConfig.collapsedSize : sidebarConfig.defaultSize,
+              minSize: sidebarConfig.minSize,
+              maxSize: sidebarConfig.maxSize,
+              onCollapse: () => onSidebarCollapsedChange?.(true),
+              onExpand: () => onSidebarCollapsedChange?.(false),
+              order: 1,
+            },
+            sidebar,
             ),
             element(
               Separator,
@@ -1315,7 +1450,7 @@ export function TextForgeAppFrame({
           {
             key: 'main-panel',
             className: 'tf-panel tf-panel--main',
-            minSize: sidebar || utility ? '42' : '100',
+            minSize: sidebar || utility ? '34' : '100',
             order: 2,
           },
           element('main', { className: 'tf-app__main', 'data-pane': 'main' }, children),
@@ -1344,9 +1479,11 @@ export function TextForgeAppFrame({
                 defaultSize: utilityOpen ? utilityConfig.defaultSize : utilityConfig.collapsedSize,
                 minSize: utilityConfig.minSize,
                 maxSize: utilityConfig.maxSize,
+                onCollapse: () => onUtilityCollapsedChange?.(true),
+                onExpand: () => onUtilityCollapsedChange?.(false),
                 order: 3,
               },
-              utilityOpen ? utility : null,
+              utility,
             ),
           ]
           : null,
@@ -1373,6 +1510,8 @@ export const defaultIcons = [
   { name: 'export', glyph: 'D', viewBox: '0 0 24 24' },
   { name: 'collapse', glyph: '<', viewBox: '0 0 24 24' },
   { name: 'expand', glyph: '>', viewBox: '0 0 24 24' },
+  { name: 'disclosureClosed', glyph: '>', viewBox: '0 0 24 24' },
+  { name: 'disclosureOpen', glyph: 'v', viewBox: '0 0 24 24' },
   { name: 'close', glyph: 'X', viewBox: '0 0 24 24' },
   { name: 'utility', glyph: 'U', viewBox: '0 0 24 24' },
   { name: 'status', glyph: '*', viewBox: '0 0 24 24' },

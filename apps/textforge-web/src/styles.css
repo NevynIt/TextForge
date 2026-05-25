@@ -1005,7 +1005,8 @@ body {
 .tf-app {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
-  height: 100vh;
+  min-height: 100dvh;
+  height: 100dvh;
   overflow: hidden;
   background:
     linear-gradient(180deg, rgba(12, 18, 33, 0.96), rgba(8, 12, 23, 1)),
@@ -1735,7 +1736,7 @@ body {
 
 @media (max-width: 1180px) {
   .tf-topbar {
-    flex-direction: column;
+    align-items: stretch;
   }
 
   .tf-topbar__actions {
@@ -1775,16 +1776,20 @@ body {
 .tf-app__body {
   position: relative;
   display: block;
+  height: 100%;
   min-height: 0;
   overflow: hidden;
 }
 
 .tf-panel-group {
   width: 100%;
+  height: 100%;
   min-height: 0;
 }
 
 .tf-panel {
+  display: flex;
+  height: 100%;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -2058,5 +2063,359 @@ body {
   .tf-popup-host {
     width: 100%;
     max-height: calc(100% - 12px);
+  }
+}
+
+.tf-topbar {
+  align-items: center;
+  flex-direction: row;
+}
+
+.tf-topbar__lead {
+  flex: 0 1 auto;
+  gap: 0;
+}
+
+.tf-topbar__actions {
+  flex: 0 1 auto;
+  margin-left: auto;
+}
+
+.tf-sidebar {
+  width: 100%;
+  justify-items: stretch;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.tf-sidebar__footer,
+.tf-sidebar__collapsed-note {
+  display: none;
+}
+
+.tf-pane__header {
+  align-items: center;
+  min-height: 52px;
+}
+
+.tf-pane__subtitle {
+  display: none;
+}
+
+.tf-tree {
+  align-content: start;
+  justify-content: stretch;
+  grid-auto-rows: max-content;
+  padding: 8px 10px 12px;
+  gap: 6px;
+}
+
+.tf-tree__item {
+  width: 100%;
+  min-width: 0;
+}
+
+.tf-tree__row {
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  gap: 8px;
+  width: 100%;
+  justify-self: stretch;
+}
+
+.tf-tree__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+}
+
+.tf-tree__toggle--placeholder {
+  opacity: 0;
+}
+
+.tf-panel-resize-handle {
+  flex: 0 0 8px;
+}
+
+.tf-panel-resize-handle__grip {
+  width: 2px;
+  height: 72px;
+}
+
+.tf-panel--sidebar,
+.tf-panel--utility,
+.tf-panel--main {
+  min-width: 0;
+  min-height: 0;
+}
+
+.tf-app__main,
+.tf-surface-frame,
+.tf-surface-frame__body,
+.tf-surface-frame__viewport,
+.tf-surface-mount {
+  min-width: 0;
+  min-height: 0;
+}
+
+.tf-surface-frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.tf-tabstrip,
+.tf-tabstrip__empty {
+  flex: 0 0 auto;
+}
+
+.tf-surface-frame__body {
+  flex: 1 1 auto;
+  display: flex;
+  overflow: hidden;
+}
+
+.tf-surface-frame__viewport {
+  flex: 1 1 auto;
+  display: block;
+  padding: 10px 12px 12px;
+  overflow: auto;
+}
+
+.tf-surface-mount {
+  display: block;
+  flex: 1 1 auto;
+  width: 100%;
+  min-width: 100%;
+}
+
+.editor-frame {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  gap: 10px;
+}
+
+.editor-frame__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+
+.editor-frame__header,
+.editor-frame__diagnostics,
+.editor-frame__footer {
+  flex: 0 0 auto;
+}
+
+.editor-frame__codemirror,
+.editor-frame__codemirror .cm-editor,
+.editor-frame__codemirror .cm-scroller {
+  min-height: 0;
+  height: 100%;
+}
+
+.asset-viewer {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-width: 100%;
+  padding: 0;
+  gap: 0;
+  overflow: hidden;
+}
+
+.asset-viewer__body,
+.asset-viewer__body--stage-only,
+.asset-viewer__stage {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+}
+
+.asset-viewer__stage {
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 10px;
+  background: rgba(2, 6, 23, 0.54);
+}
+
+.asset-viewer__media,
+.asset-viewer__fallback {
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.asset-viewer__media {
+  object-fit: contain;
+}
+
+.asset-viewer__fallback {
+  margin: 0;
+}
+
+.tf-utility {
+  position: relative;
+  top: auto;
+  right: auto;
+  bottom: auto;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  height: 100%;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  background: rgba(10, 15, 27, 0.96);
+}
+
+.tf-utility__body {
+  padding: 12px;
+}
+
+.tf-command-palette__search {
+  width: 100%;
+}
+
+.tf-command-palette__input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+}
+
+.tf-popup-host__scrim {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  pointer-events: none;
+}
+
+.tf-popup-host {
+  position: absolute;
+  width: min(760px, calc(100% - 24px));
+  height: min(70vh, calc(100% - 24px));
+  min-width: 320px;
+  min-height: 240px;
+  max-width: calc(100% - 24px);
+  max-height: calc(100% - 24px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tf-popup-host__header {
+  align-items: center;
+  padding: 10px 12px;
+  cursor: move;
+}
+
+.tf-popup-host__copy {
+  min-width: 0;
+}
+
+.tf-popup-host__title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tf-popup-host__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.tf-popup-host__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+}
+
+.tf-popup-host__resize-handle {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 18px;
+  height: 18px;
+  cursor: nwse-resize;
+}
+
+.tf-popup-host__resize-handle::before {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 10px;
+  height: 10px;
+  border-right: 2px solid rgba(126, 231, 216, 0.9);
+  border-bottom: 2px solid rgba(126, 231, 216, 0.9);
+  border-radius: 0 0 3px 0;
+}
+
+.tf-popup-host .tf-surface-mount {
+  height: 100%;
+}
+
+.tf-shell-statusbar {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.tf-shell-statusbar .tf-status-rail {
+  justify-content: flex-end;
+}
+
+.tf-shell-statusbar .tf-badge {
+  pointer-events: auto;
+  box-shadow: 0 14px 28px rgba(2, 6, 23, 0.34);
+  backdrop-filter: blur(12px);
+}
+
+@media (max-width: 960px) {
+  .tf-topbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tf-topbar__actions {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
+
+  .tf-utility {
+    width: 100%;
+  }
+
+  .tf-popup-host {
+    min-width: 0;
+    width: calc(100% - 24px);
+    height: min(60vh, calc(100% - 24px));
+  }
+
+  .tf-shell-statusbar {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+  }
+
+  .tf-shell-statusbar .tf-status-rail {
+    justify-content: flex-start;
   }
 }

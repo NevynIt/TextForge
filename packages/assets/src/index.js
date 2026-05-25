@@ -220,47 +220,11 @@ function createMediaNode(ownerDocument, model) {
 }
 
 function createAssetViewerMarkup(model) {
-  const downloadLabel = model.blobUrl ? 'Download asset' : 'No download link';
-  const downloadMarkup = model.blobUrl
-    ? `<a class="asset-viewer__download" data-download-link href="${escapeHtml(model.blobUrl)}" download="${escapeHtml(model.title)}">${escapeHtml(downloadLabel)}</a>`
-    : `<span class="asset-viewer__download asset-viewer__download--disabled" data-download-link aria-disabled="true">${escapeHtml(downloadLabel)}</span>`;
   return `
     <section class="asset-viewer asset-viewer--${model.viewerKind}">
-      <header class="asset-viewer__header">
-        <div>
-          <span class="asset-viewer__eyebrow">Asset viewer</span>
-          <h4>Workspace asset preview</h4>
-        </div>
-        <div class="asset-viewer__meta">
-          <span>${escapeHtml(model.viewerKind)}</span>
-          <span>${escapeHtml(model.mimeType)}</span>
-        </div>
-      </header>
-      <div class="asset-viewer__body">
+      <div class="asset-viewer__body asset-viewer__body--stage-only">
         <div class="asset-viewer__stage"></div>
-        <aside class="asset-viewer__details">
-          <div class="asset-viewer__detail">
-            <span>State</span>
-            <strong>${escapeHtml(model.state)}</strong>
-          </div>
-          <div class="asset-viewer__detail">
-            <span>Source</span>
-            <strong>${escapeHtml(model.provenance)}</strong>
-          </div>
-          <div class="asset-viewer__detail">
-            <span>Blob URL</span>
-            <strong>${model.blobUrl ? 'bound' : 'unbound'}</strong>
-          </div>
-          <div class="asset-viewer__detail">
-            <span>Action</span>
-            <strong>${downloadMarkup}</strong>
-          </div>
-        </aside>
       </div>
-      <footer class="asset-viewer__footer">
-        <span>${escapeHtml(model.state)}</span>
-        <span>${escapeHtml(model.provenance)}</span>
-      </footer>
     </section>
   `;
 }
@@ -317,11 +281,6 @@ export function createAssetViewerSurface(request, options = {}) {
       }
 
       stage.replaceChildren(createMediaNode(ownerDocument, model));
-      const downloadLink = container.querySelector('[data-download-link]');
-      if (downloadLink && model.blobUrl) {
-        downloadLink.setAttribute('href', model.blobUrl);
-        downloadLink.setAttribute('download', model.title);
-      }
       return () => {};
     },
   };

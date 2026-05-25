@@ -117,7 +117,7 @@ if (!workbenchJs.includes("utilityPaneOpen: true") || !workbenchJs.includes("wor
   throw new Error('workbench.js must initialize the right panel open on the inspector section and the workspace tree expanded');
 }
 
-for (const requiredPhase35Signal of ['Popup surfaces', 'closeActivePopupSurface', 'Inspector & Utility', 'Popup Summary']) {
+for (const requiredPhase35Signal of ['Popup Summary', 'Browser Storage', 'closeActivePopupSurface', 'toggleWorkspaceFolder']) {
   if (!workbenchJs.includes(requiredPhase35Signal)) {
     throw new Error(`workbench.js must surface ${requiredPhase35Signal} for the Phase 3.5 shell usability pass`);
   }

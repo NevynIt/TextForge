@@ -23,6 +23,8 @@ export type IconName =
   | 'export'
   | 'collapse'
   | 'expand'
+  | 'disclosureClosed'
+  | 'disclosureOpen'
   | 'close'
   | 'utility'
   | 'status'
@@ -109,6 +111,7 @@ export interface WorkspaceTreeItem {
   readonly depth: number;
   readonly detail?: string;
   readonly expanded?: boolean;
+  readonly hasChildren?: boolean;
   readonly active?: boolean;
   readonly attention?: ResourceAttention;
   readonly badge?: ResourceBadgeToken;
@@ -239,7 +242,7 @@ export interface TextForgeWorkspaceSidebarProps {
   readonly collapsed?: boolean;
   readonly footer?: ReactNode;
   readonly onSelectItem?: (itemId: string) => void;
-  readonly onToggleCollapsed?: () => void;
+  readonly onToggleFolder?: (itemId: string) => void;
   readonly workspaceTree: WorkspaceTreeFrame;
 }
 
@@ -321,6 +324,8 @@ export interface TextForgeAppFrameProps {
   readonly children?: ReactNode;
   readonly footer?: ReactNode;
   readonly header?: ReactNode;
+  readonly onSidebarCollapsedChange?: (collapsed: boolean) => void;
+  readonly onUtilityCollapsedChange?: (collapsed: boolean) => void;
   readonly panelLayout?: TextForgeAppFramePanelLayout;
   readonly sidebar?: ReactNode;
   readonly sidebarCollapsed?: boolean;
