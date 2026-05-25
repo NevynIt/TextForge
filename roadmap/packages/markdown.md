@@ -144,3 +144,7 @@ Do not import app-shell internals. Do not bypass contribution registries. Do not
 ## Repository and workspace workflow
 
 This package lives inside the main TextForge Git repository as an npm workspace package. It should remain independently buildable and testable, but it should not be managed as a Git submodule. Cross-package changes may be made in one branch by one agent, with commits scoped by package where practical. Package dependencies should use `workspace:*` references, and public integration should happen through contribution manifests or stable exported contracts rather than direct app-shell coupling.
+
+## Phase 4 closure note
+
+The package now delivers the Phase 4 TF-MD baseline: a Markdown preview surface, `%metadata` and `%style` control-block parsing, explicit heading anchors plus heading/paragraph/inline style references, workspace-relative image resolution against unified resources, provisional fenced-block dispatch for the known local block set, and print-optimized HTML export. Unknown fences are still preserved as code, while `%include`, `%repository`, `%require`, and ITM publication remain deferred to their planned later phases.

@@ -187,3 +187,7 @@ The package now exposes the existing asset download path as a shell command desc
 ## Phase 3.5 closure note
 
 Popup-ready asset viewers now render through the bounded overlay host instead of the utility pane, while the asset package keeps ownership of read-only viewer semantics, blob URL binding, and download actions. The shared shell chrome also uses a generic asset header label so popup asset titles do not inflate the visible duplicate-name count in the surrounding workbench.
+
+## Phase 4 closure note
+
+The package now surfaces generated-asset provenance and stale-state cues through the read-only asset model and exposes explicit SVG/PNG export commands for selected generated diagram resources. The generated-asset metadata remains compatibility-focused and works with the unified resource model delivered in Phase 3.6 instead of restoring the old text/binary split.

@@ -108,3 +108,7 @@ Do not import app-shell internals. Do not bypass contribution registries. Do not
 ## Repository and workspace workflow
 
 This package lives inside the main TextForge Git repository as an npm workspace package. It should remain independently buildable and testable, but it should not be managed as a Git submodule. Cross-package changes may be made in one branch by one agent, with commits scoped by package where practical. Package dependencies should use `workspace:*` references, and public integration should happen through contribution manifests or stable exported contracts rather than direct app-shell coupling.
+
+## Phase 4 closure note
+
+The package now exposes the Phase 4 baseline runtime: generated-resource descriptors, a minimal contribution manifest shape, a registry for pipeline steps, and a runner/trace contract that the Markdown and diagrams packages can compose without importing app-shell internals. The implementation stays intentionally small so Phase 5 can replace ad hoc registration with broader contribution-pack composition instead of undoing a heavier first pass.

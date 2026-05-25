@@ -100,3 +100,7 @@ Do not import app-shell internals. Do not bypass contribution registries. Do not
 ## Repository and workspace workflow
 
 This package lives inside the main TextForge Git repository as an npm workspace package. It should remain independently buildable and testable, but it should not be managed as a Git submodule. Cross-package changes may be made in one branch by one agent, with commits scoped by package where practical. Package dependencies should use `workspace:*` references, and public integration should happen through contribution manifests or stable exported contracts rather than direct app-shell coupling.
+
+## Phase 4 closure note
+
+The package now owns the Phase 4 diagram baseline: Mermaid and Graphviz fenced-block renderers, text-stored generated SVG outputs, browser-side SVG-to-PNG rasterization, and Markdown-callable handler exports that the shell can use to materialize generated diagram resources in the workspace. This keeps diagram generation package-owned while leaving richer contribution registration and visual editing for later phases.
