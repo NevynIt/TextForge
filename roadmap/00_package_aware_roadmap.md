@@ -1,4 +1,4 @@
-# TextForge V15h Package-Aware Roadmap
+# TextForge V15j Package-Aware Roadmap
 
 This roadmap interweaves the architecture milestones with the package split. It is intentionally package-oriented: every phase states which packages are created or updated and what each package receives.
 
@@ -379,11 +379,93 @@ Acceptance criteria: Phase 3.5 is delivered as one focused shell-usability pass;
 
 Scope boundary: no Phase 13 advanced tab groups, tab drag/reorder, split panes, saved layout/session restoration, detached browser windows, multi-monitor workflows, deep tab persistence, or full contribution-pack/plugin-management UX. `react-resizable-panels` is allowed only for bounded shell side panels in this phase; dnd-kit and advanced tab movement remain Phase 13.
 
+
+### Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+#### Architecture and pnpm implementation anchors
+
+Architecture paragraphs to consider: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`. Resolve these IDs through `roadmap/02_architecture_paragraph_reference_index.md`, which maps each anchor to the exact paragraph/block and line range in `roadmap/textforge_rebuild_whitepaper_main.md`.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Replace `text`/`binary` as a public resource-kind ontology with minimal resource content/representation contracts. Keep compatibility aliases only if needed for migration, and do not use them for surface eligibility. | No new package install. |
+| `@textforge/workspace` | Collapse text/binary file resources into one workspace resource model with a stored content representation: text or bytes. Folders may remain separate workspace entries. Add Dexie/archive compatibility migration without proliferating persistent metadata. | No new package install. |
+| `@textforge/surfaces` | Replace hard-coded resource-kind filtering with compatibility predicates based on stored representation, MIME type, language ID, and path/extension. | No new package install. |
+| `@textforge/editors` | Make source-editor compatibility depend on text representation and supported language modes, not on a `kind: text` resource discriminator. | No new package install. |
+| `@textforge/assets` | Make image/SVG/PDF/binary viewers consume compatible text or byte resources as appropriate. SVG must be openable as both source text and visual image preview; PNG/JPEG/WebP/GIF/PDF remain byte-stored assets. | No new package install. |
+| `@textforge/ui` | Update labels, icons, open-with lists, and inspector wording so they describe representation and available surfaces without turning text/binary into a user-facing resource taxonomy. | No new package install. |
+| `apps/textforge-web` | Integrate unified resources, safer import classification, representation-aware open-with routing, and placement choice that is not simply `binary => popup`. | No new package install. |
+| `@textforge/security-profile` | Confirm the resource-model migration does not introduce File System Access API, directory handles, background sync, remote sniffing, or silent local-file probing. | No new package install. |
+| `@textforge/examples-docs` | Add fixtures and guidance for SVG-as-text, PNG-as-bytes, PDF/image viewing, archive migration, and open-with behavior. | No new package install. |
+
+Focused pre-Phase-4 correction. This phase removes the false ontology created by treating `text` and `binary` as durable file kinds. A workspace file/resource should be represented once and store either text or bytes. Surface eligibility should be computed from the resource's stored representation plus lightweight existing facts such as MIME type, language ID, and path/extension.
+
+Important rule: do **not** replace `kind` with a larger persistent metadata taxonomy. Avoid persisted fields such as `openableAs`, `mediaKind`, `detectedBinarySignature`, or `isUtf8Text` unless a narrow test proves that persistence is necessary. Prefer transient helper functions such as `getResourceRepresentation`, `inferLanguageId`, `canOpenWithSurface`, and `createBlobSourceForResource`.
+
+SVG rule: SVG files are text under the hood and should normally be stored as text resources with `mimeType: image/svg+xml` and `languageId: svg`. The SVG visual viewer must be able to preview text-stored SVG by creating a safe local blob/source binding from the text. PNG, JPEG, WebP, GIF, AVIF, PDF, and other opaque assets should stay byte-stored.
+
+Recommended components of the single Phase 3.6 pass:
+
+| Component | Implementation guidance |
+|---|---|
+| Resource contract simplification | Remove or deprecate `text`/`binary` from the public resource-kind discriminator. Keep folders as separate workspace entries if that remains simpler for the tree, but files should share one resource shape. |
+| Storage migration | Replace separate `textResources` and `binaryResources` assumptions with a unified resource store or a compatibility layer that presents unified resources while migrating safely. Existing archives must still import. |
+| Import classification | Classify uploads into text or bytes using MIME type, known language definitions, extension, and safe UTF-8 decoding where appropriate. Do not decode obvious opaque byte formats such as PNG/PDF into text. |
+| Surface compatibility | Let surfaces declare or implement compatibility predicates. The text editor accepts text representation; the SVG viewer accepts `image/svg+xml` from text or bytes; image/PDF viewers accept suitable byte resources and any safe generated local binding they explicitly support. |
+| Open-with correction | The same resource can have multiple valid surfaces. SVG should show both text editor and SVG viewer. Markdown later can show source and preview. Generated SVG from diagrams should be stored as text SVG and previewed visually. |
+| Placement correction | Default placement should come from surface/user intent and contribution priority, not from `text` versus `binary`. Asset viewers must be usable in the main surface as well as popups where supported. |
+| Minimal metadata discipline | Persist only stable facts already justified by the workspace model: path/title, timestamps, badge, MIME type, language ID, and optional generated/provenance data where Phase 4 needs it. Compute everything else. |
+
+Acceptance criteria: Phase 3.6 is complete when the workspace public API no longer requires users or surfaces to reason in terms of `kind: text` and `kind: binary`; existing stored workspaces and ZIP archives migrate or import safely; SVG is stored as text by default and can open both as source and visual preview; PNG/JPEG/WebP/GIF/PDF do not get imported as text accidentally; open-with candidates are based on representation/MIME/language/path compatibility rather than a hard-coded kind list; main versus popup placement is not controlled by the old text/binary split; metadata remains intentionally small; and focused tests cover upload/import/export, Dexie hydration, archive round-trip, SVG dual-surface routing, opaque-image/PDF byte storage, and surface compatibility.
+
+Scope boundary: no rich Markdown preview work, no Phase 4 diagram generation, no broad package contribution system, no plugin manager, no advanced tabs, no saved layouts, no file-system mirroring, no remote MIME sniffing, no persistent openability taxonomy, and no context-menu UI beyond preserving existing command entry points.
+
+### Phase 3.7 — Context menus as thin command projections
+
+#### Architecture and pnpm implementation anchors
+
+Architecture paragraphs to consider: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`. Resolve these IDs through `roadmap/02_architecture_paragraph_reference_index.md`, which maps each anchor to the exact paragraph/block and line range in `roadmap/textforge_rebuild_whitepaper_main.md`.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Add only the minimal target-aware command-context shape needed for context menus, if the existing selection/active-surface context is insufficient. | No new package install. |
+| `@textforge/ui` | Add a small accessible context-menu primitive and keyboard/pointer behavior. It should render existing resolved commands, not define a second command system. | No new package install by default. |
+| `@textforge/workspace` | Reuse existing workspace command contributions for tree item context menus; add target-context support only where needed. | No new package install. |
+| `@textforge/surfaces` | Reuse existing surface/session commands for tab and popup context menus; add target-context support only where needed. | No new package install. |
+| `@textforge/editors` | Reuse existing editor commands where they are already valid for the target resource or active text surface. | No new package install. |
+| `@textforge/assets` | Reuse existing asset download/open-with actions where they are valid for the target resource. | No new package install. |
+| `apps/textforge-web` | Wire context menus for workspace tree items, main tabs, and popup/session chrome using the Phase 3.3 command registry and Phase 3.6 representation-aware context. | No new package install. |
+| `@textforge/security-profile` | Verify context menus remain local UI affordances and do not introduce browser permissions, native shell menus, remote actions, or filesystem access. | No new package install. |
+| `@textforge/examples-docs` | Document expected context-menu behavior and provide small usage notes or screenshots for workspace tree and tab commands. | No new package install. |
+
+This phase deliberately separates context menus from the Phase 3.6 resource-model correction. A basic context menu is not conceptually large, but it introduces a new command invocation source and a target distinction: the command may apply to the item under the pointer, not necessarily the globally selected item or active surface.
+
+Recommended components of the single Phase 3.7 pass:
+
+| Component | Implementation guidance |
+|---|---|
+| Target-aware command context | Add a narrow `target` or equivalent command-context field when needed so context-menu actions can apply to the right-clicked tree item, tab, or popup session without silently mutating selection first. |
+| Workspace tree context menu | Provide New folder/resource, upload/import into folder, export folder, rename, delete, download file, and open-with actions when already supported by commands and valid for the target. |
+| Tab/session context menu | Provide focus, close, refresh, move to main/popup, open-with, and download actions when already supported and valid for the target session/resource. |
+| Thin command projection | Context menu entries must be resolved from the same command registry/dispatcher used by toolbar, menu, and command palette. Avoid duplicate hard-coded business logic. |
+| Accessibility and fallback | Support pointer context menu, keyboard invocation, Escape dismissal, focus restoration, and graceful fallback to the command palette or top menu for environments where context menu behavior is awkward. |
+
+Acceptance criteria: Phase 3.7 is complete when workspace tree items and surface tabs/session chrome expose relevant context menus backed by the existing command registry; commands can target the context item without forcing a misleading global selection change; disabled/hidden menu entries follow the same command visibility rules as other shell command affordances; context menus are accessible through pointer and keyboard flows; there are no duplicate command implementations in UI components; and tests cover command targeting for workspace items, tabs, popup sessions, and stale/unsupported resources.
+
+Scope boundary: no plugin manager, no external command packs, no diagnostics aggregation UI, no advanced tab drag/reorder, no split panes, no saved layouts, no native OS context-menu integration, no browser File System Access API, and no broad contribution-system changes beyond the smallest target-context contract needed by the existing command dispatcher.
+
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 #### Architecture and pnpm implementation anchors
 
 Architecture paragraphs to consider: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P01..P06`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-11.5-P01..P03`, `ARCH-13.8-P01..P03`. Resolve these IDs through `roadmap/02_architecture_paragraph_reference_index.md`, which maps each anchor to the exact paragraph/block and line range in `roadmap/textforge_rebuild_whitepaper_main.md`.
+
+Precondition: Phase 4 must consume the Phase 3.6 unified resource model and Phase 3.7 target-aware command affordances. Local images and generated diagram assets should not reintroduce the old text/binary resource-kind split. Generated SVG assets should be stored as text SVG and still previewable visually; generated PNG assets should be byte-stored.
 
 Package dependency actions for this phase:
 

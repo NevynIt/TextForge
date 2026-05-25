@@ -42,6 +42,15 @@ Implementation anchors:
 
 No direct Markdown feature work. These phases establish React shell usability, Dexie persistence, and shell-command composition. This package should not be started early, but later work must consume the resulting workspace, surface, and command contracts through public interfaces.
 
+### Phase 3.6–3.7 — Pre-Markdown resource and shell readiness
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`.
+- pnpm packages: No direct package install in these compatibility phases.
+
+No direct Markdown feature work. Phase 4 must consume the unified resource model from Phase 3.6: SVG assets should be text-stored and still visually previewable, opaque images/PDF should be byte-stored, and local Markdown image resolution should rely on representation-aware workspace/surface contracts. Phase 3.7 context menus may later expose Markdown commands, but this package should not start the Markdown preview/report implementation before Phase 4.
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 TF-MD responsibility: implement the baseline profile slice from `roadmap/specs/textforge_markdown_profile.md`, including Level 1 anchors/style references and Level 2 `tf-md` control blocks with `%metadata`, `%style`, and diagnostics. This is a Markdown-profile baseline phase, not a complete composition/report phase.
@@ -126,7 +135,7 @@ Update. Evaluate local Markdown/HTML-to-PDF pipeline after print HTML stabilizes
 
 ## Tests and definition of done
 
-Markdown rendering tests, TF-MD profile fixture tests, `tf-md` directive diagnostics, workspace image resolution tests, fenced-block preservation tests, `%require` capability diagnostics after Phase 5, `itm`/`itm-pub` integration tests after Phase 6, include/resolved Markdown/report pipeline tests after Phase 9, and rich-editor round-trip tests after Phase 14.
+Markdown rendering tests, TF-MD profile fixture tests, `tf-md` directive diagnostics, workspace image resolution tests against Phase 3.6 unified resources, fenced-block preservation tests, `%require` capability diagnostics after Phase 5, `itm`/`itm-pub` integration tests after Phase 6, include/resolved Markdown/report pipeline tests after Phase 9, and rich-editor round-trip tests after Phase 14.
 
 ## Non-goals
 

@@ -1,10 +1,10 @@
-# TextForge Rebuild Roadmap Package V15i
+# TextForge Rebuild Roadmap Package V15j
 
 This package is arranged as a single drop-in `roadmap/` folder for the TextForge repository. Copy or merge this folder into the repository root. After that, every coding agent should start from `roadmap/AGENTS_START_HERE.md`.
 
-The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, reference specifications, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15i keeps Phase 3.5 as completed, records its shell-validation evidence under `roadmap/validation/`, and moves the next implementation step to the Phase 4 TF-MD baseline. It keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row, and keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
+The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, reference specifications, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15j keeps Phase 3.5 as completed, inserts Phase 3.6 for unified workspace resources and representation-based surface routing, inserts Phase 3.7 for context menus as thin command projections, and moves the next implementation step to Phase 3.6 before the Phase 4 TF-MD baseline. It keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row, and keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
 
-The roadmap also includes exact architecture-reference anchors, a consolidated pnpm install matrix, and a phase-sequenced package dependency activity diagram that shows when each package starts depending on other packages and app surfaces across Phases -1 through 19.
+The roadmap also includes exact architecture-reference anchors, a consolidated pnpm install matrix, and a phase-sequenced package dependency activity diagram that shows when each package starts depending on other packages and app surfaces across Phases -1 through 19, including the new 3.6/3.7 pre-Phase-4 corrections.
 
 For runnable local artifacts, the live instruction set now assumes a source-owned bootstrap path: a canonical file-launch HTML document plus a deterministic classic loader bundle, not a shipped module-script HTML entry repaired by post-build rewriting.
 

@@ -106,6 +106,28 @@ Add screenshot-review support by exposing stable layout landmarks/test IDs where
 Do not add dnd-kit, tab drag/reorder, saved layout/session restoration, detached browser windows, arbitrary popup windows outside the app shell, or a new icon library.
 
 
+### Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.6: No new package install.
+
+
+Update lightly. Adjust resource labels, icons, inspector rows, open-with lists, and empty/unsupported states so they do not present `text` and `binary` as the user-facing resource taxonomy. Prefer wording such as source, image, SVG, PDF, bytes, language mode, MIME type, or available surfaces where that helps the user.
+
+Do not introduce a large file-type icon taxonomy or arbitrary user icon picker. Keep the existing deterministic badge concept separate from content representation.
+
+### Phase 3.7 — Context menus as thin command projections
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.7: No new package install.
+
+
+Update. Add a small accessible context-menu primitive that renders resolved command entries from the existing registry. It should support pointer invocation, keyboard invocation, Escape dismissal, focus restoration, disabled/hidden entries, and target-aware command execution. It must not own workspace or surface business logic.
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -138,7 +160,7 @@ Update. Add advanced tab chrome, group-aware keyboard navigation, movement affor
 
 ## Tests and definition of done
 
-Component tests, accessibility checks, keyboard navigation tests, command palette tests after Phase 3.3, badge rendering/accessibility tests and shell-layout usability smoke tests after Phase 3.4, plus screenshot/layout checks after Phase 3.5.
+Component tests, accessibility checks, keyboard navigation tests, command palette tests after Phase 3.3, badge rendering/accessibility tests and shell-layout usability smoke tests after Phase 3.4, screenshot/layout checks after Phase 3.5, resource-label/open-with rendering checks after Phase 3.6, and context-menu interaction/targeting checks after Phase 3.7.
 
 ## Non-goals
 

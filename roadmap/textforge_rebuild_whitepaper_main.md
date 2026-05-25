@@ -362,19 +362,19 @@ flowchart TD
   Build --> Harness
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 The accreditation harness is intentionally shown outside the runtime application. It verifies the packaging and browser security envelope. It is not an internal runtime service and should not be coupled to TextForge-specific domain modules.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 ### 4.2 Source, model, surface, and export
 
 The important separation is now between **source**, **model**, **surface**, **placement**, and **export**.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 ```mermaid
@@ -397,12 +397,12 @@ flowchart LR
   Surface -.controlled write-back patch.-> Source
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 This keeps the text/model source-of-truth doctrine intact while allowing rendered artifacts to become first-class work surfaces.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 ### 4.3 Resource surfaces and derived surfaces
@@ -893,31 +893,31 @@ Report/document pipeline: unified + remark + rehype
 
 
 
-### 5.11 Binary resources, image assets, and PDF viewing
+### 5.11 Byte-stored assets, SVG text assets, and PDF viewing
 
-**Decision:** Treat binary resources as first-class workspace files, but keep them read-only unless a specific transformer generates a new derived artifact.
+**Decision:** Treat asset resources as first-class workspace files, but distinguish stored representation from open-with capability.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
 
 
-Required binary resource classes:
+Required asset representation classes:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
 
 
 ```text
-Images: PNG, JPEG, GIF, WebP, SVG
-Reference documents: PDF
-Generated diagram assets: SVG and PNG
+Images: PNG, JPEG, GIF, WebP, AVIF as bytes; SVG as text
+Reference documents: PDF as byte-stored assets
+Generated diagram assets: SVG as text and PNG as bytes
 Future generated report assets: HTML and possibly PDF
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
 
 
-**Image resources** should use native browser image rendering through object URLs or blob URLs created from workspace content. Markdown image references should resolve through the workspace resolver, not through direct network fetches.
+**Image resources** should use native browser image rendering through object URLs or blob URLs created from workspace content. Text-stored SVG may be bound to the visual viewer locally. Markdown image references should resolve through the workspace resolver, not through direct network fetches.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
 
 
 **PDF resources** should be viewable as read-only reference documents. Use PDF.js if consistent local rendering, page navigation, zoom, and text layer/search are needed. Browser-native PDF embedding is acceptable as an early fallback, but PDF.js is the better long-term fit for a controlled local workbench.
@@ -925,7 +925,7 @@ Future generated report assets: HTML and possibly PDF
 **Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
 
 
-**Generated SVG and PNG assets** should be stored in the workspace as derived files. SVG is the preferred canonical generated diagram asset. PNG should be produced by local rasterization when users need bitmap output for reports, presentations, or downstream tools.
+**Generated SVG and PNG assets** should be stored in the workspace as derived files. SVG is the preferred text-stored generated diagram asset. PNG should be produced by local rasterization when users need byte-stored bitmap output for reports, presentations, or downstream tools.
 
 **Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
 
@@ -943,7 +943,7 @@ Rationale:
 - Markdown projects need local image references.
 - ITM and diagram pipelines need a place to store generated SVG/PNG artifacts.
 - Reference PDFs are common workspace inputs even when they are not edited.
-- The virtual workspace should support mixed text and binary project folders.
+- The virtual workspace should support mixed text-representation and byte-representation project folders.
 - PDF generation is valuable, but should not delay the core text/model/report architecture.
 
 **Reverse traceability:** Implemented wholly or in part by Phase 1, Phase 4, Phase 17, and Phase 18, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/pipeline`, `@textforge/markdown`, `@textforge/diagrams`.
@@ -1293,55 +1293,54 @@ class TextForgeDb extends Dexie {
 
 
 
-### 6.5 Binary resource and asset service
+### 6.5 Asset resource and object URL service
 
-TextForge should support workspace files that are not editable text documents. These files are still part of the virtual workspace and can participate in Markdown, reports, generated assets, and reference workflows.
+TextForge should support workspace files whose stored representation is text or bytes. These files are still part of the virtual workspace and can participate in Markdown, reports, generated assets, and reference workflows.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
 
 
 Responsibilities:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
 
 
-- store binary content through the workspace storage layer;
-- classify binary resources by media type and extension;
+- store text or byte content through the workspace storage layer;
+- classify opaque byte assets by media type and extension;
 - create scoped object URLs/blob URLs for viewers;
 - revoke object URLs when no longer needed;
 - expose images to Markdown rendering through workspace-relative paths;
 - expose PDFs to a read-only PDF viewer;
-- store generated SVG and PNG artifacts into workspace folders;
+- store generated SVG as text and PNG as bytes into workspace folders;
 - mark generated artifacts as derived from source documents/pipelines;
-- keep binary resources out of CodeMirror editor tabs unless explicitly opened as source/text.
+- keep opaque byte resources out of CodeMirror editor tabs unless explicitly opened as source/text.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
 
 
 Suggested interfaces:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
 
 
 ```ts
-export type WorkspaceResourceKind =
-  | "text"
-  | "image"
-  | "svg"
-  | "pdf"
-  | "binary"
+export type WorkspaceContentRepresentation = "text" | "bytes";
+export type WorkspaceResourceRole =
+  | "source"
+  | "asset"
+  | "reference"
   | "generated";
+// Openability is computed from representation, mediaType, languageId, and path.
 
 export interface WorkspaceResource {
   id: string;
   path: string;
-  kind: WorkspaceResourceKind;
-  mediaType: string;
-  size: number;
-  role: "source" | "asset" | "reference" | "generated";
+  content: { representation: WorkspaceContentRepresentation };
+  mediaType?: string;
+  languageId?: string;
+  role?: WorkspaceResourceRole;
   derivedFrom?: string[];
   generatedBy?: string;
-  contentRef: string;
 }
 
 export interface AssetService {
@@ -1351,31 +1350,32 @@ export interface AssetService {
   writeGeneratedAsset(input: {
     path: string;
     mediaType: string;
-    bytes: Uint8Array | Blob;
+    content: { representation: "text"; text: string } |
+      { representation: "bytes"; bytes: Uint8Array | Blob };
     derivedFrom: string[];
     generatedBy: string;
   }): Promise<WorkspaceResource>;
 }
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
 
 
 Important distinction:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
 
 
 ```text
-Editable text document: opened in CodeMirror and changed by the user.
-Read-only binary resource: stored in workspace, previewed, referenced, exported, or used by pipelines.
+Editable source text: text representation opened in CodeMirror and changed by the user.
+Opaque byte asset: byte representation previewed, referenced, exported, or used by pipelines.
 Generated artifact: derived from a source/pipeline and stored in workspace as an output.
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3 — ZIP workspace import/export; Phase 3.6 — Unified workspace resources and representation-based surface routing; Phase 17 — Sketch and annotation resources, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `@textforge/security-profile`, `@textforge/markdown`.
 
 
-This distinction should be visible in the UI and in diagnostics.
+This distinction should be visible in the UI and in diagnostics without becoming a fixed text/binary resource taxonomy.
 
 **Reverse traceability:** Implemented wholly or in part by Phase 4 — Markdown, local assets, and generated diagram assets; Phase 17 — Sketch and annotation resources; Phase 18 — Late PDF generation and PDF annotation, through `@textforge/assets`, `@textforge/markdown`, `@textforge/diagrams`.
 
@@ -2928,7 +2928,7 @@ These are intentionally future expansions. The rebuild should design the Surface
 
 Use React Arborist for:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.7 — Context menus as thin command projections, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 - folders/files;
@@ -2943,12 +2943,12 @@ Use React Arborist for:
 - language/resource icons;
 - document badges.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.7 — Context menus as thin command projections, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 Required context menu actions:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.7 — Context menus as thin command projections, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
 ```text
@@ -2968,36 +2968,36 @@ Open as Popup
 Copy Path
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.1 — React workbench shell and UI recovery; Phase 3.4 — Resource identity badges and workbench readability pass; Phase 3.7 — Context menus as thin command projections, through `@textforge/core`, `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`, `apps/textforge-web`, `@textforge/security-profile`, `@textforge/examples-docs`.
 
 
-### 7.6 Binary resource UI
+### 7.6 Asset resource UI
 
-The workspace explorer should show read-only binary resources distinctly from editable text files.
+The workspace explorer should show available resource actions distinctly without reducing files to a text/binary taxonomy.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 Required UI behavior:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 ```text
 Image file double-click      -> open ImageViewerSurface, preferably in main surface
-SVG double-click             -> open SvgViewerSurface, with optional source mode
+SVG double-click             -> offer SvgViewerSurface and source editor
 PDF double-click             -> open PdfViewerSurface
-Unsupported binary file      -> open BinaryInfoSurface
+Unsupported byte file        -> open BinaryInfoSurface
 Generated SVG/PNG            -> show generated/provenance marker
 Markdown unresolved image    -> diagnostic plus broken-reference marker in preview
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 Surface toolbar requirements:
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 ```text
@@ -3007,12 +3007,12 @@ PDFs: page navigation, zoom, search if supported, download/export, reveal in wor
 Generated assets: show source pipeline and stale/current state
 ```
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
-The UI should avoid suggesting that PDFs and raster images are editable source files. They are workspace resources, references, or generated artifacts.
+The UI should avoid suggesting that PDFs and raster images are editable source files. SVG is an exception: it is source text that may also be previewed visually.
 
-**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
+**Reverse traceability:** Implemented wholly or in part by Phase 1 — Workspace and Stage 1 surface skeleton; Phase 3.6 — Unified workspace resources and representation-based surface routing, through `@textforge/workspace`, `@textforge/surfaces`, `@textforge/ui`, `@textforge/editors`, `@textforge/assets`.
 
 
 ### 7.7 Surface chrome

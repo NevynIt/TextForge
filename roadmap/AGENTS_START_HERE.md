@@ -248,9 +248,9 @@ Use this order:
 6. Continue with the next smallest coherent task that advances the current phase.
 7. Re-run the narrowest relevant verification after each coherent slice and before any phase-slice commit.
 
-## Phase 3 recovery sequence
+## Phase 3 recovery and pre-Phase-4 correction sequence
 
-After Phase 3 ZIP import/export closes, do not jump directly to Phase 4. The roadmap now inserts five explicit phases:
+After Phase 3 ZIP import/export closes, do not jump directly to Phase 4. The roadmap now inserts seven explicit phases:
 
 ```text
 Phase 3.1 — React workbench shell and UI recovery
@@ -258,11 +258,13 @@ Phase 3.2 — Dexie workspace persistence recovery
 Phase 3.3 — Command palette and contribution-driven shell commands
 Phase 3.4 — Resource identity badges and workbench readability pass
 Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
+Phase 3.6 — Unified workspace resources and representation-based surface routing
+Phase 3.7 — Context menus as thin command projections
 ```
 
-Treat Phase 3.1 and Phase 3.2 as recovery phases for promised work that was previously deferred. Treat Phase 3.3 as a deliberate pull-forward of only the shell-facing command palette and menu/toolbar slice from Phase 5. Treat Phase 3.4 as the integrated resource-identity/readability pass. Treat Phase 3.5 as a focused shell-usability pass for real app popups, bounded side-panel resizing, chrome deduplication, and screenshot-based validation before Phase 4.
+Treat Phase 3.1 and Phase 3.2 as recovery phases for promised work that was previously deferred. Treat Phase 3.3 as a deliberate pull-forward of only the shell-facing command palette and menu/toolbar slice from Phase 5. Treat Phase 3.4 as the integrated resource-identity/readability pass. Treat Phase 3.5 as a focused shell-usability pass for real app popups, bounded side-panel resizing, chrome deduplication, and screenshot-based validation. Treat Phase 3.6 as a resource-model correction before Markdown/assets/diagrams build on the current text/binary split. Treat Phase 3.7 as a deliberately thin context-menu projection of the existing command system.
 
-Phase 3.3 is not permission to pull the whole Phase 5 contribution system forward. Phase 3.5 is not permission to pull Phase 13 forward. Do not implement pipeline contribution loading, diagnostics aggregation UI, plugin management, deep context-menu proliferation, later domain package work, advanced tab groups, tab drag/reorder, saved layouts, detached browser windows, or split panes in these recovery/usability phases.
+Phase 3.3 is not permission to pull the whole Phase 5 contribution system forward. Phase 3.5 is not permission to pull Phase 13 forward. Phase 3.6 is not permission to introduce a larger persistent file-type taxonomy: remove or deprecate `text`/`binary` as public resource kinds, keep SVG as text, and compute open-with compatibility from minimal facts. Phase 3.7 is not permission to create a second command system or broad plugin UX: context menus must resolve existing commands against explicit targets. Do not implement pipeline contribution loading, diagnostics aggregation UI, plugin management, later domain package work, advanced tab groups, tab drag/reorder, saved layouts, detached browser windows, split panes, or broad contribution-pack behavior in these recovery/correction phases.
 
 Each of these phases must update the central roadmap, the affected package guide, and `RAPID.md` in the same commit as the implementation slice. Phase 3.5 also requires screenshot evidence against `roadmap/04_phase_3_5_screenshot_validation_checklist.md` or an explicit RAPID note explaining any validation gap.
 

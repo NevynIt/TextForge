@@ -96,6 +96,26 @@ Implementation anchors:
 Update. Confirm that popup overlays and side-panel size preferences remain ordinary local UI state. Reject detached browser windows, extra browser permissions, remote popup/content loading, background sync, remote sync, File System Access API usage, directory handles, or silent local-file probing.
 
 
+### Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.6: No new package install.
+
+
+Update. Confirm the resource-model correction remains inside the browser-managed workspace boundary. Classification must use local file metadata/content already supplied by explicit user upload/import; it must not use File System Access API, directory handles, silent local-file probing, remote MIME sniffing, background sync, or network services.
+
+### Phase 3.7 — Context menus as thin command projections
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.7: No new package install.
+
+
+Update. Confirm context menus are local UI affordances over the existing command dispatcher. They must not introduce native OS shell integration, additional browser permissions, remote command dispatch, external plugin loading, filesystem access, or privileged clipboard/file APIs beyond the existing explicit upload/download flows.
+
 ### Phase 16 — ArchiMate visual editing investigation
 
 Implementation anchors:
@@ -118,7 +138,7 @@ Update. Finalize reusable browser-envelope checks for static/extension/PWA targe
 
 ## Tests and definition of done
 
-Browser-envelope checks for CSP, manifests, service workers, remote assets, forbidden privileged APIs, browser-managed storage boundaries, command-palette local execution assumptions, and dependency licenses.
+Browser-envelope checks for CSP, manifests, service workers, remote assets, forbidden privileged APIs, browser-managed storage boundaries, command-palette local execution assumptions, deterministic local badge/icon checks, popup/resize local-state checks, local-only resource classification checks after Phase 3.6, local context-menu command projection checks after Phase 3.7, and dependency licenses.
 
 ## Non-goals
 

@@ -76,6 +76,28 @@ Implementation anchors:
 Update only if existing public contracts cannot express popup focus, popup/main placement, or local panel preference state. Prefer no core change. Do not put visual layout policy, screenshot logic, resize implementation details, or app-shell duplication rules in core.
 
 
+### Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.6: No new package install.
+
+
+Update. Remove or deprecate `text` and `binary` as public resource-kind discriminators. Add only the minimal content/representation contract needed by workspace resources and surface routing, such as text content versus byte content. If a compatibility `ResourceKind` or transitional alias must remain, it must not be used as the canonical open-with eligibility mechanism.
+
+Do not add a broad persistent metadata taxonomy. Keep representation, MIME type, language ID, path/extension, and optional provenance as the relevant facts. Openability should be computed by helper functions or surface predicates, not stored as `openableAs` metadata.
+
+### Phase 3.7 — Context menus as thin command projections
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.7: No new package install.
+
+
+Update only if the existing command context cannot target the right-clicked workspace item, tab, or popup/session independently from the global selection. Add the smallest target-aware command-context shape needed, then keep context menus as ordinary command registry/dispatcher consumers. Do not create a second command model or plugin permission system.
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -98,7 +120,7 @@ Update. Add stable session persistence types if needed for advanced tab groups a
 
 ## Tests and definition of done
 
-Type-level tests, compatibility tests for public contracts, command registry tests after Phase 3.3, no feature dependency leakage.
+Type-level tests, compatibility tests for public contracts, command registry tests after Phase 3.3, resource representation contract tests after Phase 3.6, target-aware command-context tests after Phase 3.7, and no feature dependency leakage.
 
 ## Non-goals
 

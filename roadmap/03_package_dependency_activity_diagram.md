@@ -133,6 +133,34 @@ sequenceDiagram
     Docs->>UI: capture screenshot evidence against the Phase 3.5 checklist
   end
 
+  rect rgb(245,255,250)
+    Note over Core,App: Phase 3.6 — unified workspace resources and representation-based surface routing
+    Core->>Core: remove or deprecate text/binary as public resource-kind ontology
+    WS->>Core: consume minimal resource content representation contracts
+    WS->>WS: migrate/present unified resources with text or byte content
+    WS->>Assets: keep SVG text-stored while opaque images/PDF remain byte-stored
+    Surf->>Core: replace hard-coded kind filters with compatibility predicates
+    Edit->>Surf: accept text-representation resources including SVG source
+    Assets->>Surf: accept compatible image/SVG/PDF resources across text/byte representations
+    App->>Surf: route open-with candidates by representation, MIME, language, and path
+    App->>UI: remove user-facing text/binary taxonomy from resource chrome
+    Sec->>WS: verify no remote sniffing, silent file probing, or filesystem API expansion
+    Docs->>WS: document SVG-as-text and opaque asset fixtures
+  end
+
+  rect rgb(255,250,240)
+    Note over Core,App: Phase 3.7 — context menus as thin command projections
+    Core->>Core: add minimal target-aware command context if needed
+    UI->>Core: render context menus from resolved command registry entries
+    WS->>Core: reuse existing workspace commands for tree item targets
+    Surf->>Core: reuse existing session commands for tab and popup targets
+    Edit->>Core: reuse existing editor commands for target text resources
+    Assets->>Core: reuse asset/open-with/download commands for target resources
+    App->>UI: wire tree, tab, and popup/session context menus
+    Sec->>UI: verify context menus remain local UI affordances
+    Docs->>UI: document expected context-menu behavior
+  end
+
   rect rgb(250,240,255)
     Note over Pipe,Diag: Phase 4 — Markdown profile baseline, local assets, generated diagram assets
     Pipe->>Core: consume pipeline value, trace, diagnostics, generated resource contracts

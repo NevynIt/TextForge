@@ -131,6 +131,38 @@ Architecture paragraphs: `ARCH-4-P04..P06`, `ARCH-5.1-P03`, `ARCH-5.2-P01..P06`,
 | `@textforge/security-profile` | Verify popup/resize state stays local and does not introduce browser-window, permission, network, sync, or filesystem changes. | No new package install. |
 | `@textforge/examples-docs` | Screenshot-based validation checklist and evidence guidance. | No new package install. |
 
+## Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Minimal content/representation contracts; remove/deprecate `text`/`binary` as resource-kind ontology. | No new package install. |
+| `@textforge/workspace` | Unified resource model, Dexie/archive compatibility migration, safer import classification, SVG-as-text handling. | No new package install. |
+| `@textforge/surfaces` | Representation/MIME/language/path compatibility predicates for open-with routing. | No new package install. |
+| `@textforge/editors` | Text-representation source-editor compatibility and SVG source editing. | No new package install. |
+| `@textforge/assets` | Image/SVG/PDF viewer compatibility for supported text/byte representations; SVG visual preview from text. | No new package install. |
+| `@textforge/ui` | Resource/open-with labels and inspector wording that avoid text/binary taxonomy. | No new package install. |
+| `apps/textforge-web` | Integrate unified resources, import classification, open-with routing, and placement defaults. | No new package install. |
+| `@textforge/security-profile` | Verify no new filesystem, remote sniffing, permission, or sync behavior. | No new package install. |
+| `@textforge/examples-docs` | Add fixtures/guidance for SVG text storage, opaque byte assets, archive migration, and open-with behavior. | No new package install. |
+
+## Phase 3.7 — Context menus as thin command projections
+
+Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Minimal target-aware command context if existing selection/active-surface context is insufficient. | No new package install. |
+| `@textforge/ui` | Accessible context-menu primitive that renders existing resolved commands. | No new package install by default. |
+| `@textforge/workspace` | Reuse workspace command contributions for tree context menus with target context. | No new package install. |
+| `@textforge/surfaces` | Reuse surface/session command contributions for tab and popup context menus with target context. | No new package install. |
+| `@textforge/editors` | Reuse existing editor commands where valid for target text resources. | No new package install. |
+| `@textforge/assets` | Reuse asset/open-with/download commands where valid for target resources. | No new package install. |
+| `apps/textforge-web` | Wire workspace tree, main tab, and popup/session context menus through the command dispatcher. | No new package install. |
+| `@textforge/security-profile` | Verify context menus remain local UI affordances with no new browser permissions or native shell integration. | No new package install. |
+| `@textforge/examples-docs` | Document expected context-menu behavior and usage notes. | No new package install. |
+
 ## Phase 4 — Markdown, local assets, and generated diagram assets
 
 Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P01..P06`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-6.22-P01..P04`, `ARCH-11.5-P01..P03`, `ARCH-13.8-P01..P03`

@@ -40,6 +40,15 @@ Implementation anchors:
 
 No direct diagram feature work. These phases establish React shell usability, Dexie persistence, and shell-command composition. This package should not be started early, but later work must consume the resulting workspace, surface, and command contracts through public interfaces.
 
+### Phase 3.6–3.7 — Pre-diagram resource and shell readiness
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.11-P01..P09`, `ARCH-6.8-P01..P06`, `ARCH-6.13-P01..P05`, `ARCH-6.22-P01..P04`.
+- pnpm packages: No direct package install in these compatibility phases.
+
+No direct diagram feature work. Phase 4 generated SVG output should consume the Phase 3.6 unified resource model and store SVG as text with `mimeType: image/svg+xml` and `languageId: svg`, while generated PNG output remains byte-stored. Context menus in Phase 3.7 may later expose diagram asset commands, but should not start diagram rendering early.
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 Implementation anchors:
@@ -82,7 +91,7 @@ Update. Add React Flow adapter for controlled graph/flowchart/layout-delta editi
 
 ## Tests and definition of done
 
-Mermaid/DOT render tests, Markdown fenced-block handler tests, SVG storage tests, SVG-to-PNG rasterization tests, generated asset stale-state tests.
+Mermaid/DOT render tests, Markdown fenced-block handler tests, text-stored SVG output tests against Phase 3.6 unified resources, SVG-to-PNG rasterization tests, generated asset stale-state tests.
 
 ## Non-goals
 

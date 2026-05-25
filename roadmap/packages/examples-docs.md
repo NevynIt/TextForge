@@ -68,6 +68,26 @@ Implementation anchors:
 Update. Add and maintain the screenshot-based validation checklist and any before/after screenshot evidence guidance. The checklist must explicitly catch wasted screen real estate, awkward whole-shell scrollbars, collapsed panels that still reserve space, duplicated active file titles/paths, and popup content relegated to side panels.
 
 
+### Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.6: No new package install.
+
+
+Update. Add guidance and fixtures showing SVG stored as text and openable both as source and visual preview, PNG/JPEG/WebP/GIF/PDF stored as bytes, archive import/export preservation, Dexie migration expectations, and open-with behavior after representation-based routing.
+
+### Phase 3.7 — Context menus as thin command projections
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.7: No new package install.
+
+
+Update. Add concise usage notes or screenshots showing workspace tree and tab/session context menus. Document that context menu entries are projections of the same command registry used by the toolbar, top menu, and command palette.
+
 ### Phase 19 — Release-envelope verification and accreditation evidence
 
 Implementation anchors:
@@ -80,7 +100,7 @@ Update. Add release checklist, example accreditation output, sample build artifa
 
 ## Tests and definition of done
 
-Resource browser smoke tests, example workspace load tests, tutorial freshness checks.
+Resource browser smoke tests, example workspace load tests, tutorial freshness checks, SVG-as-text/open-with fixtures after Phase 3.6, and context-menu documentation checks after Phase 3.7.
 
 ## Non-goals
 

@@ -98,6 +98,28 @@ Implementation anchors:
 Validate/update lightly. Ensure SVG/image/PDF/binary viewer surfaces remain readable when side panels are resized or collapsed and when a viewer is hosted as a popup overlay. Do not change binary resource semantics.
 
 
+### Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.6: No new package install.
+
+
+Update. Stop requiring asset viewers to receive only `kind: binary` resources. Image, SVG, PDF, and generic byte viewers should declare compatibility based on MIME type plus supported content representation.
+
+SVG is the mandatory dual-surface case: SVG is text under the hood and should normally be stored as text with `mimeType: image/svg+xml` and `languageId: svg`, while still being viewable through the SVG visual viewer. The viewer may create a local blob/source binding from text when needed. PNG/JPEG/WebP/GIF/AVIF/PDF remain byte-stored assets and must not be decoded into text by upload/import flows.
+
+### Phase 3.7 — Context menus as thin command projections
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.7: No new package install.
+
+
+Update only as needed to expose existing asset actions through context menus when valid for the target resource or session. Reuse download/open-with behavior and avoid context-menu-only action implementations.
+
 ### Phase 4 — Markdown, local assets, and generated diagram assets
 
 Implementation anchors:
@@ -130,7 +152,7 @@ Update. Optional PDF annotation layer over PDF.js; store annotations as separate
 
 ## Tests and definition of done
 
-Image/SVG/PDF viewing tests, blob URL lifecycle tests, React-shell mounting smoke tests after Phase 3.1, persisted binary rehydration tests after Phase 3.2, command descriptor tests after Phase 3.3 where applicable, and generated asset provenance tests.
+Image/SVG/PDF viewing tests, blob URL lifecycle tests, React-shell mounting smoke tests after Phase 3.1, persisted byte-resource rehydration tests after Phase 3.2, command descriptor tests after Phase 3.3 where applicable, SVG-as-text visual preview tests after Phase 3.6, context-target asset command checks after Phase 3.7, and generated asset provenance tests.
 
 ## Non-goals
 

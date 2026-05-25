@@ -77,7 +77,7 @@ Implementation anchors:
 
 Validate/update lightly. Ensure the text-editor surface fits the cleaned workbench layout, keeps the CodeMirror area readable, preserves existing editor ownership, and exposes only existing editor state/metadata needed by common chrome. Do not add rich editing, new document types, or new command semantics in this phase.
 
-### Phase 3.5 â€” Popup usability, resizable panels, and chrome deduplication pass
+### Phase 3.5 — Popup usability, resizable panels, and chrome deduplication pass
 
 Implementation anchors:
 
@@ -86,6 +86,28 @@ Implementation anchors:
 
 
 Validate/update lightly. Keep the text-editor surface readable when shell side panels resize or collapse, and reduce duplicate editor-header identity where needed without changing CodeMirror ownership, language behavior, or the existing source-editor workflow.
+
+### Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.6: No new package install.
+
+
+Update. Make the source editor compatible with resources whose stored representation is text and whose language mode is supported or can fall back to plaintext. Do not require `kind: text`.
+
+SVG is a required validation case: `.svg`/`image/svg+xml` should be edited as source text through the SVG language mode and also remain available to the visual SVG viewer. Opaque assets such as PNG or PDF should not be coerced into source-editor resources unless a user explicitly creates/imports text content.
+
+### Phase 3.7 — Context menus as thin command projections
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.7: No new package install.
+
+
+Update only as needed to let existing editor commands resolve against an explicit context target when the target is a text-representation resource or active text surface. Do not add rich editing, source transformations, or new language behavior in this phase.
 
 ### Phase 6 — ITM integration and model/report foundation
 
@@ -120,7 +142,7 @@ Update. Define rich-editor capability and unsupported-construct warning conventi
 
 ## Tests and definition of done
 
-Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests, React-shell mounting smoke tests after Phase 3.1, command descriptor tests after Phase 3.3 where applicable, and text-editor fit/readability checks after Phase 3.4, plus screenshot/layout checks after Phase 3.5.
+Language mode smoke tests, lint bridge tests, source navigation tests, fallback source editor tests, React-shell mounting smoke tests after Phase 3.1, command descriptor tests after Phase 3.3 where applicable, text-editor fit/readability checks after Phase 3.4, screenshot/layout checks after Phase 3.5, text-representation compatibility tests after Phase 3.6, and context-target editor command checks after Phase 3.7.
 
 ## Non-goals
 

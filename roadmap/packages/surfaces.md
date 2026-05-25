@@ -93,6 +93,28 @@ Update. Restore popup placement as a real in-app popup/overlay session rather th
 Do not add Phase 13 tab groups, tab drag/reorder, saved layout state, split panes, detached browser windows, or richer session persistence here.
 
 
+### Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.6: No new package install.
+
+
+Update. Replace resource-kind-based surface filtering with compatibility checks based on stored representation, MIME type, language ID, and path/extension. Surface contributions may expose a predicate or equivalent declarative compatibility shape, but should not require resources to be `kind: text` or `kind: binary`.
+
+Open-with must support multiple valid surfaces for the same resource. SVG is the key validation case: a text-stored SVG must be compatible with both the source editor and the SVG visual viewer. Placement must remain independent from resource representation; compatible viewers should be usable in the main surface or popup where the surface supports that placement.
+
+### Phase 3.7 — Context menus as thin command projections
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.7: No new package install.
+
+
+Update only as needed so tab/session/popup context menus can target a specific surface session and reuse existing surface commands: focus, close, refresh, move to main/popup, and open-with. Do not introduce advanced tab management, drag/reorder, saved layouts, or a second command system.
+
 ### Phase 5 — Contribution registries and package composition
 
 Implementation anchors:
@@ -135,7 +157,7 @@ Update. Add tabbed main surface groups, tab movement, richer open-to-main/open-a
 
 ## Tests and definition of done
 
-Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests, React-shell host compatibility tests after Phase 3.1, command contribution tests after Phase 3.3, and badge metadata projection and chrome-readability tests after Phase 3.4, plus screenshot/layout checks after Phase 3.5.
+Surface registration tests, placement tests, source binding/stale state tests, open-with behaviour tests, React-shell host compatibility tests after Phase 3.1, command contribution tests after Phase 3.3, badge metadata projection and chrome-readability tests after Phase 3.4, screenshot/layout checks after Phase 3.5, representation-based compatibility tests after Phase 3.6, and context-target command tests after Phase 3.7.
 
 ## Non-goals
 

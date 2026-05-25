@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Virtual workspace, text/binary resources, folders, Dexie persistence, ZIP import/export, metadata, provenance, and workspace-relative references.
+Virtual workspace resources, folders, text/byte content representation, Dexie persistence, ZIP import/export, metadata, provenance, and workspace-relative references.
 
 ## Ownership rule
 
@@ -77,14 +77,36 @@ Implementation anchors:
 - Architecture paragraphs: `ARCH-5.7-P04`, `ARCH-6.1-P01..P05`, `ARCH-6.4-P02`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P08`, `ARCH-7.3-P05`, `ARCH-7.5-P02`, `ARCH-7.7-P01..P04`, `ARCH-12.4-P01..P02`.
 - pnpm packages: Phase 3.4: No new package install.
 
-Update. Generate and persist stable document badge seeds/assignments from resource identity, path/name, resource kind, and language ID. Use the placement-based `8 × 8 × 8 × 5 = 2560` badge space across shape, accent, mark, and placement. Preserve badges across reload and ZIP export/import where possible. Repair collisions deterministically after restore, duplication, batch upload, or ZIP import, and expose diagnostics when repair changes a badge.
+Update. Generate and persist stable document badge seeds/assignments from resource identity, path/name, content representation, and language ID. Use the placement-based `8 × 8 × 8 × 5 = 2560` badge space across shape, accent, mark, and placement. Preserve badges across reload and ZIP export/import where possible. Repair collisions deterministically after restore, duplication, batch upload, or ZIP import, and expose diagnostics when repair changes a badge.
 
 The workspace package does not own the readability pass, but it must provide clean resource metadata so the UI can make the active resource obvious without deriving identity from local filesystem handles, remote sync identity, or arbitrary icon assets.
 
 
+### Phase 3.6 — Unified workspace resources and representation-based surface routing
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-5.2-P01..P06`, `ARCH-5.9-P01..P05`, `ARCH-5.11-P01..P09`, `ARCH-6.3-P01..P05`, `ARCH-6.5-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.12-P01..P05`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-6.22-P01..P04`, `ARCH-11.3-P01..P02`, `ARCH-13.8-P01..P03`.
+- pnpm packages: Phase 3.6: No new package install.
+
+
+Update. Replace the public split between `WorkspaceTextResource` and `WorkspaceBinaryResource` with one workspace file/resource contract that stores content as either text or bytes. Folders may remain separate workspace entries for tree operations, but files should no longer be semantically categorized as `kind: text` or `kind: binary`.
+
+Add a safe migration or compatibility layer for the current Dexie schema and workspace ZIP archives. Import classification should choose the stored representation using MIME type, known language definitions, extension, and safe decoding rules without persisting a larger openability taxonomy. SVG should normally import and persist as text with `mimeType: image/svg+xml` and `languageId: svg`; PNG/JPEG/WebP/GIF/AVIF/PDF and other opaque formats should remain byte-stored.
+
+### Phase 3.7 — Context menus as thin command projections
+
+Implementation anchors:
+
+- Architecture paragraphs: `ARCH-6.1-P01..P05`, `ARCH-6.7-P01..P07`, `ARCH-6.11-P01..P07`, `ARCH-6.13-P01..P05`, `ARCH-6.14-P01..P06`, `ARCH-7.2-P01..P04`, `ARCH-7.7-P01..P04`, `ARCH-7.8-P01..P05`, `ARCH-7.9-P01..P04`, `ARCH-11.3-P01..P02`.
+- pnpm packages: Phase 3.7: No new package install.
+
+
+Update only as needed to let existing workspace commands execute against an explicit context target supplied by a tree-item context menu. Reuse current commands for new folder/resource, upload/import into folder, export selected folder, download selected file, rename, and delete. Do not add separate context-menu-only business logic.
+
 ## Tests and definition of done
 
-Persistence tests, Dexie schema/version tests after Phase 3.2, ZIP import/export tests, path normalization tests, binary resource round-trip tests, workspace manifest tests, command contribution tests after Phase 3.3, and badge identity/collision-repair tests after Phase 3.4, plus screenshot/layout checks after Phase 3.5.
+Persistence tests, Dexie schema/version tests after Phase 3.2, ZIP import/export tests, path normalization tests, byte-resource round-trip tests, workspace manifest tests, command contribution tests after Phase 3.3, badge identity/collision-repair tests after Phase 3.4, unified-resource/SVG-as-text tests after Phase 3.6, context-menu target tests after Phase 3.7, plus screenshot/layout checks after Phase 3.5.
 
 ## Non-goals
 
