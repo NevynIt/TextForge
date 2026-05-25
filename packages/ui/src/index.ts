@@ -241,6 +241,7 @@ export interface TextForgeTopBarProps {
 export interface TextForgeWorkspaceSidebarProps {
   readonly collapsed?: boolean;
   readonly footer?: ReactNode;
+  readonly onDropFilesToFolder?: (itemId: string, files: ReadonlyArray<File>) => void;
   readonly onSelectItem?: (itemId: string) => void;
   readonly onToggleFolder?: (itemId: string) => void;
   readonly workspaceTree: WorkspaceTreeFrame;
@@ -250,6 +251,7 @@ export interface TextForgeSessionTabStripProps {
   readonly emptyLabel?: string;
   readonly frameModel: SurfaceFrame;
   readonly onCloseTab?: (tabId: string) => void;
+  readonly onDropFiles?: (files: ReadonlyArray<File>) => void;
   readonly onSelectTab?: (tabId: string) => void;
 }
 

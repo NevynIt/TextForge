@@ -62,28 +62,50 @@ export const workspaceCommandContributions = [
     toolbar: { order: 30, kind: 'primary' },
     when: { workspaceReady: true },
   }),
-  createCommand('workspace.import-workspace', 'Import workspace ZIP...', {
+  createCommand('workspace.upload-file', 'Upload file to selected folder...', {
+    category: 'workspace',
+    description: 'Upload a local file into the selected workspace folder without replacing the whole workspace.',
+    keywords: ['workspace', 'upload', 'file', 'import'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 25 },
+    toolbar: { order: 35, kind: 'secondary' },
+    when: { workspaceReady: true },
+  }),
+  createCommand('workspace.import-workspace', 'Import workspace dump ZIP...', {
     category: 'workspace',
     description: 'Import a workspace archive into the browser-managed workspace.',
-    keywords: ['workspace', 'import', 'zip', 'archive'],
+    keywords: ['workspace', 'import', 'zip', 'archive', 'dump'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 30 },
     toolbar: { order: 40, kind: 'secondary' },
     when: { workspaceReady: true },
   }),
-  createCommand('workspace.export-workspace', 'Export workspace ZIP', {
+  createCommand('workspace.import-folder-zip', 'Import ZIP as folder...', {
+    category: 'workspace',
+    description: 'Import a plain ZIP file into the selected folder context without requiring a TextForge workspace manifest.',
+    keywords: ['workspace', 'import', 'folder', 'zip', 'upload'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 35 },
+    when: { workspaceReady: true },
+  }),
+  createCommand('workspace.export-workspace', 'Download workspace dump ZIP', {
     category: 'workspace',
     description: 'Export the current browser-managed workspace as a ZIP archive.',
-    keywords: ['workspace', 'export', 'zip', 'archive'],
+    keywords: ['workspace', 'export', 'zip', 'archive', 'download', 'dump'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 40 },
     toolbar: { order: 50, kind: 'secondary' },
     when: { workspaceReady: true },
   }),
-  createCommand('workspace.export-selected-folder', 'Export selected folder ZIP', {
+  createCommand('workspace.export-selected-folder', 'Download selected folder as ZIP', {
     category: 'workspace',
-    description: 'Export the selected folder subtree as a ZIP archive rebased at archive root.',
-    keywords: ['workspace', 'export', 'folder', 'zip', 'archive'],
+    description: 'Download the selected folder subtree as a plain ZIP file tree without TextForge workspace metadata.',
+    keywords: ['workspace', 'export', 'folder', 'zip', 'archive', 'download'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 50 },
     when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder'] },
+  }),
+  createCommand('workspace.download-selected-file', 'Download selected file', {
+    category: 'workspace',
+    description: 'Download the selected workspace file directly without exporting the whole workspace.',
+    keywords: ['workspace', 'download', 'export', 'file'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 55 },
+    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['text', 'binary'] },
   }),
   createCommand('workspace.rename-selected', 'Rename selected item...', {
     category: 'workspace',
@@ -671,6 +693,43 @@ function createWorkspaceFolderArchiveState(input, folderPath) {
   );
 }
 
+function createWorkspaceFolderZipEntries(input, folderPath) {
+  const state = snapshotWorkspaceState(input);
+  const normalizedFolderPath = normalizeWorkspacePath(folderPath);
+  const selectedFolder = state.folders.find((folder) => folder.id !== 'root' && folder.path === normalizedFolderPath);
+  if (!selectedFolder) {
+    throw new Error(`Unknown workspace folder for archive export: ${normalizedFolderPath}`);
+  }
+
+  const descendants = collectDescendants([...state.folders, ...state.resources], selectedFolder.id);
+  const archiveEntries = {};
+
+  for (const folder of descendants.filter((entry) => entry.kind === 'folder')) {
+    const relativePath = rebaseWorkspacePath(folder.path, normalizedFolderPath).split('/').filter(Boolean).join('/');
+    if (relativePath) {
+      archiveEntries[`${relativePath}/`] = new Uint8Array(0);
+    }
+  }
+
+  for (const resource of descendants.filter((entry) => entry.kind !== 'folder')) {
+    const relativePath = rebaseWorkspacePath(resource.path, normalizedFolderPath).split('/').filter(Boolean).join('/');
+    archiveEntries[relativePath] = resource.kind === 'text'
+      ? textEncoder.encode(resource.text)
+      : cloneBytes(resource.bytes);
+  }
+
+  return archiveEntries;
+}
+
+function collectArchiveParentFolders(path) {
+  const segments = normalizeArchiveEntryPath(path).split('/').filter(Boolean);
+  const folders = [];
+  for (let index = 1; index < segments.length; index += 1) {
+    folders.push(segments.slice(0, index).join('/'));
+  }
+  return folders;
+}
+
 function cloneBytes(bytes) {
   return new Uint8Array(bytes);
 }
@@ -885,7 +944,7 @@ export function exportWorkspaceToZip(input, options = {}) {
 }
 
 export function exportWorkspaceFolderToZip(input, folderPath, options = {}) {
-  return exportWorkspaceToZip(createWorkspaceFolderArchiveState(input, folderPath), options);
+  return zipSync(createWorkspaceFolderZipEntries(input, folderPath), options);
 }
 
 export function mergeImportedWorkspaceState(existingState, importedState, options = {}) {
@@ -1037,6 +1096,36 @@ export function importWorkspaceFromZip(bytes, options = {}) {
       })),
     },
     state,
+  };
+}
+
+export function importWorkspaceFolderFromZip(bytes) {
+  const archiveEntries = unzipSync(bytes);
+  const folders = new Set();
+  const files = [];
+
+  for (const [archivePath, archiveBytes] of Object.entries(archiveEntries)) {
+    const rawPath = String(archivePath ?? '').replaceAll('\\', '/');
+    const isDirectory = rawPath.endsWith('/');
+    const normalizedPath = normalizeArchiveEntryPath(rawPath);
+    for (const parentFolder of collectArchiveParentFolders(normalizedPath)) {
+      folders.add(parentFolder);
+    }
+
+    if (isDirectory) {
+      folders.add(normalizedPath);
+      continue;
+    }
+
+    files.push({
+      path: normalizedPath,
+      bytes: cloneBytes(archiveBytes),
+    });
+  }
+
+  return {
+    folders: [...folders].sort((left, right) => left.localeCompare(right)),
+    files: files.sort((left, right) => left.path.localeCompare(right.path)),
   };
 }
 

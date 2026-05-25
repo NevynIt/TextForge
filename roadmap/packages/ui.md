@@ -167,3 +167,5 @@ The package now renders the command-focused shell chrome promised for this phase
 The package now exports the bounded popup and shell-resize primitives promised for this phase. `TextForgeAppFrame` uses `react-resizable-panels` for the left workspace rail, main region, and right utility rail, while `TextForgePopupHost` restores popup sessions as real in-app overlays instead of side-panel content.
 
 The Phase 3.5 chrome also syncs collapse and expand state with real width release, keeps stable pane markers for validation, and leaves advanced tab movement, split panes, saved layouts, and other Phase 13 behavior out of scope.
+
+As a pre-Phase-4 shell follow-up, the workspace tree rows and the main tab strip now also act as file drop targets: dropping files on a folder uploads into that folder without opening them, while dropping files on the tab strip uploads into `/upload` and opens the first dropped resource in the main surface. Keep the workspace menu labels for file upload/download and folder ZIP import/export explicit enough that these flows remain discoverable without relying on drag and drop.

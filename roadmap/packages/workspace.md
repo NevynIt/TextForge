@@ -46,6 +46,8 @@ Implementation anchors:
 
 Update. Add fflate ZIP import/export, selected-folder export, full-workspace export, workspace manifest, path normalization, conflict policy.
 
+Whole-workspace import/export uses the TextForge manifest archive format. Selected-folder ZIP flows must stay plain-file oriented: folder export should emit only the folder contents rebased at ZIP root, and folder import should accept ordinary ZIP trees without requiring `textforge-workspace.json`.
+
 ### Phase 3.2 — Dexie workspace persistence recovery
 
 Implementation anchors:
@@ -105,3 +107,5 @@ The in-memory service contract also now carries `getManifest`, `replaceState`, a
 ## Phase 3.3 closure note
 
 The package now exposes its existing shell-facing actions as command contributions instead of leaving them hard-wired in the app shell. The delivered command set covers new folder/resource creation, workspace ZIP import/export, selected-folder ZIP export, rename/delete, and explicit storage reset/retry actions over the existing persisted workspace service without adding new workspace behavior solely to fill the palette.
+
+Single-folder ZIP handling is now intentionally split from whole-workspace dumps: full workspace import/export remains manifest-based, while selected-folder export emits a plain ZIP tree and folder import accepts ordinary ZIP file trees without expecting TextForge metadata files.

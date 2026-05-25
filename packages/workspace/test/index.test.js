@@ -15,6 +15,7 @@ import {
   createWorkspaceTreeItems,
   exportWorkspaceToZip,
   exportWorkspaceFolderToZip,
+  importWorkspaceFolderFromZip,
   importWorkspaceFromZip,
   mergeImportedWorkspaceState,
   normalizeWorkspacePath,
@@ -158,9 +159,12 @@ test('workspace contribution manifest exposes the Phase 3.3 shell commands', () 
     [
       'workspace.new-folder',
       'workspace.new-resource',
+      'workspace.upload-file',
       'workspace.import-workspace',
+      'workspace.import-folder-zip',
       'workspace.export-workspace',
       'workspace.export-selected-folder',
+      'workspace.download-selected-file',
       'workspace.rename-selected',
       'workspace.delete-selected',
       'workspace.reset-storage',
@@ -225,16 +229,11 @@ test('selected folder export rebases a nested folder subtree at archive root', (
   });
 
   const archive = exportWorkspaceFolderToZip(workspace, guides.path, { exportedAt: '2026-05-23T00:00:00.000Z' });
-  const imported = importWorkspaceFromZip(archive);
-  const restoredWorkspace = createWorkspaceService({
-    state: imported.state,
-    idFactory: createSequentialIdFactory('restored'),
-    now: () => '2026-05-23T00:00:00.000Z',
-  });
+  const imported = importWorkspaceFolderFromZip(archive);
 
-  assert.equal(restoredWorkspace.getEntryByPath('/guides')?.kind, 'folder');
-  assert.equal(restoredWorkspace.getEntryByPath('/guides/intro.md')?.kind, 'text');
-  assert.equal(restoredWorkspace.getEntryByPath('/docs'), undefined);
+  assert.deepEqual(imported.folders, []);
+  assert.deepEqual(imported.files.map((entry) => entry.path), ['intro.md']);
+  assert.equal(new TextDecoder().decode(imported.files[0]?.bytes), '# Intro\n');
 });
 
 test('workspace import conflict policies are explicit when merging imported archives', () => {
@@ -256,16 +255,15 @@ test('workspace import conflict policies are explicit when merging imported arch
     idFactory: createSequentialIdFactory('source'),
     now: () => '2026-05-23T00:00:00.000Z',
   });
-  importWorkspace.createFolder({ path: '/docs' });
-  const guides = importWorkspace.createFolder({ path: '/docs/guides' });
+  const guides = importWorkspace.createFolder({ path: '/guides' });
   importWorkspace.createTextResource({
-    path: '/docs/guides/new.md',
+    path: '/guides/new.md',
     text: '# New\n',
     languageId: 'markdown',
     mimeType: 'text/markdown',
   });
 
-  const archive = exportWorkspaceFolderToZip(importWorkspace, guides.path, { exportedAt: '2026-05-23T00:00:00.000Z' });
+  const archive = exportWorkspaceToZip(importWorkspace, { exportedAt: '2026-05-23T00:00:00.000Z' });
   const imported = importWorkspaceFromZip(archive);
 
   assert.throws(

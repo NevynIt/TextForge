@@ -679,6 +679,7 @@ export function TextForgeTopBar({
 export function TextForgeWorkspaceSidebar({
   collapsed = false,
   footer,
+  onDropFilesToFolder,
   onSelectItem,
   onToggleFolder,
   workspaceTree,
@@ -708,6 +709,26 @@ export function TextForgeWorkspaceSidebar({
             tabIndex: index === fallbackIndex ? 0 : -1,
             'data-item-id': item.id,
             onClick: () => onSelectItem?.(item.id),
+            onDragOver: item.kind === 'folder'
+              ? (event) => {
+                if (!event.dataTransfer?.files?.length) {
+                  return;
+                }
+                event.preventDefault();
+                event.dataTransfer.dropEffect = 'copy';
+              }
+              : undefined,
+            onDrop: item.kind === 'folder'
+              ? (event) => {
+                const files = [...(event.dataTransfer?.files ?? [])];
+                if (files.length === 0) {
+                  return;
+                }
+                event.preventDefault();
+                event.stopPropagation();
+                onDropFilesToFolder?.(item.id, files);
+              }
+              : undefined,
             onKeyDown: (event) => handleWorkspaceTreeItemKeyDown(event, item, onSelectItem, onToggleFolder),
             title: item.path,
             style: { '--depth': item.depth },
@@ -786,11 +807,10 @@ export function TextForgeSessionTabStrip({
   emptyLabel = 'No open documents',
   frameModel,
   onCloseTab,
+  onDropFiles,
   onSelectTab,
 }) {
-  if ((frameModel.tabs ?? []).length === 0) {
-    return element('div', { className: 'tf-tabstrip__empty' }, emptyLabel);
-  }
+  const tabs = frameModel.tabs ?? [];
 
   return element(
     'div',
@@ -799,8 +819,26 @@ export function TextForgeSessionTabStrip({
       role: 'tablist',
       'aria-label': frameModel.title,
       'data-roving-root': 'session-tabs',
+      onDragOver: (event) => {
+        if (!event.dataTransfer?.files?.length) {
+          return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'copy';
+      },
+      onDrop: (event) => {
+        const files = [...(event.dataTransfer?.files ?? [])];
+        if (files.length === 0) {
+          return;
+        }
+        event.preventDefault();
+        onDropFiles?.(files);
+      },
     },
-    ...frameModel.tabs.map((tab) =>
+    tabs.length === 0
+      ? element('div', { className: 'tf-tabstrip__empty' }, emptyLabel)
+      : null,
+    ...tabs.map((tab) =>
       element(
         'div',
         {

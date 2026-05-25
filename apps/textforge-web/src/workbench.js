@@ -18,6 +18,7 @@ import {
   dirnameWorkspacePath,
   exportWorkspaceFolderToZip,
   exportWorkspaceToZip,
+  importWorkspaceFolderFromZip,
   importWorkspaceFromZip,
   joinWorkspacePath,
   normalizeWorkspacePath,
@@ -80,6 +81,7 @@ import { bundledDocFolders, bundledDocs } from './generated/bundledDocs.js';
 
 const element = React.createElement;
 const textEncoder = new TextEncoder();
+const textDecoder = new TextDecoder();
 const workspaceDatabaseName = 'textforge-workspace';
 const sampleResourcePaths = {
   notes: '/docs/notes.md',
@@ -315,6 +317,22 @@ function pickLocalFile({ accept } = {}) {
 
 async function readFileBytes(file) {
   return new Uint8Array(await file.arrayBuffer());
+}
+
+function splitFilename(name) {
+  const normalized = String(name ?? '');
+  const extensionIndex = normalized.lastIndexOf('.');
+  if (extensionIndex <= 0) {
+    return {
+      stem: normalized || 'upload',
+      extension: '',
+    };
+  }
+
+  return {
+    stem: normalized.slice(0, extensionIndex),
+    extension: normalized.slice(extensionIndex),
+  };
 }
 
 function createContributionPacks({ languageModes, surfaceContributions }) {
@@ -912,6 +930,164 @@ function createTextForgeWorkbenchController() {
     return entry.kind === 'folder' ? entry.path : dirnameWorkspacePath(entry.path);
   }
 
+  function createAvailableWorkspacePath(path) {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (!workspace.getEntryByPath(normalizedPath)) {
+      return normalizedPath;
+    }
+
+    const folderPath = dirnameWorkspacePath(normalizedPath);
+    const { stem, extension } = splitFilename(basenameWorkspacePath(normalizedPath));
+    let candidate = normalizedPath;
+    let counter = 2;
+    while (workspace.getEntryByPath(candidate)) {
+      candidate = joinWorkspacePath(folderPath, `${stem}-${counter}${extension}`);
+      counter += 1;
+    }
+    return candidate;
+  }
+
+  function inferImportedLanguageId(path, mimeType) {
+    const nextLanguageId = inferLanguageId({
+      path,
+      mimeType,
+      fallback: undefined,
+    });
+    return nextLanguageId && getLanguageDefinition(nextLanguageId) ? nextLanguageId : undefined;
+  }
+
+  function shouldCreateTextResource(path, mimeType) {
+    if (inferImportedLanguageId(path, mimeType)) {
+      return true;
+    }
+
+    return String(mimeType ?? '').toLowerCase().startsWith('text/');
+  }
+
+  function ensureWorkspaceFolder(path) {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (normalizedPath === '/') {
+      return workspace.getEntryByPath('/');
+    }
+
+    let currentPath = '/';
+    let currentFolder = workspace.getEntryByPath(currentPath);
+    for (const segment of normalizedPath.split('/').filter(Boolean)) {
+      currentPath = joinWorkspacePath(currentPath, segment);
+      const existingFolder = workspace.getEntryByPath(currentPath);
+      if (existingFolder?.kind === 'folder') {
+        currentFolder = existingFolder;
+        continue;
+      }
+
+      currentFolder = workspace.createFolder({
+        path: currentPath,
+        title: basenameWorkspacePath(currentPath),
+      });
+    }
+
+    return currentFolder;
+  }
+
+  function rebaseImportedArchive(archive) {
+    const archivePaths = [...archive.folders, ...archive.files.map((file) => file.path)];
+    if (archivePaths.length === 0 || !archivePaths.some((path) => path.includes('/'))) {
+      return archive;
+    }
+
+    const firstSegment = archivePaths[0].split('/')[0];
+    if (!firstSegment || !archivePaths.every((path) => path === firstSegment || path.startsWith(`${firstSegment}/`))) {
+      return archive;
+    }
+
+    return {
+      folders: archive.folders
+        .map((path) => path === firstSegment ? '' : path.slice(firstSegment.length + 1))
+        .filter(Boolean),
+      files: archive.files.map((file) => ({
+        ...file,
+        path: file.path.startsWith(`${firstSegment}/`) ? file.path.slice(firstSegment.length + 1) : file.path,
+      })),
+    };
+  }
+
+  function createWorkspaceResourceFromBytes(path, bytes, mimeType) {
+    const nextPath = createAvailableWorkspacePath(path);
+    const title = basenameWorkspacePath(nextPath);
+    if (shouldCreateTextResource(nextPath, mimeType)) {
+      const languageId = inferImportedLanguageId(nextPath, mimeType) ?? 'plaintext';
+      const languageDefinition = getLanguageDefinition(languageId);
+      return workspace.createTextResource({
+        path: nextPath,
+        title,
+        text: textDecoder.decode(bytes),
+        languageId,
+        mimeType: mimeType || languageDefinition?.mimeTypes[0] || 'text/plain',
+      });
+    }
+
+    return workspace.createBinaryResource({
+      path: nextPath,
+      title,
+      bytes,
+      mimeType: mimeType || 'application/octet-stream',
+    });
+  }
+
+  async function uploadFilesIntoFolder(folderPath, files, options = {}) {
+    const normalizedFolderPath = normalizeWorkspacePath(folderPath);
+    ensureWorkspaceFolder(normalizedFolderPath);
+    const uploadedResources = [];
+
+    for (const file of files) {
+      const targetPath = joinWorkspacePath(normalizedFolderPath, file.name || 'upload.bin');
+      uploadedResources.push(createWorkspaceResourceFromBytes(
+        targetPath,
+        await readFileBytes(file),
+        file.type || undefined,
+      ));
+    }
+
+    if (uploadedResources.length === 0) {
+      return [];
+    }
+
+    await persistWorkspace(options.reason ?? 'workspace.upload-file');
+    expandFolderAncestors(normalizedFolderPath);
+
+    if (options.openFirst) {
+      openResourceEntry(uploadedResources[0], { placement: options.placement ?? 'main' });
+      return uploadedResources;
+    }
+
+    rememberSelection(uploadedResources[uploadedResources.length - 1].id);
+    emit();
+    return uploadedResources;
+  }
+
+  async function importFolderArchiveIntoPath(folderPath, archive) {
+    const normalizedFolderPath = normalizeWorkspacePath(folderPath);
+    const rebasedArchive = rebaseImportedArchive(archive);
+    const targetFolder = ensureWorkspaceFolder(normalizedFolderPath);
+
+    for (const nestedFolder of rebasedArchive.folders) {
+      ensureWorkspaceFolder(joinWorkspacePath(normalizedFolderPath, nestedFolder));
+    }
+
+    for (const fileEntry of rebasedArchive.files) {
+      createWorkspaceResourceFromBytes(
+        joinWorkspacePath(normalizedFolderPath, fileEntry.path),
+        fileEntry.bytes,
+        undefined,
+      );
+    }
+
+    await persistWorkspace('workspace.import-folder-zip');
+    expandFolderAncestors(targetFolder.path);
+    rememberSelection(targetFolder.id);
+    emit();
+  }
+
   function getActiveCommandSession() {
     normalizeActiveSessions();
     const preferred = state.surfaceFocusPlacement === 'popup'
@@ -1426,6 +1602,17 @@ function createTextForgeWorkbenchController() {
     downloadBytes(createZipFilename(manifest.name, 'textforge-workspace'), bytes, 'application/zip');
   }
 
+  async function uploadFileCommand() {
+    const file = await pickLocalFile();
+    if (!file) {
+      return;
+    }
+
+    await uploadFilesIntoFolder(getSelectedFolderPath(), [file], {
+      reason: 'workspace.upload-file',
+    });
+  }
+
   async function exportSelectedFolderCommand() {
     const entry = resolveTargetEntryForCommands();
     if (!entry || entry.kind !== 'folder') {
@@ -1434,6 +1621,42 @@ function createTextForgeWorkbenchController() {
 
     const bytes = exportWorkspaceFolderToZip(workspace, entry.path);
     downloadBytes(createZipFilename(entry.metadata.title ?? basenameWorkspacePath(entry.path), 'workspace-folder'), bytes, 'application/zip');
+  }
+
+  async function importFolderZipCommand() {
+    const file = await pickLocalFile({ accept: '.zip,application/zip' });
+    if (!file) {
+      return;
+    }
+
+    const suggestedFolderName = sanitizeFilenameSegment(
+      file.name.replace(/\.zip$/i, ''),
+      'imported-folder',
+    );
+    const defaultPath = joinWorkspacePath(getSelectedFolderPath(), suggestedFolderName);
+    const requestedPath = window.prompt('Folder import path', defaultPath);
+    if (!requestedPath) {
+      return;
+    }
+
+    const targetFolderPath = assertWorkspacePathAvailable(requestedPath);
+    const archive = importWorkspaceFolderFromZip(await readFileBytes(file));
+    await importFolderArchiveIntoPath(targetFolderPath, archive);
+  }
+
+  async function downloadSelectedFileCommand() {
+    const entry = resolveTargetResourceForCommands();
+    if (!entry) {
+      return;
+    }
+
+    const filename = basenameWorkspacePath(entry.path) || entry.metadata.title || 'workspace-file';
+    if (entry.kind === 'text') {
+      downloadBytes(filename, textEncoder.encode(entry.text), entry.mimeType || 'text/plain');
+      return;
+    }
+
+    downloadBytes(filename, entry.bytes, entry.mimeType || 'application/octet-stream');
   }
 
   async function renameSelectedEntryCommand() {
@@ -1602,13 +1825,39 @@ function createTextForgeWorkbenchController() {
     );
   }
 
+  async function dropFilesOnWorkspaceFolder(folderId, files) {
+    const folder = getEntry(folderId);
+    if (!folder || folder.kind !== 'folder' || files.length === 0) {
+      return;
+    }
+
+    await uploadFilesIntoFolder(folder.path, files, {
+      reason: 'workspace.drop-folder',
+    });
+  }
+
+  async function dropFilesOnTabStrip(files) {
+    if (files.length === 0) {
+      return;
+    }
+
+    await uploadFilesIntoFolder('/upload', files, {
+      openFirst: true,
+      placement: 'main',
+      reason: 'workspace.drop-tabstrip',
+    });
+  }
+
   function registerCommandHandlers() {
     commandDispatcher
       .register('workspace.new-folder', createFolderCommand)
       .register('workspace.new-resource', createResourceCommand)
+      .register('workspace.upload-file', uploadFileCommand)
       .register('workspace.import-workspace', importWorkspaceCommand)
+      .register('workspace.import-folder-zip', importFolderZipCommand)
       .register('workspace.export-workspace', exportWorkspaceCommand)
       .register('workspace.export-selected-folder', exportSelectedFolderCommand)
+      .register('workspace.download-selected-file', downloadSelectedFileCommand)
       .register('workspace.rename-selected', renameSelectedEntryCommand)
       .register('workspace.delete-selected', deleteSelectedEntryCommand)
       .register('workspace.reset-storage', requestWorkspaceResetCommand)
@@ -1908,6 +2157,8 @@ function createTextForgeWorkbenchController() {
       closeActivePopupSurface,
       closeSession,
       confirmStorageReset,
+      dropFilesOnTabStrip,
+      dropFilesOnWorkspaceFolder,
       executeCommand,
       focusMainSession,
       focusPopupSession,
@@ -2369,6 +2620,7 @@ function TextForgeWorkbenchApp({ controller }) {
         }),
         sidebar: element(TextForgeWorkspaceSidebar, {
           collapsed: snapshot.state.workspaceTreeCollapsed,
+          onDropFilesToFolder: controller.actions.dropFilesOnWorkspaceFolder,
           onSelectItem: controller.actions.selectWorkspaceItem,
           onToggleFolder: controller.actions.toggleWorkspaceFolder,
           workspaceTree: snapshot.chromeModel.workspaceTree,
@@ -2416,6 +2668,7 @@ function TextForgeWorkbenchApp({ controller }) {
           emptyLabel: 'No documents are open',
           frameModel: snapshot.chromeModel.surfaceFrame,
           onCloseTab: controller.actions.closeSession,
+          onDropFiles: controller.actions.dropFilesOnTabStrip,
           onSelectTab: controller.actions.focusMainSession,
         }),
         element(

@@ -100,6 +100,16 @@ export interface WorkspaceArchiveImportResult {
   readonly state: WorkspaceState;
 }
 
+export interface WorkspaceFolderArchiveFile {
+  readonly path: string;
+  readonly bytes: Uint8Array;
+}
+
+export interface WorkspaceFolderArchive {
+  readonly folders: ReadonlyArray<string>;
+  readonly files: ReadonlyArray<WorkspaceFolderArchiveFile>;
+}
+
 export interface WorkspaceArchiveExportOptions {
   readonly exportedAt?: string;
 }
@@ -356,6 +366,7 @@ export declare function importWorkspaceFromZip(
   bytes: Uint8Array,
   options?: WorkspaceArchiveImportOptions,
 ): WorkspaceArchiveImportResult;
+export declare function importWorkspaceFolderFromZip(bytes: Uint8Array): WorkspaceFolderArchive;
 export declare function openWorkspaceDexieStorage(options?: WorkspaceStorageOptions): Promise<WorkspaceDexieStorage>;
 export declare function resetWorkspaceDexieStorage(options?: WorkspaceStorageOptions): Promise<void>;
 export declare function createPersistentWorkspaceService(
