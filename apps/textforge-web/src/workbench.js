@@ -99,9 +99,9 @@ const phase35ScreenshotPresets = {
     panelLayout: undefined,
     openResourcePath: sampleResourcePaths.notes,
     openPlacement: 'main',
-    utilityPaneOpen: true,
+    utilityPaneOpen: false,
     utilitySectionId: 'inspector',
-    workspaceTreeCollapsed: false,
+    workspaceTreeCollapsed: true,
   },
   'tree-collapsed': {
     panelLayout: undefined,
