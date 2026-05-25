@@ -49,15 +49,32 @@ import {
 import {
   assetSurfaceContributions,
   createAssetContributionManifest,
+  createAssetProvenanceLabel,
   createAssetViewerSurface,
   createBinaryAssetViewerSurface,
   createBlobUrlLedger,
+  markAssetBindingStale,
   createImageAssetViewerSurface,
   createPdfAssetViewerSurface,
   createSvgAssetViewerSurface,
   createWorkspaceAssetBinding,
   markAssetBindingReady,
 } from '@textforge/assets';
+import {
+  contributions as pipelineContributionPack,
+} from '@textforge/pipeline';
+import {
+  contributions as diagramContributionPack,
+  createDiagramFenceHandlers,
+  rasterizeSvgToPngBytes,
+} from '@textforge/diagrams';
+import {
+  createMarkdownContributionManifest,
+  createMarkdownPreviewSurface,
+  createMarkdownSnippet,
+  markdownPreviewSurfaceContribution,
+  renderMarkdownDocument,
+} from '@textforge/markdown';
 import {
   TextForgeAppFrame,
   TextForgeCallout,
@@ -249,6 +266,14 @@ function sanitizeFilenameSegment(value, fallback = 'textforge-workspace') {
   return normalized || fallback;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
 function createZipFilename(label, fallback) {
   return `${sanitizeFilenameSegment(label, fallback)}.zip`;
 }
@@ -331,6 +356,9 @@ function createContributionPacks({ languageModes, surfaceContributions }) {
     createSurfaceContributionManifest(surfaceContributions),
     createEditorContributionManifest(languageModes),
     createAssetContributionManifest(),
+    pipelineContributionPack,
+    diagramContributionPack,
+    createMarkdownContributionManifest(),
     uiContributionPack,
   ];
 }
@@ -344,11 +372,19 @@ function resolveCommandIcon(commandId) {
     return 'export';
   }
 
+  if (commandId.startsWith('asset.export-selected')) {
+    return 'fileImage';
+  }
+
   if (commandId === 'workspace.new-folder') {
     return 'folder';
   }
 
   if (commandId === 'workspace.new-resource' || commandId.startsWith('editor.set-language')) {
+    return 'fileText';
+  }
+
+  if (commandId.startsWith('markdown.insert-') || commandId.startsWith('markdown.export-')) {
     return 'fileText';
   }
 
@@ -396,9 +432,9 @@ function createWelcomeView() {
     id: 'welcome',
     kind: 'welcome',
     mountId: 'welcome',
-    title: 'Readable command-driven workspace',
-    summary: 'The shell keeps the local command system from Phase 3.3, adds deterministic resource badges, and shifts the workbench toward a calmer authoring layout.',
-    openWith: 'Shell chrome',
+    title: 'TF-MD preview and generated diagram assets',
+    summary: 'Phase 4 adds the Markdown preview surface, TF-MD control-block scanning, local image resolution, and generated Mermaid/Graphviz asset export on top of the recovered shell.',
+    openWith: 'Markdown and asset surfaces',
     state: 'open',
     placement: 'main',
     controls: [],
@@ -453,8 +489,10 @@ function createTextForgeWorkbenchController() {
   let storageFailure;
   const blobLedger = createBlobUrlLedger(createBlobUrlDriver());
   const languageModes = listTextEditorLanguageModes();
+  const diagramFenceHandlers = createDiagramFenceHandlers();
   const surfaceRegistry = createSurfaceRegistry([
     codeMirrorTextEditorSurfaceContribution,
+    markdownPreviewSurfaceContribution,
     ...assetSurfaceContributions,
   ]);
   const contributionPacks = createContributionPacks({
@@ -474,6 +512,7 @@ function createTextForgeWorkbenchController() {
   });
   const activeTextDocuments = new Map();
   const assetLeaseByResourceId = new Map();
+  const markdownPreviewStateByResourceId = new Map();
   const listeners = new Set();
   let cachedSnapshot;
   const state = {
@@ -638,6 +677,7 @@ function createTextForgeWorkbenchController() {
     }
     assetLeaseByResourceId.clear();
     activeTextDocuments.clear();
+    markdownPreviewStateByResourceId.clear();
     state.activeMainSessionId = undefined;
     state.activePopupSessionId = undefined;
     state.surfaceFocusPlacement = 'main';
@@ -1248,6 +1288,102 @@ function createTextForgeWorkbenchController() {
     return lease;
   }
 
+  function isMarkdownResource(resource) {
+    return Boolean(
+      resource
+      && resource.kind === 'resource'
+      && resource.representation === 'text'
+      && (
+        resource.languageId === 'markdown'
+        || resource.mimeType === 'text/markdown'
+        || resource.mimeType === 'text/x-markdown'
+        || resource.path?.toLowerCase().endsWith('.md')
+        || resource.path?.toLowerCase().endsWith('.markdown')
+        || resource.path?.toLowerCase().endsWith('.tfmd')
+      ),
+    );
+  }
+
+  function resolveMarkdownAssetReference({ sourceResource, href }) {
+    const resolvedRef = sourceResource
+      ? workspace.resolveReference(sourceResource, href)
+      : undefined;
+    if (!resolvedRef?.resourceId) {
+      return {
+        href,
+      };
+    }
+
+    const resolvedEntry = getEntry(resolvedRef.resourceId);
+    if (!isWorkspaceResource(resolvedEntry)) {
+      return {
+        href,
+        resourceId: resolvedRef.resourceId,
+        path: resolvedRef.path,
+      };
+    }
+
+    const lease = getAssetLease(workspaceEntryToResourceRef(resolvedEntry));
+    return {
+      href,
+      resourceId: resolvedEntry.id,
+      path: resolvedEntry.path,
+      resolvedSrc: lease?.url,
+    };
+  }
+
+  async function renderMarkdownResource(resource, options = {}) {
+    return renderMarkdownDocument(resource.text, {
+      resource: workspaceEntryToResourceRef(resource),
+      sourceUpdatedAt: resource.metadata.updatedAt,
+      resolveAssetReference: resolveMarkdownAssetReference,
+      fenceHandlers: diagramFenceHandlers,
+      fenceExecutionOptions: {
+        document: globalThis.document,
+        ...options.fenceExecutionOptions,
+      },
+    });
+  }
+
+  function requestMarkdownPreview(resource) {
+    const currentState = markdownPreviewStateByResourceId.get(resource.id);
+    if (currentState?.status === 'ready' && currentState.updatedAt === resource.metadata.updatedAt) {
+      return currentState;
+    }
+
+    if (currentState?.status === 'rendering' && currentState.updatedAt === resource.metadata.updatedAt) {
+      return currentState;
+    }
+
+    const nextState = {
+      status: 'rendering',
+      updatedAt: resource.metadata.updatedAt,
+      result: currentState?.result,
+      error: undefined,
+    };
+    markdownPreviewStateByResourceId.set(resource.id, nextState);
+    void renderMarkdownResource(resource)
+      .then((result) => {
+        markdownPreviewStateByResourceId.set(resource.id, {
+          status: 'ready',
+          updatedAt: resource.metadata.updatedAt,
+          result,
+          error: undefined,
+        });
+        emit();
+      })
+      .catch((error) => {
+        markdownPreviewStateByResourceId.set(resource.id, {
+          status: 'error',
+          updatedAt: resource.metadata.updatedAt,
+          result: undefined,
+          error,
+        });
+        emit();
+      });
+    return nextState;
+  }
+
   function createOpenWithControl(session, resource) {
     const selection = createOpenWithSelection(surfaceRegistry, {
       resource: workspaceEntryToResourceRef(resource),
@@ -1296,6 +1432,150 @@ function createTextForgeWorkbenchController() {
     };
   }
 
+  function reopenResourceInCurrentSurface(resource, preferredSurfaceId) {
+    const currentSession = findSessionForResource(resource.id);
+    if (!currentSession) {
+      openResourceEntry(resource, {
+        preferredSurfaceId,
+      });
+      return;
+    }
+
+    openResourceEntry(resource, {
+      placement: currentSession.placement,
+      preferredSurfaceId: preferredSurfaceId ?? currentSession.contributionId,
+      forceReopen: true,
+    });
+  }
+
+  function replaceMarkdownText(resource, snippet) {
+    if (!isMarkdownResource(resource)) {
+      return;
+    }
+
+    const currentDocument = activeTextDocuments.get(resource.id) ?? createTextEditorDocument(
+      workspaceEntryToResourceRef(resource),
+      resource.text,
+      {
+        languageId: resource.languageId,
+        readOnly: false,
+      },
+    );
+    const selection = currentDocument.selection ?? { anchor: currentDocument.text.length, head: currentDocument.text.length };
+    const start = Math.min(selection.anchor, selection.head);
+    const end = Math.max(selection.anchor, selection.head);
+    const nextText = `${currentDocument.text.slice(0, start)}${snippet}${currentDocument.text.slice(end)}`;
+    const nextOffset = start + snippet.length;
+    const nextResource = workspace.saveTextResource({
+      resourceId: resource.id,
+      text: nextText,
+    });
+    activeTextDocuments.set(resource.id, {
+      ...currentDocument,
+      resource: workspaceEntryToResourceRef(nextResource),
+      text: nextText,
+      version: currentDocument.version + 1,
+      selection: {
+        anchor: nextOffset,
+        head: nextOffset,
+      },
+      sourceRange: undefined,
+    });
+    reopenResourceInCurrentSurface(nextResource);
+  }
+
+  function buildGeneratedResourceMetadata(descriptor) {
+    if (!descriptor.pipelineId || !descriptor.sourcePath || !descriptor.sourceResourceId || !descriptor.sourceUpdatedAt) {
+      return undefined;
+    }
+
+    return {
+      provenance: {
+        kind: 'generated',
+        pipelineId: descriptor.pipelineId,
+        sourceResourceId: descriptor.sourceResourceId,
+        sourcePath: descriptor.sourcePath,
+        sourceUpdatedAt: descriptor.sourceUpdatedAt,
+        generatedAt: descriptor.generatedAt,
+        blockId: descriptor.blockId,
+        blockKind: descriptor.blockKind,
+        format: descriptor.format,
+      },
+    };
+  }
+
+  function upsertGeneratedWorkspaceResource(descriptor) {
+    const targetPath = normalizeWorkspacePath(descriptor.path);
+    ensureWorkspaceFolder(dirnameWorkspacePath(targetPath));
+    const existing = workspace.getEntryByPath(targetPath);
+    const metadata = buildGeneratedResourceMetadata(descriptor);
+    if (existing && existing.kind === 'resource' && existing.representation === descriptor.representation) {
+      if (descriptor.representation === 'text') {
+        return workspace.saveTextResource({
+          resourceId: existing.id,
+          text: descriptor.text,
+          languageId: descriptor.languageId ?? existing.languageId,
+          mimeType: descriptor.mimeType ?? existing.mimeType,
+          metadata,
+        });
+      }
+
+      return workspace.saveBinaryResource({
+        resourceId: existing.id,
+        bytes: descriptor.bytes,
+        mimeType: descriptor.mimeType ?? existing.mimeType,
+        metadata,
+      });
+    }
+
+    if (existing) {
+      workspace.deleteEntry(existing.id);
+    }
+
+    if (descriptor.representation === 'text') {
+      return workspace.createTextResource({
+        path: targetPath,
+        title: basenameWorkspacePath(targetPath),
+        text: descriptor.text,
+        languageId: descriptor.languageId,
+        mimeType: descriptor.mimeType,
+        metadata,
+      });
+    }
+
+    return workspace.createBinaryResource({
+      path: targetPath,
+      title: basenameWorkspacePath(targetPath),
+      bytes: descriptor.bytes,
+      mimeType: descriptor.mimeType,
+      metadata,
+    });
+  }
+
+  function describeGeneratedResource(resource) {
+    const provenance = resource.metadata?.provenance;
+    if (!provenance || provenance.kind !== 'generated') {
+      return {
+        stale: false,
+        label: 'workspace-bound',
+        rows: [],
+      };
+    }
+
+    const sourceResource = getEntry(provenance.sourceResourceId);
+    const stale = !isWorkspaceResource(sourceResource) || sourceResource.metadata.updatedAt !== provenance.sourceUpdatedAt;
+    return {
+      stale,
+      label: createAssetProvenanceLabel(provenance),
+      rows: [
+        { label: 'Pipeline', value: provenance.pipelineId },
+        { label: 'Source path', value: provenance.sourcePath },
+        { label: 'Source state', value: stale ? 'stale' : 'current' },
+        { label: 'Generated at', value: provenance.generatedAt },
+      ],
+    };
+  }
+
   function createSurfaceView(session) {
     const resource = getEntry(session.resource.resourceId);
     if (!resource) {
@@ -1307,6 +1587,89 @@ function createTextForgeWorkbenchController() {
     const badge = resource.metadata.badge;
     const icon = resolveEntryIcon(resource);
     const resourceTitle = resource.metadata.title ?? basenameWorkspacePath(resource.path) ?? resource.path;
+    if (session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(resource)) {
+      const previewState = requestMarkdownPreview(resource);
+      if (previewState.status === 'ready' && previewState.result) {
+        const surface = createMarkdownPreviewSurface(resource.text, previewState.result, {
+          resource: workspaceEntryToResourceRef(resource),
+        });
+        return {
+          id: session.id,
+          kind: 'surface',
+          mountId: `${session.id}:${session.contributionId}:${resource.metadata.updatedAt}`,
+          title: resourceTitle,
+          path: resource.path,
+          summary: surface.model.summary,
+          badge,
+          icon,
+          openWith,
+          state: session.state,
+          placement: session.placement,
+          detail: `${surface.model.diagnostics.length} diagnostics / ${surface.model.referencedAssets.length} asset references`,
+          readOnly: true,
+          inspectorSections: [
+            {
+              eyebrow: 'Preview',
+              icon: 'fileText',
+              title: 'TF-MD summary',
+              rows: [
+                { label: 'Metadata title', value: String(surface.model.metadata.title ?? resourceTitle) },
+                { label: 'Diagnostics', value: String(surface.model.diagnostics.length) },
+                { label: 'Assets', value: String(surface.model.referencedAssets.length) },
+                { label: 'Generated diagrams', value: String(surface.model.generatedResources.length) },
+              ],
+            },
+          ],
+          controls,
+          surface,
+        };
+      }
+
+      const placeholderHtml = previewState.status === 'error'
+        ? `<section class="tfmd-preview tfmd-preview--error"><p>Markdown preview failed: ${escapeHtml(previewState.error?.message ?? 'Unknown error')}</p></section>`
+        : '<section class="tfmd-preview tfmd-preview--loading"><p>Rendering Markdown preview...</p></section>';
+      return {
+        id: session.id,
+        kind: 'surface',
+        mountId: `${session.id}:${session.contributionId}:${previewState.status}:${resource.metadata.updatedAt}`,
+        title: resourceTitle,
+        path: resource.path,
+        summary: previewState.status === 'error'
+          ? 'Markdown preview failed to render.'
+          : 'Rendering the package-owned Markdown preview surface.',
+        badge,
+        icon,
+        openWith,
+        state: session.state,
+        placement: session.placement,
+        detail: previewState.status === 'error' ? 'Render error' : 'Preview loading',
+        readOnly: true,
+        inspectorSections: [
+          {
+            eyebrow: 'Preview',
+            icon: previewState.status === 'error' ? 'warning' : 'status',
+            title: 'TF-MD summary',
+            rows: [
+              { label: 'State', value: previewState.status },
+              { label: 'Source', value: resource.path },
+            ],
+          },
+        ],
+        controls,
+        surface: {
+          model: {
+            html: placeholderHtml,
+          },
+          mount(container) {
+            container.innerHTML = placeholderHtml;
+            return () => {
+              container.innerHTML = '';
+            };
+          },
+        },
+      };
+    }
+
     if (session.contributionId === codeMirrorTextEditorSurfaceContribution.id && resource.representation === 'text') {
       const document = activeTextDocuments.get(resource.id) ?? createTextEditorDocument(
         workspaceEntryToResourceRef(resource),
@@ -1320,12 +1683,18 @@ function createTextForgeWorkbenchController() {
       const surface = createCodeMirrorTextEditorSurface({
         document,
         diagnostics: [],
+        onUpdate(nextDocument) {
+          activeTextDocuments.set(resource.id, nextDocument);
+        },
         onChange(nextDocument) {
-          workspace.saveTextResource({
+          const nextResource = workspace.saveTextResource({
             resourceId: resource.id,
             text: nextDocument.text,
           });
-          activeTextDocuments.set(resource.id, nextDocument);
+          activeTextDocuments.set(resource.id, {
+            ...nextDocument,
+            resource: workspaceEntryToResourceRef(nextResource),
+          });
           getHostForPlacement(session.placement).markCurrent(session.id);
         },
       });
@@ -1351,20 +1720,22 @@ function createTextForgeWorkbenchController() {
 
     const resourceRef = workspaceEntryToResourceRef(resource);
     const lease = getAssetLease(resourceRef);
+    const generatedResource = describeGeneratedResource(resource);
     const binding = createWorkspaceAssetBinding({
       resource: resourceRef,
       workspaceResource: resource,
       title: resource.metadata.title ?? resource.path,
-      provenance: 'workspace-bound',
+      provenance: resource.metadata?.provenance ?? 'workspace-bound',
     });
-    const readyBinding = lease ? markAssetBindingReady(binding, lease.url) : binding;
+    const readyBindingBase = lease ? markAssetBindingReady(binding, lease.url) : binding;
+    const readyBinding = generatedResource.stale ? markAssetBindingStale(readyBindingBase) : readyBindingBase;
     const createAssetSurface = assetSurfaceFactoryByContributionId[session.contributionId] ?? createAssetViewerSurface;
     const surface = createAssetSurface(
       {
         resource: resourceRef,
         workspaceResource: resource,
         title: resource.metadata.title ?? resource.path,
-        provenance: 'workspace-bound',
+        provenance: resource.metadata?.provenance ?? 'workspace-bound',
       },
       {
         binding: readyBinding,
@@ -1392,11 +1763,19 @@ function createTextForgeWorkbenchController() {
           title: 'Asset state',
           rows: [
             { label: 'State', value: surface.model.state },
-            { label: 'Source', value: surface.model.provenance },
+            { label: 'Source', value: surface.model.provenanceLabel },
             { label: 'Blob URL', value: surface.model.blobUrl ? 'bound' : 'unbound' },
             { label: 'Action', value: surface.model.blobUrl ? 'Download asset' : 'No download link' },
           ],
         },
+        ...(generatedResource.rows.length > 0
+          ? [{
+            eyebrow: 'Generated',
+            icon: generatedResource.stale ? 'warning' : 'status',
+            title: 'Derived asset provenance',
+            rows: generatedResource.rows,
+          }]
+          : []),
       ],
       controls,
       surface,
@@ -2009,6 +2388,99 @@ function createTextForgeWorkbenchController() {
     );
   }
 
+  async function exportSelectedSvgCommand(commandContext) {
+    const resource = resolveTargetResourceForCommands(commandContext);
+    if (!resource || resource.representation !== 'text' || resource.mimeType !== 'image/svg+xml') {
+      return;
+    }
+
+    downloadBytes(
+      basenameWorkspacePath(resource.path) || 'diagram.svg',
+      textEncoder.encode(resource.text),
+      'image/svg+xml',
+    );
+  }
+
+  async function exportSelectedPngCommand(commandContext) {
+    const resource = resolveTargetResourceForCommands(commandContext);
+    if (!resource || resource.representation !== 'text' || resource.mimeType !== 'image/svg+xml') {
+      return;
+    }
+
+    const pngBytes = await rasterizeSvgToPngBytes(resource.text, {
+      document: globalThis.document,
+    });
+    const baseName = basenameWorkspacePath(resource.path).replace(/\.svg$/i, '') || 'diagram';
+    downloadBytes(`${baseName}.png`, pngBytes, 'image/png');
+  }
+
+  async function insertMarkdownSnippetCommand(kind, commandContext) {
+    const resource = resolveTargetResourceForCommands(commandContext);
+    if (!isMarkdownResource(resource)) {
+      return;
+    }
+
+    if (kind === 'image') {
+      const href = window.prompt('Workspace-relative image path', 'generated/example.svg');
+      if (!href) {
+        return;
+      }
+      replaceMarkdownText(resource, createMarkdownSnippet('image', {
+        href,
+        alt: 'Generated diagram',
+      }));
+      await persistWorkspace('markdown.insert-image-reference');
+      return;
+    }
+
+    replaceMarkdownText(resource, createMarkdownSnippet(kind));
+    await persistWorkspace(`markdown.insert-${kind}-block`);
+  }
+
+  async function exportMarkdownPrintHtmlCommand(commandContext) {
+    const resource = resolveTargetResourceForCommands(commandContext);
+    if (!isMarkdownResource(resource)) {
+      return;
+    }
+
+    const rendered = await renderMarkdownResource(resource);
+    const fileName = `${basenameWorkspacePath(resource.path).replace(/\.(md|markdown|tfmd)$/i, '') || 'document'}.html`;
+    downloadBytes(fileName, textEncoder.encode(rendered.printHtml), 'text/html');
+  }
+
+  async function exportMarkdownGeneratedDiagramsCommand(commandContext) {
+    const resource = resolveTargetResourceForCommands(commandContext);
+    if (!isMarkdownResource(resource)) {
+      return;
+    }
+
+    const stem = basenameWorkspacePath(resource.path).replace(/\.(md|markdown|tfmd)$/i, '') || 'document';
+    const rendered = await renderMarkdownResource(resource, {
+      fenceExecutionOptions: {
+        generatedAssetBasePath: `/generated/${sanitizeFilenameSegment(stem, 'diagram')}`,
+        includePng: true,
+        document: globalThis.document,
+      },
+    });
+
+    if (rendered.generatedResources.length === 0) {
+      window.alert('No Mermaid or Graphviz blocks were found in the selected Markdown resource.');
+      return;
+    }
+
+    const savedResources = rendered.generatedResources.map((descriptor) => upsertGeneratedWorkspaceResource(descriptor));
+    await persistWorkspace('markdown.export-generated-diagrams');
+    expandFolderPath('/generated');
+    if (savedResources[0]) {
+      openResourceEntry(savedResources[0], {
+        placement: 'popup',
+        preferredSurfaceId: '@textforge/assets/svg',
+      });
+    } else {
+      emit();
+    }
+  }
+
   async function dropFilesOnWorkspaceFolder(folderId, files) {
     const folder = getEntry(folderId);
     if (!folder || folder.kind !== 'folder' || files.length === 0) {
@@ -2052,7 +2524,14 @@ function createTextForgeWorkbenchController() {
       .register('surface.move-active-to-popup', ({ context }) => moveActiveSurfaceCommand('popup', context))
       .register('surface.focus-main-session', ({ context }) => focusMainSurfaceCommand(context))
       .register('surface.focus-popup-session', ({ context }) => focusPopupSurfaceCommand(context))
-      .register('asset.download-selected', ({ context }) => downloadSelectedAssetCommand(context));
+      .register('asset.download-selected', ({ context }) => downloadSelectedAssetCommand(context))
+      .register('asset.export-selected-svg', ({ context }) => exportSelectedSvgCommand(context))
+      .register('asset.export-selected-png', ({ context }) => exportSelectedPngCommand(context))
+      .register('markdown.insert-image-reference', ({ context }) => insertMarkdownSnippetCommand('image', context))
+      .register('markdown.insert-mermaid-block', ({ context }) => insertMarkdownSnippetCommand('mermaid', context))
+      .register('markdown.insert-graphviz-block', ({ context }) => insertMarkdownSnippetCommand('graphviz', context))
+      .register('markdown.export-print-html', ({ context }) => exportMarkdownPrintHtmlCommand(context))
+      .register('markdown.export-generated-diagrams', ({ context }) => exportMarkdownGeneratedDiagramsCommand(context));
 
     for (const surfaceContribution of surfaceRegistry.list()) {
       commandDispatcher.register(`surface.open-with:${surfaceContribution.id}`, ({ command, context }) =>
@@ -2420,9 +2899,9 @@ function hasDroppedFiles(dataTransfer) {
 
 function WelcomeState({ hydrationSource }) {
   return element(TextForgeEmptyState, {
-    eyebrow: 'Phase 3.5',
+    eyebrow: 'Phase 4',
     icon: 'status',
-    title: 'Popup overlays and calmer shell chrome',
+    title: 'Markdown preview and generated assets',
     children: element(
       React.Fragment,
       null,
@@ -2430,16 +2909,16 @@ function WelcomeState({ hydrationSource }) {
         'p',
         null,
         hydrationSource === 'storage'
-          ? 'The shell reopened the browser-managed workspace, rebuilt the local command registry, restored the resizable shell rails, and kept popup sessions separate from the main document strip.'
-          : 'The shell seeded a fresh browser-managed workspace with resizable side rails, popup overlays, and the existing local command system.',
+          ? 'The shell reopened the browser-managed workspace, rebuilt the local command and package contribution registry, and restored TF-MD preview, generated-asset export, and popup-ready viewer surfaces.'
+          : 'The shell seeded a fresh browser-managed workspace with TF-MD preview, local diagram export, and the existing local command shell layout.',
       ),
       element(
         'ul',
         { className: 'tf-welcome__list' },
-        element('li', null, 'Deterministic resource badges stay compact across the tree, tabs, and inspector'),
-        element('li', null, 'Main documents stay central while the left tree and right panel resize within bounded widths'),
-        element('li', null, 'Binary and popup-ready surfaces open as in-app overlays instead of side-panel content'),
-        element('li', null, 'No plugin manager, remote package loading, or advanced tab-management pulled forward'),
+        element('li', null, 'Markdown resources can open in both the source editor and the package-owned TF-MD preview surface'),
+        element('li', null, 'Workspace-relative images resolve through the browser-managed workspace without host filesystem access'),
+        element('li', null, 'Mermaid and Graphviz blocks can render inline and export generated SVG and PNG workspace assets'),
+        element('li', null, 'No plugin manager, remote package loading, or rich Markdown editing was pulled forward'),
       ),
     ),
   });
@@ -2612,7 +3091,7 @@ function WorkbenchDetailsCard() {
     element(
       'p',
       { className: 'tf-surface-details__summary' },
-      'Resizable shell rails and the resizable right panel keep popup overlays and local ui state inside the browser-managed Dexie workspace.',
+      'The shell now layers TF-MD preview, local diagram generation, and generated asset provenance onto the existing browser-managed workspace, local ui state model, popup overlays, and resizable right panel layout.',
     ),
   );
 }

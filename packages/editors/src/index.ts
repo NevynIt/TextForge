@@ -77,7 +77,10 @@ export interface CodeMirrorTextEditorSurface {
   readonly model: TextEditorSurfaceModel;
   mount(
     container: HTMLElement,
-    handlers?: { readonly onChange?: (document: TextEditorDocument) => void },
+    handlers?: {
+      readonly onChange?: (document: TextEditorDocument) => void;
+      readonly onUpdate?: (document: TextEditorDocument) => void;
+    },
   ): () => void;
 }
 
@@ -253,6 +256,7 @@ export declare function createCodeMirrorTextEditorSurface(props?: {
   readonly document?: TextEditorDocument;
   readonly diagnostics?: ReadonlyArray<Diagnostic>;
   readonly onChange?: (document: TextEditorDocument) => void;
+  readonly onUpdate?: (document: TextEditorDocument) => void;
 }): CodeMirrorTextEditorSurface;
 
 export declare const contributions: ContributionManifest;

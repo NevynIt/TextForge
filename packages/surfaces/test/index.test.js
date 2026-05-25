@@ -47,6 +47,14 @@ test('surface registry picks the highest-priority compatible contribution', () =
       placements: ['main'],
       openWithPriority: 40,
     },
+    {
+      id: '@textforge/markdown/preview',
+      label: 'Markdown preview',
+      resourceRepresentations: ['text'],
+      languageIds: ['markdown'],
+      placements: ['main', 'popup'],
+      openWithPriority: 15,
+    },
   ]);
 
   const host = createMainSurfaceHost({
@@ -72,6 +80,18 @@ test('surface registry picks the highest-priority compatible contribution', () =
     resource: { resourceId: 'resource-3', kind: 'resource', representation: 'text', path: '/docs/notes.md' },
   });
   assert.equal(selection.selectedSurfaceId, 'surface.editor');
+
+  const markdownSelection = createOpenWithSelection(registry, {
+    resource: {
+      resourceId: 'resource-5',
+      kind: 'resource',
+      representation: 'text',
+      path: '/docs/notes.md',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+  });
+  assert.deepEqual(markdownSelection.candidates.map((candidate) => candidate.surfaceId), ['surface.editor', '@textforge/markdown/preview']);
 
   const svgSelection = createOpenWithSelection(registry, {
     resource: { resourceId: 'resource-4', kind: 'resource', representation: 'bytes', path: '/docs/system.svg', mimeType: 'image/svg+xml' },

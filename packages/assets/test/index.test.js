@@ -5,6 +5,7 @@ import test from 'node:test';
 
 import {
   createAssetContributionManifest,
+  createAssetProvenanceLabel,
   createBinaryAssetViewerSurface,
   createImageAssetViewerSurface,
   createPdfAssetViewerSurface,
@@ -57,6 +58,15 @@ test('asset viewer helpers select and bind viewer kinds', () => {
   assert.equal(createPdfAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'pdf');
   assert.equal(createBinaryAssetViewerSurface(request, { binding, lease }).model.viewerKind, 'binary');
   assert.equal(createAssetContributionManifest().commands.some((command) => command.id === 'asset.download-selected'), true);
+  assert.equal(createAssetContributionManifest().commands.some((command) => command.id === 'asset.export-selected-png'), true);
+  assert.equal(createAssetProvenanceLabel({
+    kind: 'generated',
+    pipelineId: '@textforge/diagrams/graphviz-svg',
+    sourceResourceId: 'resource-1',
+    sourcePath: '/docs/example.md',
+    sourceUpdatedAt: fixedNow(),
+    generatedAt: fixedNow(),
+  }), '@textforge/diagrams/graphviz-svg from /docs/example.md');
   assert.equal(markAssetBindingReleased(binding).state, 'released');
 });
 

@@ -17,11 +17,24 @@ export type WorkspaceStorageDriver = 'dexie';
 export type WorkspaceStorageStatus = 'idle' | 'persisting' | 'error';
 export type WorkspaceHydrationSource = 'seed' | 'storage';
 
+export interface WorkspaceGeneratedProvenance {
+  readonly kind: 'generated';
+  readonly pipelineId: string;
+  readonly sourceResourceId: string;
+  readonly sourcePath: string;
+  readonly sourceUpdatedAt: string;
+  readonly generatedAt: string;
+  readonly blockId?: string;
+  readonly blockKind?: string;
+  readonly format?: 'svg' | 'png' | 'html' | string;
+}
+
 export interface WorkspaceMetadata {
   readonly title?: string;
   readonly description?: string;
   readonly tags?: ReadonlyArray<string>;
   readonly badge?: ResourceBadgeToken;
+  readonly provenance?: WorkspaceGeneratedProvenance;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -161,6 +174,7 @@ export interface WorkspaceDexieSchema {
 export interface WorkspaceCreateFolderInput {
   readonly path: string;
   readonly title?: string;
+  readonly metadata?: Partial<WorkspaceMetadata>;
 }
 
 export interface WorkspaceCreateTextInput {
@@ -169,6 +183,7 @@ export interface WorkspaceCreateTextInput {
   readonly title?: string;
   readonly languageId?: string;
   readonly mimeType?: string;
+  readonly metadata?: Partial<WorkspaceMetadata>;
 }
 
 export interface WorkspaceCreateBinaryInput {
@@ -176,6 +191,7 @@ export interface WorkspaceCreateBinaryInput {
   readonly bytes: Uint8Array;
   readonly title?: string;
   readonly mimeType?: string;
+  readonly metadata?: Partial<WorkspaceMetadata>;
 }
 
 export interface WorkspaceCreateResourceTextInput extends WorkspaceCreateTextInput {
@@ -194,6 +210,7 @@ export interface WorkspaceSaveTextInput {
   readonly languageId?: string;
   readonly mimeType?: string;
   readonly updatedAt?: string;
+  readonly metadata?: Partial<WorkspaceMetadata>;
 }
 
 export interface WorkspaceSaveBinaryInput {
@@ -201,6 +218,7 @@ export interface WorkspaceSaveBinaryInput {
   readonly bytes: Uint8Array;
   readonly mimeType?: string;
   readonly updatedAt?: string;
+  readonly metadata?: Partial<WorkspaceMetadata>;
 }
 
 export interface WorkspaceSaveResourceTextInput extends WorkspaceSaveTextInput {

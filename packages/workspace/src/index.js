@@ -232,6 +232,7 @@ function cloneMetadata(metadata) {
     ...normalizedMetadata,
     tags: normalizedMetadata.tags ? [...normalizedMetadata.tags] : undefined,
     badge: normalizedMetadata.badge ? createResourceBadgeToken({ ...normalizedMetadata.badge }) : undefined,
+    provenance: normalizedMetadata.provenance ? { ...normalizedMetadata.provenance } : undefined,
   };
 }
 
@@ -770,9 +771,10 @@ function cloneBytes(bytes) {
   return new Uint8Array(bytes);
 }
 
-function createMetadata(title, now) {
+function createMetadata(title, now, overrides = {}) {
   const timestamp = now();
   return {
+    ...overrides,
     title,
     createdAt: timestamp,
     updatedAt: timestamp,
@@ -828,7 +830,7 @@ function createFolderEntry(input, now, idFactory, parentId) {
     id: idFactory(),
     path: normalizeWorkspacePath(input.path),
     parentId,
-    metadata: createMetadata(title, now),
+    metadata: createMetadata(title, now, cloneMetadata(input.metadata)),
     childIds: [],
   };
 }
@@ -841,7 +843,7 @@ function createTextEntry(input, now, idFactory, parentId) {
     id: idFactory(),
     path: normalizeWorkspacePath(input.path),
     parentId,
-    metadata: createMetadata(title, now),
+    metadata: createMetadata(title, now, cloneMetadata(input.metadata)),
     text: input.text ?? '',
     languageId: input.languageId,
     mimeType: input.mimeType,
@@ -856,7 +858,7 @@ function createBinaryEntry(input, now, idFactory, parentId) {
     id: idFactory(),
     path: normalizeWorkspacePath(input.path),
     parentId,
-    metadata: createMetadata(title, now),
+    metadata: createMetadata(title, now, cloneMetadata(input.metadata)),
     bytes: cloneBytes(input.bytes),
     mimeType: input.mimeType,
   };
@@ -1743,6 +1745,7 @@ export function createWorkspaceService(options = {}) {
         mimeType: input.mimeType ?? current.mimeType,
         metadata: {
           ...current.metadata,
+          ...cloneMetadata(input.metadata),
           updatedAt: input.updatedAt ?? now(),
         },
       };
@@ -1763,6 +1766,7 @@ export function createWorkspaceService(options = {}) {
       mimeType: input.mimeType ?? current.mimeType,
       metadata: {
         ...current.metadata,
+        ...cloneMetadata(input.metadata),
         updatedAt: input.updatedAt ?? now(),
       },
     };

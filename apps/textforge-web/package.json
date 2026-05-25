@@ -20,7 +20,10 @@
   "dependencies": {
     "@textforge/assets": "workspace:*",
     "@textforge/core": "workspace:*",
+    "@textforge/diagrams": "workspace:^",
     "@textforge/editors": "workspace:*",
+    "@textforge/markdown": "workspace:^",
+    "@textforge/pipeline": "workspace:^",
     "@textforge/security-profile": "workspace:*",
     "@textforge/surfaces": "workspace:*",
     "@textforge/ui": "workspace:*",

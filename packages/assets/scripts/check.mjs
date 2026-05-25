@@ -4,6 +4,7 @@ import {
   assetSurfaceContributions,
   createBinaryAssetViewerSurface,
   createImageAssetViewerSurface,
+  createAssetProvenanceLabel,
   createAssetViewerSurface,
   createAssetViewerSurfaceModel,
   createBlobUrlLedger,
@@ -48,6 +49,7 @@ const surface = createAssetViewerSurface(request, { binding: readyBinding, lease
 
 assert.equal(surface.model.viewerKind, 'svg');
 assert.equal(surface.model.blobUrl, 'blob:asset-check');
+assert.equal(surface.model.provenanceLabel, 'generated');
 assert.equal(typeof surface.mount, 'function');
 assert.equal(createAssetViewerSurfaceModel(request, readyBinding, lease).mimeType, 'image/svg+xml');
 assert.equal(createImageAssetViewerSurface(request, { binding: readyBinding, lease }).model.viewerKind, 'image');
@@ -87,5 +89,13 @@ assert.equal(createWorkspaceAssetBinding({
   workspaceResource: restoredSvg,
   title: restoredSvg?.metadata.title,
 }).viewerKind, 'svg');
+assert.equal(createAssetProvenanceLabel({
+  kind: 'generated',
+  pipelineId: '@textforge/diagrams/mermaid-svg',
+  sourceResourceId: 'resource-1',
+  sourcePath: '/docs/source.md',
+  sourceUpdatedAt: '2026-05-23T00:00:00.000Z',
+  generatedAt: '2026-05-23T00:00:00.000Z',
+}), '@textforge/diagrams/mermaid-svg from /docs/source.md');
 
 console.info('assets package checks passed');

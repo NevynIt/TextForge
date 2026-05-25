@@ -67,6 +67,9 @@ for (const requiredImport of [
   '@textforge/surfaces',
   '@textforge/editors',
   '@textforge/assets',
+  '@textforge/pipeline',
+  '@textforge/diagrams',
+  '@textforge/markdown',
   '@textforge/ui',
   '@textforge/security-profile',
 ]) {
@@ -89,6 +92,8 @@ for (const requiredReactSignal of [
   'TextForgeWorkspaceSidebar',
   'TextForgeUtilityPane',
   'createMainSessionTabStrip',
+  'markdownPreviewSurfaceContribution',
+  'renderMarkdownDocument',
 ]) {
   if (!workbenchJs.includes(requiredReactSignal)) {
     throw new Error(`workbench.js must include ${requiredReactSignal} for the React shell`);
@@ -120,6 +125,12 @@ if (!workbenchJs.includes("utilityPaneOpen: true") || !workbenchJs.includes("wor
 for (const requiredPhase35Signal of ['Popup Summary', 'Browser Storage', 'closeActivePopupSurface', 'toggleWorkspaceFolder']) {
   if (!workbenchJs.includes(requiredPhase35Signal)) {
     throw new Error(`workbench.js must surface ${requiredPhase35Signal} for the Phase 3.5 shell usability pass`);
+  }
+}
+
+for (const requiredPhase4Signal of ['Markdown preview', 'generated diagram', 'TF-MD', 'local image resolution']) {
+  if (!workbenchJs.includes(requiredPhase4Signal)) {
+    throw new Error(`workbench.js must surface ${requiredPhase4Signal} for the Phase 4 Markdown/diagram slice`);
   }
 }
 

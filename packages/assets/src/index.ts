@@ -1,6 +1,6 @@
 import type { CommandContribution, ContributionManifest, ResourceRef } from '@textforge/core';
 import type { SurfaceContribution } from '@textforge/surfaces';
-import type { WorkspaceResource } from '@textforge/workspace';
+import type { WorkspaceGeneratedProvenance, WorkspaceResource } from '@textforge/workspace';
 
 export type AssetViewerKind = 'image' | 'svg' | 'pdf' | 'binary';
 export type AssetBindingState = 'pending' | 'ready' | 'stale' | 'released';
@@ -40,7 +40,7 @@ export interface WorkspaceAssetBinding {
   readonly mimeType?: string;
   readonly title?: string;
   readonly blobUrl?: string;
-  readonly provenance?: string;
+  readonly provenance?: string | WorkspaceGeneratedProvenance;
   readonly state: AssetBindingState;
 }
 
@@ -60,7 +60,7 @@ export interface AssetViewerRequest {
   readonly workspaceResource?: WorkspaceResource;
   readonly mimeType?: string;
   readonly title?: string;
-  readonly provenance?: string;
+  readonly provenance?: string | WorkspaceGeneratedProvenance;
 }
 
 export interface AssetViewerSurfaceModel {
@@ -74,7 +74,8 @@ export interface AssetViewerSurfaceModel {
   readonly lease?: BlobUrlLease;
   readonly blobUrl?: string;
   readonly resourceText: string;
-  readonly provenance: string;
+  readonly provenance: string | WorkspaceGeneratedProvenance;
+  readonly provenanceLabel: string;
 }
 
 export interface AssetViewerSurfaceOptions {
@@ -144,6 +145,7 @@ export const assetSurfaceContributions: ReadonlyArray<AssetSurfaceContribution> 
 export declare const assetCommandContributions: ReadonlyArray<CommandContribution>;
 export declare function createAssetContributionManifest(): ContributionManifest;
 export declare const contributions: ContributionManifest;
+export declare function createAssetProvenanceLabel(provenance: AssetViewerRequest['provenance']): string;
 
 export function createWorkspaceAssetBinding(request: AssetViewerRequest): WorkspaceAssetBinding {
   const viewerKind = selectAssetViewerKind(request);

@@ -386,7 +386,7 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
   ];
 }
 
-export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], onChange } = {}) {
+export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], onChange, onUpdate } = {}) {
   const baseDocument = document ?? createTextEditorDocument(
     { resourceId: 'text-editor-document', kind: 'resource', representation: 'text' },
     '',
@@ -412,6 +412,7 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
       }
 
       const update = typeof handlers.onChange === 'function' ? handlers.onChange : onChange;
+      const handleStateUpdate = typeof handlers.onUpdate === 'function' ? handlers.onUpdate : onUpdate;
       let currentDocument = baseDocument;
 
       const syncSurfaceState = (viewUpdate) => {
@@ -436,6 +437,9 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
           selection: nextSelection,
           sourceRange: selectionToSourceRange(nextSelection, text),
         };
+        if (typeof handleStateUpdate === 'function') {
+          handleStateUpdate(currentDocument);
+        }
 
         return currentDocument;
       };

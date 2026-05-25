@@ -474,3 +474,45 @@ test('workspace Dexie storage migrates legacy textResources and binaryResources 
   assert.equal(state?.resources.find((resource) => resource.path === '/docs/report.pdf')?.representation, 'bytes');
   await resetWorkspaceDexieStorage({ databaseName });
 });
+
+test('workspace resources preserve generated provenance metadata through create and save flows', () => {
+  const workspace = createWorkspaceService({
+    workspaceId: 'workspace-generated-metadata',
+    idFactory: createSequentialIdFactory('entry'),
+    now: fixedNow,
+  });
+  workspace.createFolder({ path: '/generated' });
+  const created = workspace.createTextResource({
+    path: '/generated/diagram.svg',
+    text: '<svg />',
+    languageId: 'svg',
+    mimeType: 'image/svg+xml',
+    metadata: {
+      provenance: {
+        kind: 'generated',
+        pipelineId: '@textforge/diagrams/mermaid-svg',
+        sourceResourceId: 'resource-1',
+        sourcePath: '/docs/source.md',
+        sourceUpdatedAt: fixedNow(),
+        generatedAt: fixedNow(),
+        blockId: 'block-1',
+        blockKind: 'mermaid',
+        format: 'svg',
+      },
+    },
+  });
+
+  const saved = workspace.saveTextResource({
+    resourceId: created.id,
+    text: '<svg><rect /></svg>',
+    metadata: {
+      provenance: {
+        ...created.metadata.provenance,
+        generatedAt: '2026-05-24T01:00:00.000Z',
+      },
+    },
+  });
+
+  assert.equal(saved.metadata.provenance?.pipelineId, '@textforge/diagrams/mermaid-svg');
+  assert.equal(saved.metadata.provenance?.generatedAt, '2026-05-24T01:00:00.000Z');
+});

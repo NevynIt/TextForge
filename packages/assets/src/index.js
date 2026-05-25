@@ -160,6 +160,30 @@ export const assetCommandContributions = [
       selectionRepresentations: ['bytes'],
     },
   }),
+  createCommand('asset.export-selected-svg', 'Export selected SVG', {
+    category: 'asset',
+    description: 'Export the selected SVG resource as an SVG file through the asset workflow.',
+    keywords: ['asset', 'svg', 'export', 'download'],
+    menu: { id: 'asset', label: 'Asset', groupOrder: 40, order: 20 },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['resource'],
+      availableSurfaceIds: ['@textforge/assets/svg'],
+    },
+  }),
+  createCommand('asset.export-selected-png', 'Export selected SVG as PNG', {
+    category: 'asset',
+    description: 'Rasterize the selected SVG resource locally and export it as PNG.',
+    keywords: ['asset', 'svg', 'png', 'export', 'rasterize'],
+    menu: { id: 'asset', label: 'Asset', groupOrder: 40, order: 30 },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['resource'],
+      availableSurfaceIds: ['@textforge/assets/svg'],
+    },
+  }),
 ];
 
 export function createAssetContributionManifest() {
@@ -181,6 +205,22 @@ function escapeHtml(text) {
 
 function bytesToText(bytes) {
   return new TextDecoder().decode(bytes);
+}
+
+export function createAssetProvenanceLabel(provenance) {
+  if (!provenance) {
+    return 'workspace-bound';
+  }
+
+  if (typeof provenance === 'string') {
+    return provenance;
+  }
+
+  if (provenance.kind === 'generated') {
+    return `${provenance.pipelineId} from ${provenance.sourcePath}`;
+  }
+
+  return 'workspace-bound';
 }
 
 function createMediaNode(ownerDocument, model) {
@@ -259,6 +299,7 @@ export function createAssetViewerSurfaceModel(request, binding, lease) {
     blobUrl,
     resourceText,
     provenance: request.provenance ?? 'workspace-bound',
+    provenanceLabel: createAssetProvenanceLabel(request.provenance),
   };
 }
 
