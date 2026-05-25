@@ -587,6 +587,10 @@ function createTextForgeWorkbenchController() {
 
   function rememberSelection(entryId) {
     state.selectedWorkspaceItemId = entryId;
+    const entry = getEntry(entryId);
+    if (entry?.path) {
+      expandFolderAncestors(entry.path);
+    }
     if (runtime.status === 'ready' && typeof workspace.setSelectedResourceId === 'function') {
       workspace.setSelectedResourceId(entryId);
     }
@@ -1658,7 +1662,7 @@ function createTextForgeWorkbenchController() {
       runtime.status = 'ready';
 
       const selectedEntry = getEntry(workspace.getManifest().selectedResourceId) ?? getDefaultSelection();
-      state.selectedWorkspaceItemId = selectedEntry?.id;
+      rememberSelection(selectedEntry?.id);
       normalizeActiveSessions();
 
       const presetEntry = screenshotPreset.openResourcePath

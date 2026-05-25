@@ -1838,6 +1838,8 @@ body {
 
 .tf-app__main {
   position: relative;
+  flex: 1 1 auto;
+  width: 100%;
   min-width: 0;
   min-height: 0;
   display: flex;

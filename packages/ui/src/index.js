@@ -62,6 +62,15 @@ function normalizePanelConfig(config, defaults) {
   };
 }
 
+function isEffectivelyCollapsed(panelSize, collapsedSize) {
+  const collapsedPercentage = Number.parseFloat(`${collapsedSize ?? 0}`);
+  if (Number.isFinite(collapsedPercentage) && panelSize.asPercentage <= (collapsedPercentage + 0.1)) {
+    return true;
+  }
+
+  return panelSize.inPixels <= 1;
+}
+
 function IconGlyph({ className, name, size = 16, strokeWidth = 1.9 }) {
   const Icon = iconRegistry[name];
   if (!Icon) {
@@ -1394,6 +1403,14 @@ export function TextForgeAppFrame({
     }
   }, [utilityOpen, utility]);
 
+  function handleSidebarResize(panelSize) {
+    onSidebarCollapsedChange?.(isEffectivelyCollapsed(panelSize, sidebarConfig.collapsedSize));
+  }
+
+  function handleUtilityResize(panelSize) {
+    onUtilityCollapsedChange?.(isEffectivelyCollapsed(panelSize, utilityConfig.collapsedSize));
+  }
+
   return element(
     'div',
     {
@@ -1423,14 +1440,15 @@ export function TextForgeAppFrame({
                 className: classNames('tf-panel', 'tf-panel--sidebar', sidebarCollapsed && 'is-collapsed'),
                 collapsible: true,
                 collapsedSize: sidebarConfig.collapsedSize,
-              defaultSize: sidebarCollapsed ? sidebarConfig.collapsedSize : sidebarConfig.defaultSize,
-              minSize: sidebarConfig.minSize,
-              maxSize: sidebarConfig.maxSize,
-              onCollapse: () => onSidebarCollapsedChange?.(true),
-              onExpand: () => onSidebarCollapsedChange?.(false),
-              order: 1,
-            },
-            sidebar,
+                defaultSize: sidebarCollapsed ? sidebarConfig.collapsedSize : sidebarConfig.defaultSize,
+                minSize: sidebarConfig.minSize,
+                maxSize: sidebarConfig.maxSize,
+                onCollapse: () => onSidebarCollapsedChange?.(true),
+                onExpand: () => onSidebarCollapsedChange?.(false),
+                onResize: handleSidebarResize,
+                order: 1,
+              },
+              sidebar,
             ),
             element(
               Separator,
@@ -1481,6 +1499,7 @@ export function TextForgeAppFrame({
                 maxSize: utilityConfig.maxSize,
                 onCollapse: () => onUtilityCollapsedChange?.(true),
                 onExpand: () => onUtilityCollapsedChange?.(false),
+                onResize: handleUtilityResize,
                 order: 3,
               },
               utility,
