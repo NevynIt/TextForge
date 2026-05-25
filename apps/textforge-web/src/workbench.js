@@ -76,6 +76,7 @@ import {
   createWorkbenchChromeModel,
   createWorkspaceTreeFrameModel,
 } from '@textforge/ui';
+import { bundledDocFolders, bundledDocs } from './generated/bundledDocs.js';
 
 const element = React.createElement;
 const textEncoder = new TextEncoder();
@@ -195,6 +196,15 @@ function createSeedWorkspaceState() {
 
   workspace.createFolder({ path: '/docs', title: 'docs' });
   workspace.createFolder({ path: '/roadmap', title: 'roadmap' });
+  for (const folderPath of bundledDocFolders) {
+    workspace.createFolder({
+      path: folderPath,
+      title: basenameWorkspacePath(folderPath),
+    });
+  }
+  for (const resource of bundledDocs) {
+    workspace.createTextResource(resource);
+  }
   workspace.createTextResource({
     path: sampleResourcePaths.notes,
     title: 'notes.md',

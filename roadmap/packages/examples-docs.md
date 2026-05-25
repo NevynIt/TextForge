@@ -12,6 +12,8 @@ Bundled documentation, examples, sample workspaces, tutorial resources, test fix
 
 When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
+The browser-seeded workspace also mirrors the repository `docs/` tree from a generated bundle under `apps/textforge-web/src/generated/bundledDocs.js`. Whenever repo documents under `docs/` change, rerun `apps/textforge-web/scripts/sync-bundled-docs.mjs` and keep the generated bundle in the same commit so the built shell stays aligned with the source documentation.
+
 ## Allowed dependencies
 
 Internal dependencies:

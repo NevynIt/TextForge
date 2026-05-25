@@ -4,6 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "sync:bundled-docs": "node scripts/sync-bundled-docs.mjs",
+    "prebuild": "node scripts/sync-bundled-docs.mjs",
+    "predev": "node scripts/sync-bundled-docs.mjs",
+    "pretest": "node scripts/sync-bundled-docs.mjs",
+    "prelint": "node scripts/sync-bundled-docs.mjs",
+    "pretypecheck": "node scripts/sync-bundled-docs.mjs",
     "build": "vite build && node scripts/check-dist.mjs",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
