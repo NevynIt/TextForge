@@ -4,3 +4,4 @@ coverage
 tsconfig.tsbuildinfo
 .tmp-playwright
 .vscode
+tmp
