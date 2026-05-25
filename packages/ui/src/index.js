@@ -1,5 +1,10 @@
 import * as React from 'react';
 import {
+  Group,
+  Panel,
+  Separator,
+} from 'react-resizable-panels';
+import {
   AlertTriangle,
   CheckCircle2,
   ChevronLeft,
@@ -45,6 +50,13 @@ const iconRegistry = {
 
 function classNames(...tokens) {
   return tokens.filter(Boolean).join(' ');
+}
+
+function normalizePanelConfig(config, defaults) {
+  return {
+    ...defaults,
+    ...(config ?? {}),
+  };
 }
 
 function IconGlyph({ className, name, size = 16, strokeWidth = 1.9 }) {
@@ -576,6 +588,7 @@ export function TextForgeTopBar({
   statusBadges = [],
   subtitle,
   toolbarSlots = [],
+  utilityToggleLabel = 'Panel',
   utilityOpen = false,
 }) {
   const actions = [
@@ -618,10 +631,10 @@ export function TextForgeTopBar({
     element(TextForgeToolbarButton, {
       key: 'toggle-utility',
       active: utilityOpen,
-      ariaLabel: utilityOpen ? 'Hide utility pane' : 'Show utility pane',
+      ariaLabel: utilityOpen ? `Hide ${utilityToggleLabel}` : `Show ${utilityToggleLabel}`,
       icon: utilityOpen ? 'close' : 'utility',
       kind: 'toggle',
-      label: utilityOpen ? 'Hide Utility' : 'Show Utility',
+      label: utilityOpen ? `Hide ${utilityToggleLabel}` : `Show ${utilityToggleLabel}`,
       onPress: onToggleUtility,
     }),
   ].filter(Boolean);
@@ -959,6 +972,62 @@ export function TextForgeUtilityPane({
   );
 }
 
+export function TextForgePopupHost({
+  children,
+  frameModel,
+  onClose,
+  onCloseTab,
+  onSelectTab,
+  subtitle,
+  title = 'Popup surfaces',
+}) {
+  if ((frameModel?.tabs ?? []).length === 0) {
+    return null;
+  }
+
+  return element(
+    'div',
+    { className: 'tf-popup-host__scrim' },
+    element(
+      'section',
+      {
+        className: 'tf-popup-host',
+        role: 'dialog',
+        'aria-modal': 'false',
+        'aria-label': title,
+        'data-pane': 'popup',
+      },
+      element(
+        'div',
+        { className: 'tf-popup-host__header' },
+        element(
+          'div',
+          { className: 'tf-popup-host__copy' },
+          element('span', { className: 'tf-popup-host__eyebrow' }, 'Popup surfaces'),
+          element('h2', { className: 'tf-popup-host__title' }, title),
+          subtitle ? element('p', { className: 'tf-popup-host__subtitle' }, subtitle) : null,
+        ),
+        onClose
+          ? element(TextForgeToolbarButton, {
+            ariaLabel: 'Close active popup surface',
+            icon: 'close',
+            kind: 'secondary',
+            label: 'Close popup',
+            onPress: onClose,
+          })
+          : null,
+      ),
+      element(TextForgeSessionTabStrip, {
+        emptyLabel: 'No popup sessions',
+        frameModel,
+        onCloseTab,
+        onSelectTab,
+      }),
+      element('div', { className: 'tf-popup-host__body' }, children),
+    ),
+  );
+}
+
 export function TextForgeCommandPalette({
   emptyLabel = 'No commands match the current query.',
   entries = [],
@@ -1139,11 +1208,59 @@ export function TextForgeAppFrame({
   children,
   footer,
   header,
+  panelLayout,
   sidebar,
   sidebarCollapsed = false,
   utility,
   utilityOpen = false,
 }) {
+  const sidebarPanelRef = React.useRef(null);
+  const utilityPanelRef = React.useRef(null);
+  const sidebarConfig = normalizePanelConfig(panelLayout?.sidebar, {
+    defaultSize: '22',
+    minSize: '16',
+    maxSize: '30',
+    collapsedSize: '6',
+  });
+  const utilityConfig = normalizePanelConfig(panelLayout?.utility, {
+    defaultSize: '24',
+    minSize: '18',
+    maxSize: '34',
+    collapsedSize: '0',
+  });
+
+  React.useEffect(() => {
+    const panel = sidebarPanelRef.current;
+    if (!panel?.collapse || !panel?.expand || !panel?.isCollapsed) {
+      return;
+    }
+
+    if (sidebarCollapsed && !panel.isCollapsed()) {
+      panel.collapse();
+      return;
+    }
+
+    if (!sidebarCollapsed && panel.isCollapsed()) {
+      panel.expand();
+    }
+  }, [sidebarCollapsed, sidebar]);
+
+  React.useEffect(() => {
+    const panel = utilityPanelRef.current;
+    if (!panel?.collapse || !panel?.expand || !panel?.isCollapsed) {
+      return;
+    }
+
+    if (!utilityOpen && !panel.isCollapsed()) {
+      panel.collapse();
+      return;
+    }
+
+    if (utilityOpen && panel.isCollapsed()) {
+      panel.expand();
+    }
+  }, [utilityOpen, utility]);
+
   return element(
     'div',
     {
@@ -1157,9 +1274,83 @@ export function TextForgeAppFrame({
     element(
       'div',
       { className: 'tf-app__body' },
-      sidebar,
-      element('main', { className: 'tf-app__main', 'data-pane': 'main' }, children),
-      utilityOpen ? utility : null,
+      element(
+        Group,
+        {
+          className: 'tf-panel-group',
+          direction: 'horizontal',
+        },
+        sidebar
+          ? [
+            element(
+              Panel,
+              {
+                key: 'sidebar-panel',
+                ref: sidebarPanelRef,
+                className: classNames('tf-panel', 'tf-panel--sidebar', sidebarCollapsed && 'is-collapsed'),
+                collapsible: true,
+                collapsedSize: sidebarConfig.collapsedSize,
+                defaultSize: sidebarCollapsed ? sidebarConfig.collapsedSize : sidebarConfig.defaultSize,
+                minSize: sidebarConfig.minSize,
+                maxSize: sidebarConfig.maxSize,
+                order: 1,
+              },
+              sidebar,
+            ),
+            element(
+              Separator,
+              {
+                key: 'sidebar-resize',
+                className: 'tf-panel-resize-handle',
+              },
+              element('span', {
+                className: 'tf-panel-resize-handle__grip',
+                'aria-hidden': 'true',
+              }),
+            ),
+          ]
+          : null,
+        element(
+          Panel,
+          {
+            key: 'main-panel',
+            className: 'tf-panel tf-panel--main',
+            minSize: sidebar || utility ? '42' : '100',
+            order: 2,
+          },
+          element('main', { className: 'tf-app__main', 'data-pane': 'main' }, children),
+        ),
+        utility
+          ? [
+            element(
+              Separator,
+              {
+                key: 'utility-resize',
+                className: classNames('tf-panel-resize-handle', !utilityOpen && 'is-collapsed'),
+              },
+              element('span', {
+                className: 'tf-panel-resize-handle__grip',
+                'aria-hidden': 'true',
+              }),
+            ),
+            element(
+              Panel,
+              {
+                key: 'utility-panel',
+                ref: utilityPanelRef,
+                className: classNames('tf-panel', 'tf-panel--utility', !utilityOpen && 'is-collapsed'),
+                collapsible: true,
+                collapsedSize: utilityConfig.collapsedSize,
+                defaultSize: utilityOpen ? utilityConfig.defaultSize : utilityConfig.collapsedSize,
+                minSize: utilityConfig.minSize,
+                maxSize: utilityConfig.maxSize,
+                order: 3,
+              },
+              utilityOpen ? utility : null,
+            ),
+          ]
+          : null,
+      ),
     ),
     footer ? element('footer', { className: 'tf-footer' }, footer) : null,
   );

@@ -265,7 +265,7 @@ function createEditorSurfaceMarkup(model) {
       <header class="editor-frame__header">
         <div>
           <span class="editor-frame__eyebrow">Text editor</span>
-          <h4>${escapeHtml(model.title)}</h4>
+          <h4>Source editor</h4>
         </div>
         <div class="editor-frame__meta">
           <span>${escapeHtml(model.languageLabel)}</span>

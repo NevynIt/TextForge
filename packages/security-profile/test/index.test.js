@@ -6,6 +6,7 @@ import {
   createBrowserStorageBoundaryCheck,
   createForbiddenFilesystemApiCheck,
   createLocalCommandDispatchCheck,
+  createLocalUiStateBoundaryCheck,
   createOpenSourceLicenseGate,
   createVisualIdentityBoundaryCheck,
   defaultSecurityProfile,
@@ -18,6 +19,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
   const archiveBoundaryCheck = createArchiveBoundaryDocumentationCheck();
   const storageBoundaryCheck = createBrowserStorageBoundaryCheck();
   const commandDispatchCheck = createLocalCommandDispatchCheck();
+  const localUiStateCheck = createLocalUiStateBoundaryCheck();
   const visualIdentityCheck = createVisualIdentityBoundaryCheck();
 
   assert.equal(licenseGate.run({
@@ -55,6 +57,21 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       usesPluginExecution: false,
       usesRemoteExecution: false,
       notesUri: 'docs/specs/local-command-dispatch.md',
+    },
+  }).passed, true);
+  assert.equal(localUiStateCheck.run({
+    profile: defaultSecurityProfile,
+    localUiState: {
+      documented: true,
+      localOnly: true,
+      coversPopupOverlays: true,
+      coversPanelSizing: true,
+      usesDetachedWindows: false,
+      usesRemoteContent: false,
+      usesBackgroundSync: false,
+      usesRemoteSync: false,
+      usesFilesystemAccess: false,
+      notesUri: 'docs/specs/local-shell-ui-state.md',
     },
   }).passed, true);
   assert.equal(visualIdentityCheck.run({
@@ -111,6 +128,18 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       usesRemoteExecution: false,
       notesUri: 'docs/specs/local-command-dispatch.md',
     },
+    localUiState: {
+      documented: true,
+      localOnly: false,
+      coversPopupOverlays: false,
+      coversPanelSizing: false,
+      usesDetachedWindows: true,
+      usesRemoteContent: false,
+      usesBackgroundSync: false,
+      usesRemoteSync: true,
+      usesFilesystemAccess: false,
+      notesUri: 'docs/specs/local-shell-ui-state.md',
+    },
   });
 
   assert.equal(results.some((result) => result.kind === 'filesystem-api' && result.passed === false), true);
@@ -118,4 +147,5 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
   assert.equal(results.some((result) => result.kind === 'visual-identity' && result.passed === false), true);
   assert.equal(results.some((result) => result.kind === 'storage-boundary' && result.passed === false), true);
   assert.equal(results.some((result) => result.kind === 'command-dispatch' && result.passed === false), true);
+  assert.equal(results.some((result) => result.kind === 'local-ui-state' && result.passed === false), true);
 });

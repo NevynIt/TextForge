@@ -229,7 +229,7 @@ function createAssetViewerMarkup(model) {
       <header class="asset-viewer__header">
         <div>
           <span class="asset-viewer__eyebrow">Asset viewer</span>
-          <h4>${escapeHtml(model.title)}</h4>
+          <h4>Workspace asset preview</h4>
         </div>
         <div class="asset-viewer__meta">
           <span>${escapeHtml(model.viewerKind)}</span>

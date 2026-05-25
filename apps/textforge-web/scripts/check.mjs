@@ -6,6 +6,7 @@ import {
   createForbiddenBrowserApiCheck,
   createForbiddenFilesystemApiCheck,
   createLocalCommandDispatchCheck,
+  createLocalUiStateBoundaryCheck,
   createOpenSourceLicenseGate,
   createVisualIdentityBoundaryCheck,
   defaultSecurityProfile,
@@ -22,6 +23,7 @@ const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
 const uiPackageJson = await readFile(resolve(rootDir, '..', '..', 'packages', 'ui', 'package.json'), 'utf8');
 const storageBoundaryDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'browser-managed-workspace-storage.md'), 'utf8');
 const commandDispatchDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'local-command-dispatch.md'), 'utf8');
+const localUiStateDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'local-shell-ui-state.md'), 'utf8');
 const resourceIdentityDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'resource-identity-badges.md'), 'utf8');
 
 if (!indexHtml.includes('./src/scriptLoader.js')) {
@@ -82,6 +84,7 @@ for (const requiredReactSignal of [
   'TextForgeAppFrame',
   'TextForgeCallout',
   'TextForgeCommandPalette',
+  'TextForgePopupHost',
   'TextForgeTopBar',
   'TextForgeWorkspaceSidebar',
   'TextForgeUtilityPane',
@@ -110,8 +113,14 @@ if (!workbenchJs.includes('createPersistedWorkspaceService') || !workbenchJs.inc
   throw new Error('workbench.js must hydrate the workspace through the persisted Dexie service and expose reset recovery flow');
 }
 
-if (!workbenchJs.includes("utilityPaneOpen: false") || !workbenchJs.includes("workspaceTreeCollapsed: false") || !workbenchJs.includes("utilitySectionId: 'storage'")) {
-  throw new Error('workbench.js must initialize the utility pane hidden and the workspace tree expanded');
+if (!workbenchJs.includes("utilityPaneOpen: true") || !workbenchJs.includes("workspaceTreeCollapsed: false") || !workbenchJs.includes("utilitySectionId: 'inspector'")) {
+  throw new Error('workbench.js must initialize the right panel open on the inspector section and the workspace tree expanded');
+}
+
+for (const requiredPhase35Signal of ['Popup surfaces', 'closeActivePopupSurface', 'Inspector & Utility', 'Popup Summary']) {
+  if (!workbenchJs.includes(requiredPhase35Signal)) {
+    throw new Error(`workbench.js must surface ${requiredPhase35Signal} for the Phase 3.5 shell usability pass`);
+  }
 }
 
 for (const requiredDependency of ['"react"', '"react-dom"', '"@textforge/security-profile"', '"@textforge/workspace"']) {
@@ -120,8 +129,10 @@ for (const requiredDependency of ['"react"', '"react-dom"', '"@textforge/securit
   }
 }
 
-if (!uiPackageJson.includes('"lucide-react"')) {
-  throw new Error('@textforge/ui must declare lucide-react for the Phase 3.4 readability pass');
+for (const requiredUiDependency of ['"lucide-react"', '"react-resizable-panels"']) {
+  if (!uiPackageJson.includes(requiredUiDependency)) {
+    throw new Error(`@textforge/ui must declare ${requiredUiDependency} for the delivered shell chrome`);
+  }
 }
 
 if (packageJson.includes('"lucide-react"') || workbenchJs.includes("lucide-react")) {
@@ -146,6 +157,12 @@ for (const requiredCommandSignal of ['Command palette', 'local command', 'contri
   }
 }
 
+for (const requiredUiStateSignal of ['popup overlays', 'local ui state', 'resizable right panel']) {
+  if (!workbenchJs.toLowerCase().includes(requiredUiStateSignal)) {
+    throw new Error(`workbench.js must surface ${requiredUiStateSignal} wording for Phase 3.5`);
+  }
+}
+
 for (const requiredDocSignal of ['IndexedDB', 'File System Access API', 'background sync', 'remote sync']) {
   if (!storageBoundaryDoc.includes(requiredDocSignal)) {
     throw new Error(`browser-managed-workspace-storage.md must document ${requiredDocSignal}`);
@@ -155,6 +172,12 @@ for (const requiredDocSignal of ['IndexedDB', 'File System Access API', 'backgro
 for (const requiredDocSignal of ['local command', 'external packages', 'remote commands', 'plugin manager']) {
   if (!commandDispatchDoc.toLowerCase().includes(requiredDocSignal)) {
     throw new Error(`local-command-dispatch.md must document ${requiredDocSignal}`);
+  }
+}
+
+for (const requiredDocSignal of ['popup overlays', 'panel sizing', 'detached browser windows', 'remote sync']) {
+  if (!localUiStateDoc.toLowerCase().includes(requiredDocSignal)) {
+    throw new Error(`local-shell-ui-state.md must document ${requiredDocSignal}`);
   }
 }
 
@@ -241,5 +264,23 @@ function assertSecurityEnvelope() {
     },
   }).passed !== true) {
     throw new Error('The shell must keep Phase 3.3 command dispatch local and bundled');
+  }
+
+  if (createLocalUiStateBoundaryCheck().run({
+    profile: defaultSecurityProfile,
+    localUiState: {
+      documented: true,
+      localOnly: true,
+      coversPopupOverlays: true,
+      coversPanelSizing: true,
+      usesDetachedWindows: false,
+      usesRemoteContent: false,
+      usesBackgroundSync: false,
+      usesRemoteSync: false,
+      usesFilesystemAccess: false,
+      notesUri: 'docs/specs/local-shell-ui-state.md',
+    },
+  }).passed !== true) {
+    throw new Error('The shell must keep popup and panel behavior inside local UI state only');
   }
 }

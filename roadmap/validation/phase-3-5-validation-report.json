@@ -1,0 +1,243 @@
+{
+  "metricsMain1440": {
+    "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nMain surface active\nHide Tree\nWorkspace\nSurface\nEditor\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nCollapse\ndocs\n4 items\narchitecture.txt\nTEXT\nnotes.md\nMARKDOWN\nsettings.yaml\nYAML\nsystem.svg\nSVG\nroadmap\n1 item\nphase-3-4-readability-pass.md\nMARKDOWN\nWORKSPACE\nCurrent selection\n/docs\n\nText resources open in the main workbench session strip and accept language-mode commands.\n\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nnotes.md\nClose\nTEXT EDITOR\nSource editor\nMarkdown\neditable\n1\n2\n3\n# TextForge\n\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.\n0 diagnostics\nL1:C1\nRange 1:1 to 1:1\n156 characters\nInspector & Utility\n\nInspector details stay in the resizable right panel so the editor remains the dominant region.\n\nHide\nInspector\nPopup Summary\nBrowser Storage\nContribution Packs\nINSPECTOR\nnotes.md\n\neditable text surface for Markdown.\n\nMarkdown\n\nFolder\n/docs\nOpen with\nText editor\nSurfa",
+    "globalOverflowOk": true,
+    "main": {
+      "height": 406,
+      "width": 773
+    },
+    "popup": null,
+    "scrollWidth": 1440,
+    "utility": {
+      "height": 729,
+      "width": 360
+    },
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleNeedleCount": 3,
+    "workspace": {
+      "height": 729,
+      "width": 315
+    }
+  },
+  "metricsTreeCollapsed1440": {
+    "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nMain surface active\nShow Tree\nWorkspace\nSurface\nEditor\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nExpand\n7 items\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nnotes.md\nClose\nTEXT EDITOR\nSource editor\nMarkdown\neditable\n1\n2\n3\n# TextForge\n\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.\n0 diagnostics\nL1:C1\nRange 1:1 to 1:1\n156 characters\nInspector & Utility\n\nInspector details stay in the resizable right panel so the editor remains the dominant region.\n\nHide\nInspector\nPopup Summary\nBrowser Storage\nContribution Packs\nINSPECTOR\nnotes.md\n\neditable text surface for Markdown.\n\nMarkdown\n\nFolder\n/docs\nOpen with\nText editor\nSurface\nEditable source surface\nSESSION STATE\nPlacement and access\nPlacement\nmain\nState\nopen\nMode\nMarkdown\nCONTROLS\nSurface controls\nOPEN WITH\nText editor\n1 compatible surface for this resource.\nLANGUAGE MODE\nPlain text - metadata only\nMarkdown - parser-backed\nITM - ",
+    "globalOverflowOk": true,
+    "main": {
+      "height": 355,
+      "width": 1002
+    },
+    "popup": null,
+    "scrollWidth": 1440,
+    "utility": {
+      "height": 729,
+      "width": 360
+    },
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleNeedleCount": 2,
+    "workspace": {
+      "height": 729,
+      "width": 86
+    }
+  },
+  "metricsUtility1440": {
+    "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nMain surface active\nHide Tree\nWorkspace\nSurface\nEditor\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nCollapse\ndocs\n4 items\narchitecture.txt\nTEXT\nnotes.md\nMARKDOWN\nsettings.yaml\nYAML\nsystem.svg\nSVG\nroadmap\n1 item\nphase-3-4-readability-pass.md\nMARKDOWN\nWORKSPACE\nCurrent selection\n/docs\n\nText resources open in the main workbench session strip and accept language-mode commands.\n\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nnotes.md\nClose\nTEXT EDITOR\nSource editor\nMarkdown\neditable\n1\n2\n3\n# TextForge\n\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.\n0 diagnostics\nL1:C1\nRange 1:1 to 1:1\n156 characters\nInspector & Utility\n\nBrowser storage state and recovery stay visible without squeezing the main document area.\n\nHide\nInspector\nPopup Summary\nBrowser Storage\nContribution Packs\nBrowser-managed workspace boundary\n\nTextForge stores the workspace in browser-managed IndexedDB through Dexie. C",
+    "globalOverflowOk": true,
+    "main": {
+      "height": 406,
+      "width": 773
+    },
+    "popup": null,
+    "scrollWidth": 1440,
+    "utility": {
+      "height": 729,
+      "width": 360
+    },
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleNeedleCount": 2,
+    "workspace": {
+      "height": 729,
+      "width": 315
+    }
+  },
+  "metricsPopup1440": {
+    "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nPopup surface active\n1 popup open\nHide Tree\nWorkspace\nSurface\nAsset\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nCollapse\ndocs\n4 items\narchitecture.txt\nTEXT\nnotes.md\nMARKDOWN\nsettings.yaml\nYAML\nsystem.svg\nSVG\nroadmap\n1 item\nphase-3-4-readability-pass.md\nMARKDOWN\nWORKSPACE\nCurrent selection\n/docs\n\nBinary resources open in popup sessions and expose the existing download action through shell commands.\n\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nNo documents are open\nPHASE 3.5\nPopup overlays and calmer shell chrome\n\nThe shell reopened the browser-managed workspace, rebuilt the local command registry, restored the resizable shell rails, and kept popup sessions separate from the main document strip.\n\nDeterministic resource badges stay compact across the tree, tabs, and inspector\nMain documents stay central while the left tree and right panel resize within bounded widths\nBinary and popup-ready surfaces open as in-app overlays instead of side-panel content\nNo plugin manager, r",
+    "globalOverflowOk": true,
+    "main": {
+      "height": 707,
+      "width": 773
+    },
+    "popup": {
+      "height": 583,
+      "width": 713
+    },
+    "scrollWidth": 1440,
+    "utility": {
+      "height": 729,
+      "width": 360
+    },
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleNeedleCount": 3,
+    "workspace": {
+      "height": 729,
+      "width": 315
+    }
+  },
+  "metricsPanelsNarrow1440": {
+    "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nMain surface active\nHide Tree\nWorkspace\nSurface\nEditor\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nCollapse\ndocs\n4 items\narchitecture.txt\nTEXT\nnotes.md\nMARKDOWN\nsettings.yaml\nYAML\nsystem.svg\nSVG\nroadmap\n1 item\nphase-3-4-readability-pass.md\nMARKDOWN\nWORKSPACE\nCurrent selection\n/docs\n\nText resources open in the main workbench session strip and accept language-mode commands.\n\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nnotes.md\nClose\nTEXT EDITOR\nSource editor\nMarkdown\neditable\n1\n2\n3\n# TextForge\n\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.\n0 diagnostics\nL1:C1\nRange 1:1 to 1:1\n156 characters\nInspector & Utility\n\nInspector details stay in the resizable right panel so the editor remains the dominant region.\n\nHide\nInspector\nPopup Summary\nBrowser Storage\nContribution Packs\nINSPECTOR\nnotes.md\n\neditable text surface for Markdown.\n\nMarkdown\n\nFolder\n/docs\nOpen with\nText editor\nSurfa",
+    "globalOverflowOk": true,
+    "main": {
+      "height": 406,
+      "width": 773
+    },
+    "popup": null,
+    "scrollWidth": 1440,
+    "utility": {
+      "height": 729,
+      "width": 360
+    },
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleNeedleCount": 3,
+    "workspace": {
+      "height": 729,
+      "width": 229
+    }
+  },
+  "metricsPanelsWide1440": {
+    "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nMain surface active\nHide Tree\nWorkspace\nSurface\nEditor\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nCollapse\ndocs\n4 items\narchitecture.txt\nTEXT\nnotes.md\nMARKDOWN\nsettings.yaml\nYAML\nsystem.svg\nSVG\nroadmap\n1 item\nphase-3-4-readability-pass.md\nMARKDOWN\nWORKSPACE\nCurrent selection\n/docs\n\nText resources open in the main workbench session strip and accept language-mode commands.\n\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nnotes.md\nClose\nTEXT EDITOR\nSource editor\nMarkdown\neditable\n1\n2\n3\n# TextForge\n\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.\n0 diagnostics\nL1:C1\nRange 1:1 to 1:1\n156 characters\nInspector & Utility\n\nInspector details stay in the resizable right panel so the editor remains the dominant region.\n\nHide\nInspector\nPopup Summary\nBrowser Storage\nContribution Packs\nINSPECTOR\nnotes.md\n\neditable text surface for Markdown.\n\nMarkdown\n\nFolder\n/docs\nOpen with\nText editor\nSurfa",
+    "globalOverflowOk": true,
+    "main": {
+      "height": 406,
+      "width": 773
+    },
+    "popup": null,
+    "scrollWidth": 1440,
+    "utility": {
+      "height": 729,
+      "width": 360
+    },
+    "viewport": {
+      "height": 900,
+      "width": 1440
+    },
+    "visibleNeedleCount": 3,
+    "workspace": {
+      "height": 729,
+      "width": 401
+    }
+  },
+  "dragResizeCheck": {
+    "before": {
+      "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nMain surface active\nHide Tree\nWorkspace\nSurface\nEditor\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nCollapse\ndocs\n4 items\narchitecture.txt\nTEXT\nnotes.md\nMARKDOWN\nsettings.yaml\nYAML\nsystem.svg\nSVG\nroadmap\n1 item\nphase-3-4-readability-pass.md\nMARKDOWN\nWORKSPACE\nCurrent selection\n/docs\n\nText resources open in the main workbench session strip and accept language-mode commands.\n\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nnotes.md\nClose\nTEXT EDITOR\nSource editor\nMarkdown\neditable\n1\n2\n3\n# TextForge\n\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.\n0 diagnostics\nL1:C1\nRange 1:1 to 1:1\n156 characters\nInspector & Utility\n\nInspector details stay in the resizable right panel so the editor remains the dominant region.\n\nHide\nInspector\nPopup Summary\nBrowser Storage\nContribution Packs\nINSPECTOR\nnotes.md\n\neditable text surface for Markdown.\n\nMarkdown\n\nFolder\n/docs\nOpen with\nText editor\nSurfa",
+      "globalOverflowOk": true,
+      "main": {
+        "height": 406,
+        "width": 773
+      },
+      "popup": null,
+      "scrollWidth": 1440,
+      "utility": {
+        "height": 729,
+        "width": 360
+      },
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "visibleNeedleCount": 3,
+      "workspace": {
+        "height": 729,
+        "width": 315
+      }
+    },
+    "after": {
+      "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nMain surface active\nHide Tree\nWorkspace\nSurface\nEditor\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nCollapse\ndocs\n4 items\narchitecture.txt\nTEXT\nnotes.md\nMARKDOWN\nsettings.yaml\nYAML\nsystem.svg\nSVG\nroadmap\n1 item\nphase-3-4-readability-pass.md\nMARKDOWN\nWORKSPACE\nCurrent selection\n/docs\n\nText resources open in the main workbench session strip and accept language-mode commands.\n\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nnotes.md\nClose\nTEXT EDITOR\nSource editor\nMarkdown\neditable\n1\n2\n3\n# TextForge\n\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.\n0 diagnostics\nL1:C1\nRange 1:1 to 1:1\n156 characters\nInspector & Utility\n\nInspector details stay in the resizable right panel so the editor remains the dominant region.\n\nHide\nInspector\nPopup Summary\nBrowser Storage\nContribution Packs\nINSPECTOR\nnotes.md\n\neditable text surface for Markdown.\n\nMarkdown\n\nFolder\n/docs\nOpen with\nText editor\nSurfa",
+      "globalOverflowOk": true,
+      "main": {
+        "height": 406,
+        "width": 739
+      },
+      "popup": null,
+      "scrollWidth": 1440,
+      "utility": {
+        "height": 729,
+        "width": 360
+      },
+      "viewport": {
+        "height": 900,
+        "width": 1440
+      },
+      "visibleNeedleCount": 3,
+      "workspace": {
+        "height": 729,
+        "width": 229
+      }
+    },
+    "sidebarWidthChanged": true,
+    "utilityWidthChanged": false,
+    "globalOverflowStillOk": true
+  },
+  "metricsMain1920": {
+    "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nMain surface active\nHide Tree\nWorkspace\nSurface\nEditor\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nCollapse\ndocs\n4 items\narchitecture.txt\nTEXT\nnotes.md\nMARKDOWN\nsettings.yaml\nYAML\nsystem.svg\nSVG\nroadmap\n1 item\nphase-3-4-readability-pass.md\nMARKDOWN\nWORKSPACE\nCurrent selection\n/docs\n\nText resources open in the main workbench session strip and accept language-mode commands.\n\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nnotes.md\nClose\nTEXT EDITOR\nSource editor\nMarkdown\neditable\n1\n2\n3\n# TextForge\n\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.\n0 diagnostics\nL1:C1\nRange 1:1 to 1:1\n156 characters\nInspector & Utility\n\nInspector details stay in the resizable right panel so the editor remains the dominant region.\n\nHide\nInspector\nPopup Summary\nBrowser Storage\nContribution Packs\nINSPECTOR\nnotes.md\n\neditable text surface for Markdown.\n\nMarkdown\n\nFolder\n/docs\nOpen with\nText editor\nSurfa",
+    "globalOverflowOk": true,
+    "main": {
+      "height": 355,
+      "width": 1032
+    },
+    "popup": null,
+    "scrollWidth": 1920,
+    "utility": {
+      "height": 909,
+      "width": 360
+    },
+    "viewport": {
+      "height": 1080,
+      "width": 1920
+    },
+    "visibleNeedleCount": 3,
+    "workspace": {
+      "height": 909,
+      "width": 421
+    }
+  },
+  "metricsPopup1920": {
+    "bodyTextSample": "TF\nTextForge\nResizable shell rails, popup overlays, and calmer command chrome over a Dexie-backed browser workspace\n7 resources\nPopup surface active\n1 popup open\nHide Tree\nWorkspace\nSurface\nAsset\nCommands\nHide Panel\nWorkspace\n\nTextForge Workspace\n\nCollapse\ndocs\n4 items\narchitecture.txt\nTEXT\nnotes.md\nMARKDOWN\nsettings.yaml\nYAML\nsystem.svg\nSVG\nroadmap\n1 item\nphase-3-4-readability-pass.md\nMARKDOWN\nWORKSPACE\nCurrent selection\n/docs\n\nBinary resources open in popup sessions and expose the existing download action through shell commands.\n\nMain surface\n\nPrimary document tabs stay central while the inspector and utility details live in the resizable right panel.\n\nNo documents are open\nPHASE 3.5\nPopup overlays and calmer shell chrome\n\nThe shell reopened the browser-managed workspace, rebuilt the local command registry, restored the resizable shell rails, and kept popup sessions separate from the main document strip.\n\nDeterministic resource badges stay compact across the tree, tabs, and inspector\nMain documents stay central while the left tree and right panel resize within bounded widths\nBinary and popup-ready surfaces open as in-app overlays instead of side-panel content\nNo plugin manager, r",
+    "globalOverflowOk": true,
+    "main": {
+      "height": 479,
+      "width": 1032
+    },
+    "popup": {
+      "height": 355,
+      "width": 760
+    },
+    "scrollWidth": 1920,
+    "utility": {
+      "height": 909,
+      "width": 360
+    },
+    "viewport": {
+      "height": 1080,
+      "width": 1920
+    },
+    "visibleNeedleCount": 3,
+    "workspace": {
+      "height": 909,
+      "width": 421
+    }
+  }
+}

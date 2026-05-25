@@ -381,6 +381,60 @@ export function createLocalCommandDispatchCheck(options = {}) {
   };
 }
 
+export function createLocalUiStateBoundaryCheck(options = {}) {
+  return {
+    id: options.id ?? 'security.localUiState',
+    kind: 'local-ui-state',
+    label: options.label ?? 'Local shell UI state boundary',
+    run(context) {
+      const diagnostics = [];
+      const localUiState = context.localUiState;
+
+      if (!localUiState?.documented) {
+        diagnostics.push(createIssue('Local popup and panel state behavior must be documented.', 'warning', context.resource));
+      } else {
+        if (!localUiState.localOnly) {
+          diagnostics.push(createIssue('Popup overlays and panel sizing must remain local-only UI state.', 'error', context.resource));
+        }
+
+        if (!localUiState.coversPopupOverlays) {
+          diagnostics.push(createIssue('Local UI state documentation should explicitly cover popup overlays.', 'warning', context.resource));
+        }
+
+        if (!localUiState.coversPanelSizing) {
+          diagnostics.push(createIssue('Local UI state documentation should explicitly cover panel sizing.', 'warning', context.resource));
+        }
+
+        if (!localUiState.notesUri) {
+          diagnostics.push(createIssue('Local UI state documentation should link to a boundary note.', 'warning', context.resource));
+        }
+      }
+
+      if (localUiState?.usesDetachedWindows) {
+        diagnostics.push(createIssue('Popup behavior must not use detached browser windows.', 'error', context.resource));
+      }
+
+      if (localUiState?.usesRemoteContent) {
+        diagnostics.push(createIssue('Popup or panel state must not depend on remote content loading.', 'error', context.resource));
+      }
+
+      if (localUiState?.usesBackgroundSync) {
+        diagnostics.push(createIssue('Popup or panel state must not use background sync.', 'error', context.resource));
+      }
+
+      if (localUiState?.usesRemoteSync) {
+        diagnostics.push(createIssue('Popup or panel state must not use remote sync.', 'error', context.resource));
+      }
+
+      if (localUiState?.usesFilesystemAccess) {
+        diagnostics.push(createIssue('Popup or panel state must not use File System Access API.', 'error', context.resource));
+      }
+
+      return createResult('security.localUiState', 'local-ui-state', diagnostics, 'Local shell UI state boundary inspected.');
+    },
+  };
+}
+
 export function runSecurityChecks(profile, context) {
   return profile.checks.map((check) => check.run({ ...context, profile }));
 }
@@ -407,6 +461,7 @@ export const defaultSecurityProfile = createSecurityProfile({
     createVisualIdentityBoundaryCheck(),
     createBrowserStorageBoundaryCheck(),
     createLocalCommandDispatchCheck(),
+    createLocalUiStateBoundaryCheck(),
   ],
 });
 

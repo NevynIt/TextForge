@@ -231,6 +231,7 @@ export interface TextForgeTopBarProps {
   readonly statusBadges?: ReadonlyArray<StatusBadge>;
   readonly subtitle?: string;
   readonly toolbarSlots?: ReadonlyArray<ToolbarSlot>;
+  readonly utilityToggleLabel?: string;
   readonly utilityOpen?: boolean;
 }
 
@@ -284,6 +285,16 @@ export interface TextForgeUtilityPaneProps {
   readonly title?: string;
 }
 
+export interface TextForgePopupHostProps {
+  readonly children?: ReactNode;
+  readonly frameModel: SurfaceFrame;
+  readonly onClose?: () => void;
+  readonly onCloseTab?: (tabId: string) => void;
+  readonly onSelectTab?: (tabId: string) => void;
+  readonly subtitle?: string;
+  readonly title?: string;
+}
+
 export interface TextForgeCommandPaletteProps {
   readonly emptyLabel?: string;
   readonly entries?: ReadonlyArray<CommandPaletteEntry>;
@@ -294,10 +305,23 @@ export interface TextForgeCommandPaletteProps {
   readonly title?: string;
 }
 
+export interface ShellPanelLayoutConfig {
+  readonly defaultSize?: number | string;
+  readonly minSize?: number | string;
+  readonly maxSize?: number | string;
+  readonly collapsedSize?: number | string;
+}
+
+export interface TextForgeAppFramePanelLayout {
+  readonly sidebar?: ShellPanelLayoutConfig;
+  readonly utility?: ShellPanelLayoutConfig;
+}
+
 export interface TextForgeAppFrameProps {
   readonly children?: ReactNode;
   readonly footer?: ReactNode;
   readonly header?: ReactNode;
+  readonly panelLayout?: TextForgeAppFramePanelLayout;
   readonly sidebar?: ReactNode;
   readonly sidebarCollapsed?: boolean;
   readonly utility?: ReactNode;
@@ -348,6 +372,7 @@ export declare function TextForgeWorkspaceSidebar(props: TextForgeWorkspaceSideb
 export declare function TextForgeSessionTabStrip(props: TextForgeSessionTabStripProps): unknown;
 export declare function TextForgeSelectField(props: TextForgeSelectFieldProps): unknown;
 export declare function TextForgeUtilityPane(props: TextForgeUtilityPaneProps): unknown;
+export declare function TextForgePopupHost(props: TextForgePopupHostProps): unknown;
 export declare function TextForgeCommandPalette(props: TextForgeCommandPaletteProps): unknown;
 export declare function TextForgeAppFrame(props: TextForgeAppFrameProps): unknown;
 

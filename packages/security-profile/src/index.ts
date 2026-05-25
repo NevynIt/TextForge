@@ -13,6 +13,7 @@ export type SecurityCheckKind =
   | 'visual-identity'
   | 'storage-boundary'
   | 'command-dispatch'
+  | 'local-ui-state'
   | 'license';
 
 export interface SecurityDependency {
@@ -77,6 +78,19 @@ export interface LocalCommandDispatchSnapshot {
   readonly notesUri?: string;
 }
 
+export interface LocalUiStateBoundarySnapshot {
+  readonly documented: boolean;
+  readonly localOnly: boolean;
+  readonly coversPopupOverlays?: boolean;
+  readonly coversPanelSizing?: boolean;
+  readonly usesDetachedWindows?: boolean;
+  readonly usesRemoteContent?: boolean;
+  readonly usesBackgroundSync?: boolean;
+  readonly usesRemoteSync?: boolean;
+  readonly usesFilesystemAccess?: boolean;
+  readonly notesUri?: string;
+}
+
 export interface SecurityProfile {
   readonly id: string;
   readonly name: string;
@@ -107,6 +121,7 @@ export interface SecurityCheckContext {
   readonly visualIdentity?: VisualIdentityBoundarySnapshot;
   readonly storageBoundary?: BrowserStorageBoundarySnapshot;
   readonly commandDispatch?: LocalCommandDispatchSnapshot;
+  readonly localUiState?: LocalUiStateBoundarySnapshot;
 }
 
 export interface SecurityCheckResult {
@@ -552,6 +567,63 @@ export function createLocalCommandDispatchCheck(options: {
   };
 }
 
+export function createLocalUiStateBoundaryCheck(options: {
+  readonly id?: string;
+  readonly label?: string;
+} = {}): SecurityCheck {
+  return {
+    id: options.id ?? 'security.localUiState',
+    kind: 'local-ui-state',
+    label: options.label ?? 'Local shell UI state boundary',
+    run(context) {
+      const diagnostics: Diagnostic[] = [];
+      const localUiState = context.localUiState;
+
+      if (!localUiState?.documented) {
+        diagnostics.push(createIssue('Local popup and panel state behavior must be documented.', 'warning', context.resource));
+      } else {
+        if (!localUiState.localOnly) {
+          diagnostics.push(createIssue('Popup overlays and panel sizing must remain local-only UI state.', 'error', context.resource));
+        }
+
+        if (!localUiState.coversPopupOverlays) {
+          diagnostics.push(createIssue('Local UI state documentation should explicitly cover popup overlays.', 'warning', context.resource));
+        }
+
+        if (!localUiState.coversPanelSizing) {
+          diagnostics.push(createIssue('Local UI state documentation should explicitly cover panel sizing.', 'warning', context.resource));
+        }
+
+        if (!localUiState.notesUri) {
+          diagnostics.push(createIssue('Local UI state documentation should link to a boundary note.', 'warning', context.resource));
+        }
+      }
+
+      if (localUiState?.usesDetachedWindows) {
+        diagnostics.push(createIssue('Popup behavior must not use detached browser windows.', 'error', context.resource));
+      }
+
+      if (localUiState?.usesRemoteContent) {
+        diagnostics.push(createIssue('Popup or panel state must not depend on remote content loading.', 'error', context.resource));
+      }
+
+      if (localUiState?.usesBackgroundSync) {
+        diagnostics.push(createIssue('Popup or panel state must not use background sync.', 'error', context.resource));
+      }
+
+      if (localUiState?.usesRemoteSync) {
+        diagnostics.push(createIssue('Popup or panel state must not use remote sync.', 'error', context.resource));
+      }
+
+      if (localUiState?.usesFilesystemAccess) {
+        diagnostics.push(createIssue('Popup or panel state must not use File System Access API.', 'error', context.resource));
+      }
+
+      return createResult('security.localUiState', 'local-ui-state', diagnostics, 'Local shell UI state boundary inspected.');
+    },
+  };
+}
+
 export function runSecurityChecks(profile: SecurityProfile, context: Omit<SecurityCheckContext, 'profile'>): ReadonlyArray<SecurityCheckResult> {
   return profile.checks.map((check) => check.run({ ...context, profile }));
 }
@@ -578,6 +650,7 @@ export const defaultSecurityProfile = createSecurityProfile({
     createVisualIdentityBoundaryCheck(),
     createBrowserStorageBoundaryCheck(),
     createLocalCommandDispatchCheck(),
+    createLocalUiStateBoundaryCheck(),
   ],
 });
 

@@ -1,0 +1,27 @@
+{
+  "panelWidthsMain": [
+    421,
+    1032,
+    459
+  ],
+  "panelWidthsNarrow": [
+    306,
+    1032,
+    574
+  ],
+  "panelWidthsWide": [
+    535,
+    1032,
+    344
+  ],
+  "panelWidthsDragBefore": [
+    421,
+    1032,
+    459
+  ],
+  "panelWidthsDragAfterRight": [
+    421,
+    892,
+    599
+  ]
+}
