@@ -708,27 +708,8 @@ export function TextForgeWorkspaceSidebar({
             'aria-selected': item.id === workspaceTree.selectedResourceId,
             tabIndex: index === fallbackIndex ? 0 : -1,
             'data-item-id': item.id,
+            'data-workspace-folder-drop': item.kind === 'folder' ? item.id : undefined,
             onClick: () => onSelectItem?.(item.id),
-            onDragOver: item.kind === 'folder'
-              ? (event) => {
-                if (!event.dataTransfer?.files?.length) {
-                  return;
-                }
-                event.preventDefault();
-                event.dataTransfer.dropEffect = 'copy';
-              }
-              : undefined,
-            onDrop: item.kind === 'folder'
-              ? (event) => {
-                const files = [...(event.dataTransfer?.files ?? [])];
-                if (files.length === 0) {
-                  return;
-                }
-                event.preventDefault();
-                event.stopPropagation();
-                onDropFilesToFolder?.(item.id, files);
-              }
-              : undefined,
             onKeyDown: (event) => handleWorkspaceTreeItemKeyDown(event, item, onSelectItem, onToggleFolder),
             title: item.path,
             style: { '--depth': item.depth },
@@ -819,21 +800,7 @@ export function TextForgeSessionTabStrip({
       role: 'tablist',
       'aria-label': frameModel.title,
       'data-roving-root': 'session-tabs',
-      onDragOver: (event) => {
-        if (!event.dataTransfer?.files?.length) {
-          return;
-        }
-        event.preventDefault();
-        event.dataTransfer.dropEffect = 'copy';
-      },
-      onDrop: (event) => {
-        const files = [...(event.dataTransfer?.files ?? [])];
-        if (files.length === 0) {
-          return;
-        }
-        event.preventDefault();
-        onDropFiles?.(files);
-      },
+      'data-upload-drop-zone': 'session-tabs',
     },
     tabs.length === 0
       ? element('div', { className: 'tf-tabstrip__empty' }, emptyLabel)

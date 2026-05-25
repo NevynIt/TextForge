@@ -84,11 +84,7 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const workspaceDatabaseName = 'textforge-workspace';
 const sampleResourcePaths = {
-  notes: '/docs/notes.md',
-  architecture: '/docs/architecture.txt',
-  settings: '/docs/settings.yaml',
-  roadmap: '/roadmap/phase-3-4-readability-pass.md',
-  svg: '/docs/system.svg',
+  notes: '/docs/design/README.md',
 };
 const utilitySections = [
   { id: 'inspector', label: 'Inspector', icon: 'status' },
@@ -124,7 +120,7 @@ const phase35ScreenshotPresets = {
   },
   popup: {
     panelLayout: undefined,
-    openResourcePath: sampleResourcePaths.svg,
+    openResourcePath: sampleResourcePaths.notes,
     openPlacement: 'popup',
     utilityPaneOpen: true,
     utilitySectionId: 'inspector',
@@ -174,19 +170,6 @@ function createTimestampFactory() {
   return () => new Date().toISOString();
 }
 
-function createBinarySvgBytes() {
-  return textEncoder.encode(`
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200">
-      <rect width="320" height="200" rx="20" fill="#0b1020" />
-      <rect x="24" y="24" width="272" height="152" rx="14" fill="#1b2740" />
-      <circle cx="92" cy="104" r="26" fill="none" stroke="#55c6bb" stroke-width="8" />
-      <path d="M150 124 L198 74 L244 124" fill="none" stroke="#f4b860" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" />
-      <path d="M92 134 L116 102 L132 118 L150 92" fill="none" stroke="#e6edf7" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" />
-      <text x="24" y="44" fill="#d7e3f4" font-family="sans-serif" font-size="18">TextForge system.svg</text>
-    </svg>
-  `);
-}
-
 function createSeedWorkspaceState() {
   const now = createTimestampFactory();
   const workspace = createWorkspaceService({
@@ -207,39 +190,6 @@ function createSeedWorkspaceState() {
   for (const resource of bundledDocs) {
     workspace.createTextResource(resource);
   }
-  workspace.createTextResource({
-    path: sampleResourcePaths.notes,
-    title: 'notes.md',
-    text: '# TextForge\n\nPhase 3.4 keeps the local command shell from Phase 3.3, adds deterministic resource badges, and calms the workbench chrome for daily authoring.',
-    languageId: 'markdown',
-    mimeType: 'text/markdown',
-  });
-  workspace.createTextResource({
-    path: sampleResourcePaths.architecture,
-    title: 'architecture.txt',
-    text: 'The Phase 3.4 shell keeps command dispatch local, uses deterministic badge metadata for orientation, and removes overflow-heavy debug chrome.',
-    mimeType: 'text/plain',
-  });
-  workspace.createTextResource({
-    path: sampleResourcePaths.settings,
-    title: 'settings.yaml',
-    text: 'workspace: textforge\nshell: react\nreadability: compact\nbadges: deterministic\n',
-    languageId: 'yaml',
-    mimeType: 'text/yaml',
-  });
-  workspace.createTextResource({
-    path: sampleResourcePaths.roadmap,
-    title: 'phase-3-4-readability-pass.md',
-    text: 'Phase 3.4 keeps the command substrate from Phase 3.3, adds stable Shapez-style resource badges, and tightens layout, status, inspector, and utility readability in one integrated pass.',
-    languageId: 'markdown',
-    mimeType: 'text/markdown',
-  });
-  workspace.createBinaryResource({
-    path: sampleResourcePaths.svg,
-    title: 'system.svg',
-    bytes: createBinarySvgBytes(),
-    mimeType: 'image/svg+xml',
-  });
 
   return workspace.snapshot();
 }
@@ -851,6 +801,24 @@ function createTextForgeWorkbenchController() {
     state.expandedFolderIds = [...nextExpandedIds];
   }
 
+  function expandFolderPath(path) {
+    if (!path || path === '/') {
+      return;
+    }
+
+    expandFolderAncestors(path);
+    const folder = workspace.getEntryByPath(path);
+    if (!folder || folder.kind !== 'folder') {
+      return;
+    }
+
+    if (state.expandedFolderIds.includes(folder.id)) {
+      return;
+    }
+
+    state.expandedFolderIds = [...state.expandedFolderIds, folder.id];
+  }
+
   function createVisibleTreeItems(allTreeItems) {
     const folderIdByPath = new Map(
       allTreeItems
@@ -1036,7 +1004,7 @@ function createTextForgeWorkbenchController() {
 
   async function uploadFilesIntoFolder(folderPath, files, options = {}) {
     const normalizedFolderPath = normalizeWorkspacePath(folderPath);
-    ensureWorkspaceFolder(normalizedFolderPath);
+    const targetFolder = ensureWorkspaceFolder(normalizedFolderPath);
     const uploadedResources = [];
 
     for (const file of files) {
@@ -1053,14 +1021,14 @@ function createTextForgeWorkbenchController() {
     }
 
     await persistWorkspace(options.reason ?? 'workspace.upload-file');
-    expandFolderAncestors(normalizedFolderPath);
+    expandFolderPath(normalizedFolderPath);
 
     if (options.openFirst) {
       openResourceEntry(uploadedResources[0], { placement: options.placement ?? 'main' });
       return uploadedResources;
     }
 
-    rememberSelection(uploadedResources[uploadedResources.length - 1].id);
+    rememberSelection(targetFolder?.id ?? uploadedResources[uploadedResources.length - 1].id);
     emit();
     return uploadedResources;
   }
@@ -2205,6 +2173,26 @@ function SurfaceMount({ view }) {
   });
 }
 
+function listDroppedFiles(dataTransfer) {
+  if (!dataTransfer) {
+    return [];
+  }
+
+  return [...(dataTransfer.files ?? [])].filter(Boolean);
+}
+
+function hasDroppedFiles(dataTransfer) {
+  if (!dataTransfer) {
+    return false;
+  }
+
+  if ((dataTransfer.files?.length ?? 0) > 0) {
+    return true;
+  }
+
+  return [...(dataTransfer.items ?? [])].some((item) => item.kind === 'file');
+}
+
 function WelcomeState({ hydrationSource }) {
   return element(TextForgeEmptyState, {
     eyebrow: 'Phase 3.5',
@@ -2585,6 +2573,55 @@ function TextForgeWorkbenchApp({ controller }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  React.useEffect(() => {
+    function handleFileDragOver(event) {
+      if (!hasDroppedFiles(event.dataTransfer)) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'copy';
+      }
+    }
+
+    function handleFileDrop(event) {
+      if (!hasDroppedFiles(event.dataTransfer)) {
+        return;
+      }
+
+      const files = listDroppedFiles(event.dataTransfer);
+      if (files.length === 0) {
+        return;
+      }
+
+      event.preventDefault();
+      event.stopPropagation();
+      const target = event.target instanceof Element ? event.target : undefined;
+      const folderDropTarget = target?.closest('[data-workspace-folder-drop]');
+      if (folderDropTarget instanceof HTMLElement) {
+        const folderId = folderDropTarget.dataset.workspaceFolderDrop;
+        if (folderId) {
+          void controller.actions.dropFilesOnWorkspaceFolder(folderId, files);
+          return;
+        }
+      }
+
+      const uploadDropTarget = target?.closest('[data-upload-drop-zone]');
+      if (uploadDropTarget) {
+        void controller.actions.dropFilesOnTabStrip(files);
+      }
+    }
+
+    window.addEventListener('dragover', handleFileDragOver, true);
+    window.addEventListener('drop', handleFileDrop, true);
+    return () => {
+      window.removeEventListener('dragover', handleFileDragOver, true);
+      window.removeEventListener('drop', handleFileDrop, true);
+    };
+  }, [controller]);
+
   const mainViewportContent = snapshot.runtime.status === 'loading'
     ? element(LoadingState)
     : snapshot.runtime.status === 'error'
@@ -2674,11 +2711,15 @@ function TextForgeWorkbenchApp({ controller }) {
         element(
           'div',
           { className: 'tf-surface-frame__body' },
-          element(
-            'div',
-            { className: 'tf-surface-frame__viewport', 'data-view-kind': mainView.kind },
-            mainViewportContent,
-          ),
+        element(
+          'div',
+          {
+            className: 'tf-surface-frame__viewport',
+            'data-view-kind': mainView.kind,
+            'data-upload-drop-zone': 'surface-main',
+          },
+          mainViewportContent,
+        ),
         ),
         popupOverlay,
       ),
