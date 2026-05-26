@@ -3,10 +3,22 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "types": "./src/index.ts",
   "scripts": {
-    "build": "echo build placeholder",
-    "test": "echo test placeholder",
-    "lint": "echo lint placeholder",
-    "typecheck": "echo typecheck placeholder"
+    "build": "node --check src/index.js",
+    "test": "node --test test/index.test.js",
+    "lint": "node scripts/check.mjs",
+    "typecheck": "node --check src/index.js"
+  },
+  "dependencies": {
+    "@textforge/core": "workspace:^",
+    "@textforge/editors": "workspace:^",
+    "@textforge/pipeline": "workspace:^",
+    "@textforge/surfaces": "workspace:^",
+    "@textforge/workspace": "workspace:^",
+    "fengari": "^0.1.5"
   }
 }
