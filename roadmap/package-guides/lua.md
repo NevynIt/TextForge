@@ -50,9 +50,13 @@ Implementation anchors:
 
 Create. Fengari worker, sandbox, tf.* capability bridge, Lua editor/console surfaces, action discovery, pipeline action adapter.
 
+Security-profile integration for this phase is package-owned: keep Lua sandbox/security checks inside `WP-LUA` acceptance evidence rather than modeling a separate Lua-only security workpackage gate.
+
 ## Tests and definition of done
 
 Sandbox tests, tf.* capability tests, no DOM/network/filesystem tests, action discovery tests.
+
+Validation evidence must include security-profile-compatible checks for worker isolation, module/bridge restrictions, and diagnostics when blocked APIs or capabilities are requested.
 
 ## Non-goals
 

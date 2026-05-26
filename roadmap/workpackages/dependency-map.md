@@ -64,11 +64,12 @@ flowchart TD
   classDef startable fill:#1565c0,stroke:#0d47a1,color:#ffffff,stroke-width:2px;
 
   class F,WP05A,WP05B,WP05C done;
-  class WP05D,SET01,RES01,ID01,ITM01 startable;
+  class WP05D,SET01,RES01,ID01,ITM01,LUA startable;
 
   linkStyle 3 stroke:#1565c0,stroke-width:2px;
   linkStyle 4 stroke:#1565c0,stroke-width:2px;
   linkStyle 5 stroke:#1565c0,stroke-width:2px;
+  linkStyle 6 stroke:#1565c0,stroke-width:2px;
   linkStyle 7 stroke:#1565c0,stroke-width:2px;
   linkStyle 14 stroke:#1565c0,stroke-width:2px;
 ```

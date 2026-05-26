@@ -42,7 +42,7 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 | WP-ITM-VISUALS | Phase 7 | ITM visual projections | Feature | Not started | WP-ITM-01, WP-05C | WP-BPMN-VISUAL, WP-GRAPH-EDIT | Yes | No | Can split into mindmap, graph, viewpoint projection if useful. |
 | WP-SERVICES-LOCAL | Phase 7.1 | Local service-folder convention | Core/service seam | Not started | WP-RES-01, WP-05C recommended | WP-SERVICES-BE | Yes | No | Data-plane convention before server-backed jobs. |
 | WP-SET-UI | Phase 7.2 | User settings UI | Feature / UX | Not started | WP-SET-01, WP-05A/B | WP-AI-PREF | Yes | No | Can be deferred if command surfaces remain manageable. |
-| WP-LUA | Phase 8 | Lua automation | Optional automation | Not started | WP-05C, security profile | Pipeline scripting use cases | Yes | No | Should remain sandboxed/local and capability-gated. |
+| WP-LUA | Phase 8 | Lua automation | Optional automation | Not started | WP-05C | Pipeline scripting use cases | Yes | No | Should remain sandboxed/local and capability-gated. Security-profile evidence is validated inside WP-LUA acceptance; no separate Lua-only security gate workpackage. |
 | WP-PRIVATE-CONTRACT | Phase 8.1 | Private/group space contracts | Core backend contract | Not started | WP-ID-01, WP-RES-01 | WP-PRIVATE-SERVER | Yes | Yes for backend profile | Define early; do not expose UI roots until server enforcement exists. |
 | WP-MD-REPORT | Phase 9 | Markdown + ITM report generation | Feature | Not started | Phase 4 markdown baseline, WP-ITM-01, WP-REPO-01 | Publication/report flows, PDF later | Yes | No | Keeps Phase 9 report role separate from backend Phase 9.x inserts. |
 | WP-BE-HOST | Phase 9.1 | Enterprise container and app host | Profile foundation | Not started | Build/profile packaging, manifest schema | WP-BE-API, WP-POLICY-01, optional SSO adapters | Yes | Required for enterprise profile | One local Node/container origin; no Entra required. |
@@ -80,6 +80,7 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 - The former Phase 5 contribution/capability spine `WP-05A -> WP-05B -> WP-05C` is now validated.
 - The nearest ready follow-on slices are `WP-05D` diagnostics polish and `WP-RES-01` provider-aware resource descriptors.
 - `WP-ID-01`, `WP-SET-01`, and `WP-ITM-01` are also startable foundation workpackages under the current dependency posture.
+- `WP-LUA` is startable from validated `WP-05C`; sandbox and security-profile checks stay part of `WP-LUA` validation evidence instead of a separate gating workpackage.
 - Resource-provider, identity-contract, and settings-core work can be developed as independent foundations once their small prerequisites are met.
 - Entra SSO is now explicitly deferred as `WP-SSO-ENTRA`, a standalone production adapter that does not block local backend development.
 - Backend private/group spaces, roaming settings, GitLab, service jobs, leases, and AI should depend on provider-neutral identity/policy plus a dev fixture first, not on Entra itself.
