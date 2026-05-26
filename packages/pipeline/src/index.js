@@ -1,4 +1,9 @@
-import { createCapability, createContributionManifest, createDiagnostic } from '@textforge/core';
+import {
+  createCapability,
+  createContributionManifest,
+  createDiagnostic,
+  createResourcePredicate,
+} from '@textforge/core';
 
 export const pipelineValueKinds = [
   'text',
@@ -15,8 +20,12 @@ export const generatedResourceFormats = ['svg', 'png', 'html'];
 export const pipelineCapabilities = [
   createCapability('@textforge/pipeline/capability/run', {
     description: 'Run local pipeline steps over bundled TextForge values.',
+    localName: 'run',
     defaultActive: true,
     scope: 'document',
+    documentPredicate: createResourcePredicate({
+      representations: ['text'],
+    }),
   }),
 ];
 

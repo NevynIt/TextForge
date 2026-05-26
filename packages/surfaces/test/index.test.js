@@ -28,6 +28,7 @@ test('surface registry picks the highest-priority compatible contribution', () =
     {
       id: 'surface.editor',
       label: 'Editor',
+      capabilities: ['@textforge/editors/capability/source'],
       resourceRepresentations: ['text'],
       placements: ['main'],
       openWithPriority: 20,
@@ -50,6 +51,7 @@ test('surface registry picks the highest-priority compatible contribution', () =
     {
       id: '@textforge/markdown/preview',
       label: 'Markdown preview',
+      capabilities: ['@textforge/markdown/capability/preview'],
       resourceRepresentations: ['text'],
       languageIds: ['markdown'],
       placements: ['main', 'popup'],
@@ -92,6 +94,19 @@ test('surface registry picks the highest-priority compatible contribution', () =
     },
   });
   assert.deepEqual(markdownSelection.candidates.map((candidate) => candidate.surfaceId), ['surface.editor', '@textforge/markdown/preview']);
+
+  const filteredMarkdownSelection = createOpenWithSelection(registry, {
+    resource: {
+      resourceId: 'resource-6',
+      kind: 'resource',
+      representation: 'text',
+      path: '/docs/notes.md',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+    activeCapabilityIds: ['@textforge/markdown/capability/preview'],
+  });
+  assert.deepEqual(filteredMarkdownSelection.candidates.map((candidate) => candidate.surfaceId), ['@textforge/markdown/preview']);
 
   const svgSelection = createOpenWithSelection(registry, {
     resource: { resourceId: 'resource-4', kind: 'resource', representation: 'bytes', path: '/docs/system.svg', mimeType: 'image/svg+xml' },

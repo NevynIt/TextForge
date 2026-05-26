@@ -14,6 +14,7 @@ import {
   createContributionManifest,
   createContributionRegistry,
   createDiagnostic,
+  deriveCapabilityLocalName,
   deriveContributionLocalName,
   createMarkdownFenceHandlerContribution,
   createPipelineValue,
@@ -31,6 +32,7 @@ import {
   matchesResourcePredicate,
   resourceKinds,
   resourceRepresentations,
+  resolveDocumentContributionContext,
   severityLevels,
 } from '../src/index.js';
 
@@ -48,6 +50,7 @@ assert.deepEqual(contributionRegistryPackageStatuses, ['available', 'disabled', 
 assert.equal(contributions.id, '@textforge/core');
 assert.equal(createCanonicalContributionId('@textforge/example', 'preview'), '@textforge/example/preview');
 assert.equal(deriveContributionLocalName('@textforge/example', '@textforge/example/preview'), 'preview');
+assert.equal(deriveCapabilityLocalName('@textforge/example/capability/preview'), 'preview');
 
 const ref = createResourceRef('resource-1', { path: '/docs/note.md', kind: 'resource', representation: 'text' });
 assert.equal(ref.resourceId, 'resource-1');
@@ -100,6 +103,16 @@ const contributionRegistry = createContributionRegistry([
 ]);
 assert.equal(contributionRegistry.createMarkdownFenceHandlerMap().handlers.json.id, '@textforge/markdown/json');
 assert.equal(contributionRegistry.resolve().packages[0]?.packageId, '@textforge/markdown');
+assert.equal(resolveDocumentContributionContext({
+  registry: contributionRegistry,
+  document: createResourceRef('resource-3', {
+    path: '/docs/example.md',
+    kind: 'resource',
+    representation: 'text',
+    languageId: 'markdown',
+    mimeType: 'text/markdown',
+  }),
+}).activeMarkdownFenceHandlers[0]?.id, '@textforge/markdown/json');
 
 const workspaceRoot = fileURLToPath(new URL('..\\..\\..', import.meta.url));
 const auditedFiles = [

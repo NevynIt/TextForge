@@ -105,6 +105,12 @@ if (!workbenchJs.includes('createOpenWithSelection') || !workbenchJs.includes('l
   throw new Error('workbench.js must preserve package-backed open-with and language control chrome');
 }
 
+for (const requiredPhase5Signal of ['resolveDocumentContext', 'parseMarkdownCapabilityRequirements', 'Current document capability context', '%require']) {
+  if (!workbenchJs.includes(requiredPhase5Signal)) {
+    throw new Error(`workbench.js must surface ${requiredPhase5Signal} for WP-05B document capability resolution`);
+  }
+}
+
 for (const requiredPhase34Signal of ['TextForgeResourceBadge', 'TextForgeInspectorCard', 'TextForgeEmptyState', 'badge repair']) {
   if (!workbenchJs.includes(requiredPhase34Signal)) {
     throw new Error(`workbench.js must surface ${requiredPhase34Signal} for the Phase 3.4 readability pass`);

@@ -8,39 +8,59 @@ import {
   createContributionManifest,
   createDiagnostic,
   createMarkdownFenceHandlerContribution,
+  createResourcePredicate,
 } from '@textforge/core';
 
 export const tfmdFenceAliases = ['tf-md', 'tfmd', 'textforge-md', 'textforge-markdown'];
+export const markdownDocumentPredicate = createResourcePredicate({
+  representations: ['text'],
+  languageIds: ['markdown'],
+  mimeTypes: ['text/markdown', 'text/x-markdown'],
+  fileExtensions: ['md', 'markdown', 'tfmd'],
+});
 export const markdownCapabilities = [
   createCapability('@textforge/markdown/capability/preview', {
     description: 'Render Markdown and TF-MD source through the package preview surface.',
+    localName: 'tf-md',
+    aliases: ['markdown', 'preview'],
     defaultActive: true,
     scope: 'document',
+    documentPredicate: markdownDocumentPredicate,
   }),
   createCapability('@textforge/markdown/capability/local-assets', {
     description: 'Resolve local workspace asset references inside Markdown content.',
+    localName: 'local-assets',
     defaultActive: true,
     scope: 'document',
+    documentPredicate: markdownDocumentPredicate,
   }),
   createCapability('@textforge/markdown/capability/math', {
     description: 'Render inline and block KaTeX markup in the Markdown preview.',
+    aliases: ['katex'],
     defaultActive: true,
     scope: 'document',
+    documentPredicate: markdownDocumentPredicate,
   }),
   createCapability('@textforge/markdown/capability/fence-svg', {
     description: 'Render inline SVG fenced blocks in the Markdown preview.',
-    defaultActive: true,
+    aliases: ['svg'],
+    defaultActive: false,
     scope: 'document',
+    documentPredicate: markdownDocumentPredicate,
   }),
   createCapability('@textforge/markdown/capability/fence-json', {
     description: 'Render JSON fenced blocks in the Markdown preview.',
-    defaultActive: true,
+    aliases: ['json'],
+    defaultActive: false,
     scope: 'document',
+    documentPredicate: markdownDocumentPredicate,
   }),
   createCapability('@textforge/markdown/capability/fence-yaml', {
     description: 'Render YAML fenced blocks in the Markdown preview.',
-    defaultActive: true,
+    aliases: ['yaml'],
+    defaultActive: false,
     scope: 'document',
+    documentPredicate: markdownDocumentPredicate,
   }),
 ];
 
@@ -299,6 +319,7 @@ function parseStructuredBlock(blockSource) {
 function parseControlBlock(blockSource, diagnostics) {
   const metadata = {};
   const styles = {};
+  const requirements = [];
   const lines = blockSource.split(/\r?\n/);
   let index = 0;
 
@@ -359,6 +380,19 @@ function parseControlBlock(blockSource, diagnostics) {
           };
           break;
         }
+        case 'require': {
+          const [name, versionRange] = directiveValue.trim().split(/\s+/, 2);
+          if (!name) {
+            throw new Error('A %require directive must name a capability.');
+          }
+
+          requirements.push({
+            name,
+            versionRange,
+            source: 'document',
+          });
+          break;
+        }
         default:
           diagnostics.push(createMarkdownDiagnostic(
             'tfmd.directive.unsupported',
@@ -388,6 +422,7 @@ function parseControlBlock(blockSource, diagnostics) {
 
   return {
     metadata,
+    requirements,
     styles,
   };
 }
@@ -395,6 +430,7 @@ function parseControlBlock(blockSource, diagnostics) {
 function scanTfmdBlocks(source) {
   const diagnostics = [];
   const metadata = {};
+  const requirements = [];
   const styles = {};
   const fencePattern = /```([^\n]+)\r?\n([\s\S]*?)\r?\n```/g;
   let lastIndex = 0;
@@ -412,6 +448,7 @@ function scanTfmdBlocks(source) {
 
     const parsed = parseControlBlock(blockBody, diagnostics);
     Object.assign(metadata, parsed.metadata);
+    requirements.push(...parsed.requirements);
     for (const [styleName, styleRules] of Object.entries(parsed.styles)) {
       styles[styleName] = {
         ...(styles[styleName] ?? {}),
@@ -425,9 +462,14 @@ function scanTfmdBlocks(source) {
   return {
     source: stripped,
     metadata,
+    requirements,
     styles,
     diagnostics,
   };
+}
+
+export function parseMarkdownCapabilityRequirements(source = '') {
+  return scanTfmdBlocks(source).requirements;
 }
 
 function replaceInlineStyleSpans(source) {
@@ -758,13 +800,26 @@ export function createPrintOptimizedHtmlDocument(result, options = {}) {
 
 export async function renderMarkdownDocument(source, options = {}) {
   const scanned = scanTfmdBlocks(source);
+  const contributionContext = options.contributionContext
+    ?? (options.contributionRegistry?.resolveDocumentContext
+      ? options.contributionRegistry.resolveDocumentContext({
+        document: options.resource,
+        explicitRequirements: scanned.requirements,
+      })
+      : undefined);
   const environment = createMarkdownItEnvironment({
-    diagnostics: scanned.diagnostics,
+    diagnostics: [
+      ...scanned.diagnostics,
+      ...(contributionContext?.diagnostics ?? []),
+    ],
     sourceResource: options.resource,
     resolveAssetReference: options.resolveAssetReference,
   });
   const preprocessedSource = replaceInlineStyleSpans(scanned.source);
-  const resolvedSource = await resolveKnownFencedBlocks(preprocessedSource, options, environment);
+  const resolvedSource = await resolveKnownFencedBlocks(preprocessedSource, {
+    ...options,
+    contributionContext,
+  }, environment);
   const markdown = createMarkdownProcessor(environment);
   const bodyHtml = markdown.render(resolvedSource, environment);
   const styleSheet = createTfmdStyleSheet(scanned.styles);
@@ -785,6 +840,7 @@ export async function renderMarkdownDocument(source, options = {}) {
     diagnostics: environment.diagnostics,
     referencedAssets: environment.referencedAssets,
     generatedResources: environment.generatedResources,
+    capabilityContext: contributionContext,
   };
   return {
     ...result,

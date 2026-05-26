@@ -77,10 +77,23 @@ function normalizeResourcePredicate(input = {}) {
 }
 
 function normalizeCapability(capability) {
+  const normalizedLocalName = normalizeLocalName(capability?.localName)
+    ?? deriveCapabilityLocalName(capability?.id);
+  const aliases = [...new Set(
+    (capability?.aliases ?? [])
+      .map((alias) => normalizeLocalName(alias))
+      .filter(Boolean),
+  )].sort(compareByStringId);
   return {
     defaultActive: false,
     scope: 'document',
+    localName: normalizedLocalName,
+    aliases,
+    documentPredicate: normalizeResourcePredicate(capability?.documentPredicate ?? {}),
     ...capability,
+    localName: normalizedLocalName,
+    aliases,
+    documentPredicate: normalizeResourcePredicate(capability?.documentPredicate ?? {}),
   };
 }
 
@@ -149,6 +162,26 @@ export function deriveContributionLocalName(packageId, contributionId) {
     return normalizedContributionId.slice(prefix.length) || undefined;
   }
   return undefined;
+}
+
+export function deriveCapabilityLocalName(capabilityId) {
+  const normalizedCapabilityId = String(capabilityId ?? '').trim();
+  if (!normalizedCapabilityId) {
+    return undefined;
+  }
+
+  const capabilityMarker = '/capability/';
+  const markerIndex = normalizedCapabilityId.indexOf(capabilityMarker);
+  if (markerIndex >= 0) {
+    return normalizeLocalName(normalizedCapabilityId.slice(markerIndex + capabilityMarker.length));
+  }
+
+  const lastSlashIndex = normalizedCapabilityId.lastIndexOf('/');
+  if (lastSlashIndex >= 0) {
+    return normalizeLocalName(normalizedCapabilityId.slice(lastSlashIndex + 1));
+  }
+
+  return normalizeLocalName(normalizedCapabilityId);
 }
 
 function compareByStringId(left, right) {
@@ -1082,7 +1115,12 @@ function resolveCapabilityState(capability, context = {}, packageStateById = new
   const failedCapabilityIds = normalizeIdSet(context.failedCapabilityIds);
   const activeCapabilityIds = new Set([
     ...(context.activeCapabilityIds ?? []),
-    ...(capability.defaultActive ? [capability.id] : []),
+    ...(context.defaultActiveCapabilityIds ?? []),
+    ...(context.useLegacyDefaultActive === false
+      ? []
+      : capability.defaultActive
+        ? [capability.id]
+        : []),
   ]);
 
   if (failedCapabilityIds.has(capability.id)) {
@@ -1152,6 +1190,367 @@ function createRegistryConflictDiagnostic(name, contributions, kind) {
       })),
     },
   );
+}
+
+function createResolverDiagnostic(code, message, overrides = {}) {
+  return createDiagnostic(message, overrides.severity ?? 'error', {
+    ...overrides,
+    code,
+    origin: {
+      packageId: '@textforge/core',
+      subsystem: 'document-capability-resolver',
+      ...overrides.origin,
+    },
+  });
+}
+
+function normalizeCapabilityRequirement(requirement) {
+  if (typeof requirement === 'string') {
+    const [name, versionRange] = String(requirement).trim().split(/\s+/, 2);
+    return {
+      name: normalizeLocalName(name),
+      versionRange: normalizeLocalName(versionRange),
+      source: 'document',
+    };
+  }
+
+  return {
+    name: normalizeLocalName(requirement?.name ?? requirement?.localName ?? requirement?.id),
+    capabilityId: normalizeLocalName(requirement?.capabilityId),
+    versionRange: normalizeLocalName(requirement?.versionRange ?? requirement?.version ?? requirement?.range),
+    source: requirement?.source ?? 'document',
+  };
+}
+
+function normalizeCapabilityRequirementList(requirements = []) {
+  return requirements
+    .map((requirement) => normalizeCapabilityRequirement(requirement))
+    .filter((requirement) => requirement.name || requirement.capabilityId);
+}
+
+function normalizeCapabilitySelectors(values = []) {
+  return values
+    .map((value) => normalizeCapabilityRequirement(value))
+    .filter((value) => value.name || value.capabilityId);
+}
+
+function listCapabilityLookupNames(capability) {
+  return [
+    capability.id,
+    capability.localName,
+    ...(capability.aliases ?? []),
+  ]
+    .map((value) => normalizeLocalName(value))
+    .filter(Boolean);
+}
+
+function matchCapabilityRequirement(requirement, capabilities) {
+  if (requirement.capabilityId) {
+    const byId = capabilities.filter((capability) => capability.id === requirement.capabilityId);
+    if (byId.length > 0) {
+      return byId;
+    }
+  }
+
+  if (!requirement.name) {
+    return [];
+  }
+
+  return capabilities.filter((capability) =>
+    listCapabilityLookupNames(capability).includes(requirement.name));
+}
+
+function resolveCapabilitySelectorIds(selectors, capabilities, diagnostics, options = {}) {
+  const resolvedIds = [];
+  for (const selector of normalizeCapabilitySelectors(selectors)) {
+    const matches = matchCapabilityRequirement(selector, capabilities);
+    if (matches.length === 1) {
+      resolvedIds.push(matches[0].id);
+      continue;
+    }
+
+    if (options.silent === true) {
+      continue;
+    }
+
+    if (matches.length === 0) {
+      diagnostics.push(createResolverDiagnostic(
+        'resolver.capability-selector.missing',
+        `No bundled capability matches "${selector.capabilityId ?? selector.name}".`,
+        {
+          severity: 'warning',
+          origin: {
+            ruleId: `selector:${selector.capabilityId ?? selector.name}`,
+          },
+        },
+      ));
+      continue;
+    }
+
+    diagnostics.push(createResolverDiagnostic(
+      'resolver.capability-selector.ambiguous',
+      `Multiple bundled capabilities match "${selector.capabilityId ?? selector.name}".`,
+      {
+        origin: {
+          ruleId: `selector:${selector.capabilityId ?? selector.name}`,
+        },
+        related: matches.map((capability) => ({
+          message: `${capability.id} from ${capability.packageId}`,
+        })),
+      },
+    ));
+  }
+
+  return [...new Set(resolvedIds)].sort(compareByStringId);
+}
+
+function resolveExplicitRequirements(requirements, capabilities, diagnostics) {
+  const activations = [];
+  const requirementStatuses = [];
+  for (const requirement of normalizeCapabilityRequirementList(requirements)) {
+    const identifier = requirement.capabilityId ?? requirement.name;
+    const matches = matchCapabilityRequirement(requirement, capabilities);
+    if (matches.length === 0) {
+      diagnostics.push(createResolverDiagnostic(
+        'resolver.requirement.missing',
+        `Required capability "${identifier}" is not available in the bundled registry.`,
+        {
+          severity: 'warning',
+          origin: {
+            capabilityId: identifier,
+            directive: 'require',
+            ruleId: `require:${identifier}`,
+          },
+        },
+      ));
+      requirementStatuses.push({
+        ...requirement,
+        matchedCapabilityId: undefined,
+        status: 'missing',
+      });
+      continue;
+    }
+
+    if (matches.length > 1) {
+      diagnostics.push(createResolverDiagnostic(
+        'resolver.requirement.ambiguous',
+        `Required capability "${identifier}" is ambiguous across the bundled registry.`,
+        {
+          origin: {
+            capabilityId: identifier,
+            directive: 'require',
+            ruleId: `require:${identifier}`,
+          },
+          related: matches.map((capability) => ({
+            message: `${capability.id} from ${capability.packageId}`,
+          })),
+        },
+      ));
+      requirementStatuses.push({
+        ...requirement,
+        matchedCapabilityId: undefined,
+        status: 'ambiguous',
+      });
+      continue;
+    }
+
+    const match = matches[0];
+    if (match.status !== 'available' && match.status !== 'active') {
+      diagnostics.push(createResolverDiagnostic(
+        'resolver.requirement.unavailable',
+        `Required capability "${identifier}" is registered as ${match.status}.`,
+        {
+          severity: 'warning',
+          origin: {
+            capabilityId: match.id,
+            directive: 'require',
+            ruleId: `require:${identifier}`,
+          },
+        },
+      ));
+      requirementStatuses.push({
+        ...requirement,
+        matchedCapabilityId: match.id,
+        status: match.status,
+      });
+      continue;
+    }
+
+    activations.push({
+      capabilityId: match.id,
+      source: 'explicit',
+      matchedBy: requirement.capabilityId ? 'capabilityId' : 'name',
+    });
+    requirementStatuses.push({
+      ...requirement,
+      matchedCapabilityId: match.id,
+      status: 'active',
+    });
+  }
+
+  return {
+    activations: activations.sort((left, right) => compareByStringId(left.capabilityId, right.capabilityId)),
+    requirementStatuses,
+  };
+}
+
+function createActivationEntries(capabilityIds, source) {
+  return capabilityIds.map((capabilityId) => ({
+    capabilityId,
+    source,
+    matchedBy: source,
+  }));
+}
+
+function buildActivationPlan(options, capabilities, diagnostics) {
+  const explicit = resolveExplicitRequirements(options.explicitRequirements, capabilities, diagnostics);
+  const documentDefaults = capabilities
+    .filter((capability) =>
+      capability.defaultActive === true
+      && capability.status === 'available'
+      && matchesResourcePredicate(capability.documentPredicate ?? {}, options.document ?? {}))
+    .map((capability) => capability.id)
+    .sort(compareByStringId);
+  const workspaceDefaults = resolveCapabilitySelectorIds(
+    options.workspaceDefaultCapabilityIds,
+    capabilities,
+    diagnostics,
+  );
+  const appDefaults = resolveCapabilitySelectorIds(
+    options.appDefaultCapabilityIds,
+    capabilities,
+    diagnostics,
+  );
+  const coreDefaults = capabilities
+    .filter((capability) =>
+      capability.defaultActive === true
+      && capability.status === 'available'
+      && !matchesResourcePredicate(capability.documentPredicate ?? {}, options.document ?? {}))
+    .map((capability) => capability.id)
+    .sort(compareByStringId);
+
+  const activationOrder = [
+    ...explicit.activations,
+    ...createActivationEntries(documentDefaults, 'document'),
+    ...createActivationEntries(workspaceDefaults, 'workspace'),
+    ...createActivationEntries(appDefaults, 'app'),
+    ...createActivationEntries(coreDefaults, 'core'),
+  ];
+  const activeCapabilityIds = [];
+  const seenCapabilityIds = new Set();
+  for (const activation of activationOrder) {
+    if (seenCapabilityIds.has(activation.capabilityId)) {
+      continue;
+    }
+    seenCapabilityIds.add(activation.capabilityId);
+    activeCapabilityIds.push(activation.capabilityId);
+  }
+
+  return {
+    activationOrder,
+    activeCapabilityIds,
+    requirements: explicit.requirementStatuses,
+  };
+}
+
+function collectActiveShortNameConflicts(entries, kind, diagnostics) {
+  const ownersByLocalName = new Map();
+  for (const entry of entries) {
+    const localName = normalizeLocalName(entry.localName);
+    if (!localName) {
+      continue;
+    }
+
+    const existing = ownersByLocalName.get(localName) ?? [];
+    existing.push(entry);
+    ownersByLocalName.set(localName, existing);
+  }
+
+  return [...ownersByLocalName.entries()]
+    .filter(([, owners]) => owners.length > 1)
+    .sort((left, right) => compareByStringId(left[0], right[0]))
+    .map(([localName, owners]) => {
+      diagnostics.push(createResolverDiagnostic(
+        'resolver.active-short-name-conflict',
+        `Active ${kind} contributions conflict on short name "${localName}".`,
+        {
+          origin: {
+            ruleId: `${kind}:${localName}`,
+          },
+          related: owners.map((owner) => ({
+            message: `${owner.id} from ${owner.packageId}`,
+          })),
+        },
+      ));
+      return {
+        localName,
+        kind,
+        contributionIds: owners.map((owner) => owner.id).sort(compareByStringId),
+      };
+    });
+}
+
+export function resolveDocumentContributionContext(input = {}) {
+  const registry = input.registry;
+  if (!registry?.resolve || typeof registry.resolve !== 'function') {
+    throw new Error('resolveDocumentContributionContext requires a contribution registry instance.');
+  }
+
+  const baseResolution = registry.resolve({
+    packageStatuses: input.packageStatuses,
+    disabledCapabilityIds: input.disabledCapabilityIds,
+    failedCapabilityIds: input.failedCapabilityIds,
+    activeCapabilityIds: [],
+    defaultActiveCapabilityIds: [],
+    useLegacyDefaultActive: false,
+  });
+  const diagnostics = [...baseResolution.diagnostics];
+  const activationPlan = buildActivationPlan({
+    document: input.document,
+    explicitRequirements: input.explicitRequirements,
+    workspaceDefaultCapabilityIds: input.workspaceDefaultCapabilityIds,
+    appDefaultCapabilityIds: input.appDefaultCapabilityIds,
+  }, baseResolution.capabilities, diagnostics);
+  const resolved = registry.resolve({
+    packageStatuses: input.packageStatuses,
+    disabledCapabilityIds: input.disabledCapabilityIds,
+    failedCapabilityIds: input.failedCapabilityIds,
+    activeCapabilityIds: activationPlan.activeCapabilityIds,
+    defaultActiveCapabilityIds: [],
+    useLegacyDefaultActive: false,
+  });
+  const activeCapabilities = resolved.capabilities.filter((capability) => capability.status === 'active');
+  const inactiveCapabilities = resolved.capabilities.filter((capability) => capability.status !== 'active');
+  const activeCommands = resolved.commands.filter((command) => command.status === 'active');
+  const activeSurfaces = resolved.surfaces.filter((surface) => surface.status === 'active');
+  const activePipelines = resolved.pipelines.filter((pipeline) => pipeline.status === 'active');
+  const activeMarkdownFenceHandlers = resolved.markdownFenceHandlers.filter((handler) => handler.status === 'active');
+  const shortNameConflicts = [
+    ...collectActiveShortNameConflicts(activeSurfaces, 'surface', diagnostics),
+    ...collectActiveShortNameConflicts(activePipelines, 'pipeline', diagnostics),
+    ...collectActiveShortNameConflicts(activeMarkdownFenceHandlers, 'markdown-fence-handler', diagnostics),
+  ];
+
+  return {
+    document: input.document ? createResourceRef(input.document.resourceId ?? input.document.id ?? '', input.document) : undefined,
+    packages: resolved.packages,
+    capabilities: resolved.capabilities,
+    activeCapabilities,
+    inactiveCapabilities,
+    commands: resolved.commands,
+    activeCommands,
+    surfaces: resolved.surfaces,
+    activeSurfaces,
+    pipelines: resolved.pipelines,
+    activePipelines,
+    markdownFenceHandlers: resolved.markdownFenceHandlers,
+    activeMarkdownFenceHandlers,
+    diagnostics,
+    requirements: activationPlan.requirements,
+    activationOrder: activationPlan.activationOrder,
+    activeCapabilityIds: activationPlan.activeCapabilityIds,
+    shortNameConflicts,
+  };
 }
 
 export function createContributionRegistry(initialManifests = []) {
@@ -1386,6 +1785,12 @@ export function createContributionRegistry(initialManifests = []) {
         knownFenceNames,
         handlers,
       };
+    },
+    resolveDocumentContext(options = {}) {
+      return resolveDocumentContributionContext({
+        registry,
+        ...options,
+      });
     },
   };
 

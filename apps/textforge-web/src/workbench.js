@@ -71,6 +71,7 @@ import {
   contributions as markdownContributionPack,
   createMarkdownPreviewSurface,
   createMarkdownSnippet,
+  parseMarkdownCapabilityRequirements,
   markdownPreviewSurfaceContribution,
   renderMarkdownDocument,
 } from '@textforge/markdown';
@@ -493,7 +494,8 @@ function createTextForgeWorkbenchController() {
   ]);
   const resolvedDefaultContributions = contributionRegistry.resolve();
   const surfaceRegistry = createSurfaceRegistry(
-    resolvedDefaultContributions.surfaces.filter((contribution) => contribution.status === 'active'),
+    resolvedDefaultContributions.surfaces.filter((contribution) =>
+      contribution.status !== 'failed' && contribution.status !== 'disabled'),
   );
   contributionRegistry.registerManifest(createSurfaceContributionManifest(surfaceRegistry.list()));
   const resolvedContributionRegistry = contributionRegistry.resolve();
@@ -511,6 +513,7 @@ function createTextForgeWorkbenchController() {
   });
   const activeTextDocuments = new Map();
   const assetLeaseByResourceId = new Map();
+  const documentContributionContextByResourceId = new Map();
   const markdownPreviewStateByResourceId = new Map();
   const listeners = new Set();
   let cachedSnapshot;
@@ -600,9 +603,11 @@ function createTextForgeWorkbenchController() {
 
   function createSurfaceOpenRequest(entry, options = {}) {
     const resource = workspaceEntryToResourceRef(entry);
+    const documentContext = resolveDocumentContributionContextForEntry(entry);
     const placement = options.placement ?? getDefaultSurfacePlacement(surfaceRegistry, {
       resource,
       allowPopup: true,
+      activeCapabilityIds: documentContext?.activeCapabilityIds,
       preferredSurfaceIds: options.preferredSurfaceId ? [options.preferredSurfaceId] : undefined,
     });
     return {
@@ -611,6 +616,7 @@ function createTextForgeWorkbenchController() {
       title: entry.metadata.title ?? entry.path,
       placement,
       allowPopup: true,
+      activeCapabilityIds: documentContext?.activeCapabilityIds,
       preferredSurfaceIds: options.preferredSurfaceId ? [options.preferredSurfaceId] : undefined,
     };
   }
@@ -1224,14 +1230,17 @@ function createTextForgeWorkbenchController() {
       return [];
     }
 
+    const documentContext = resolveDocumentContributionContextForEntry(entry);
     return createOpenWithSelection(surfaceRegistry, {
       resource: workspaceEntryToResourceRef(entry),
       placement: placement ?? getDefaultSurfacePlacement(surfaceRegistry, {
         resource: workspaceEntryToResourceRef(entry),
         allowPopup: true,
+        activeCapabilityIds: documentContext?.activeCapabilityIds,
         preferredSurfaceIds,
       }),
       allowPopup: true,
+      activeCapabilityIds: documentContext?.activeCapabilityIds,
       preferredSurfaceIds,
     }).candidates.map((candidate) => candidate.surfaceId);
   }
@@ -1303,6 +1312,35 @@ function createTextForgeWorkbenchController() {
     );
   }
 
+  function getDocumentCapabilityRequirements(resource) {
+    if (!isMarkdownResource(resource)) {
+      return [];
+    }
+
+    return parseMarkdownCapabilityRequirements(resource.text);
+  }
+
+  function resolveDocumentContributionContextForEntry(entry) {
+    if (!isWorkspaceResource(entry)) {
+      return undefined;
+    }
+
+    const cachedContext = documentContributionContextByResourceId.get(entry.id);
+    if (cachedContext?.updatedAt === entry.metadata.updatedAt) {
+      return cachedContext.context;
+    }
+
+    const context = contributionRegistry.resolveDocumentContext({
+      document: workspaceEntryToResourceRef(entry),
+      explicitRequirements: getDocumentCapabilityRequirements(entry),
+    });
+    documentContributionContextByResourceId.set(entry.id, {
+      updatedAt: entry.metadata.updatedAt,
+      context,
+    });
+    return context;
+  }
+
   function resolveMarkdownAssetReference({ sourceResource, href }) {
     const resolvedRef = sourceResource
       ? workspace.resolveReference(sourceResource, href)
@@ -1332,11 +1370,13 @@ function createTextForgeWorkbenchController() {
   }
 
   async function renderMarkdownResource(resource, options = {}) {
+    const contributionContext = resolveDocumentContributionContextForEntry(resource);
     return renderMarkdownDocument(resource.text, {
       resource: workspaceEntryToResourceRef(resource),
       sourceUpdatedAt: resource.metadata.updatedAt,
       resolveAssetReference: resolveMarkdownAssetReference,
       contributionRegistry,
+      contributionContext,
       fenceExecutionOptions: {
         document: globalThis.document,
         ...options.fenceExecutionOptions,
@@ -1384,10 +1424,12 @@ function createTextForgeWorkbenchController() {
   }
 
   function createOpenWithControl(session, resource) {
+    const documentContext = resolveDocumentContributionContextForEntry(resource);
     const selection = createOpenWithSelection(surfaceRegistry, {
       resource: workspaceEntryToResourceRef(resource),
       placement: session.placement,
       allowPopup: session.placement === 'popup',
+      activeCapabilityIds: documentContext?.activeCapabilityIds,
       preferredSurfaceIds: [session.contributionId],
     });
 
@@ -2716,6 +2758,14 @@ function createTextForgeWorkbenchController() {
       ? listWorkspaceBadgeDiagnostics(workspace.snapshot())
       : [];
     const activeResource = describeActiveResource();
+    const activeCommandSession = runtime.status === 'ready' ? getActiveCommandSession() : undefined;
+    const inspectedDocumentEntry = runtime.status === 'ready'
+      ? getEntry(activeCommandSession?.resource.resourceId)
+        ?? getSelectedEntry()
+      : undefined;
+    const documentContributionContext = isWorkspaceResource(inspectedDocumentEntry)
+      ? resolveDocumentContributionContextForEntry(inspectedDocumentEntry)
+      : undefined;
     const chromeModel = createWorkbenchChromeModel({
       workspaceTree: createWorkspaceTreeFrameModel({
         items: treeItems,
@@ -2785,6 +2835,8 @@ function createTextForgeWorkbenchController() {
       commandPaletteEntries,
       contextMenu,
       contributionPacks,
+      documentContributionContext,
+      inspectedDocumentEntry: isWorkspaceResource(inspectedDocumentEntry) ? inspectedDocumentEntry : undefined,
       badgeDiagnostics,
       popupFrame,
       selectedEntry: describeSelectedEntry(),
@@ -3112,10 +3164,146 @@ function formatRegistryPackageStatus(status) {
   }
 }
 
-function ContributionRegistryView({ packs }) {
+function formatActivationSource(source) {
+  switch (source) {
+    case 'explicit':
+      return '%require';
+    case 'document':
+      return 'Document default';
+    case 'workspace':
+      return 'Workspace default';
+    case 'app':
+      return 'App default';
+    default:
+      return 'Core default';
+  }
+}
+
+function formatRequirementStatus(status) {
+  switch (status) {
+    case 'active':
+      return 'Activated';
+    case 'ambiguous':
+      return 'Ambiguous';
+    case 'missing':
+      return 'Missing';
+    default:
+      return formatRegistryPackageStatus(status);
+  }
+}
+
+function formatCapabilityLabel(capability) {
+  return capability.localName
+    ? `${capability.localName} (${capability.id})`
+    : capability.id;
+}
+
+function ContributionRegistryView({ packs, documentContext, inspectedDocumentEntry }) {
+  const capabilityById = new Map((documentContext?.capabilities ?? []).map((capability) => [capability.id, capability]));
+  const documentHeadline = inspectedDocumentEntry?.path ?? 'No active document';
+  const activeSurfaceIds = (documentContext?.activeSurfaces ?? []).map((surface) => surface.id);
+  const activePipelineIds = (documentContext?.activePipelines ?? []).map((pipeline) => pipeline.id);
+  const activeFenceHandlerIds = (documentContext?.activeMarkdownFenceHandlers ?? []).map((handler) => handler.id);
+
   return element(
     'div',
     { className: 'tf-registry' },
+    element(
+      'article',
+      { className: 'tf-registry__card' },
+      element(
+        'div',
+        { className: 'tf-registry__header' },
+        element(
+          'div',
+          { className: 'tf-registry__identity' },
+          element('strong', null, 'Current document capability context'),
+          element(
+            'span',
+            { className: `tf-registry__status tf-registry__status--${documentContext ? 'available' : 'disabled'}` },
+            documentContext ? 'Resolved' : 'No document',
+          ),
+        ),
+        element('span', null, documentHeadline),
+      ),
+      element(
+        'p',
+        null,
+        documentContext
+          ? 'The active capability set is resolved per document from bundled defaults plus explicit %require directives. Short-name conflicts stay diagnostic-producing instead of silently winning by registration order.'
+          : 'Select or focus a resource to inspect its active capability context.',
+      ),
+      documentContext
+        ? element(
+          React.Fragment,
+          null,
+          element(
+            'dl',
+            { className: 'tf-registry__meta' },
+            element('div', null, element('dt', null, 'Active capabilities'), element('dd', null, String(documentContext.activeCapabilities.length))),
+            element('div', null, element('dt', null, 'Diagnostics'), element('dd', null, String(documentContext.diagnostics.length))),
+            element('div', null, element('dt', null, 'Requirements'), element('dd', null, String(documentContext.requirements.length))),
+          ),
+          documentContext.activationOrder.length > 0
+            ? element(
+              'ul',
+              { className: 'tf-registry__list' },
+              ...documentContext.activationOrder.map((activation) => {
+                const capability = capabilityById.get(activation.capabilityId);
+                return element(
+                  'li',
+                  { key: `${activation.source}:${activation.capabilityId}` },
+                  `${formatActivationSource(activation.source)}: ${formatCapabilityLabel(capability ?? { id: activation.capabilityId })}`,
+                );
+              }),
+            )
+            : null,
+          documentContext.requirements.length > 0
+            ? element(
+              'ul',
+              { className: 'tf-registry__list' },
+              ...documentContext.requirements.map((requirement, index) =>
+                element(
+                  'li',
+                  { key: `${requirement.name ?? requirement.capabilityId ?? 'requirement'}:${index}` },
+                  `%require ${requirement.name ?? requirement.capabilityId} - ${formatRequirementStatus(requirement.status)}`,
+                )),
+            )
+            : null,
+          element(
+            'ul',
+            { className: 'tf-registry__list' },
+            element('li', { key: 'surfaces' }, `Active surfaces: ${activeSurfaceIds.length > 0 ? activeSurfaceIds.join(', ') : 'none'}`),
+            element('li', { key: 'pipelines' }, `Active pipelines: ${activePipelineIds.length > 0 ? activePipelineIds.join(', ') : 'none'}`),
+            element('li', { key: 'handlers' }, `Active fence handlers: ${activeFenceHandlerIds.length > 0 ? activeFenceHandlerIds.join(', ') : 'none'}`),
+          ),
+          documentContext.shortNameConflicts.length > 0
+            ? element(
+              'ul',
+              { className: 'tf-registry__list' },
+              ...documentContext.shortNameConflicts.map((conflict) =>
+                element(
+                  'li',
+                  { key: `${conflict.kind}:${conflict.localName}` },
+                  `Conflict: ${conflict.kind} short name "${conflict.localName}" -> ${conflict.contributionIds.join(', ')}`,
+                )),
+            )
+            : null,
+          documentContext.diagnostics.length > 0
+            ? element(
+              'ul',
+              { className: 'tf-registry__list' },
+              ...documentContext.diagnostics.map((diagnostic, index) =>
+                element(
+                  'li',
+                  { key: `${diagnostic.code ?? 'diagnostic'}:${index}` },
+                  `${diagnostic.code ?? 'diagnostic'}: ${diagnostic.message}`,
+                )),
+            )
+            : null,
+        )
+        : null,
+    ),
     ...packs.map((pack) =>
       element(
         'article',
@@ -3464,7 +3652,11 @@ function TextForgeWorkbenchApp({ controller }) {
             })
             : showStoragePane
               ? element(StoragePaneView, { controller, snapshot })
-              : element(ContributionRegistryView, { packs: snapshot.contributionPacks }),
+              : element(ContributionRegistryView, {
+                packs: snapshot.contributionPacks,
+                documentContext: snapshot.documentContributionContext,
+                inspectedDocumentEntry: snapshot.inspectedDocumentEntry,
+              }),
         ),
         utilityOpen,
       },

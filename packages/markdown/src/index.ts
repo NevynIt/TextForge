@@ -1,4 +1,13 @@
-import type { CommandContribution, ContributionManifest, Diagnostic, ResourceRef } from '@textforge/core';
+import type {
+  CapabilityRequirement,
+  CommandContribution,
+  ContributionManifest,
+  ContributionRegistry,
+  Diagnostic,
+  DocumentContributionContext,
+  ResourcePredicate,
+  ResourceRef,
+} from '@textforge/core';
 import type { GeneratedResourceDescriptor } from '@textforge/pipeline';
 import type { SurfaceContribution } from '@textforge/surfaces';
 
@@ -41,6 +50,8 @@ export interface MarkdownRenderOptions {
   readonly resource?: ResourceRef;
   readonly sourceUpdatedAt?: string;
   readonly fenceExecutionOptions?: Pick<MarkdownFenceExecution, 'generatedAssetBasePath' | 'includePng' | 'document'>;
+  readonly contributionRegistry?: ContributionRegistry;
+  readonly contributionContext?: DocumentContributionContext;
   readonly resolveAssetReference?: (input: {
     readonly sourceResource?: ResourceRef;
     readonly href: string;
@@ -59,6 +70,7 @@ export interface MarkdownRenderResult {
   readonly diagnostics: ReadonlyArray<Diagnostic>;
   readonly referencedAssets: ReadonlyArray<MarkdownReferencedAsset>;
   readonly generatedResources: ReadonlyArray<GeneratedResourceDescriptor>;
+  readonly capabilityContext?: DocumentContributionContext;
 }
 
 export interface MarkdownPreviewModel {
@@ -80,10 +92,12 @@ export interface MarkdownPreviewSurface {
 }
 
 export declare const tfmdFenceAliases: ReadonlyArray<string>;
+export declare const markdownDocumentPredicate: ResourcePredicate;
 export declare const markdownPreviewSurfaceContribution: SurfaceContribution;
 export declare const markdownCommandContributions: ReadonlyArray<CommandContribution>;
 export declare function createMarkdownContributionManifest(): ContributionManifest;
 export declare const contributions: ContributionManifest;
+export declare function parseMarkdownCapabilityRequirements(source?: string): ReadonlyArray<CapabilityRequirement>;
 export declare function createMarkdownSnippet(kind: 'image' | 'mermaid' | 'graphviz', options?: {
   readonly href?: string;
   readonly alt?: string;

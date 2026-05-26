@@ -27,6 +27,8 @@ export interface SurfaceOpenRequest {
   readonly resource: ResourceRef;
   readonly title?: string;
   readonly preferredSurfaceIds?: ReadonlyArray<string>;
+  readonly activeContributionIds?: ReadonlyArray<string>;
+  readonly activeCapabilityIds?: ReadonlyArray<string>;
   readonly placement?: SurfacePlacement;
   readonly allowPopup?: boolean;
   readonly sourceSessionId?: string;
@@ -165,9 +167,32 @@ function matchesMimeType(contribution: SurfaceContribution, mimeType: string | u
   return contributionMimeTypes.some((candidate) => candidate.toLowerCase() === normalizedMimeType);
 }
 
+function matchesCapabilityScope(contribution: SurfaceContribution, request: SurfaceOpenRequest): boolean {
+  const activeContributionIds = new Set(request.activeContributionIds ?? []);
+  if (activeContributionIds.size > 0 && !activeContributionIds.has(contribution.id)) {
+    return false;
+  }
+
+  const activeCapabilityIds = new Set(request.activeCapabilityIds ?? []);
+  if (activeCapabilityIds.size === 0) {
+    return true;
+  }
+
+  const contributionCapabilities = contribution.capabilities ?? [];
+  if (contributionCapabilities.length === 0) {
+    return false;
+  }
+
+  return contributionCapabilities.some((capabilityId) => activeCapabilityIds.has(capabilityId));
+}
+
 function matchesOpenRequest(contribution: SurfaceContribution, request: SurfaceOpenRequest): boolean {
   const requestedPlacement = request.placement ?? 'main';
   if (!matchesPlacement(contribution, requestedPlacement)) {
+    return false;
+  }
+
+  if (!matchesCapabilityScope(contribution, request)) {
     return false;
   }
 

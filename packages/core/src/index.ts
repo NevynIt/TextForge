@@ -105,10 +105,13 @@ export interface EditorDiagnosticBridge {
 export interface Capability {
   readonly id: string;
   readonly description?: string;
+  readonly localName?: string;
+  readonly aliases?: ReadonlyArray<string>;
   readonly resourceKinds?: ReadonlyArray<ResourceKind>;
   readonly editable?: boolean;
   readonly defaultActive?: boolean;
   readonly scope?: 'document' | 'workspace' | 'session';
+  readonly documentPredicate?: ResourcePredicate;
 }
 
 export interface ContributionPackageDependency {
@@ -357,9 +360,61 @@ export interface ContributionRegistryResolution {
 
 export interface ContributionRegistryContext {
   readonly activeCapabilityIds?: ReadonlyArray<string>;
+  readonly defaultActiveCapabilityIds?: ReadonlyArray<string>;
   readonly disabledCapabilityIds?: ReadonlyArray<string>;
   readonly failedCapabilityIds?: ReadonlyArray<string>;
   readonly packageStatuses?: Readonly<Record<string, 'available' | 'disabled' | 'failed'>>;
+  readonly useLegacyDefaultActive?: boolean;
+}
+
+export interface CapabilityRequirement {
+  readonly name?: string;
+  readonly capabilityId?: string;
+  readonly versionRange?: string;
+  readonly source?: string;
+}
+
+export interface DocumentCapabilityActivation {
+  readonly capabilityId: string;
+  readonly source: 'explicit' | 'document' | 'workspace' | 'app' | 'core';
+  readonly matchedBy?: string;
+}
+
+export interface ActiveShortNameConflict {
+  readonly localName: string;
+  readonly kind: 'surface' | 'pipeline' | 'markdown-fence-handler';
+  readonly contributionIds: ReadonlyArray<string>;
+}
+
+export interface DocumentContributionContext {
+  readonly document?: ResourceRef;
+  readonly packages: ReadonlyArray<ContributionRegistryPackage>;
+  readonly capabilities: ReadonlyArray<ResolvedCapability>;
+  readonly activeCapabilities: ReadonlyArray<ResolvedCapability>;
+  readonly inactiveCapabilities: ReadonlyArray<ResolvedCapability>;
+  readonly commands: ReadonlyArray<ResolvedContribution<CommandContribution>>;
+  readonly activeCommands: ReadonlyArray<ResolvedContribution<CommandContribution>>;
+  readonly surfaces: ReadonlyArray<ResolvedContribution<SurfaceContribution>>;
+  readonly activeSurfaces: ReadonlyArray<ResolvedContribution<SurfaceContribution>>;
+  readonly pipelines: ReadonlyArray<ResolvedContribution<PipelineContribution>>;
+  readonly activePipelines: ReadonlyArray<ResolvedContribution<PipelineContribution>>;
+  readonly markdownFenceHandlers: ReadonlyArray<ResolvedContribution<MarkdownFenceHandlerContribution>>;
+  readonly activeMarkdownFenceHandlers: ReadonlyArray<ResolvedContribution<MarkdownFenceHandlerContribution>>;
+  readonly diagnostics: ReadonlyArray<Diagnostic>;
+  readonly requirements: ReadonlyArray<CapabilityRequirement & {
+    readonly matchedCapabilityId?: string;
+    readonly status: 'active' | 'missing' | 'ambiguous' | 'available' | 'disabled' | 'failed';
+  }>;
+  readonly activationOrder: ReadonlyArray<DocumentCapabilityActivation>;
+  readonly activeCapabilityIds: ReadonlyArray<string>;
+  readonly shortNameConflicts: ReadonlyArray<ActiveShortNameConflict>;
+}
+
+export interface DocumentContributionResolverOptions extends ContributionRegistryContext {
+  readonly document?: Partial<ResourceRef> & { readonly id?: string };
+  readonly explicitRequirements?: ReadonlyArray<string | CapabilityRequirement>;
+  readonly workspaceDefaultCapabilityIds?: ReadonlyArray<string | CapabilityRequirement>;
+  readonly appDefaultCapabilityIds?: ReadonlyArray<string | CapabilityRequirement>;
 }
 
 export interface ContributionRegistry {
@@ -371,6 +426,7 @@ export interface ContributionRegistry {
   listPipelines(): ReadonlyArray<PipelineContribution>;
   listMarkdownFenceHandlers(): ReadonlyArray<MarkdownFenceHandlerContribution>;
   resolve(context?: ContributionRegistryContext): ContributionRegistryResolution;
+  resolveDocumentContext(options?: DocumentContributionResolverOptions): DocumentContributionContext;
   createMarkdownFenceHandlerMap(context?: ContributionRegistryContext): {
     readonly diagnostics: ReadonlyArray<Diagnostic>;
     readonly handlers: Readonly<Record<string, ResolvedContribution<MarkdownFenceHandlerContribution>>>;
@@ -472,6 +528,7 @@ export declare function createMarkdownFenceHandlerContribution(
 ): MarkdownFenceHandlerContribution;
 export declare function createCanonicalContributionId(packageId: string, localName: string): string;
 export declare function deriveContributionLocalName(packageId: string, contributionId?: string): string | undefined;
+export declare function deriveCapabilityLocalName(capabilityId?: string): string | undefined;
 export declare function createContributionManifest(
   packageId: string,
   overrides?: Partial<ContributionManifest>,
@@ -508,6 +565,9 @@ export declare function inferResourceRepresentation(input: {
 export declare function createContributionRegistry(
   initialManifests?: ReadonlyArray<ContributionManifest>,
 ): ContributionRegistry;
+export declare function resolveDocumentContributionContext(input: {
+  readonly registry: ContributionRegistry;
+} & DocumentContributionResolverOptions): DocumentContributionContext;
 
 export declare const defaultContributionManifest: ContributionManifest;
 

@@ -9,15 +9,19 @@ import {
   createContributionRegistry,
   createContributionManifest,
   deriveContributionLocalName,
+  deriveCapabilityLocalName,
   createDiagnostic,
   createMarkdownFenceHandlerContribution,
+  createCapability,
   createResourceFacts,
   createResourcePredicate,
   createResourceRef,
+  createSurfaceContribution,
   createSourcePosition,
   createSourceRange,
   inferLanguageId,
   matchesResourcePredicate,
+  resolveDocumentContributionContext,
 } from '../src/index.js';
 
 test('core constructors build stable value objects', () => {
@@ -33,6 +37,7 @@ test('core constructors build stable value objects', () => {
   assert.equal(manifest.packageId, '@textforge/core');
   assert.equal(createCanonicalContributionId('@textforge/example', 'preview'), '@textforge/example/preview');
   assert.equal(deriveContributionLocalName('@textforge/example', '@textforge/example/preview'), 'preview');
+  assert.equal(deriveCapabilityLocalName('@textforge/example/capability/preview'), 'preview');
 });
 
 test('command registry filters context-sensitive commands and dispatches local handlers', async () => {
@@ -207,4 +212,76 @@ test('contribution registry derives canonical local IDs and exposes deterministi
   assert.equal(resolved.packages[1]?.dependencies[0]?.status, 'missingDependency');
   assert.equal(resolved.surfaces[0]?.status, 'failed');
   assert.equal(resolved.diagnostics.some((diagnostic) => diagnostic.code === 'registry.package.missing-dependency'), true);
+});
+
+test('document contribution context resolves explicit requirements and document defaults deterministically', () => {
+  const registry = createContributionRegistry([
+    createContributionManifest('@textforge/editors', {
+      capabilities: [
+        createCapability('@textforge/editors/capability/source', {
+          localName: 'source',
+          defaultActive: true,
+          documentPredicate: createResourcePredicate({ representations: ['text'] }),
+        }),
+      ],
+      surfaces: [
+        createSurfaceContribution('@textforge/editors/source', {
+          localName: 'source',
+          capabilities: ['@textforge/editors/capability/source'],
+          resourcePredicate: createResourcePredicate({ representations: ['text'] }),
+        }),
+      ],
+    }),
+    createContributionManifest('@textforge/diagrams', {
+      capabilities: [
+        createCapability('@textforge/diagrams/capability/mermaid', {
+          aliases: ['mermaid'],
+          defaultActive: true,
+          documentPredicate: createResourcePredicate({ languageIds: ['markdown'] }),
+        }),
+        createCapability('@textforge/diagrams/capability/json', {
+          aliases: ['json'],
+          defaultActive: false,
+          documentPredicate: createResourcePredicate({ languageIds: ['markdown'] }),
+        }),
+      ],
+      markdownFenceHandlers: [
+        createMarkdownFenceHandlerContribution('@textforge/diagrams/mermaid', {
+          localName: 'mermaid',
+          capabilities: ['@textforge/diagrams/capability/mermaid'],
+          fenceNames: ['mermaid'],
+        }),
+        createMarkdownFenceHandlerContribution('@textforge/diagrams/json', {
+          localName: 'json',
+          capabilities: ['@textforge/diagrams/capability/json'],
+          fenceNames: ['json'],
+        }),
+      ],
+    }),
+  ]);
+
+  const resolved = resolveDocumentContributionContext({
+    registry,
+    document: createResourceRef('resource-markdown', {
+      path: '/docs/example.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    }),
+    explicitRequirements: ['json', 'missing-capability'],
+  });
+
+  assert.deepEqual(
+    resolved.activationOrder.map((entry) => `${entry.source}:${entry.capabilityId}`),
+    [
+      'explicit:@textforge/diagrams/capability/json',
+      'document:@textforge/diagrams/capability/mermaid',
+      'document:@textforge/editors/capability/source',
+    ],
+  );
+  assert.equal(resolved.requirements[0]?.matchedCapabilityId, '@textforge/diagrams/capability/json');
+  assert.equal(resolved.requirements[1]?.status, 'missing');
+  assert.equal(resolved.activeMarkdownFenceHandlers.some((handler) => handler.id === '@textforge/diagrams/json'), true);
+  assert.equal(resolved.diagnostics.some((diagnostic) => diagnostic.code === 'resolver.requirement.missing'), true);
 });

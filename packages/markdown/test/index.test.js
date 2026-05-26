@@ -5,8 +5,16 @@ import {
   contributions,
   createMarkdownPreviewSurface,
   createMarkdownSnippet,
+  parseMarkdownCapabilityRequirements,
   renderMarkdownDocument,
 } from '../src/index.js';
+import {
+  createCapability,
+  createContributionManifest,
+  createContributionRegistry,
+  createMarkdownFenceHandlerContribution,
+  createResourcePredicate,
+} from '@textforge/core';
 
 test('markdown package exposes preview contribution and command surface', () => {
   assert.equal(contributions.packageId, '@textforge/markdown');
@@ -88,6 +96,65 @@ flowchart TD
   assert.equal(result.referencedAssets[0]?.resolvedSrc, 'blob:system-svg');
   assert.equal(result.generatedResources[0]?.path, '/generated/example-mermaid.svg');
   assert.match(result.printHtml, /<!doctype html>/i);
+});
+
+test('renderMarkdownDocument resolves %require through the document capability context', async () => {
+  const contributionRegistry = createContributionRegistry([
+    createContributionManifest('@textforge/markdown', {
+      capabilities: [
+        createCapability('@textforge/markdown/capability/preview', {
+          localName: 'tf-md',
+          defaultActive: true,
+          documentPredicate: createResourcePredicate({ languageIds: ['markdown'] }),
+        }),
+      ],
+    }),
+    createContributionManifest('@textforge/custom', {
+      capabilities: [
+        createCapability('@textforge/custom/capability/json', {
+          aliases: ['json'],
+          defaultActive: false,
+          documentPredicate: createResourcePredicate({ languageIds: ['markdown'] }),
+        }),
+      ],
+      markdownFenceHandlers: [
+        createMarkdownFenceHandlerContribution('@textforge/custom/json', {
+          localName: 'json',
+          capabilities: ['@textforge/custom/capability/json'],
+          fenceNames: ['json'],
+          async render() {
+            return {
+              html: '<pre data-json="active"></pre>',
+              generatedResources: [],
+            };
+          },
+        }),
+      ],
+    }),
+  ]);
+
+  const result = await renderMarkdownDocument(`\`\`\`tf-md
+%require json
+\`\`\`
+
+\`\`\`json
+{"ok": true}
+\`\`\`
+`, {
+    resource: {
+      resourceId: 'markdown-3',
+      path: '/docs/preview.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+    contributionRegistry,
+  });
+
+  assert.equal(parseMarkdownCapabilityRequirements('```tf-md\n%require json\n```')[0]?.name, 'json');
+  assert.match(result.html, /data-json="active"/);
+  assert.equal(result.capabilityContext?.requirements[0]?.status, 'active');
 });
 
 test('createMarkdownPreviewSurface mounts preview html', async () => {
