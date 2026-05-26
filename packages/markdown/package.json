@@ -16,6 +16,7 @@
   "dependencies": {
     "@textforge/assets": "workspace:*",
     "@textforge/core": "workspace:*",
+    "@textforge/itm": "workspace:*",
     "@textforge/pipeline": "workspace:*",
     "@textforge/surfaces": "workspace:*",
     "@textforge/workspace": "workspace:*",

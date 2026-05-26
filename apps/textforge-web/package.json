@@ -22,6 +22,7 @@
     "@textforge/core": "workspace:*",
     "@textforge/diagrams": "workspace:^",
     "@textforge/editors": "workspace:*",
+    "@textforge/itm": "workspace:*",
     "@textforge/lua": "workspace:^",
     "@textforge/markdown": "workspace:^",
     "@textforge/pipeline": "workspace:^",

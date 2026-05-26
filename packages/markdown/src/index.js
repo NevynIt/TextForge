@@ -701,6 +701,42 @@ function renderDiagramBlock(kind, html, blockId) {
 `.trim();
 }
 
+function parseFenceInfo(rawInfo) {
+  const trimmed = String(rawInfo ?? '').trim();
+  if (!trimmed) {
+    return {
+      rawInfo: '',
+      kind: '',
+      parameters: {},
+    };
+  }
+
+  const [kindToken, ...parameterTokens] = trimmed.split(/\s+/);
+  const parameters = {};
+  for (const token of parameterTokens) {
+    const separatorIndex = token.indexOf('=');
+    if (separatorIndex > 0) {
+      const key = token.slice(0, separatorIndex).trim();
+      const rawValue = token.slice(separatorIndex + 1).trim();
+      const value = rawValue.replace(/^['"]|['"]$/g, '');
+      if (key) {
+        parameters[key] = value;
+      }
+      continue;
+    }
+
+    if (token.trim()) {
+      parameters[token.trim()] = true;
+    }
+  }
+
+  return {
+    rawInfo: trimmed,
+    kind: kindToken.toLowerCase(),
+    parameters,
+  };
+}
+
 async function resolveKnownFencedBlocks(source, options, environment) {
   const fenceHandlerRegistry = resolveMarkdownFenceHandlerRegistry(options);
   if (fenceHandlerRegistry.diagnostics?.length) {
@@ -710,11 +746,13 @@ async function resolveKnownFencedBlocks(source, options, environment) {
   let output = '';
   let blockCounter = 0;
   let lastIndex = 0;
+  const sharedState = {};
 
   for (const match of source.matchAll(fencePattern)) {
     const [rawFence, rawInfo, blockContent] = match;
     const blockIndex = match.index ?? 0;
-    const kind = rawInfo.trim().split(/\s+/)[0].toLowerCase();
+    const fence = parseFenceInfo(rawInfo);
+    const kind = fence.kind;
     output += source.slice(lastIndex, blockIndex);
     lastIndex = blockIndex + rawFence.length;
 
@@ -747,12 +785,15 @@ async function resolveKnownFencedBlocks(source, options, environment) {
         content: blockContent,
         blockId,
         blockKind: kind,
+        fence,
         contributionContext: options.contributionContext,
         sourceResource: options.resource,
         sourceUpdatedAt: options.sourceUpdatedAt,
         generatedAssetBasePath: options.fenceExecutionOptions?.generatedAssetBasePath,
         includePng: options.fenceExecutionOptions?.includePng,
         document: options.fenceExecutionOptions?.document,
+        hostServices: options.fenceExecutionOptions?.hostServices,
+        sharedState,
         pipelineRunner: options.pipelineRunner,
       });
       if (result.diagnostics?.length) {

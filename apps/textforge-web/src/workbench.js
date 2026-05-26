@@ -67,6 +67,9 @@ import {
   renderMarkdownDocument,
 } from '@textforge/markdown';
 import {
+  contributions as itmContributionPack,
+} from '@textforge/itm';
+import {
   contributions as securityProfileContributionPack,
 } from '@textforge/security-profile';
 import {
@@ -508,6 +511,7 @@ function createTextForgeWorkbenchController() {
     pipelineContributionPack,
     diagramContributionPack,
     markdownContributionPack,
+    itmContributionPack,
     luaContributionPack,
     uiContributionPack,
     securityProfileContributionPack,
@@ -1579,6 +1583,9 @@ function createTextForgeWorkbenchController() {
       contributionContext,
       fenceExecutionOptions: {
         document: globalThis.document,
+        hostServices: {
+          workspace,
+        },
         ...options.fenceExecutionOptions,
       },
     });

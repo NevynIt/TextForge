@@ -9,6 +9,9 @@ import {
   renderMarkdownDocument,
 } from '../src/index.js';
 import {
+  contributions as itmContributions,
+} from '@textforge/itm';
+import {
   createCapability,
   createContributionManifest,
   createContributionRegistry,
@@ -175,4 +178,46 @@ test('createMarkdownPreviewSurface mounts preview html', async () => {
   assert.match(container.innerHTML, /tfmd-preview/);
   dispose();
   assert.equal(container.innerHTML, '');
+});
+
+test('renderMarkdownDocument renders itm and itm-pub fences through active contribution handlers', async () => {
+  const contributionRegistry = createContributionRegistry([
+    contributions,
+    itmContributions,
+  ]);
+
+  const result = await renderMarkdownDocument(`\`\`\`itm name=roadmap-model
+%viewpoint roadmap_viewpoint
+{
+  pipeline:
+    - select: "[Capability]"
+}
+%view roadmap_view
+{
+  viewpoint: roadmap_viewpoint
+}
+&roadmap [Capability] Capability roadmap
+  &phase1 [Phase] Foundation
+\`\`\`
+
+\`\`\`itm-pub
+view: roadmap_view
+source: roadmap-model
+title: "Roadmap summary"
+\`\`\`
+`, {
+    resource: {
+      resourceId: 'markdown-4',
+      path: '/docs/roadmap.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+    contributionRegistry,
+  });
+
+  assert.match(result.html, /Roadmap summary/);
+  assert.match(result.html, /Capability roadmap/);
+  assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
 });

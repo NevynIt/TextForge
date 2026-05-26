@@ -33,12 +33,19 @@ export interface MarkdownFenceExecution {
   readonly content: string;
   readonly blockId: string;
   readonly blockKind: string;
+  readonly fence?: {
+    readonly rawInfo: string;
+    readonly kind: string;
+    readonly parameters: Readonly<Record<string, string | boolean>>;
+  };
   readonly contributionContext?: DocumentContributionContext;
   readonly sourceResource?: ResourceRef;
   readonly sourceUpdatedAt?: string;
   readonly generatedAssetBasePath?: string;
   readonly includePng?: boolean;
   readonly document?: Document;
+  readonly hostServices?: Readonly<Record<string, unknown>>;
+  readonly sharedState?: Record<string, unknown>;
   readonly pipelineRunner?: PipelineRunner;
 }
 
@@ -54,7 +61,7 @@ export type MarkdownFenceHandler = (execution: MarkdownFenceExecution) => Promis
 export interface MarkdownRenderOptions {
   readonly resource?: ResourceRef;
   readonly sourceUpdatedAt?: string;
-  readonly fenceExecutionOptions?: Pick<MarkdownFenceExecution, 'generatedAssetBasePath' | 'includePng' | 'document'>;
+  readonly fenceExecutionOptions?: Pick<MarkdownFenceExecution, 'generatedAssetBasePath' | 'includePng' | 'document' | 'hostServices'>;
   readonly contributionRegistry?: ContributionRegistry;
   readonly contributionContext?: DocumentContributionContext;
   readonly pipelineRunner?: PipelineRunner;
