@@ -26,7 +26,7 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 | WP-05A | Phase 5 | Contribution manifest and registry model | Core gate | Validated | Phase 4.1 closed | WP-05B, WP-05C, WP-RES-01, WP-ITM-01, WP-SET-01 | No | Yes | Canonical bundled manifest normalization, deterministic registry package read model, dependency/conflict diagnostics, and shell registry inspector landed; document capability activation stays in WP-05B. |
 | WP-05B | Phase 5 | Capability activation and resolver context | Core gate | Validated | WP-05A | WP-05C, WP-05D, WP-ITM-02, WP-REPO-01 | No | Yes | Pure document-scoped resolver, deterministic activation ordering, `%require` capability matching, active short-name diagnostics, and shell inspector context landed on top of the validated WP-05A registry. |
 | WP-05C | Phase 5 | Pipeline/contribution execution integration | Core gate | Validated | WP-05A, WP-05B | WP-ITM-VISUALS, WP-LUA, WP-SERVICES-LOCAL, WP-PIPELINE-EDITOR | No | Yes | Canonical contribution execution now replaces the remaining shell runtime adapter and active-context pipeline execution records intermediate reopening metadata. |
-| WP-05D | Phase 5 | Minimal package/capability inspector | Feature / diagnostics | Not started | WP-05A, WP-05B | All capability-heavy UX | Yes | No | Useful for debugging; not necessarily blocking for non-UI implementation. |
+| WP-05D | Phase 5 | Minimal package/capability inspector | Feature / diagnostics | Validated | WP-05A, WP-05B | All capability-heavy UX | Yes | No | Core-owned inspector read model, current-document capability routing, packaged contribution state cards, and shell-visible diagnostics now sit on top of the validated WP-05A/WP-05B registry/resolver contracts. |
 | WP-RES-01 | Phase 5.1 | Provider-aware resource descriptors | Core foundation | Not started | Phase 4.1 resource facts | WP-RES-02, WP-REPO-01, WP-BE-API | No | Yes | May start after 4.1; does not need Entra or backend. |
 | WP-RES-02 | Phase 5.1 | Revisions, dirty state, and conflict diagnostics | Core foundation | Not started | WP-RES-01 | WP-RES-03, WP-BE-PERSIST, WP-COLLAB-LEASES | No | Yes | Separates local revision model from backend persistence. |
 | WP-RES-03 | Phase 5.1 | Multi-resource changesets and provider allowlists | Core foundation | Not started | WP-RES-02, WP-05B recommended | WP-BE-API, WP-GITLAB, WP-AI-MEDIATOR | No | Yes | Backend-backed writes and future Git/AI edits converge here. |
@@ -77,9 +77,9 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 
 ## Current reading
 
-- The former Phase 5 contribution/capability spine `WP-05A -> WP-05B -> WP-05C` is now validated.
-- The nearest ready follow-on slices are `WP-05D` diagnostics polish and `WP-RES-01` provider-aware resource descriptors.
-- `WP-ID-01`, `WP-SET-01`, and `WP-ITM-01` are also startable foundation workpackages under the current dependency posture.
+- The former Phase 5 contribution/capability spine plus the minimal inspector are now validated: `WP-05A -> WP-05B -> WP-05C`, with `WP-05D` landed on top of that registry/resolver baseline.
+- The nearest ready follow-on slice is `WP-RES-01` provider-aware resource descriptors.
+- `WP-ID-01`, `WP-SET-01`, `WP-ITM-01`, and `WP-LUA` are also startable foundation workpackages under the current dependency posture.
 - `WP-LUA` is startable from validated `WP-05C`; sandbox and security-profile checks stay part of `WP-LUA` validation evidence instead of a separate gating workpackage.
 - Resource-provider, identity-contract, and settings-core work can be developed as independent foundations once their small prerequisites are met.
 - Entra SSO is now explicitly deferred as `WP-SSO-ENTRA`, a standalone production adapter that does not block local backend development.

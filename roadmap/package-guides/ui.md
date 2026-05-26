@@ -203,6 +203,10 @@ The Phase 3.5 chrome also syncs collapse and expand state with real width releas
 
 As a pre-Phase-4 shell follow-up, the workspace tree rows and the main tab strip now also act as file drop targets: dropping files on a folder uploads into that folder without opening them, while dropping files on the tab strip uploads into `/upload` and opens the first dropped resource in the main surface. Keep the workspace menu labels for file upload/download and folder ZIP import/export explicit enough that these flows remain discoverable without relying on drag and drop.
 
+## WP-05D progress note
+
+The shell now uses the existing inspector-card, empty-state, and utility-pane primitives to render a real package/capability inspector rather than a thin package list. The delivered `WP-05D` baseline shows a registry overview, current-document activation flow, `%require` state, exposed active contributions, per-package capability/contribution state, dependency/conflict summaries, and diagnostics, while still stopping short of plugin installation, remote loading, or editable package configuration.
+
 
 ## V16 backend-optional responsibilities
 

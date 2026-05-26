@@ -165,6 +165,10 @@ The package now owns the stabilized Phase 4.1 foundation contracts: normalized `
 
 `@textforge/core` now carries the canonical bundled runtime hooks alongside the validated registry/resolver contract: surface contributions may expose package-owned `open(...)` execution, pipeline contributions may expose package-owned `run(...)` execution, and Markdown fence handlers remain contribution-owned runtime entries. The shell therefore consumes execution through canonical registered contributions rather than through its old local `contributionId` adapter table.
 
+## WP-05D progress note
+
+`@textforge/core` now also owns the minimal package/capability inspector read model instead of leaving package-state projection inside the shell. `createContributionInspectorModel(...)` derives deterministic package summaries, per-package capability/contribution state, current-document activation order, `%require` status, active-context conflicts, and diagnostics from the validated registry/resolver outputs so later UX can inspect capability-heavy behavior without recreating registry logic in the app.
+
 
 ## V16 backend-optional responsibilities
 

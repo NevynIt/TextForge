@@ -9,7 +9,7 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 | Area | Current state |
 |---|---|
 | Foundation phases | Phase -1 through Phase 4.1 are treated as closed foundation history unless explicitly reopened. |
-| Next implementation options | `WP-05D` or `WP-RES-01`; `WP-ID-01`, `WP-SET-01`, `WP-ITM-01`, and `WP-LUA` are also startable. |
+| Next implementation options | `WP-RES-01`; `WP-ID-01`, `WP-SET-01`, `WP-ITM-01`, and `WP-LUA` are also startable. |
 | Backend identity | Develop against `WP-ID-DEV` fixture identity; Entra is optional later adapter. |
 | Backend profile | Not started. May be developed locally with Node/container and one approved local backend origin. |
 | Roadmap structure | V18 workpackage-first structure active. V16/V17 source preserved in archive. |
@@ -21,6 +21,7 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 | WP-05A | Validated | `roadmap/validation/workpackage-checklists/WP-05A-contribution-manifest-and-registry-model.md`; `corepack pnpm verify`; app `file://` build checks | 2026-05-26 | Canonical manifest normalization and deterministic bundled registry package model validated. |
 | WP-05B | Validated | `roadmap/validation/workpackage-checklists/WP-05B-capability-activation-and-resolver-context.md`; focused package tests/checks; app `file://` build checks | 2026-05-26 | Document-scoped capability resolver, `%require` activation, active-context surface filtering, and current-document inspector shipped. |
 | WP-05C | Validated | `roadmap/validation/workpackage-checklists/WP-05C-pipeline-contribution-execution-integration.md`; focused package tests/checks; app `file://` build checks; `corepack pnpm verify` | 2026-05-26 | Canonical surface/pipeline/fence-handler execution, active-context pipeline resolution, and intermediate surface reopening shipped. |
+| WP-05D | Validated | `roadmap/validation/workpackage-checklists/WP-05D-minimal-package-capability-inspector.md`; `corepack pnpm --filter @textforge/core test`; `corepack pnpm --filter ./apps/textforge-web test`; `corepack pnpm --filter ./apps/textforge-web build`; `corepack pnpm verify` | 2026-05-26 | Core-owned inspector read model, current-document capability routing view, packaged contribution state cards, and bundled-local diagnostics visibility shipped. |
 | WP-LUA | Not started | Depends on validated `WP-05C`; security-profile-compatible sandbox evidence is part of `WP-LUA` acceptance | 2026-05-26 | Optional and startable; no separate Lua-only security workpackage gate. |
 | WP-ID-01 | Not started | Can proceed after foundation | 2026-05-26 | Identity contract only; no Entra. |
 | WP-ID-DEV | Not started | Depends on WP-ID-01 | 2026-05-26 | Required to keep local backend development unblocked. |

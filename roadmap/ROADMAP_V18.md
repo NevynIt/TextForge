@@ -148,17 +148,17 @@ The selected path must be recorded in RAPID and reflected in `workpackages/imple
 
 ## 10. Immediate recommendation
 
-The former contribution/capability spine is now validated:
+The former contribution/capability spine plus the minimal inspector are now validated:
 
 ```text
 WP-05A -> WP-05B -> WP-05C
+WP-05D
 ```
 
-The nearest ready follow-on slices are:
+The nearest ready follow-on slice is:
 
 ```text
-WP-05D
 WP-RES-01
 ```
 
-`WP-ID-01`, `WP-SET-01`, and `WP-ITM-01` are also startable. Reassess whether to proceed along the diagnostics path, the core resource/repository path, the local ITM/Markdown path, or the backend-preview path.
+`WP-ID-01`, `WP-SET-01`, `WP-ITM-01`, and `WP-LUA` are also startable. Reassess whether to proceed along the core resource/repository path, the local ITM/Markdown path, the optional automation path, or the backend-preview path.
