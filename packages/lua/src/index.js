@@ -170,6 +170,32 @@ function formatLuaConsolePrompt() {
   return '\x1b[38;5;81mlua>\x1b[0m ';
 }
 
+function formatPlainLuaConsolePrompt() {
+  return 'lua> ';
+}
+
+function createLuaConsoleHelpLines() {
+  return [
+    'TextForge Lua Console',
+    'Type Lua statements or expressions directly.',
+    'Built-in shortcuts:',
+    '  help        Show this console help.',
+    '  =expr       Evaluate an expression explicitly.',
+    'Available from Lua:',
+    '  input                         Pipeline-style input value for the focused text resource.',
+    '  print(value, ...)             Write values into the console transcript.',
+    '  require("tf")                Emit structured values.',
+    '  require("tf.pipeline").list() List registered pipeline IDs.',
+    '  require("tf.pipeline").run("id", input)',
+    '  require("tf.actions").list()  List discovered Lua actions.',
+    '  require("tf.actions").run("id", input)',
+    '  require("tf.console").inspect(value)',
+    'Not available yet:',
+    '  Direct workbench/editor/surface/session inspection helpers.',
+    'See /docs/legacy/guides/lua-guide.md for the current console guide.',
+  ];
+}
+
 function writeConsoleTranscript(terminal, state) {
   for (const line of state.transcript) {
     terminal.writeln(line);
@@ -224,18 +250,31 @@ export function createLuaConsoleSurface(options = {}) {
         options.setState?.(state);
       };
 
-      const rerender = () => {
+      const rerenderTranscript = () => {
         if (!terminal || disposed) {
           return;
         }
 
-        terminal.reset();
+        terminal.write('\x1b[2J\x1b[H');
         writeConsoleTranscript(terminal, state);
+      };
+
+      const redrawCurrentPrompt = () => {
+        if (!terminal || disposed) {
+          return;
+        }
+
+        terminal.write('\r\x1b[2K');
+        terminal.write(formatLuaConsolePrompt());
+        if (state.currentInput) {
+          terminal.write(state.currentInput);
+        }
       };
 
       const handleSubmit = async (command) => {
         const trimmed = command.trim();
-        const nextTranscript = [...state.transcript, `${formatLuaConsolePrompt().replace(/\x1b\[[0-9;]*m/g, '')}${command}`];
+        const plainPrompt = formatPlainLuaConsolePrompt();
+        const nextTranscript = [...state.transcript, `${plainPrompt}${command}`];
         const nextHistory = trimmed ? [...state.history, command] : [...state.history];
         syncState({
           ...state,
@@ -244,8 +283,25 @@ export function createLuaConsoleSurface(options = {}) {
           historyIndex: nextHistory.length,
           currentInput: '',
         });
-        rerender();
+        terminal?.write('\r\n');
         if (!trimmed) {
+          terminal?.write(formatLuaConsolePrompt());
+          return;
+        }
+
+        if (trimmed === 'help' || trimmed === ':help' || trimmed === '.help') {
+          const nextLines = createLuaConsoleHelpLines();
+          for (const line of nextLines) {
+            terminal?.writeln(line);
+          }
+          syncState({
+            ...state,
+            transcript: [...nextTranscript, ...nextLines],
+            history: nextHistory,
+            historyIndex: nextHistory.length,
+            currentInput: '',
+          });
+          terminal?.write(formatLuaConsolePrompt());
           return;
         }
 
@@ -253,6 +309,9 @@ export function createLuaConsoleSurface(options = {}) {
         try {
           const result = await options.runCommand?.(command);
           const nextLines = formatLuaConsoleResult(result ?? { ok: true, consoleLines: [], diagnostics: [] });
+          for (const line of nextLines) {
+            terminal?.writeln(line);
+          }
           syncState({
             ...state,
             transcript: [...nextTranscript, ...nextLines],
@@ -261,16 +320,18 @@ export function createLuaConsoleSurface(options = {}) {
             currentInput: '',
           });
         } catch (error) {
+          const nextLine = `error: ${error?.message ?? 'Lua console command failed.'}`;
+          terminal?.writeln(nextLine);
           syncState({
             ...state,
-            transcript: [...nextTranscript, `error: ${error?.message ?? 'Lua console command failed.'}`],
+            transcript: [...nextTranscript, nextLine],
             history: nextHistory,
             historyIndex: nextHistory.length,
             currentInput: '',
           });
         } finally {
           busy = false;
-          rerender();
+          terminal?.write(formatLuaConsolePrompt());
         }
       };
 
@@ -313,8 +374,8 @@ export function createLuaConsoleSurface(options = {}) {
         fitAddon = new FitAddon();
         terminal.loadAddon(fitAddon);
         terminal.open(host);
-        fitAddon.fit();
-        rerender();
+        requestAnimationFrame(() => fitAddon.fit());
+        rerenderTranscript();
         terminal.focus();
         disposeCallbacks.push(terminal.onData((data) => {
           if (busy) {
@@ -327,12 +388,14 @@ export function createLuaConsoleSurface(options = {}) {
           }
 
           if (data === '\u0003') {
+            const nextTranscript = [...state.transcript, `${formatPlainLuaConsolePrompt()}${state.currentInput}^C`];
             syncState({
               ...state,
-              transcript: [...state.transcript, `${formatLuaConsolePrompt().replace(/\x1b\[[0-9;]*m/g, '')}${state.currentInput}`, '^C'],
+              transcript: nextTranscript,
               currentInput: '',
             });
-            rerender();
+            terminal.write('^C\r\n');
+            terminal.write(formatLuaConsolePrompt());
             return;
           }
 
@@ -344,7 +407,7 @@ export function createLuaConsoleSurface(options = {}) {
               ...state,
               currentInput: state.currentInput.slice(0, -1),
             });
-            rerender();
+            redrawCurrentPrompt();
             return;
           }
 
@@ -358,7 +421,7 @@ export function createLuaConsoleSurface(options = {}) {
               historyIndex: nextIndex,
               currentInput: state.history[nextIndex] ?? '',
             });
-            rerender();
+            redrawCurrentPrompt();
             return;
           }
 
@@ -372,7 +435,7 @@ export function createLuaConsoleSurface(options = {}) {
               historyIndex: nextIndex,
               currentInput: state.history[nextIndex] ?? '',
             });
-            rerender();
+            redrawCurrentPrompt();
             return;
           }
 

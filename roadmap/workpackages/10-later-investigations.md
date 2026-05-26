@@ -12,6 +12,7 @@ This cluster contains valuable but deliberately delayed or investigatory work.
 | ArchiMate visual editing | Best treated as investigation after semantic profile and graph write-back foundation. |
 | Native/local packaged app | Would require a distinct security profile if it introduces filesystem or OS integration. |
 | PWA/offline install profile | Must not blur local/offline no-silent-filesystem/no-arbitrary-network claims. |
+| Lua console workbench introspection | Needs a stable, security-reviewed contract for exposing open editors, popup surfaces, registry/package state, and command routing without coupling arbitrary shell internals into the Lua sandbox. |
 
 ## Rule
 

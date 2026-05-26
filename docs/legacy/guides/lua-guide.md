@@ -61,17 +61,37 @@ The Lua Console accepts normal Lua snippets and a few convenience commands:
 
 ```text
 help
-actions
-run selection
-run itm-to-graph
-action uppercase-itm-labels
-open run selection
-open run itm-to-graph
-open last
+:help
+.help
+print(2 + 2)
+=2 + 2
 ```
 
-`open <command>` runs the command and opens the returned text/model as a new editor document.
-`run selection` executes the currently selected Lua text from the active editor and maps runtime diagnostics back to the selected source lines.
+`help`, `:help`, and `.help` print the built-in console summary.
+`=...` forces expression evaluation when you want a result value back without wrapping the expression in `return`.
+
+The current console is a persistent Lua session. Variables defined in one command remain available to later commands until the console session is closed.
+
+## What Is Available In The Console Today
+
+- Ordinary Lua statements and expressions.
+- `input`, which mirrors the focused text resource as a pipeline-style value.
+- `print(...)` for plain console output.
+- `require("tf")` for emit helpers.
+- `require("tf.pipeline").list()` and `require("tf.pipeline").run("id", input)`.
+- `require("tf.actions").list()` and `require("tf.actions").run("id", input)`.
+- `require("tf.console").inspect(value)` for structured inspection.
+
+## What Is Not Available Yet
+
+The console does not yet expose stable workbench-aware helpers for:
+
+- listing open editors or popup surfaces;
+- inspecting the active surface/session model;
+- browsing the contribution/package registry directly from Lua;
+- issuing shell-level UI commands from Lua.
+
+Those capabilities need a deliberate contract between the shell and the Lua sandbox rather than ad hoc direct access.
 
 ## Bundled Modules
 
