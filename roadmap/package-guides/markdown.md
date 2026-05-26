@@ -164,6 +164,10 @@ The package now delivers the Phase 4 TF-MD baseline: a Markdown preview surface,
 
 The package now keeps the fenced-block dispatcher explicitly provisional by shaping its built-ins as default contribution records with stable IDs, capability associations, and structured diagnostics. Markdown preview resolution now consumes the shared contribution registry for active fence handlers, reports active handler conflicts or unavailable registered handlers through the shared diagnostic shape, and preserves the local-artifact-safe preview path.
 
+## WP-05B progress note
+
+The package now parses `%require` as capability activation input for the shared document resolver instead of reporting it as an unsupported TF-MD directive. Markdown preview consumes the resolved document capability context, keeps Mermaid/math/Graphviz plus base Markdown defaults active for Markdown resources, and leaves SVG/JSON/YAML fenced-block renderers inactive until the document explicitly activates them.
+
 
 ## V16 backend-optional responsibilities
 

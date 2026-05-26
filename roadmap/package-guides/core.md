@@ -157,6 +157,10 @@ The package now owns the stabilized Phase 4.1 foundation contracts: normalized `
 
 `@textforge/core` now owns the first canonical WP-05A registry layer rather than the narrower Phase 4.1 placeholder. Contribution manifests normalize bundled package dependency descriptors, package-local contribution names, and derived canonical IDs for surfaces, pipelines, and Markdown fence handlers. The registry read model now sorts deterministically, reports package/dependency/conflict state, and exposes a UI-friendly package status view without collapsing package availability into the later document-scoped capability resolver work that belongs to `WP-05B`.
 
+## WP-05B progress note
+
+`@textforge/core` now also owns the pure WP-05B document resolver. Capabilities carry package-local names, aliases, and document predicates; the resolver accepts explicit `%require`-style inputs, computes deterministic activation order across explicit/document/workspace/app/core sources, preserves the bundled-static boundary, and emits active short-name plus missing/ambiguous requirement diagnostics without reintroducing package-local registries.
+
 
 ## V16 backend-optional responsibilities
 

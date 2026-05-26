@@ -19,7 +19,7 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 | WP ID | Status | Evidence | Last updated | Notes |
 |---|---|---|---|---|
 | WP-05A | Validated | `roadmap/validation/workpackage-checklists/WP-05A-contribution-manifest-and-registry-model.md`; `corepack pnpm verify`; app `file://` build checks | 2026-05-26 | Canonical manifest normalization and deterministic bundled registry package model validated. |
-| WP-05B | Not started | Depends on WP-05A | 2026-05-26 | Capability activation/resolver context. |
+| WP-05B | Validated | `roadmap/validation/workpackage-checklists/WP-05B-capability-activation-and-resolver-context.md`; focused package tests/checks; app `file://` build checks | 2026-05-26 | Document-scoped capability resolver, `%require` activation, active-context surface filtering, and current-document inspector shipped. |
 | WP-05C | Not started | Depends on WP-05A/WP-05B | 2026-05-26 | Contribution execution integration. |
 | WP-ID-01 | Not started | Can proceed after foundation | 2026-05-26 | Identity contract only; no Entra. |
 | WP-ID-DEV | Not started | Depends on WP-ID-01 | 2026-05-26 | Required to keep local backend development unblocked. |

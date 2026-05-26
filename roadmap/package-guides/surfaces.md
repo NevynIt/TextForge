@@ -200,6 +200,10 @@ Popup sessions now stay separate from the main document strip and reopen through
 
 The package now resolves open-with compatibility through shared resource predicates over representation, MIME type, language ID, and extension facts, and it emits a structured diagnostic when no registered surface can open a resource. The context-menu and surface-command projection remains on the single command spine, while the app-shell surface-mount adapter is explicitly marked as temporary Phase 5 follow-up work rather than hidden shell coupling.
 
+## WP-05B progress note
+
+Surface open-with eligibility now also respects the resolved document capability context instead of assuming globally active bundled surfaces. The package still stays runtime-light, but the request contract now accepts active capability/contribution filters so the shell can reopen resources through the document-scoped resolver rather than a global everything-active view.
+
 
 ## V16 backend-optional responsibilities
 
