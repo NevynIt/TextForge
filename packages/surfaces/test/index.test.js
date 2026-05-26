@@ -7,6 +7,8 @@ import {
   createMainSessionTabStrip,
   createMainSurfaceHost,
   createOpenWithSelection,
+  createPipelineValueOpenWithSelection,
+  createPipelineValueResource,
   createSequentialSessionIdFactory,
   createSourceEditorFallback,
   createSurfaceRegistry,
@@ -123,6 +125,20 @@ test('surface registry picks the highest-priority compatible contribution', () =
 
   const fallback = createSourceEditorFallback(session.resource, 'surface.editor', 'explicit-source-open');
   assert.equal(fallback.reason, 'explicit-source-open');
+
+  const pipelineValueResource = createPipelineValueResource({
+    kind: 'json',
+    value: '{"ok":true}',
+  });
+  assert.equal(pipelineValueResource.mimeType, 'application/json');
+
+  const intermediateSelection = createPipelineValueOpenWithSelection(registry, {
+    value: {
+      kind: 'svg',
+      value: '<svg />',
+    },
+  });
+  assert.equal(intermediateSelection.selectedSurfaceId, 'surface.editor');
 });
 
 test('surface command contributions include shell actions and open-with descriptors', () => {

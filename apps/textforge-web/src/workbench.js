@@ -42,23 +42,13 @@ import {
 } from '@textforge/surfaces';
 import {
   contributions as editorContributionPack,
-  codeMirrorTextEditorSurfaceContribution,
-  createCodeMirrorTextEditorSurface,
   createTextEditorDocument,
   listTextEditorLanguageModes,
 } from '@textforge/editors';
 import {
   contributions as assetContributionPack,
   createAssetProvenanceLabel,
-  createAssetViewerSurface,
-  createBinaryAssetViewerSurface,
   createBlobUrlLedger,
-  markAssetBindingStale,
-  createImageAssetViewerSurface,
-  createPdfAssetViewerSurface,
-  createSvgAssetViewerSurface,
-  createWorkspaceAssetBinding,
-  markAssetBindingReady,
 } from '@textforge/assets';
 import {
   contributions as pipelineContributionPack,
@@ -69,7 +59,6 @@ import {
 } from '@textforge/diagrams';
 import {
   contributions as markdownContributionPack,
-  createMarkdownPreviewSurface,
   createMarkdownSnippet,
   parseMarkdownCapabilityRequirements,
   markdownPreviewSurfaceContribution,
@@ -213,16 +202,6 @@ function readPhase35ScreenshotPreset() {
   const presetId = new URL(window.location.href).searchParams.get('phase35');
   return phase35ScreenshotPresets[presetId] ?? phase35ScreenshotPresets.main;
 }
-
-const assetSurfaceFactoryByContributionId = {
-  '@textforge/assets/image': createImageAssetViewerSurface,
-  '@textforge/assets/svg': createSvgAssetViewerSurface,
-  '@textforge/assets/pdf': createPdfAssetViewerSurface,
-  '@textforge/assets/binary': createBinaryAssetViewerSurface,
-};
-// Phase 4.1 explicitly keeps this as a temporary runtime adapter.
-// Contribution metadata, capability state, and open-with resolution are now package-registered,
-// but the shell still owns the final mount function lookup until Phase 5 grows a runtime contribution executor.
 
 function createTimestampFactory() {
   return () => new Date().toISOString();
@@ -1623,206 +1602,82 @@ function createTextForgeWorkbenchController() {
       return createWelcomeView();
     }
 
-    const openWith = surfaceRegistry.get(session.contributionId)?.label ?? 'Surface';
+    const contribution = surfaceRegistry.get(session.contributionId);
+    const openWith = contribution?.label ?? 'Surface';
     const controls = [createOpenWithControl(session, resource)];
     const badge = resource.metadata.badge;
     const icon = resolveEntryIcon(resource);
     const resourceTitle = resource.metadata.title ?? basenameWorkspacePath(resource.path) ?? resource.path;
-    // Temporary Phase 4.1 adapter: the shell still mounts the registered surface implementations here.
-    if (session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(resource)) {
-      const previewState = requestMarkdownPreview(resource);
-      if (previewState.status === 'ready' && previewState.result) {
-        const surface = createMarkdownPreviewSurface(resource.text, previewState.result, {
-          resource: workspaceEntryToResourceRef(resource),
-        });
-        return {
-          id: session.id,
-          kind: 'surface',
-          mountId: `${session.id}:${session.contributionId}:${resource.metadata.updatedAt}`,
-          title: resourceTitle,
-          path: resource.path,
-          summary: surface.model.summary,
-          badge,
-          icon,
-          openWith,
-          state: session.state,
-          placement: session.placement,
-          detail: `${surface.model.diagnostics.length} diagnostics / ${surface.model.referencedAssets.length} asset references`,
-          readOnly: true,
-          inspectorSections: [
-            {
-              eyebrow: 'Preview',
-              icon: 'fileText',
-              title: 'TF-MD summary',
-              rows: [
-                { label: 'Metadata title', value: String(surface.model.metadata.title ?? resourceTitle) },
-                { label: 'Diagnostics', value: String(surface.model.diagnostics.length) },
-                { label: 'Assets', value: String(surface.model.referencedAssets.length) },
-                { label: 'Generated diagrams', value: String(surface.model.generatedResources.length) },
-              ],
-            },
-          ],
-          controls,
-          surface,
-        };
-      }
-
-      const placeholderHtml = previewState.status === 'error'
-        ? `<section class="tfmd-preview tfmd-preview--error"><p>Markdown preview failed: ${escapeHtml(previewState.error?.message ?? 'Unknown error')}</p></section>`
-        : '<section class="tfmd-preview tfmd-preview--loading"><p>Rendering Markdown preview...</p></section>';
-      return {
-        id: session.id,
-        kind: 'surface',
-        mountId: `${session.id}:${session.contributionId}:${previewState.status}:${resource.metadata.updatedAt}`,
-        title: resourceTitle,
-        path: resource.path,
-        summary: previewState.status === 'error'
-          ? 'Markdown preview failed to render.'
-          : 'Rendering the package-owned Markdown preview surface.',
-        badge,
-        icon,
-        openWith,
-        state: session.state,
-        placement: session.placement,
-        detail: previewState.status === 'error' ? 'Render error' : 'Preview loading',
-        readOnly: true,
-        inspectorSections: [
-          {
-            eyebrow: 'Preview',
-            icon: previewState.status === 'error' ? 'warning' : 'status',
-            title: 'TF-MD summary',
-            rows: [
-              { label: 'State', value: previewState.status },
-              { label: 'Source', value: resource.path },
-            ],
-          },
-        ],
-        controls,
-        surface: {
-          model: {
-            html: placeholderHtml,
-          },
-          mount(container) {
-            container.innerHTML = placeholderHtml;
-            return () => {
-              container.innerHTML = '';
-            };
-          },
-        },
-      };
-    }
-
-    // Temporary Phase 4.1 adapter: the shell still wires editor persistence callbacks around the registered editor contribution.
-    if (session.contributionId === codeMirrorTextEditorSurfaceContribution.id && resource.representation === 'text') {
-      const document = activeTextDocuments.get(resource.id) ?? createTextEditorDocument(
-        workspaceEntryToResourceRef(resource),
+    const resourceRef = workspaceEntryToResourceRef(resource);
+    const runtimeView = contribution?.open?.({
+      session,
+      contribution,
+      resource: resourceRef,
+      workspaceResource: resource,
+      resourceTitle,
+      sourceText: resource.representation === 'text' ? resource.text : undefined,
+      updatedAt: resource.metadata.updatedAt,
+      contributionRegistry,
+      documentContext: resolveDocumentContributionContextForEntry(resource),
+      requestPreview: session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(resource)
+        ? () => requestMarkdownPreview(resource)
+        : undefined,
+      getAssetLease: () => getAssetLease(resourceRef),
+      describeGeneratedResource: () => describeGeneratedResource(resource),
+      getTextDocument: () => activeTextDocuments.get(resource.id) ?? createTextEditorDocument(
+        resourceRef,
         resource.text,
         {
           languageId: resource.languageId,
           readOnly: false,
         },
-      );
-      activeTextDocuments.set(resource.id, document);
-      const surface = createCodeMirrorTextEditorSurface({
-        document,
-        diagnostics: [],
-        onUpdate(nextDocument) {
-          activeTextDocuments.set(resource.id, nextDocument);
-        },
-        onChange(nextDocument) {
-          const nextResource = workspace.saveTextResource({
-            resourceId: resource.id,
-            text: nextDocument.text,
-          });
-          activeTextDocuments.set(resource.id, {
-            ...nextDocument,
-            resource: workspaceEntryToResourceRef(nextResource),
-          });
-          getHostForPlacement(session.placement).markCurrent(session.id);
-        },
-      });
-      return {
-        id: session.id,
-        kind: 'surface',
-        mountId: `${session.id}:${surface.model.languageMode.languageId}:${session.contributionId}`,
-        title: resourceTitle,
-        path: resource.path,
-        summary: surface.model.summary,
-        badge,
-        icon,
-        openWith,
-        state: session.state,
-        placement: session.placement,
-        detail: surface.model.languageLabel,
-        readOnly: false,
-        inspectorSections: [],
-        controls: [...controls, createLanguageControl(resource, surface.model)],
-        surface,
-      };
-    }
-
-    const resourceRef = workspaceEntryToResourceRef(resource);
-    const lease = getAssetLease(resourceRef);
-    const generatedResource = describeGeneratedResource(resource);
-    const binding = createWorkspaceAssetBinding({
-      resource: resourceRef,
-      workspaceResource: resource,
-      title: resource.metadata.title ?? resource.path,
-      provenance: resource.metadata?.provenance ?? 'workspace-bound',
+      ),
+      setTextDocument(nextDocument) {
+        activeTextDocuments.set(resource.id, nextDocument);
+      },
+      persistTextDocument(nextDocument) {
+        const nextResource = workspace.saveTextResource({
+          resourceId: resource.id,
+          text: nextDocument.text,
+        });
+        return {
+          ...nextDocument,
+          resource: workspaceEntryToResourceRef(nextResource),
+        };
+      },
+      markSessionCurrent() {
+        getHostForPlacement(session.placement).markCurrent(session.id);
+      },
+      createLanguageControl,
     });
-    const readyBindingBase = lease ? markAssetBindingReady(binding, lease.url) : binding;
-    const readyBinding = generatedResource.stale ? markAssetBindingStale(readyBindingBase) : readyBindingBase;
-    // Temporary Phase 4.1 adapter: asset viewers are discovered through registration, but the final
-    // contributionId-to-mount-function lookup stays local until Phase 5 replaces it with package runtime execution.
-    const createAssetSurface = assetSurfaceFactoryByContributionId[session.contributionId] ?? createAssetViewerSurface;
-    const surface = createAssetSurface(
-      {
-        resource: resourceRef,
-        workspaceResource: resource,
-        title: resource.metadata.title ?? resource.path,
-        provenance: resource.metadata?.provenance ?? 'workspace-bound',
+
+    const surface = runtimeView?.surface ?? {
+      model: {
+        html: `<section class="tfmd-preview tfmd-preview--error"><p>Surface runtime unavailable for ${escapeHtml(openWith)}.</p></section>`,
       },
-      {
-        binding: readyBinding,
-        lease,
+      mount(container) {
+        container.innerHTML = this.model.html;
+        return () => {
+          container.innerHTML = '';
+        };
       },
-    );
+    };
     return {
       id: session.id,
       kind: 'surface',
-      mountId: `${session.id}:${session.contributionId}`,
+      mountId: runtimeView?.mountId ?? `${session.id}:${session.contributionId}:${resource.metadata.updatedAt}`,
       title: resourceTitle,
       path: resource.path,
-      summary: surface.model.summary,
+      summary: runtimeView?.summary ?? 'Surface runtime unavailable.',
       badge,
       icon,
       openWith,
       state: session.state,
       placement: session.placement,
-      detail: surface.model.mimeType,
-      readOnly: true,
-      inspectorSections: [
-        {
-          eyebrow: 'Resource binding',
-          icon: 'fileImage',
-          title: 'Asset state',
-          rows: [
-            { label: 'State', value: surface.model.state },
-            { label: 'Source', value: surface.model.provenanceLabel },
-            { label: 'Blob URL', value: surface.model.blobUrl ? 'bound' : 'unbound' },
-            { label: 'Action', value: surface.model.blobUrl ? 'Download asset' : 'No download link' },
-          ],
-        },
-        ...(generatedResource.rows.length > 0
-          ? [{
-            eyebrow: 'Generated',
-            icon: generatedResource.stale ? 'warning' : 'status',
-            title: 'Derived asset provenance',
-            rows: generatedResource.rows,
-          }]
-          : []),
-      ],
-      controls,
+      detail: runtimeView?.detail ?? 'Runtime unavailable',
+      readOnly: runtimeView?.readOnly ?? true,
+      inspectorSections: runtimeView?.inspectorSections ?? [],
+      controls: [...controls, ...(runtimeView?.controls ?? [])],
       surface,
     };
   }

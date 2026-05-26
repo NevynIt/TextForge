@@ -2,6 +2,7 @@ import type {
   Capability,
   CommandContribution,
   ContributionManifest,
+  PipelineValue,
   ResourceRepresentation,
   ResourceRef,
   SurfaceContribution as CoreSurfaceContribution,
@@ -64,6 +65,17 @@ export interface OpenWithSelection {
   readonly placement: SurfacePlacement;
   readonly candidates: ReadonlyArray<OpenWithCandidate>;
   readonly selectedSurfaceId?: string;
+}
+
+export interface PipelineValueSurfaceSelectionRequest {
+  readonly value: PipelineValue;
+  readonly placement?: SurfacePlacement;
+  readonly allowPopup?: boolean;
+  readonly activeCapabilityIds?: ReadonlyArray<string>;
+  readonly activeContributionIds?: ReadonlyArray<string>;
+  readonly preferredSurfaceIds?: ReadonlyArray<string>;
+  readonly resourceId?: string;
+  readonly path?: string;
 }
 
 export interface SourceEditorFallback {
@@ -406,6 +418,89 @@ export function createOpenWithSelection(
     })),
     selectedSurfaceId,
   };
+}
+
+function inferPipelineValueResourceFacts(value: PipelineValue, overrides: {
+  readonly resourceId?: string;
+  readonly path?: string;
+} = {}): ResourceRef {
+  if (value.resource) {
+    return {
+      ...value.resource,
+      resourceId: overrides.resourceId ?? value.resource.resourceId,
+      path: overrides.path ?? value.resource.path,
+    };
+  }
+
+  const resourceId = overrides.resourceId ?? `pipeline:${String(value.kind ?? 'value').trim() || 'value'}`;
+  const normalizedKind = String(value.kind ?? '').trim().toLowerCase();
+  const textResource = (path: string, languageId: string | undefined, mimeType: string) => ({
+    resourceId,
+    kind: 'virtual' as const,
+    representation: 'text' as const,
+    path: overrides.path ?? path,
+    languageId,
+    mimeType,
+  });
+
+  switch (normalizedKind) {
+    case 'svg':
+      return textResource('/virtual/pipeline/output.svg', 'svg', 'image/svg+xml');
+    case 'json':
+      return textResource('/virtual/pipeline/output.json', 'json', 'application/json');
+    case 'yaml':
+      return textResource('/virtual/pipeline/output.yaml', 'yaml', 'application/yaml');
+    case 'html':
+      return textResource('/virtual/pipeline/output.html', undefined, 'text/html');
+    case 'diagnostics':
+      return textResource('/virtual/pipeline/diagnostics.txt', 'plaintext', 'text/plain');
+    case 'png':
+      return {
+        resourceId,
+        kind: 'virtual',
+        representation: 'bytes',
+        path: overrides.path ?? '/virtual/pipeline/output.png',
+        mimeType: 'image/png',
+      };
+    case 'workspace-resource':
+      return {
+        resourceId,
+        kind: 'virtual',
+        representation: 'text',
+        path: overrides.path ?? '/virtual/pipeline/resource.txt',
+        mimeType: 'text/plain',
+      };
+    case 'text':
+    default:
+      return textResource('/virtual/pipeline/output.txt', 'plaintext', 'text/plain');
+  }
+}
+
+export function createPipelineValueResource(
+  value: PipelineValue,
+  overrides: {
+    readonly resourceId?: string;
+    readonly path?: string;
+  } = {},
+): ResourceRef {
+  return inferPipelineValueResourceFacts(value, overrides);
+}
+
+export function createPipelineValueOpenWithSelection(
+  registry: SurfaceRegistry,
+  request: PipelineValueSurfaceSelectionRequest,
+): OpenWithSelection {
+  return createOpenWithSelection(registry, {
+    resource: createPipelineValueResource(request.value, {
+      resourceId: request.resourceId,
+      path: request.path,
+    }),
+    placement: request.placement,
+    allowPopup: request.allowPopup,
+    activeCapabilityIds: request.activeCapabilityIds,
+    activeContributionIds: request.activeContributionIds,
+    preferredSurfaceIds: request.preferredSurfaceIds,
+  });
 }
 
 export declare function createSourceEditorFallback(

@@ -1,4 +1,10 @@
-import type { ContributionManifest, Diagnostic } from '@textforge/core';
+import type {
+  ContributionManifest,
+  Diagnostic,
+  DocumentContributionContext,
+  PipelineContribution,
+  PipelineValue,
+} from '@textforge/core';
 
 export type PipelineValueKind =
   | 'text'
@@ -67,12 +73,19 @@ export interface PipelineTraceStep {
   readonly generatedResourceCount: number;
 }
 
+export interface PipelineIntermediateValue<TValue = unknown> {
+  readonly stepId: string;
+  readonly contributionId: string;
+  readonly value: TValue;
+}
+
 export interface PipelineRunResult<TValue = unknown> {
   readonly ok: boolean;
   readonly value: TValue;
   readonly diagnostics: ReadonlyArray<Diagnostic>;
   readonly generatedResources: ReadonlyArray<GeneratedResourceDescriptor>;
   readonly trace: ReadonlyArray<PipelineTraceStep>;
+  readonly intermediateValues: ReadonlyArray<PipelineIntermediateValue>;
 }
 
 export interface PipelineRegistry {
@@ -93,6 +106,11 @@ export interface PipelineRunner {
   ): Promise<PipelineRunResult<TValue>>;
 }
 
+export interface DocumentPipelineRunnerOptions {
+  readonly contributionContext?: DocumentContributionContext;
+  readonly now?: () => string;
+}
+
 export declare const pipelineValueKinds: ReadonlyArray<PipelineValueKind>;
 export declare const generatedResourceFormats: ReadonlyArray<GeneratedResourceFormat>;
 export declare function createGeneratedResourceDescriptor(input: Partial<GeneratedResourceDescriptor> & { readonly path: string }): GeneratedResourceDescriptor;
@@ -101,9 +119,18 @@ export declare function createPipelineStep<TInput = unknown, TOutput = unknown>(
   overrides?: Partial<PipelineStep<TInput, TOutput>>,
 ): PipelineStep<TInput, TOutput>;
 export declare function createPipelineRegistry(initialSteps?: ReadonlyArray<PipelineStep>): PipelineRegistry;
+export declare function createPipelineRegistryFromContributions(
+  contributions?: ReadonlyArray<PipelineContribution>,
+): PipelineRegistry;
 export declare function createPipelineRunner(options?: {
   readonly registry?: PipelineRegistry;
   readonly now?: () => string;
 }): PipelineRunner;
+export declare function createDocumentPipelineRunner(options?: DocumentPipelineRunnerOptions): PipelineRunner;
+export declare function createPipelineOutputValue<TValue = unknown>(
+  kind: PipelineValueKind | string,
+  value: TValue,
+  overrides?: Partial<PipelineValue<TValue>>,
+): PipelineValue<TValue>;
 export declare function createPipelineContributionManifest(pipelines?: ReadonlyArray<PipelineStep>): ContributionManifest;
 export declare const contributions: ContributionManifest;

@@ -10,6 +10,7 @@ import {
   createMarkdownFenceHandlerContribution,
   createResourcePredicate,
 } from '@textforge/core';
+import { createDocumentPipelineRunner } from '@textforge/pipeline';
 
 export const tfmdFenceAliases = ['tf-md', 'tfmd', 'textforge-md', 'textforge-markdown'];
 export const markdownDocumentPredicate = createResourcePredicate({
@@ -90,6 +91,70 @@ export const markdownPreviewSurfaceContribution = {
   mimeTypes: ['text/markdown', 'text/x-markdown'],
   fileExtensions: ['md', 'markdown', 'tfmd'],
   openWithPriority: 85,
+  open(execution = {}) {
+    const resource = execution.resource;
+    const resourceTitle = execution.resourceTitle ?? resource?.path ?? 'Markdown preview';
+    const previewState = execution.requestPreview?.();
+    if (previewState?.status === 'ready' && previewState.result) {
+      const surface = createMarkdownPreviewSurface(execution.sourceText ?? '', previewState.result, {
+        resource,
+      });
+      return {
+        mountId: `${execution.session?.id ?? 'surface'}:${this.id}:${execution.updatedAt ?? 'current'}`,
+        summary: surface.model.summary,
+        detail: `${surface.model.diagnostics.length} diagnostics / ${surface.model.referencedAssets.length} asset references`,
+        readOnly: true,
+        inspectorSections: [
+          {
+            eyebrow: 'Preview',
+            icon: 'fileText',
+            title: 'TF-MD summary',
+            rows: [
+              { label: 'Metadata title', value: String(surface.model.metadata.title ?? resourceTitle) },
+              { label: 'Diagnostics', value: String(surface.model.diagnostics.length) },
+              { label: 'Assets', value: String(surface.model.referencedAssets.length) },
+              { label: 'Generated diagrams', value: String(surface.model.generatedResources.length) },
+            ],
+          },
+        ],
+        surface,
+      };
+    }
+
+    const placeholderHtml = previewState?.status === 'error'
+      ? `<section class="tfmd-preview tfmd-preview--error"><p>Markdown preview failed: ${escapeHtml(previewState.error?.message ?? 'Unknown error')}</p></section>`
+      : '<section class="tfmd-preview tfmd-preview--loading"><p>Rendering Markdown preview...</p></section>';
+    return {
+      mountId: `${execution.session?.id ?? 'surface'}:${this.id}:${previewState?.status ?? 'rendering'}:${execution.updatedAt ?? 'current'}`,
+      summary: previewState?.status === 'error'
+        ? 'Markdown preview failed to render.'
+        : 'Rendering the package-owned Markdown preview surface.',
+      detail: previewState?.status === 'error' ? 'Render error' : 'Preview loading',
+      readOnly: true,
+      inspectorSections: [
+        {
+          eyebrow: 'Preview',
+          icon: previewState?.status === 'error' ? 'warning' : 'status',
+          title: 'TF-MD summary',
+          rows: [
+            { label: 'State', value: previewState?.status ?? 'rendering' },
+            { label: 'Source', value: resource?.path ?? resourceTitle },
+          ],
+        },
+      ],
+      surface: {
+        model: {
+          html: placeholderHtml,
+        },
+        mount(container) {
+          container.innerHTML = placeholderHtml;
+          return () => {
+            container.innerHTML = '';
+          };
+        },
+      },
+    };
+  },
 };
 
 export const markdownCommandContributions = [
@@ -682,11 +747,13 @@ async function resolveKnownFencedBlocks(source, options, environment) {
         content: blockContent,
         blockId,
         blockKind: kind,
+        contributionContext: options.contributionContext,
         sourceResource: options.resource,
         sourceUpdatedAt: options.sourceUpdatedAt,
         generatedAssetBasePath: options.fenceExecutionOptions?.generatedAssetBasePath,
         includePng: options.fenceExecutionOptions?.includePng,
         document: options.fenceExecutionOptions?.document,
+        pipelineRunner: options.pipelineRunner,
       });
       if (result.diagnostics?.length) {
         environment.diagnostics.push(...result.diagnostics);
@@ -716,6 +783,23 @@ async function resolveKnownFencedBlocks(source, options, environment) {
 }
 
 function resolveMarkdownFenceHandlerRegistry(options = {}) {
+  if (options.contributionContext?.activeMarkdownFenceHandlers?.length) {
+    const handlers = {};
+    const knownFenceNames = new Set();
+    for (const contribution of options.contributionContext.activeMarkdownFenceHandlers) {
+      for (const fenceName of contribution.fenceNames ?? []) {
+        const normalizedFenceName = String(fenceName).trim().toLowerCase();
+        knownFenceNames.add(normalizedFenceName);
+        handlers[normalizedFenceName] = contribution;
+      }
+    }
+    return {
+      diagnostics: options.contributionContext.diagnostics ?? [],
+      knownFenceNames,
+      handlers,
+    };
+  }
+
   if (options.contributionRegistry?.createMarkdownFenceHandlerMap) {
     return options.contributionRegistry.createMarkdownFenceHandlerMap(options.contributionContext);
   }
@@ -807,6 +891,13 @@ export async function renderMarkdownDocument(source, options = {}) {
         explicitRequirements: scanned.requirements,
       })
       : undefined);
+  const pipelineRunner = options.pipelineRunner
+    ?? (contributionContext
+      ? createDocumentPipelineRunner({
+        contributionContext,
+        now: options.now,
+      })
+      : undefined);
   const environment = createMarkdownItEnvironment({
     diagnostics: [
       ...scanned.diagnostics,
@@ -819,6 +910,7 @@ export async function renderMarkdownDocument(source, options = {}) {
   const resolvedSource = await resolveKnownFencedBlocks(preprocessedSource, {
     ...options,
     contributionContext,
+    pipelineRunner,
   }, environment);
   const markdown = createMarkdownProcessor(environment);
   const bodyHtml = markdown.render(resolvedSource, environment);

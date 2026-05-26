@@ -57,6 +57,63 @@ export function createAssetViewerSurfaceContribution(overrides) {
     ...overrides,
     kind: 'asset-viewer',
     readOnly: true,
+    open(execution = {}) {
+      const resource = execution.resource;
+      const workspaceResource = execution.workspaceResource;
+      const lease = execution.getAssetLease?.();
+      const generatedResource = execution.describeGeneratedResource?.() ?? { stale: false, rows: [] };
+      const binding = createWorkspaceAssetBinding({
+        resource,
+        workspaceResource,
+        title: execution.resourceTitle ?? workspaceResource?.metadata?.title ?? resource?.path,
+        provenance: workspaceResource?.metadata?.provenance ?? 'workspace-bound',
+      });
+      const readyBindingBase = lease ? markAssetBindingReady(binding, lease.url) : binding;
+      const readyBinding = generatedResource.stale ? markAssetBindingStale(readyBindingBase) : readyBindingBase;
+      const surface = createAssetViewerSurface(
+        {
+          resource,
+          workspaceResource,
+          title: execution.resourceTitle ?? workspaceResource?.metadata?.title ?? resource?.path,
+          provenance: workspaceResource?.metadata?.provenance ?? 'workspace-bound',
+        },
+        {
+          binding: {
+            ...readyBinding,
+            viewerKind: this.viewerKind ?? readyBinding.viewerKind,
+          },
+          lease,
+        },
+      );
+      return {
+        mountId: `${execution.session?.id ?? 'surface'}:${this.id}`,
+        summary: surface.model.summary,
+        detail: surface.model.mimeType,
+        readOnly: true,
+        inspectorSections: [
+          {
+            eyebrow: 'Resource binding',
+            icon: 'fileImage',
+            title: 'Asset state',
+            rows: [
+              { label: 'State', value: surface.model.state },
+              { label: 'Source', value: surface.model.provenanceLabel },
+              { label: 'Blob URL', value: surface.model.blobUrl ? 'bound' : 'unbound' },
+              { label: 'Action', value: surface.model.blobUrl ? 'Download asset' : 'No download link' },
+            ],
+          },
+          ...(generatedResource.rows?.length > 0
+            ? [{
+              eyebrow: 'Generated',
+              icon: generatedResource.stale ? 'warning' : 'status',
+              title: 'Derived asset provenance',
+              rows: generatedResource.rows,
+            }]
+            : []),
+        ],
+        surface,
+      };
+    },
   };
 }
 

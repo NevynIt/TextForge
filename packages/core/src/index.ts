@@ -260,6 +260,7 @@ export interface SurfaceContribution {
   readonly localName?: string;
   readonly defaultActive?: boolean;
   readonly resourcePredicate?: ResourcePredicate;
+  readonly open?: (execution: unknown) => unknown | Promise<unknown>;
 }
 
 export interface PipelineContribution {
@@ -271,6 +272,7 @@ export interface PipelineContribution {
   readonly capabilities?: ReadonlyArray<Capability['id']>;
   readonly localName?: string;
   readonly defaultActive?: boolean;
+  readonly run?: (execution: unknown) => unknown | Promise<unknown>;
 }
 
 export interface MarkdownFenceHandlerContribution {

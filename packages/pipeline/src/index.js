@@ -2,6 +2,7 @@ import {
   createCapability,
   createContributionManifest,
   createDiagnostic,
+  createPipelineValue,
   createResourcePredicate,
 } from '@textforge/core';
 
@@ -94,6 +95,10 @@ export function createPipelineStep(id, overrides = {}) {
   };
 }
 
+export function createPipelineOutputValue(kind, value, overrides = {}) {
+  return createPipelineValue(kind, value, overrides);
+}
+
 export function createPipelineRegistry(initialSteps = []) {
   const steps = new Map();
 
@@ -120,11 +125,60 @@ export function createPipelineRegistry(initialSteps = []) {
   return registry;
 }
 
+export function createPipelineRegistryFromContributions(contributions = []) {
+  return createPipelineRegistry(
+    contributions.map((contribution) => createPipelineStep(contribution.id, contribution)),
+  );
+}
+
 function inferValueKind(value, fallback) {
   if (value?.kind) {
     return value.kind;
   }
   return fallback ?? 'text';
+}
+
+function resolvePipelineReference(registry, reference) {
+  const normalizedReference = String(reference ?? '').trim();
+  if (!normalizedReference) {
+    return {
+      status: 'missing',
+      reference: normalizedReference,
+      matches: [],
+    };
+  }
+
+  const exactMatch = registry.get(normalizedReference);
+  if (exactMatch) {
+    return {
+      status: 'resolved',
+      reference: normalizedReference,
+      step: exactMatch,
+    };
+  }
+
+  const localMatches = registry.list().filter((step) => step.localName === normalizedReference);
+  if (localMatches.length === 1) {
+    return {
+      status: 'resolved',
+      reference: normalizedReference,
+      step: localMatches[0],
+    };
+  }
+
+  if (localMatches.length > 1) {
+    return {
+      status: 'ambiguous',
+      reference: normalizedReference,
+      matches: localMatches,
+    };
+  }
+
+  return {
+    status: 'missing',
+    reference: normalizedReference,
+    matches: [],
+  };
 }
 
 export function createPipelineRunner(options = {}) {
@@ -138,13 +192,47 @@ export function createPipelineRunner(options = {}) {
       const diagnostics = [];
       const generatedResources = [];
       const trace = [];
+      const intermediateValues = [];
       let current = input;
       let failed = false;
 
       const steps = (runOptions.steps ?? []).flatMap((step) => {
         if (typeof step === 'string') {
-          const resolved = registry.get(step);
-          if (!resolved) {
+          const resolved = resolvePipelineReference(registry, step);
+          if (resolved.status === 'resolved') {
+            return [resolved.step];
+          }
+
+          if (resolved.status === 'ambiguous') {
+            diagnostics.push(createPipelineDiagnostic(
+              'pipeline.step.ambiguous',
+              `Pipeline step "${step}" is ambiguous in the active contribution context.`,
+              'error',
+              {
+                origin: {
+                  pipelineStepId: step,
+                },
+                related: resolved.matches.map((match) => ({
+                  message: match.id,
+                })),
+              },
+            ));
+            failed = true;
+            trace.push({
+              stepId: step,
+              contributionId: step,
+              inputKind: inferValueKind(current, 'text'),
+              outputKind: inferValueKind(current, 'text'),
+              startedAt: now(),
+              finishedAt: now(),
+              status: 'failed',
+              diagnosticsCount: 1,
+              generatedResourceCount: 0,
+            });
+            return [];
+          }
+
+          if (resolved.status !== 'resolved') {
             diagnostics.push(createPipelineDiagnostic(
               'pipeline.step.missing',
               `Unknown pipeline step: ${step}`,
@@ -169,7 +257,6 @@ export function createPipelineRunner(options = {}) {
             });
             return [];
           }
-          return [resolved];
         }
         return [createPipelineStep(step.id, step)];
       });
@@ -181,6 +268,7 @@ export function createPipelineRunner(options = {}) {
           diagnostics,
           generatedResources,
           trace,
+          intermediateValues,
         };
       }
 
@@ -211,6 +299,11 @@ export function createPipelineRunner(options = {}) {
             status: 'done',
             diagnosticsCount: stepDiagnostics.length,
             generatedResourceCount: stepGeneratedResources.length,
+          });
+          intermediateValues.push({
+            stepId: step.id,
+            contributionId: step.contributionId ?? step.id,
+            value: nextOutput,
           });
           current = nextOutput;
         } catch (error) {
@@ -249,9 +342,17 @@ export function createPipelineRunner(options = {}) {
         diagnostics,
         generatedResources,
         trace,
+        intermediateValues,
       };
     },
   };
+}
+
+export function createDocumentPipelineRunner(options = {}) {
+  return createPipelineRunner({
+    registry: createPipelineRegistryFromContributions(options.contributionContext?.activePipelines ?? []),
+    now: options.now,
+  });
 }
 
 export function createPipelineContributionManifest(pipelines = []) {

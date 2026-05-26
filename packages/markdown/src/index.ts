@@ -8,7 +8,10 @@ import type {
   ResourcePredicate,
   ResourceRef,
 } from '@textforge/core';
-import type { GeneratedResourceDescriptor } from '@textforge/pipeline';
+import type {
+  GeneratedResourceDescriptor,
+  PipelineRunner,
+} from '@textforge/pipeline';
 import type { SurfaceContribution } from '@textforge/surfaces';
 
 export interface TfmdStyleMap {
@@ -30,11 +33,13 @@ export interface MarkdownFenceExecution {
   readonly content: string;
   readonly blockId: string;
   readonly blockKind: string;
+  readonly contributionContext?: DocumentContributionContext;
   readonly sourceResource?: ResourceRef;
   readonly sourceUpdatedAt?: string;
   readonly generatedAssetBasePath?: string;
   readonly includePng?: boolean;
   readonly document?: Document;
+  readonly pipelineRunner?: PipelineRunner;
 }
 
 export interface MarkdownFenceResult {
@@ -52,6 +57,8 @@ export interface MarkdownRenderOptions {
   readonly fenceExecutionOptions?: Pick<MarkdownFenceExecution, 'generatedAssetBasePath' | 'includePng' | 'document'>;
   readonly contributionRegistry?: ContributionRegistry;
   readonly contributionContext?: DocumentContributionContext;
+  readonly pipelineRunner?: PipelineRunner;
+  readonly now?: () => string;
   readonly resolveAssetReference?: (input: {
     readonly sourceResource?: ResourceRef;
     readonly href: string;

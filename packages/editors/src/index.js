@@ -210,6 +210,47 @@ export const codeMirrorTextEditorSurfaceContribution = {
   placements: ['main', 'popup', 'auxiliary'],
   resourceRepresentations: ['text'],
   openWithPriority: 100,
+  open(execution = {}) {
+    const resource = execution.resource;
+    const workspaceResource = execution.workspaceResource;
+    if (!workspaceResource || workspaceResource.representation !== 'text') {
+      return undefined;
+    }
+
+    const document = execution.getTextDocument?.()
+      ?? createTextEditorDocument(
+        resource,
+        workspaceResource.text,
+        {
+          languageId: workspaceResource.languageId,
+          readOnly: false,
+        },
+      );
+    execution.setTextDocument?.(document);
+    const surface = createCodeMirrorTextEditorSurface({
+      document,
+      diagnostics: execution.diagnostics ?? [],
+      onUpdate(nextDocument) {
+        execution.setTextDocument?.(nextDocument);
+      },
+      onChange(nextDocument) {
+        const persistedDocument = execution.persistTextDocument?.(nextDocument) ?? nextDocument;
+        execution.setTextDocument?.(persistedDocument);
+        execution.markSessionCurrent?.();
+      },
+    });
+    return {
+      mountId: `${execution.session?.id ?? 'surface'}:${surface.model.languageMode.languageId}:${this.id}`,
+      summary: surface.model.summary,
+      detail: surface.model.languageLabel,
+      readOnly: false,
+      inspectorSections: [],
+      controls: execution.createLanguageControl
+        ? [execution.createLanguageControl(workspaceResource, surface.model)]
+        : [],
+      surface,
+    };
+  },
 };
 
 export function createEditorCommandContributions(languageModes = listTextEditorLanguageModes()) {
