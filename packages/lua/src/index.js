@@ -14,7 +14,23 @@ import {
   joinWorkspacePath,
   normalizeWorkspacePath,
 } from '@textforge/workspace';
-import { lua, lauxlib, lualib, to_luastring } from 'fengari';
+import fengariCore from 'fengari/src/fengaricore.js';
+import fengariLua from 'fengari/src/lua.js';
+import fengariLauxlib from 'fengari/src/lauxlib.js';
+import fengariBaseLib from 'fengari/src/lbaselib.js';
+import fengariMathLib from 'fengari/src/lmathlib.js';
+import fengariStringLib from 'fengari/src/lstrlib.js';
+import fengariTableLib from 'fengari/src/ltablib.js';
+import fengariUtf8Lib from 'fengari/src/lutf8lib.js';
+
+const { to_luastring } = fengariCore;
+const lua = fengariLua;
+const lauxlib = fengariLauxlib;
+const { luaopen_base } = fengariBaseLib;
+const { luaopen_math } = fengariMathLib;
+const { luaopen_string } = fengariStringLib;
+const { luaopen_table } = fengariTableLib;
+const { luaopen_utf8 } = fengariUtf8Lib;
 
 const packageId = '@textforge/lua';
 const luaLanguageId = 'lua';
@@ -111,6 +127,9 @@ export const luaCommandContributions = [
   }),
 ];
 
+export const luaConsoleResourceMimeType = 'application/x-textforge-lua-console';
+export const luaConsoleResourcePath = '/.textforge/runtime/lua-console.session';
+
 export const luaCapabilities = [
   createCapability(luaCapabilityIds.manualRun, {
     description: 'Allows manual execution of Lua source in the local sandbox.',
@@ -135,6 +154,282 @@ export const luaCapabilities = [
     scope: 'session',
   }),
 ];
+
+function createDefaultConsoleState() {
+  return {
+    history: [],
+    historyIndex: 0,
+    transcript: [
+      'TextForge Lua Console',
+      'Fresh Lua state per command. No DOM, network, or local filesystem access.',
+    ],
+    currentInput: '',
+  };
+}
+
+function formatLuaConsolePrompt() {
+  return '\x1b[38;5;81mlua>\x1b[0m ';
+}
+
+function writeConsoleTranscript(terminal, state) {
+  for (const line of state.transcript) {
+    terminal.writeln(line);
+  }
+  terminal.write(formatLuaConsolePrompt());
+  if (state.currentInput) {
+    terminal.write(state.currentInput);
+  }
+}
+
+function formatLuaConsoleResult(result) {
+  const lines = [];
+  for (const line of result.consoleLines ?? []) {
+    lines.push(line.kind === 'inspect' ? `inspect: ${line.text}` : line.text);
+  }
+
+  for (const diagnostic of result.diagnostics ?? []) {
+    lines.push(`${diagnostic.severity}: ${diagnostic.message}`);
+  }
+
+  if (result.ok && result.value?.value !== undefined) {
+    lines.push(normalizeConsoleText(result.value.value));
+  }
+
+  return lines;
+}
+
+export function createLuaConsoleSurface(options = {}) {
+  return {
+    id: 'lua-console-surface',
+    mount(container) {
+      const disposeCallbacks = [];
+      container.innerHTML = '<section class="tf-lua-console"><div class="tf-lua-console__terminal" data-lua-terminal></div></section>';
+      const host = container.querySelector('[data-lua-terminal]');
+      if (!host) {
+        return () => {
+          container.replaceChildren();
+        };
+      }
+
+      let disposed = false;
+      let terminal;
+      let fitAddon;
+      let busy = false;
+      let state = {
+        ...createDefaultConsoleState(),
+        ...(typeof options.getState === 'function' ? options.getState() : {}),
+      };
+
+      const syncState = (nextState) => {
+        state = nextState;
+        options.setState?.(state);
+      };
+
+      const rerender = () => {
+        if (!terminal || disposed) {
+          return;
+        }
+
+        terminal.reset();
+        writeConsoleTranscript(terminal, state);
+      };
+
+      const handleSubmit = async (command) => {
+        const trimmed = command.trim();
+        const nextTranscript = [...state.transcript, `${formatLuaConsolePrompt().replace(/\x1b\[[0-9;]*m/g, '')}${command}`];
+        const nextHistory = trimmed ? [...state.history, command] : [...state.history];
+        syncState({
+          ...state,
+          transcript: nextTranscript,
+          history: nextHistory,
+          historyIndex: nextHistory.length,
+          currentInput: '',
+        });
+        rerender();
+        if (!trimmed) {
+          return;
+        }
+
+        busy = true;
+        try {
+          const result = await options.runCommand?.(command);
+          const nextLines = formatLuaConsoleResult(result ?? { ok: true, consoleLines: [], diagnostics: [] });
+          syncState({
+            ...state,
+            transcript: [...nextTranscript, ...nextLines],
+            history: nextHistory,
+            historyIndex: nextHistory.length,
+            currentInput: '',
+          });
+        } catch (error) {
+          syncState({
+            ...state,
+            transcript: [...nextTranscript, `error: ${error?.message ?? 'Lua console command failed.'}`],
+            history: nextHistory,
+            historyIndex: nextHistory.length,
+            currentInput: '',
+          });
+        } finally {
+          busy = false;
+          rerender();
+        }
+      };
+
+      const boot = async () => {
+        const [{ Terminal }, { FitAddon }] = await Promise.all([
+          import('@xterm/xterm'),
+          import('@xterm/addon-fit'),
+        ]);
+        if (disposed) {
+          return;
+        }
+
+        terminal = new Terminal({
+          convertEol: true,
+          cursorBlink: true,
+          fontFamily: '"Iosevka Term", Consolas, "SFMono-Regular", monospace',
+          fontSize: 13,
+          theme: {
+            background: '#09111f',
+            foreground: '#d9e6ff',
+            cursor: '#7dd3fc',
+            black: '#0b1220',
+            brightBlack: '#344055',
+            red: '#f97373',
+            brightRed: '#fb7185',
+            green: '#86efac',
+            brightGreen: '#4ade80',
+            yellow: '#fcd34d',
+            brightYellow: '#f59e0b',
+            blue: '#60a5fa',
+            brightBlue: '#38bdf8',
+            magenta: '#f9a8d4',
+            brightMagenta: '#f472b6',
+            cyan: '#67e8f9',
+            brightCyan: '#22d3ee',
+            white: '#d9e6ff',
+            brightWhite: '#ffffff',
+          },
+        });
+        fitAddon = new FitAddon();
+        terminal.loadAddon(fitAddon);
+        terminal.open(host);
+        fitAddon.fit();
+        rerender();
+        terminal.focus();
+        disposeCallbacks.push(terminal.onData((data) => {
+          if (busy) {
+            return;
+          }
+
+          if (data === '\r') {
+            void handleSubmit(state.currentInput);
+            return;
+          }
+
+          if (data === '\u0003') {
+            syncState({
+              ...state,
+              transcript: [...state.transcript, `${formatLuaConsolePrompt().replace(/\x1b\[[0-9;]*m/g, '')}${state.currentInput}`, '^C'],
+              currentInput: '',
+            });
+            rerender();
+            return;
+          }
+
+          if (data === '\u007f') {
+            if (!state.currentInput) {
+              return;
+            }
+            syncState({
+              ...state,
+              currentInput: state.currentInput.slice(0, -1),
+            });
+            rerender();
+            return;
+          }
+
+          if (data === '\u001b[A') {
+            if (state.history.length === 0) {
+              return;
+            }
+            const nextIndex = Math.max(0, state.historyIndex - 1);
+            syncState({
+              ...state,
+              historyIndex: nextIndex,
+              currentInput: state.history[nextIndex] ?? '',
+            });
+            rerender();
+            return;
+          }
+
+          if (data === '\u001b[B') {
+            if (state.history.length === 0) {
+              return;
+            }
+            const nextIndex = Math.min(state.history.length, state.historyIndex + 1);
+            syncState({
+              ...state,
+              historyIndex: nextIndex,
+              currentInput: state.history[nextIndex] ?? '',
+            });
+            rerender();
+            return;
+          }
+
+          if (data >= ' ') {
+            syncState({
+              ...state,
+              currentInput: `${state.currentInput}${data}`,
+            });
+            terminal.write(data);
+          }
+        }));
+        const resizeObserver = new ResizeObserver(() => fitAddon?.fit());
+        resizeObserver.observe(host);
+        disposeCallbacks.push(() => resizeObserver.disconnect());
+      };
+
+      void boot();
+      return () => {
+        disposed = true;
+        for (const dispose of disposeCallbacks) {
+          if (typeof dispose === 'function') {
+            dispose();
+          } else {
+            dispose?.dispose?.();
+          }
+        }
+        terminal?.dispose?.();
+        container.replaceChildren();
+      };
+    },
+  };
+}
+
+export const luaConsoleSurfaceContribution = {
+  id: `${packageId}/console`,
+  label: 'Lua Console',
+  description: 'xterm.js-backed local Lua console with fresh-state command execution.',
+  localName: 'console',
+  capabilities: [luaCapabilityIds.console],
+  defaultActive: true,
+  allowPopup: true,
+  mimeTypes: [luaConsoleResourceMimeType],
+  open(execution = {}) {
+    return {
+      mountId: `lua-console:${execution.resource?.resourceId ?? 'session'}`,
+      summary: 'Local Lua console with fresh sandboxed state per command.',
+      detail: 'Interactive xterm.js surface; no DOM, network, or local filesystem access.',
+      readOnly: false,
+      surface: createLuaConsoleSurface({
+        getState: execution.getConsoleState,
+        setState: execution.setConsoleState,
+        runCommand: execution.runConsoleCommand,
+      }),
+    };
+  },
+};
 
 export function createLuaDiagnostic(code, message, severity = 'error', overrides = {}) {
   return createDiagnostic(message, severity, {
@@ -191,6 +486,7 @@ export function createLuaContributionManifest(options = {}) {
   return createContributionManifest(packageId, {
     capabilities: luaCapabilities,
     commands: luaCommandContributions,
+    surfaces: [luaConsoleSurfaceContribution],
     pipelines: createManifestPipelines(options.definitions ?? [], options.executionService ?? createLuaExecutionService()),
   });
 }
@@ -852,11 +1148,11 @@ function installBlockedGlobals(L) {
 
 function createLuaState(runtime) {
   const L = lauxlib.luaL_newstate();
-  openLuaLibrary(L, '_G', lualib.luaopen_base);
-  openLuaLibrary(L, 'table', lualib.luaopen_table);
-  openLuaLibrary(L, 'string', lualib.luaopen_string);
-  openLuaLibrary(L, 'math', lualib.luaopen_math);
-  openLuaLibrary(L, 'utf8', lualib.luaopen_utf8);
+  openLuaLibrary(L, '_G', luaopen_base);
+  openLuaLibrary(L, 'table', luaopen_table);
+  openLuaLibrary(L, 'string', luaopen_string);
+  openLuaLibrary(L, 'math', luaopen_math);
+  openLuaLibrary(L, 'utf8', luaopen_utf8);
   setGlobalNil(L, 'dofile');
   setGlobalNil(L, 'loadfile');
   setGlobalNil(L, 'load');
@@ -871,6 +1167,8 @@ function createLuaState(runtime) {
 function loadAndExecuteChunk(L, source, scriptPath, inputValue) {
   const chunkName = `@${normalizeWorkspacePath(scriptPath ?? '/lua/script.lua')}`;
   const sourceBytes = to_luastring(source ?? '');
+  pushPipelineValueTable(L, inputValue);
+  lua.lua_setglobal(L, to_luastring('input'));
   const loadStatus = lauxlib.luaL_loadbuffer(L, sourceBytes, sourceBytes.length, to_luastring(chunkName));
   if (loadStatus !== lua.LUA_OK) {
     throw new Error(getLuaErrorMessage(L));

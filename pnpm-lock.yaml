@@ -22,6 +22,9 @@ importers:
       '@textforge/editors':
         specifier: workspace:*
         version: link:../../packages/editors
+      '@textforge/lua':
+        specifier: workspace:^
+        version: link:../../packages/lua
       '@textforge/markdown':
         specifier: workspace:^
         version: link:../../packages/markdown
@@ -160,6 +163,12 @@ importers:
       '@textforge/workspace':
         specifier: workspace:^
         version: link:../workspace
+      '@xterm/addon-fit':
+        specifier: ^0.11.0
+        version: 0.11.0
+      '@xterm/xterm':
+        specifier: ^6.0.0
+        version: 6.0.0
       fengari:
         specifier: ^0.1.5
         version: 0.1.5
@@ -572,6 +581,12 @@ packages:
 
   '@viz-js/viz@3.27.0':
     resolution: {integrity: sha512-XjU8elLpbRieto/kHYWqT01yXDDYBTZB/Ny8ZUuheQw3Kc61I5Eto5+3Lb1PMdjEkh+DKA4Or5b2kxUY3cEfnA==}
+
+  '@xterm/addon-fit@0.11.0':
+    resolution: {integrity: sha512-jYcgT6xtVYhnhgxh3QgYDnnNMYTcf8ElbxxFzX0IZo+vabQqSPAjC3c1wJrKB5E19VwQei89QCiZZP86DCPF7g==}
+
+  '@xterm/xterm@6.0.0':
+    resolution: {integrity: sha512-TQwDdQGtwwDt+2cgKDLn0IRaSxYu1tSUjgKarSDkUM0ZNiSRXFpjxEsvc/Zgc5kq5omJ+V0a8/kIM2WD3sMOYg==}
 
   argparse@2.0.1:
     resolution: {integrity: sha512-8+9WqebbFzpX9OR+Wa6O29asIogeRMzcGtAINdpMHHyAg10f05aSFVBbcEqGf/PXw1EjAZ+q2/bEBg3DvurK3Q==}
@@ -1503,6 +1518,10 @@ snapshots:
       d3-transition: 3.0.1(d3-selection@3.0.0)
 
   '@viz-js/viz@3.27.0': {}
+
+  '@xterm/addon-fit@0.11.0': {}
+
+  '@xterm/xterm@6.0.0': {}
 
   argparse@2.0.1: {}
 

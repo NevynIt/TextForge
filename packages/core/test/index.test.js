@@ -54,6 +54,15 @@ test('command registry filters context-sensitive commands and dispatches local h
           menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 20 },
           when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder'] },
         }),
+        createCommand('lua.run-selected-resource', 'Run selected Lua file', {
+          menu: { id: 'lua', label: 'Lua', groupOrder: 30, order: 10 },
+          when: {
+            workspaceReady: true,
+            selectionRequired: true,
+            selectionKinds: ['resource'],
+            selectionLanguageIds: ['lua'],
+          },
+        }),
       ],
     }),
     createContributionManifest('@textforge/surfaces', {
@@ -102,6 +111,13 @@ test('command registry filters context-sensitive commands and dispatches local h
   assert.deepEqual(
     registry.resolve(textContext).filter((command) => command.visible).map((command) => command.id),
     ['workspace.export', 'surface.close'],
+  );
+  assert.equal(
+    registry.resolve({
+      ...textContext,
+      selection: { ...textContext.selection, languageId: 'lua' },
+    }).some((command) => command.id === 'lua.run-selected-resource' && command.visible),
+    true,
   );
 
   const calls = [];

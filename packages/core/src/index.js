@@ -482,6 +482,13 @@ export function matchesCommandContext(command, context = {}) {
     }
   }
 
+  if (when.selectionLanguageIds?.length > 0) {
+    const selectedLanguageId = effectiveSelection?.languageId;
+    if (!selectedLanguageId || !when.selectionLanguageIds.includes(selectedLanguageId)) {
+      return false;
+    }
+  }
+
   if (when.activeSurfaceRequired && !effectiveActiveSurface) {
     return false;
   }

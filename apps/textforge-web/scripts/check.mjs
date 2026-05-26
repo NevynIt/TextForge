@@ -70,6 +70,7 @@ for (const requiredImport of [
   '@textforge/pipeline',
   '@textforge/diagrams',
   '@textforge/markdown',
+  '@textforge/lua',
   '@textforge/ui',
   '@textforge/security-profile',
 ]) {
@@ -147,7 +148,13 @@ for (const requiredPhase4Signal of ['Markdown preview', 'generated diagram', 'TF
   }
 }
 
-for (const requiredDependency of ['"react"', '"react-dom"', '"@textforge/security-profile"', '"@textforge/workspace"']) {
+for (const requiredLuaSignal of ['Lua Console', 'Reload Lua automation pipelines', 'xterm', 'lua.open-console']) {
+  if (!workbenchJs.includes(requiredLuaSignal)) {
+    throw new Error(`workbench.js must surface ${requiredLuaSignal} for WP-LUA`);
+  }
+}
+
+for (const requiredDependency of ['"react"', '"react-dom"', '"@textforge/security-profile"', '"@textforge/workspace"', '"@textforge/lua"']) {
   if (!packageJson.includes(requiredDependency)) {
     throw new Error(`package.json must declare ${requiredDependency} for the Phase 3.1 shell`);
   }

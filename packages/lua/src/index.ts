@@ -49,6 +49,8 @@ export interface LuaAutomationFileRecord {
 }
 
 export declare const luaAutomationRoot: '/.textforge/automation/lua';
+export declare const luaConsoleResourceMimeType: 'application/x-textforge-lua-console';
+export declare const luaConsoleResourcePath: '/.textforge/runtime/lua-console.session';
 export declare const luaCapabilityIds: {
   readonly manualRun: '@textforge/lua/capability/manual-run';
   readonly automation: '@textforge/lua/capability/automation';
@@ -59,6 +61,15 @@ export declare const luaBlockedGlobals: ReadonlyArray<string>;
 export declare const luaBlockedModules: ReadonlyArray<string>;
 export declare const luaCommandContributions: ReadonlyArray<import('@textforge/core').CommandContribution>;
 export declare const luaCapabilities: ReadonlyArray<import('@textforge/core').Capability>;
+export declare function createLuaConsoleSurface(options?: {
+  readonly getState?: () => unknown;
+  readonly setState?: (nextState: unknown) => void;
+  readonly runCommand?: (command: string) => unknown | Promise<unknown>;
+}): {
+  readonly id: string;
+  mount(container: HTMLElement): () => void;
+};
+export declare const luaConsoleSurfaceContribution: import('@textforge/surfaces').SurfaceContribution;
 
 export declare function createLuaDiagnostic(
   code: string,

@@ -24,6 +24,8 @@ Internal dependencies:
 
 Third-party candidates: Fengari, optional xterm.js. All third-party dependencies must pass the open-source license gate.
 
+Historical note: the legacy pre-rebuild implementation used an xterm.js-backed Lua console. In the current V18 rebuild plan, xterm.js remains optional and is deferred to Phase 8 (`WP-LUA`) rather than being installed during the earlier recovery phases.
+
 ## Public surface
 
 Lua worker service, sandbox configuration, tf.* bridge, Lua console/editor surfaces, Lua action contribution API.
@@ -56,7 +58,7 @@ Security-profile integration for this phase is package-owned: keep Lua sandbox/s
 
 Sandbox tests, tf.* capability tests, no DOM/network/filesystem tests, action discovery tests.
 
-Validation evidence must include security-profile-compatible checks for worker isolation, module/bridge restrictions, and diagnostics when blocked APIs or capabilities are requested.
+Validation evidence must include security-profile-compatible checks for fresh-state execution isolation, module/bridge restrictions, xterm console behavior, and diagnostics when blocked APIs or capabilities are requested. For the current `file://` static build profile, the execution boundary may stay in-process as long as the runtime remains local-only, capability-gated, bounded by instruction/wall-time limits, and free of DOM/network/filesystem access.
 
 ## Non-goals
 

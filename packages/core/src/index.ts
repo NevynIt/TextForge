@@ -180,6 +180,7 @@ export interface CommandWhen {
   readonly selectionRequired?: boolean;
   readonly selectionKinds?: ReadonlyArray<string>;
   readonly selectionRepresentations?: ReadonlyArray<string>;
+  readonly selectionLanguageIds?: ReadonlyArray<string>;
   readonly activeSurfaceRequired?: boolean;
   readonly activeSurfacePlacements?: ReadonlyArray<string>;
   readonly activeSurfaceResourceKinds?: ReadonlyArray<string>;

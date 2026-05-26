@@ -169,3 +169,61 @@ test('execution service materializes discovered automations into contribution ma
   });
   assert.equal(directManifest.commands.some((command) => command.id === 'lua.open-console'), true);
 });
+
+test('bundled tf modules run nested pipelines and actions and surface console inspection', () => {
+  const workspace = createWorkspace();
+  const result = runLuaScript({
+    workspace,
+    scriptPath: '/lua/main.lua',
+    source: [
+      'local tf = require("tf")',
+      'local pipeline = require("tf.pipeline")',
+      'local actions = require("tf.actions")',
+      'local console = require("tf.console")',
+      'return function(input)',
+      '  local doubled = pipeline.run("double-text", input)',
+      '  local final = actions.run("append-bang", doubled)',
+      '  console.inspect({ pipelines = pipeline.list(), actions = actions.list() })',
+      '  return tf.emit_json({',
+      '    value = final.value,',
+      '    pipelineKind = doubled.kind,',
+      '    actionKind = final.kind,',
+      '  })',
+      'end',
+    ].join('\n'),
+    input: createPipelineValue('text', 'go'),
+    pipelineDefinitions: [{
+      id: 'double-text',
+      contributionId: '@textforge/lua/automation-double-text',
+      localName: 'double-text',
+      name: 'Double text',
+      category: 'Lua Automation',
+      input: ['text'],
+      output: 'text',
+      description: 'Duplicate the incoming text.',
+      sourcePath: '/.textforge/automation/lua/double-text.lua',
+      source: 'return function(input) return input:emit_text("plaintext", input.text .. input.text) end',
+    }],
+    automationDefinitions: [{
+      id: 'append-bang',
+      contributionId: '@textforge/lua/automation-append-bang',
+      localName: 'append-bang',
+      name: 'Append bang',
+      category: 'Lua Automation',
+      input: ['text'],
+      output: 'text',
+      description: 'Append punctuation to the incoming text.',
+      sourcePath: '/.textforge/automation/lua/append-bang.lua',
+      source: 'return function(input) return input:emit_text("plaintext", input.text .. "!") end',
+    }],
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.value?.kind, 'json');
+  assert.equal(result.value?.value?.value, 'gogo!');
+  assert.equal(result.value?.value?.pipelineKind, 'text');
+  assert.equal(result.value?.value?.actionKind, 'text');
+  assert.equal(result.consoleLines[0]?.kind, 'inspect');
+  assert.match(result.consoleLines[0]?.text ?? '', /Double text/);
+  assert.match(result.consoleLines[0]?.text ?? '', /append-bang/);
+});

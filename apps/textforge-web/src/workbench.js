@@ -6,6 +6,7 @@ import {
   createCommandRegistry,
   createContributionRegistry,
   createContributionInspectorModel,
+  createPipelineValue,
   getLanguageDefinition,
   inferLanguageId,
   inferResourceRepresentation,
@@ -68,6 +69,15 @@ import {
 import {
   contributions as securityProfileContributionPack,
 } from '@textforge/security-profile';
+import {
+  createLuaExecutionService,
+  contributions as luaContributionPack,
+  isLuaResource as isLuaPackageResource,
+  luaConsoleResourceMimeType,
+  luaConsoleResourcePath,
+  luaConsoleSurfaceContribution,
+} from '@textforge/lua';
+// WP-LUA keeps the interactive xterm.js "Lua Console" and "Reload Lua automation pipelines" flows contribution-driven.
 import {
   TextForgeAppFrame,
   TextForgeCallout,
@@ -174,6 +184,8 @@ const workspaceFolderContextCommandIds = [
 ];
 
 const workspaceResourceContextCommandIds = [
+  'lua.run-selected-resource',
+  'lua.promote-selected-to-automation',
   'workspace.download-selected-file',
   'workspace.rename-selected',
   'workspace.delete-selected',
@@ -202,6 +214,31 @@ function readPhase35ScreenshotPreset() {
 
   const presetId = new URL(window.location.href).searchParams.get('phase35');
   return phase35ScreenshotPresets[presetId] ?? phase35ScreenshotPresets.main;
+}
+
+function readWorkbenchBootstrapOptions() {
+  if (typeof window === 'undefined') {
+    return {
+      commandIds: [],
+      luaConsoleCommand: undefined,
+    };
+  }
+
+  const searchParams = new URL(window.location.href).searchParams;
+  const commandIds = searchParams
+    .getAll('command')
+    .map((value) => String(value ?? '').trim())
+    .filter(Boolean);
+
+  if (searchParams.get('luaConsole') === '1') {
+    commandIds.unshift('lua.open-console');
+  }
+
+  const luaConsoleCommand = String(searchParams.get('luaConsoleCommand') ?? '').trim() || undefined;
+  return {
+    commandIds: [...new Set(commandIds)],
+    luaConsoleCommand,
+  };
 }
 
 function createTimestampFactory() {
@@ -449,6 +486,7 @@ function createStorageFailure(error) {
 
 function createTextForgeWorkbenchController() {
   const screenshotPreset = readPhase35ScreenshotPreset();
+  const bootstrapOptions = readWorkbenchBootstrapOptions();
   let workspace = createWorkspaceService({
     workspaceId: 'textforge-shell',
     name: 'TextForge Workspace',
@@ -461,6 +499,7 @@ function createTextForgeWorkbenchController() {
   let storageFailure;
   const blobLedger = createBlobUrlLedger(createBlobUrlDriver());
   const languageModes = listTextEditorLanguageModes();
+  const luaExecutionService = createLuaExecutionService();
   const contributionRegistry = createContributionRegistry([
     coreContributions,
     workspaceContributionPack,
@@ -469,6 +508,7 @@ function createTextForgeWorkbenchController() {
     pipelineContributionPack,
     diagramContributionPack,
     markdownContributionPack,
+    luaContributionPack,
     uiContributionPack,
     securityProfileContributionPack,
   ]);
@@ -494,8 +534,10 @@ function createTextForgeWorkbenchController() {
   const assetLeaseByResourceId = new Map();
   const documentContributionContextByResourceId = new Map();
   const markdownPreviewStateByResourceId = new Map();
+  const luaConsoleStateByResourceId = new Map();
   const listeners = new Set();
   let cachedSnapshot;
+  let bootstrapApplied = false;
   const state = {
     activeMainSessionId: undefined,
     activePopupSessionId: undefined,
@@ -583,10 +625,13 @@ function createTextForgeWorkbenchController() {
   function createSurfaceOpenRequest(entry, options = {}) {
     const resource = workspaceEntryToResourceRef(entry);
     const documentContext = resolveDocumentContributionContextForEntry(entry);
+    const activeCapabilityIds = isLuaConsoleResource(entry)
+      ? [...new Set([...(documentContext?.activeCapabilityIds ?? []), '@textforge/lua/capability/console'])]
+      : documentContext?.activeCapabilityIds;
     const placement = options.placement ?? getDefaultSurfacePlacement(surfaceRegistry, {
       resource,
       allowPopup: true,
-      activeCapabilityIds: documentContext?.activeCapabilityIds,
+      activeCapabilityIds,
       preferredSurfaceIds: options.preferredSurfaceId ? [options.preferredSurfaceId] : undefined,
     });
     return {
@@ -595,7 +640,7 @@ function createTextForgeWorkbenchController() {
       title: entry.metadata.title ?? entry.path,
       placement,
       allowPopup: true,
-      activeCapabilityIds: documentContext?.activeCapabilityIds,
+      activeCapabilityIds,
       preferredSurfaceIds: options.preferredSurfaceId ? [options.preferredSurfaceId] : undefined,
     };
   }
@@ -662,6 +707,7 @@ function createTextForgeWorkbenchController() {
     assetLeaseByResourceId.clear();
     activeTextDocuments.clear();
     markdownPreviewStateByResourceId.clear();
+    luaConsoleStateByResourceId.clear();
     state.activeMainSessionId = undefined;
     state.activePopupSessionId = undefined;
     state.surfaceFocusPlacement = 'main';
@@ -912,6 +958,9 @@ function createTextForgeWorkbenchController() {
 
     return allTreeItems
       .filter((item) => {
+        if (item.path === luaConsoleResourcePath) {
+          return false;
+        }
         let parentPath = dirnameWorkspacePath(item.path);
         while (parentPath && parentPath !== '/') {
           const parentId = folderIdByPath.get(parentPath);
@@ -1291,12 +1340,186 @@ function createTextForgeWorkbenchController() {
     );
   }
 
+  function isLuaConsoleResource(resource) {
+    return Boolean(
+      resource
+      && resource.kind === 'resource'
+      && resource.representation === 'text'
+      && resource.mimeType === luaConsoleResourceMimeType,
+    );
+  }
+
+  function isLuaWorkspaceResource(resource) {
+    return isLuaPackageResource(resource) && !isLuaConsoleResource(resource);
+  }
+
   function getDocumentCapabilityRequirements(resource) {
     if (!isMarkdownResource(resource)) {
       return [];
     }
 
     return parseMarkdownCapabilityRequirements(resource.text);
+  }
+
+  function ensureWorkspaceFolder(path) {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (normalizedPath === '/') {
+      return workspace.getEntryByPath('/');
+    }
+
+    const existing = workspace.getEntryByPath(normalizedPath);
+    if (existing) {
+      return existing;
+    }
+
+    const parts = normalizedPath.split('/').filter(Boolean);
+    let currentPath = '';
+    let currentFolder;
+    for (const part of parts) {
+      currentPath = joinWorkspacePath(currentPath || '/', part);
+      currentFolder = workspace.getEntryByPath(currentPath);
+      if (!currentFolder) {
+        currentFolder = workspace.createFolder({
+          path: currentPath,
+          title: basenameWorkspacePath(currentPath),
+        });
+      }
+    }
+    return currentFolder;
+  }
+
+  function createLuaInputValue(excludedResourceId) {
+    const focusedSession = state.surfaceFocusPlacement === 'popup'
+      ? findSessionById(state.activePopupSessionId)
+      : findSessionById(state.activeMainSessionId);
+    const focusedEntry = focusedSession ? getEntry(focusedSession.resource.resourceId) : undefined;
+    const fallbackEntry = getEntry(state.selectedWorkspaceItemId);
+    const candidate = [focusedEntry, fallbackEntry].find((entry) =>
+      isWorkspaceResource(entry)
+      && entry.representation === 'text'
+      && entry.id !== excludedResourceId
+      && !isLuaConsoleResource(entry));
+
+    if (!candidate) {
+      return createPipelineValue('text', '', {
+        metadata: {
+          languageId: 'plaintext',
+        },
+      });
+    }
+
+    return createPipelineValue('text', candidate.text, {
+      resource: workspaceEntryToResourceRef(candidate),
+      metadata: {
+        languageId: candidate.languageId ?? 'plaintext',
+      },
+    });
+  }
+
+  function formatLuaDiagnostics(diagnostics = []) {
+    return diagnostics.map((diagnostic) => diagnostic.message).join('\n');
+  }
+
+  function createDefaultLuaConsoleState() {
+    return {
+      history: [],
+      historyIndex: 0,
+      transcript: [
+        'TextForge Lua Console',
+        'Fresh Lua state per command. No DOM, network, or local filesystem access.',
+      ],
+      currentInput: '',
+    };
+  }
+
+  function createLuaConsoleTranscriptState(resourceId, command, result) {
+    const currentState = luaConsoleStateByResourceId.get(resourceId) ?? createDefaultLuaConsoleState();
+    const transcript = [...currentState.transcript, `lua> ${command}`];
+    for (const line of result.consoleLines ?? []) {
+      transcript.push(line.kind === 'inspect' ? `inspect: ${line.text}` : line.text);
+    }
+    for (const diagnostic of result.diagnostics ?? []) {
+      transcript.push(`${diagnostic.severity}: ${diagnostic.message}`);
+    }
+    if (result.ok && result.value?.value !== undefined) {
+      transcript.push(typeof result.value.value === 'string'
+        ? result.value.value
+        : JSON.stringify(result.value.value, null, 2));
+    }
+    const history = command.trim()
+      ? [...currentState.history, command]
+      : [...currentState.history];
+    return {
+      history,
+      historyIndex: history.length,
+      transcript,
+      currentInput: '',
+    };
+  }
+
+  function reloadLuaAutomation(options = {}) {
+    const discovered = luaExecutionService.discover(workspace, {
+      limits: {
+        maxWallTimeMs: 500,
+      },
+    });
+    contributionRegistry.registerManifest(luaExecutionService.createContributionManifest());
+    documentContributionContextByResourceId.clear();
+    if (discovered.diagnostics.length > 0 && options.throwOnDiagnostics) {
+      throw new Error(formatLuaDiagnostics(discovered.diagnostics));
+    }
+    return discovered;
+  }
+
+  async function ensureLuaConsoleResource() {
+    ensureWorkspaceFolder('/.textforge');
+    ensureWorkspaceFolder('/.textforge/runtime');
+    const existing = workspace.getEntryByPath(luaConsoleResourcePath);
+    if (existing && isWorkspaceResource(existing)) {
+      return existing;
+    }
+
+    const resource = workspace.createTextResource({
+      path: luaConsoleResourcePath,
+      title: 'Lua Console',
+      text: '-- TextForge Lua Console\n',
+      languageId: 'plaintext',
+      mimeType: luaConsoleResourceMimeType,
+    });
+    await persistWorkspace('lua.open-console');
+    return resource;
+  }
+
+  async function applyWorkbenchBootstrapOptions() {
+    if (bootstrapApplied) {
+      return;
+    }
+    bootstrapApplied = true;
+
+    for (const commandId of bootstrapOptions.commandIds) {
+      await executeCommand(commandId);
+    }
+
+    if (!bootstrapOptions.luaConsoleCommand) {
+      return;
+    }
+
+    const resource = await ensureLuaConsoleResource();
+    const result = luaExecutionService.runSnippet({
+      source: bootstrapOptions.luaConsoleCommand,
+      scriptPath: resource.path,
+      workspace,
+      input: createLuaInputValue(resource.id),
+    });
+    luaConsoleStateByResourceId.set(
+      resource.id,
+      createLuaConsoleTranscriptState(resource.id, bootstrapOptions.luaConsoleCommand, result),
+    );
+    openResourceEntry(resource, {
+      placement: 'popup',
+      preferredSurfaceId: luaConsoleSurfaceContribution.id,
+      forceReopen: true,
+    });
   }
 
   function resolveDocumentContributionContextForEntry(entry) {
@@ -1649,6 +1872,20 @@ function createTextForgeWorkbenchController() {
         getHostForPlacement(session.placement).markCurrent(session.id);
       },
       createLanguageControl,
+      getConsoleState() {
+        return luaConsoleStateByResourceId.get(resource.id);
+      },
+      setConsoleState(nextState) {
+        luaConsoleStateByResourceId.set(resource.id, nextState);
+      },
+      runConsoleCommand(command) {
+        return luaExecutionService.runSnippet({
+          source: command,
+          scriptPath: resource.path,
+          workspace,
+          input: createLuaInputValue(resource.id),
+        });
+      },
     });
 
     const surface = runtimeView?.surface ?? {
@@ -1935,6 +2172,107 @@ function createTextForgeWorkbenchController() {
         disabled: !command.enabled,
       })),
     };
+  }
+
+  async function openLuaConsoleCommand() {
+    const resource = await ensureLuaConsoleResource();
+    openResourceEntry(resource, {
+      placement: 'popup',
+      preferredSurfaceId: luaConsoleSurfaceContribution.id,
+    });
+  }
+
+  async function runSelectedLuaResourceCommand(commandContext) {
+    const entry = resolveTargetEntryForCommands(commandContext) ?? getSelectedEntry();
+    if (!isLuaWorkspaceResource(entry)) {
+      throw new Error('Select a Lua resource to run it.');
+    }
+
+    const result = luaExecutionService.runSnippet({
+      source: entry.text,
+      scriptPath: entry.path,
+      workspace,
+      input: createLuaInputValue(entry.id),
+    });
+    if (!result.ok) {
+      throw new Error(formatLuaDiagnostics(result.diagnostics));
+    }
+
+    const output = result.value;
+    if (!output) {
+      return;
+    }
+
+    const fileExtension = output.kind === 'json'
+      ? 'json'
+      : output.kind === 'html'
+        ? 'html'
+        : 'txt';
+    const outputPath = createAvailableWorkspacePath(`/.textforge/generated/${sanitizeFilenameSegment(basenameWorkspacePath(entry.path).replace(/\.lua$/i, ''), 'lua-output')}.${fileExtension}`);
+    ensureWorkspaceFolder('/.textforge');
+    ensureWorkspaceFolder('/.textforge/generated');
+    const renderedText = typeof output.value === 'string'
+      ? output.value
+      : JSON.stringify(output.value, null, 2);
+    const resource = workspace.createTextResource({
+      path: outputPath,
+      title: basenameWorkspacePath(outputPath),
+      text: renderedText,
+      languageId: output.kind === 'json' ? 'json' : 'plaintext',
+      mimeType: output.kind === 'json' ? 'application/json' : 'text/plain',
+      metadata: {
+        provenance: {
+          kind: 'generated',
+          pipelineId: entry.path,
+          sourceResourceId: entry.id,
+          sourcePath: entry.path,
+          sourceUpdatedAt: entry.metadata.updatedAt,
+          generatedAt: new Date().toISOString(),
+          format: output.kind,
+        },
+      },
+    });
+    await persistWorkspace('lua.run-selected-resource');
+    openResourceEntry(resource, { placement: 'main' });
+  }
+
+  async function promoteSelectedLuaResourceCommand(commandContext) {
+    const entry = resolveTargetEntryForCommands(commandContext) ?? getSelectedEntry();
+    if (!isLuaWorkspaceResource(entry)) {
+      throw new Error('Select a Lua resource to promote it into the automation area.');
+    }
+
+    ensureWorkspaceFolder('/.textforge');
+    ensureWorkspaceFolder('/.textforge/automation');
+    ensureWorkspaceFolder('/.textforge/automation/lua');
+    const targetPath = createAvailableWorkspacePath(joinWorkspacePath('/.textforge/automation/lua', basenameWorkspacePath(entry.path)));
+    const resource = workspace.createTextResource({
+      path: targetPath,
+      title: basenameWorkspacePath(targetPath),
+      text: entry.text,
+      languageId: 'lua',
+      mimeType: entry.mimeType ?? 'text/x-lua',
+    });
+    await persistWorkspace('lua.promote-selected-to-automation');
+    reloadLuaAutomation({ throwOnDiagnostics: true });
+    openResourceEntry(resource, { placement: 'main' });
+  }
+
+  async function reloadLuaAutomationCommand() {
+    const discovered = reloadLuaAutomation({ throwOnDiagnostics: false });
+    await persistWorkspace('lua.reload-automation');
+    if (discovered.diagnostics.length > 0) {
+      throw new Error(formatLuaDiagnostics(discovered.diagnostics));
+    }
+  }
+
+  async function openLuaAutomationRootCommand() {
+    ensureWorkspaceFolder('/.textforge');
+    ensureWorkspaceFolder('/.textforge/automation');
+    const folder = ensureWorkspaceFolder('/.textforge/automation/lua');
+    await persistWorkspace('lua.open-automation-root');
+    rememberSelection(folder?.id);
+    emit();
   }
 
   async function createFolderCommand(commandContext) {
@@ -2418,6 +2756,11 @@ function createTextForgeWorkbenchController() {
       .register('workspace.delete-selected', ({ context }) => deleteSelectedEntryCommand(context))
       .register('workspace.reset-storage', requestWorkspaceResetCommand)
       .register('workspace.retry-storage', retryWorkspaceLoadCommand)
+      .register('lua.open-console', openLuaConsoleCommand)
+      .register('lua.run-selected-resource', ({ context }) => runSelectedLuaResourceCommand(context))
+      .register('lua.promote-selected-to-automation', ({ context }) => promoteSelectedLuaResourceCommand(context))
+      .register('lua.reload-automation', reloadLuaAutomationCommand)
+      .register('lua.open-automation-root', openLuaAutomationRootCommand)
       .register('surface.close-active', ({ context }) => closeActiveSurfaceCommand(context))
       .register('surface.refresh-active', ({ context }) => refreshActiveSurfaceCommand(context))
       .register('surface.move-active-to-main', ({ context }) => moveActiveSurfaceCommand('main', context))
@@ -2484,6 +2827,7 @@ function createTextForgeWorkbenchController() {
       workspace = hydrated.workspace;
       hydrationSource = hydrated.hydrationSource;
       unsubscribePersistence = hydrated.workspace.subscribePersistence(() => emit());
+      reloadLuaAutomation();
       runtime.status = 'ready';
 
       const selectedEntry = getEntry(workspace.getManifest().selectedResourceId) ?? getDefaultSelection();
@@ -2502,6 +2846,7 @@ function createTextForgeWorkbenchController() {
       } else {
         emit();
       }
+      await applyWorkbenchBootstrapOptions();
     } catch (error) {
       workspace = createWorkspaceService({
         workspaceId: 'textforge-shell',
