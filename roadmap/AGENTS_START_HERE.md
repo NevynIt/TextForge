@@ -32,7 +32,7 @@ Unless a newer RAPID entry supersedes this, the next implementation path is:
 WP-RES-01
 ```
 
-`WP-05A`, `WP-05B`, `WP-05C`, and `WP-05D` are now validated. `WP-ID-01`, `WP-SET-01`, `WP-ITM-01`, and `WP-LUA` are also startable under the current dependency posture.
+`WP-05A`, `WP-05B`, `WP-05C`, `WP-05D`, `WP-ITM-01`, and `WP-LUA` are now validated. `WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable under the current dependency posture.
 
 These workpackages preserve the accepted Phase 5 grilling decisions around contribution manifests, capability activation, resolver context, contribution execution, `%require` diagnostics, package composition, active capability context, and surface reopening for intermediate values.
 

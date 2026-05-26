@@ -172,6 +172,10 @@ The package now parses `%require` as capability activation input for the shared 
 
 The package now resolves active fence handlers directly from the current document contribution context and creates a document-scoped pipeline runner for fence execution. Mermaid and Graphviz blocks therefore run through canonical active pipeline contributions rather than ad hoc shell runtime adapters, while the preview surface itself now opens through package-owned contribution execution instead of a shell-local `contributionId` branch.
 
+## WP-ITM-01 progress note
+
+The package now passes parsed fence metadata, shared per-document fence state, and host workspace services into active fence handlers so `@textforge/itm` can publish embedded `itm` and `itm-pub` blocks through public contribution manifests. Markdown keeps the integration document-scoped and contribution-driven: the preview host resolves workspace includes through the shared workspace service, while ITM publication rendering stays inside the `@textforge/itm` package surface rather than duplicating model logic in Markdown.
+
 
 ## V16 backend-optional responsibilities
 

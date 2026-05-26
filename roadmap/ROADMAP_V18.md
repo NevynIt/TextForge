@@ -161,4 +161,4 @@ The nearest ready follow-on slice is:
 WP-RES-01
 ```
 
-`WP-ID-01`, `WP-SET-01`, `WP-ITM-01`, and `WP-LUA` are also startable. Reassess whether to proceed along the core resource/repository path, the local ITM/Markdown path, the optional automation path, or the backend-preview path.
+`WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable. Reassess whether to proceed along the core resource/repository path, the next ITM/Markdown semantics slice, or the backend-preview path.

@@ -12,15 +12,18 @@ Canonical ITM parser, serializer, resolver, selectors, styles, views, validation
 
 When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
+Current validated implementation note:
+
+- TextForge vendors the current upstream `nevynit/ITM` runtime under `packages/itm/src/upstream/` and layers TextForge-owned workspace include resolution, resolver diagnostic taxonomy helpers, Markdown `itm`/`itm-pub` contribution integration, and vendored profile fixtures on top of that runtime.
+
 ## Allowed dependencies
 
 Internal dependencies:
 
 - `@textforge/core`
 - `@textforge/workspace`
-- `@textforge/pipeline`
 
-Third-party candidates: YAML parser where needed. All third-party dependencies must pass the open-source license gate.
+Third-party candidates: YAML parser and XML support where needed. All third-party dependencies must pass the open-source license gate.
 
 ## Public surface
 
@@ -43,10 +46,10 @@ No direct ITM feature work. These phases establish React shell usability, Dexie 
 Implementation anchors:
 
 - Architecture paragraphs: `ARCH-6.6-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.9-P01..P07`, `ARCH-6.18-P01..P12`, `ARCH-11.2-P01..P02`, `ARCH-12.2-P01`.
-- pnpm packages: Phase 6: `pnpm --filter @textforge/itm add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/pipeline@workspace:* yaml`
+- pnpm packages: Phase 6: `corepack pnpm --filter @textforge/itm add @textforge/core@workspace:* @textforge/workspace@workspace:* yaml fast-xml-parser`
 
 
-Create. Parser/serializer/resolver interfaces, selectors, styles, views/viewpoints, validation diagnostics, profile package loading, workspace include resolver contract, and public APIs needed by `@textforge/markdown` to parse `itm` blocks, validate them, and render `itm-pub` publication views.
+Create. Parser/serializer/resolver interfaces, selectors, styles, views/viewpoints, validation diagnostics, profile package loading, workspace include resolver contract, stable resolver diagnostic categories, and public APIs needed by `@textforge/markdown` to parse `itm` blocks, validate them, and render `itm-pub` publication views.
 
 ### Phase 7 — ITM visual projections
 
@@ -100,7 +103,7 @@ Update. Add small-subgraph patch contracts and view-layout delta support.
 
 ## Tests and definition of done
 
-Parser/serializer round-trip tests, resolver tests, selector/style/view tests, validation diagnostics, profile fixtures.
+Parser/serializer round-trip tests, resolver taxonomy tests, selector/style/view tests, validation diagnostics, vendored profile fixtures, and Markdown publication integration checks.
 
 ## Non-goals
 

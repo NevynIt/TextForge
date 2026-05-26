@@ -52,6 +52,18 @@ export const itmCapabilities = [
   }),
 ];
 
+export const itmResolverDiagnosticCodes = Object.freeze({
+  unresolved: 'itm.resolve.unresolved',
+  unsupported: 'itm.resolve.unsupported',
+  unauthorized: 'itm.resolve.unauthorized',
+  unavailable: 'itm.resolve.unavailable',
+  conflictingAlias: 'itm.resolve.conflicting-alias',
+  versionMismatch: 'itm.resolve.version-mismatch',
+  capabilityMismatch: 'itm.resolve.capability-mismatch',
+  blocked: 'itm.resolve.blocked',
+  circular: 'itm.resolve.circular',
+});
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -82,6 +94,56 @@ function createItmCoreDiagnostic(diagnostic, sourceResource, overrides = {}) {
       ...overrides.origin,
     },
     ...overrides,
+  });
+}
+
+function normalizeResolverCategory(category) {
+  switch (category) {
+    case 'unresolved':
+    case 'unsupported':
+    case 'unauthorized':
+    case 'unavailable':
+    case 'conflictingAlias':
+    case 'versionMismatch':
+    case 'capabilityMismatch':
+    case 'blocked':
+    case 'circular':
+      return category;
+    default:
+      return 'unresolved';
+  }
+}
+
+function defaultResolverSeverity(category) {
+  switch (category) {
+    case 'unresolved':
+    case 'unsupported':
+    case 'unavailable':
+      return 'warning';
+    default:
+      return 'error';
+  }
+}
+
+export function createItmResolverDiagnostic(category, message, options = {}) {
+  const normalizedCategory = normalizeResolverCategory(category);
+  return createDiagnostic(message, options.severity ?? defaultResolverSeverity(normalizedCategory), {
+    code: options.code ?? itmResolverDiagnosticCodes[normalizedCategory],
+    file: options.file,
+    uri: options.uri,
+    range: options.range,
+    includeTarget: options.includeTarget,
+    includeStack: options.includeStack,
+    repositoryRef: options.repositoryRef,
+    requirementRef: options.requirementRef,
+    packageRef: options.packageRef,
+    usingScope: options.usingScope,
+    origin: {
+      packageId: '@textforge/itm',
+      subsystem: 'itm-resolver',
+      category: normalizedCategory,
+      ...options.origin,
+    },
   });
 }
 
@@ -251,9 +313,153 @@ export async function loadItmDocument(source, options = {}) {
   };
 }
 
+function findConflictingRepositoryAliases(document) {
+  const repositoriesByName = new Map();
+  for (const repository of document.repositories ?? []) {
+    if (!repositoriesByName.has(repository.name)) {
+      repositoriesByName.set(repository.name, []);
+    }
+    repositoriesByName.get(repository.name).push(repository);
+  }
+
+  return [...repositoriesByName.entries()].filter(([, repositories]) => repositories.length > 1);
+}
+
+function createIncludeResolutionDiagnostics(document) {
+  const diagnostics = [];
+  const repositoriesByName = new Map((document.repositories ?? []).map((repository) => [repository.name, repository]));
+
+  for (const [repositoryName, repositories] of findConflictingRepositoryAliases(document)) {
+    diagnostics.push(createItmResolverDiagnostic(
+      'conflictingAlias',
+      `Repository alias '${repositoryName}' is declared multiple times.`,
+      {
+        repositoryRef: repositoryName,
+        uri: document.uri,
+        file: repositories[0]?.source?.file ?? document.uri,
+        range: repositories[0]?.source,
+      },
+    ));
+  }
+
+  for (const include of document.includes ?? []) {
+    const repositoryReference = splitRepositoryTarget(include.target);
+    const repository = repositoryReference
+      ? repositoriesByName.get(repositoryReference.repositoryName)
+      : undefined;
+
+    if (repositoryReference && !repository) {
+      diagnostics.push(createItmResolverDiagnostic(
+        'unsupported',
+        `Repository alias '${repositoryReference.repositoryName}' is not declared for include target '${include.target}'.`,
+        {
+          includeTarget: include.target,
+          repositoryRef: repositoryReference.repositoryName,
+          uri: document.uri,
+          file: include.source?.file ?? document.uri,
+          range: include.source,
+        },
+      ));
+      continue;
+    }
+
+    if (repository?.allowed === false) {
+      diagnostics.push(createItmResolverDiagnostic(
+        'unauthorized',
+        `Repository alias '${repository.name}' is not authorized for include target '${include.target}'.`,
+        {
+          includeTarget: include.target,
+          repositoryRef: repository.name,
+          uri: document.uri,
+          file: include.source?.file ?? document.uri,
+          range: include.source,
+        },
+      ));
+      continue;
+    }
+
+    if (repository && repository.resolved === false) {
+      diagnostics.push(createItmResolverDiagnostic(
+        'unavailable',
+        `Repository alias '${repository.name}' is currently unavailable for include target '${include.target}'.`,
+        {
+          includeTarget: include.target,
+          repositoryRef: repository.name,
+          uri: document.uri,
+          file: include.source?.file ?? document.uri,
+          range: include.source,
+        },
+      ));
+      continue;
+    }
+
+    switch (include.status) {
+      case 'unresolved':
+        diagnostics.push(createItmResolverDiagnostic(
+          'unresolved',
+          `Include target '${include.target}' could not be resolved.`,
+          {
+            includeTarget: include.target,
+            repositoryRef: repositoryReference?.repositoryName,
+            uri: document.uri,
+            file: include.source?.file ?? document.uri,
+            range: include.source,
+          },
+        ));
+        break;
+      case 'missing':
+        diagnostics.push(createItmResolverDiagnostic(
+          'unavailable',
+          `Include target '${include.target}' is unavailable.`,
+          {
+            includeTarget: include.target,
+            repositoryRef: repositoryReference?.repositoryName,
+            uri: document.uri,
+            file: include.source?.file ?? document.uri,
+            range: include.source,
+          },
+        ));
+        break;
+      case 'blocked':
+        diagnostics.push(createItmResolverDiagnostic(
+          'blocked',
+          `Include target '${include.target}' was blocked by the active resolver.`,
+          {
+            includeTarget: include.target,
+            repositoryRef: repositoryReference?.repositoryName,
+            uri: document.uri,
+            file: include.source?.file ?? document.uri,
+            range: include.source,
+          },
+        ));
+        break;
+      case 'circular':
+        diagnostics.push(createItmResolverDiagnostic(
+          'circular',
+          `Include target '${include.target}' is part of a circular resolution chain.`,
+          {
+            includeTarget: include.target,
+            repositoryRef: repositoryReference?.repositoryName,
+            uri: document.uri,
+            file: include.source?.file ?? document.uri,
+            range: include.source,
+          },
+        ));
+        break;
+      default:
+        break;
+    }
+  }
+
+  return diagnostics;
+}
+
 export function validateItmDocument(document) {
   const resolvedDocument = isResolvedDocument(document) ? document : resolveDocument(document);
-  return [...(resolvedDocument.diagnostics ?? [])];
+  return mergeDiagnostics(
+    resolvedDocument.diagnostics,
+    createIncludeResolutionDiagnostics(resolvedDocument),
+  );
 }
 
 function parseSelectorExpression(selector) {

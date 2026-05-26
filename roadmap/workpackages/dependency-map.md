@@ -11,7 +11,6 @@ flowchart TD
   WP_05A[WP-05A\nContribution manifest and registry model] --> WP_05D[WP-05D\nMinimal package/capability inspector]
   WP_05B[WP-05B\nCapability activation and resolver context] --> WP_05D[WP-05D\nMinimal package/capability inspector]
   FOUNDATION[Foundation history\nPhases -1 to 4.1] --> WP_SET_01[WP-SET-01\nUser settings core and local persistence]
-  FOUNDATION[Foundation history\nPhases -1 to 4.1] --> WP_ITM_01[WP-ITM-01\nITM parser/model foundation]
   WP_05C[WP-05C\nPipeline/contribution execution integration] --> WP_LUA[WP-LUA\nLua automation]
   FOUNDATION[Foundation history\nPhases -1 to 4.1] --> WP_RES_01[WP-RES-01\nProvider-aware resource descriptors]
   WP_RES_01[WP-RES-01\nProvider-aware resource descriptors] --> WP_RES_02[WP-RES-02\nRevisions, dirty state, and conflict diagnostics]
@@ -75,14 +74,14 @@ flowchart TD
   classDef done fill:#2e7d32,stroke:#1b5e20,color:#ffffff,stroke-width:2px;
   classDef startable fill:#1565c0,stroke:#0d47a1,color:#ffffff,stroke-width:2px;
 
-  class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D done;
-  class WP_SET_01,WP_ITM_01,WP_LUA,WP_RES_01,WP_ID_01 startable;
+  class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D,WP_ITM_01,WP_LUA done;
+  class WP_SET_01,WP_RES_01,WP_ITM_02,WP_ID_01 startable;
 
   linkStyle 6 stroke:#1565c0,stroke-width:2px;
-  linkStyle 7 stroke:#1565c0,stroke-width:2px;
   linkStyle 8 stroke:#1565c0,stroke-width:2px;
-  linkStyle 9 stroke:#1565c0,stroke-width:2px;
-  linkStyle 18 stroke:#1565c0,stroke-width:2px;
+  linkStyle 13 stroke:#1565c0,stroke-width:2px;
+  linkStyle 14 stroke:#1565c0,stroke-width:2px;
+  linkStyle 17 stroke:#1565c0,stroke-width:2px;
 ```
 
 ## Reading rule
