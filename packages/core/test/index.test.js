@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  createCanonicalContributionId,
   createCommand,
   createCommandDispatcher,
   createCommandRegistry,
   createContributionRegistry,
   createContributionManifest,
+  deriveContributionLocalName,
   createDiagnostic,
   createMarkdownFenceHandlerContribution,
   createResourceFacts,
@@ -29,6 +31,8 @@ test('core constructors build stable value objects', () => {
   assert.equal(diagnostic.source?.end.offset, 3);
   assert.equal(inferLanguageId({ path: '/docs/notes.md' }), 'markdown');
   assert.equal(manifest.packageId, '@textforge/core');
+  assert.equal(createCanonicalContributionId('@textforge/example', 'preview'), '@textforge/example/preview');
+  assert.equal(deriveContributionLocalName('@textforge/example', '@textforge/example/preview'), 'preview');
 });
 
 test('command registry filters context-sensitive commands and dispatches local handlers', async () => {
@@ -165,4 +169,42 @@ test('contribution registry resolves active fence handlers and emits active conf
   });
 
   assert.equal(matchesResourcePredicate(predicate, resourceFacts), true);
+});
+
+test('contribution registry derives canonical local IDs and exposes deterministic package read models', () => {
+  const registry = createContributionRegistry([
+    createContributionManifest('@textforge/zeta', {
+      dependencies: [{ packageId: '@textforge/missing', versionRange: '^1.0.0' }],
+      capabilities: [{ id: '@textforge/zeta/capability/preview' }],
+      surfaces: [{
+        localName: 'preview',
+        label: 'Preview',
+        capabilities: ['@textforge/zeta/capability/preview'],
+      }],
+    }),
+    createContributionManifest('@textforge/alpha', {
+      version: '1.2.0',
+      capabilities: [{ id: '@textforge/alpha/capability/source', defaultActive: true }],
+      markdownFenceHandlers: [
+        createMarkdownFenceHandlerContribution('@textforge/alpha/fence-handler/json', {
+          fenceNames: ['json'],
+          capabilities: ['@textforge/alpha/capability/source'],
+        }),
+      ],
+    }),
+  ]);
+
+  const manifests = registry.listManifests();
+  assert.deepEqual(manifests.map((manifest) => manifest.packageId), ['@textforge/alpha', '@textforge/zeta']);
+  assert.equal(manifests[1].surfaces[0]?.id, '@textforge/zeta/preview');
+  assert.equal(manifests[1].surfaces[0]?.localName, 'preview');
+
+  const resolved = registry.resolve();
+  assert.deepEqual(resolved.packages.map((entry) => entry.packageId), ['@textforge/alpha', '@textforge/zeta']);
+  assert.equal(resolved.packages[0]?.status, 'available');
+  assert.equal(resolved.packages[1]?.status, 'missingDependency');
+  assert.equal(resolved.packages[1]?.dependencies[0]?.packageId, '@textforge/missing');
+  assert.equal(resolved.packages[1]?.dependencies[0]?.status, 'missingDependency');
+  assert.equal(resolved.surfaces[0]?.status, 'failed');
+  assert.equal(resolved.diagnostics.some((diagnostic) => diagnostic.code === 'registry.package.missing-dependency'), true);
 });

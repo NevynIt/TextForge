@@ -638,9 +638,60 @@ select {
   gap: 8px;
 }
 
+.tf-registry__identity {
+  display: grid;
+  gap: 4px;
+}
+
+.tf-registry__status {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tf-registry__status--available {
+  color: #7de0a5;
+}
+
+.tf-registry__status--missingDependency,
+.tf-registry__status--incompatibleVersion,
+.tf-registry__status--conflict,
+.tf-registry__status--failedToInitialize,
+.tf-registry__status--disabled {
+  color: #ffbf7a;
+}
+
 .tf-registry__card p {
   margin: 8px 0 0;
   line-height: 1.5;
+}
+
+.tf-registry__meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin-top: 12px;
+}
+
+.tf-registry__meta div {
+  display: grid;
+  gap: 2px;
+}
+
+.tf-registry__meta dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.tf-registry__meta dd {
+  margin: 0;
+}
+
+.tf-registry__list {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
 }
 
 .tf-callout {

@@ -8,6 +8,14 @@ export const legacySeverityAliases = {
 export const resourceKinds = ['resource', 'generated', 'virtual'];
 export const resourceRepresentations = ['text', 'bytes'];
 export const capabilityStates = ['available', 'active', 'disabled', 'missing', 'failed'];
+export const contributionRegistryPackageStatuses = [
+  'available',
+  'disabled',
+  'missingDependency',
+  'incompatibleVersion',
+  'conflict',
+  'failedToInitialize',
+];
 
 export const resourceBadgePlacements = ['center', 'top', 'right', 'bottom', 'left'];
 
@@ -76,12 +84,95 @@ function normalizeCapability(capability) {
   };
 }
 
+function normalizeManifestDependency(dependency) {
+  if (typeof dependency === 'string') {
+    return {
+      packageId: normalizePackageId(dependency),
+      optional: false,
+      versionRange: undefined,
+    };
+  }
+
+  return {
+    packageId: normalizePackageId(dependency?.packageId ?? dependency?.id),
+    optional: dependency?.optional === true,
+    versionRange: normalizeLocalName(dependency?.versionRange ?? dependency?.version ?? dependency?.range),
+  };
+}
+
+function normalizeContributionIdentity(packageId, contribution) {
+  const normalizedPackageId = normalizePackageId(packageId);
+  const localName = normalizeLocalName(contribution.localName)
+    ?? deriveContributionLocalName(normalizedPackageId, contribution.id);
+  const id = normalizeLocalName(contribution.id)
+    ?? createCanonicalContributionId(normalizedPackageId, localName);
+  return {
+    ...contribution,
+    id,
+    localName,
+    packageId: normalizedPackageId,
+  };
+}
+
 function normalizeIdSet(values = []) {
   return new Set(
     values
       .map((value) => String(value ?? '').trim())
       .filter(Boolean),
   );
+}
+
+function normalizePackageId(packageId, fallback = '@textforge/unknown') {
+  const normalized = String(packageId ?? '').trim();
+  return normalized || fallback;
+}
+
+function normalizeLocalName(localName) {
+  const normalized = String(localName ?? '').trim();
+  return normalized || undefined;
+}
+
+export function createCanonicalContributionId(packageId, localName) {
+  const normalizedPackageId = normalizePackageId(packageId);
+  const normalizedLocalName = normalizeLocalName(localName);
+  if (!normalizedLocalName) {
+    throw new Error(`Cannot derive a canonical contribution ID for ${normalizedPackageId} without a local contribution name.`);
+  }
+  return `${normalizedPackageId}/${normalizedLocalName}`;
+}
+
+export function deriveContributionLocalName(packageId, contributionId) {
+  const normalizedPackageId = normalizePackageId(packageId);
+  const normalizedContributionId = String(contributionId ?? '').trim();
+  const prefix = `${normalizedPackageId}/`;
+  if (normalizedContributionId.startsWith(prefix)) {
+    return normalizedContributionId.slice(prefix.length) || undefined;
+  }
+  return undefined;
+}
+
+function compareByStringId(left, right) {
+  return String(left ?? '').localeCompare(String(right ?? ''));
+}
+
+function compareManifestEntries(left, right) {
+  return compareByStringId(left.packageId, right.packageId);
+}
+
+function compareContributionEntries(left, right) {
+  const packageComparison = compareByStringId(left.packageId, right.packageId);
+  if (packageComparison !== 0) {
+    return packageComparison;
+  }
+  return compareByStringId(left.id, right.id);
+}
+
+function sortByCanonicalId(items = []) {
+  return [...items].sort(compareContributionEntries);
+}
+
+function sortDependenciesByPackageId(items = []) {
+  return [...items].sort((left, right) => compareByStringId(left.packageId, right.packageId));
 }
 
 function cloneCommandArrays(command) {
@@ -514,7 +605,7 @@ export function createSurfaceContribution(id, overrides = {}) {
   return {
     id,
     capabilities: normalizeContributionCapabilities(overrides),
-    localName: overrides.localName,
+    localName: normalizeLocalName(overrides.localName) ?? deriveContributionLocalName(overrides.packageId, id),
     defaultActive: overrides.defaultActive ?? false,
     resourcePredicate: normalizeResourcePredicate({
       ...overrides.resourcePredicate,
@@ -531,7 +622,7 @@ export function createPipelineContribution(id, overrides = {}) {
   return {
     id,
     capabilities: normalizeContributionCapabilities(overrides),
-    localName: overrides.localName,
+    localName: normalizeLocalName(overrides.localName) ?? deriveContributionLocalName(overrides.packageId, id),
     defaultActive: overrides.defaultActive ?? false,
     ...overrides,
   };
@@ -543,7 +634,7 @@ export function createMarkdownFenceHandlerContribution(id, overrides = {}) {
     label: overrides.label ?? id,
     description: overrides.description,
     capabilities: normalizeContributionCapabilities(overrides),
-    localName: overrides.localName,
+    localName: normalizeLocalName(overrides.localName) ?? deriveContributionLocalName(overrides.packageId, id),
     defaultActive: overrides.defaultActive ?? false,
     provisional: overrides.provisional ?? false,
     localArtifactCompatible: overrides.localArtifactCompatible !== false,
@@ -553,9 +644,10 @@ export function createMarkdownFenceHandlerContribution(id, overrides = {}) {
 }
 
 export function createContributionManifest(packageId, overrides = {}) {
+  const normalizedPackageId = normalizePackageId(packageId);
   return {
-    id: packageId,
-    packageId,
+    id: normalizedPackageId,
+    packageId: normalizedPackageId,
     name: undefined,
     version: undefined,
     description: undefined,
@@ -566,15 +658,29 @@ export function createContributionManifest(packageId, overrides = {}) {
     pipelines: [],
     markdownFenceHandlers: [],
     ...overrides,
-    dependencies: [...(overrides.dependencies ?? [])],
-    capabilities: (overrides.capabilities ?? []).map((capability) => normalizeCapability(capability)),
-    commands: (overrides.commands ?? []).map((command) => normalizeCommand(command, packageId)),
-    surfaces: (overrides.surfaces ?? []).map((contribution) =>
-      createSurfaceContribution(contribution.id, contribution)),
-    pipelines: (overrides.pipelines ?? []).map((contribution) =>
-      createPipelineContribution(contribution.id, contribution)),
-    markdownFenceHandlers: (overrides.markdownFenceHandlers ?? []).map((contribution) =>
-      createMarkdownFenceHandlerContribution(contribution.id, contribution)),
+    id: normalizedPackageId,
+    packageId: normalizedPackageId,
+    dependencies: sortDependenciesByPackageId((overrides.dependencies ?? []).map((dependency) =>
+      normalizeManifestDependency(dependency))),
+    capabilities: [...(overrides.capabilities ?? [])]
+      .map((capability) => normalizeCapability(capability))
+      .sort((left, right) => compareByStringId(left.id, right.id)),
+    commands: (overrides.commands ?? []).map((command) => normalizeCommand(command, normalizedPackageId)),
+    surfaces: sortByCanonicalId((overrides.surfaces ?? []).map((contribution) =>
+      normalizeContributionIdentity(
+        normalizedPackageId,
+        createSurfaceContribution(contribution.id, { ...contribution, packageId: normalizedPackageId }),
+      ))),
+    pipelines: sortByCanonicalId((overrides.pipelines ?? []).map((contribution) =>
+      normalizeContributionIdentity(
+        normalizedPackageId,
+        createPipelineContribution(contribution.id, { ...contribution, packageId: normalizedPackageId }),
+      ))),
+    markdownFenceHandlers: sortByCanonicalId((overrides.markdownFenceHandlers ?? []).map((contribution) =>
+      normalizeContributionIdentity(
+        normalizedPackageId,
+        createMarkdownFenceHandlerContribution(contribution.id, { ...contribution, packageId: normalizedPackageId }),
+      ))),
   };
 }
 
@@ -726,14 +832,252 @@ export function inferLanguageId({ path, mimeType, fallback = 'plaintext' } = {})
 }
 
 function collectManifestContributions(manifests, propertyName) {
-  return manifests.flatMap((manifest) =>
-    (manifest[propertyName] ?? []).map((contribution) => ({
-      ...contribution,
-      packageId: contribution.packageId ?? manifest.packageId,
-    })));
+  return sortByCanonicalId(manifests.flatMap((manifest) =>
+    (manifest[propertyName] ?? []).map((contribution) =>
+      normalizeContributionIdentity(manifest.packageId, contribution))));
 }
 
-function resolveCapabilityState(capability, context = {}) {
+function collectManifestCapabilities(manifests) {
+  return manifests.flatMap((manifest) =>
+    (manifest.capabilities ?? []).map((capability) => ({
+      ...capability,
+      packageId: manifest.packageId,
+    })))
+    .sort((left, right) => {
+      const idComparison = compareByStringId(left.id, right.id);
+      if (idComparison !== 0) {
+        return idComparison;
+      }
+      return compareByStringId(left.packageId, right.packageId);
+    });
+}
+
+function parseVersionParts(version) {
+  const normalized = String(version ?? '').trim().replace(/^[=v]/, '');
+  if (!normalized) {
+    return undefined;
+  }
+
+  const [majorText, minorText = '0', patchText = '0'] = normalized.split(/[.-]/);
+  const major = Number.parseInt(majorText, 10);
+  const minor = Number.parseInt(minorText, 10);
+  const patch = Number.parseInt(patchText, 10);
+  if ([major, minor, patch].some((value) => Number.isNaN(value))) {
+    return undefined;
+  }
+
+  return [major, minor, patch];
+}
+
+function compareVersionParts(left, right) {
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const delta = (left[index] ?? 0) - (right[index] ?? 0);
+    if (delta !== 0) {
+      return delta;
+    }
+  }
+  return 0;
+}
+
+function isVersionRangeSatisfied(version, versionRange) {
+  const normalizedRange = String(versionRange ?? '').trim();
+  if (!normalizedRange || normalizedRange === '*') {
+    return true;
+  }
+
+  const normalizedVersion = String(version ?? '').trim();
+  if (!normalizedVersion) {
+    return false;
+  }
+
+  const comparisonOperators = ['>=', '<=', '>', '<'];
+  for (const operator of comparisonOperators) {
+    if (!normalizedRange.startsWith(operator)) {
+      continue;
+    }
+
+    const parsedVersion = parseVersionParts(normalizedVersion);
+    const parsedExpected = parseVersionParts(normalizedRange.slice(operator.length));
+    if (!parsedVersion || !parsedExpected) {
+      return normalizedVersion === normalizedRange.slice(operator.length).trim();
+    }
+
+    const comparison = compareVersionParts(parsedVersion, parsedExpected);
+    if (operator === '>=') {
+      return comparison >= 0;
+    }
+    if (operator === '<=') {
+      return comparison <= 0;
+    }
+    if (operator === '>') {
+      return comparison > 0;
+    }
+    return comparison < 0;
+  }
+
+  const rangePrefix = normalizedRange[0];
+  const parsedVersion = parseVersionParts(normalizedVersion);
+  const parsedExpected = parseVersionParts(rangePrefix === '^' || rangePrefix === '~'
+    ? normalizedRange.slice(1)
+    : normalizedRange);
+  if (!parsedVersion || !parsedExpected) {
+    return normalizedVersion === normalizedRange;
+  }
+
+  if (rangePrefix === '^') {
+    return parsedVersion[0] === parsedExpected[0]
+      && compareVersionParts(parsedVersion, parsedExpected) >= 0;
+  }
+
+  if (rangePrefix === '~') {
+    return parsedVersion[0] === parsedExpected[0]
+      && parsedVersion[1] === parsedExpected[1]
+      && compareVersionParts(parsedVersion, parsedExpected) >= 0;
+  }
+
+  return compareVersionParts(parsedVersion, parsedExpected) === 0;
+}
+
+function createRegistryDiagnostic(code, message, overrides = {}) {
+  return createDiagnostic(message, overrides.severity ?? 'error', {
+    ...overrides,
+    code,
+    origin: {
+      packageId: '@textforge/core',
+      subsystem: 'contribution-registry',
+      ...overrides.origin,
+    },
+  });
+}
+
+function collectDuplicateEntries(items, keySelector) {
+  const grouped = new Map();
+  for (const item of items) {
+    const key = normalizeLocalName(keySelector(item));
+    if (!key) {
+      continue;
+    }
+
+    const owners = grouped.get(key) ?? [];
+    owners.push(item);
+    grouped.set(key, owners);
+  }
+
+  return [...grouped.entries()]
+    .filter(([, owners]) => owners.length > 1)
+    .sort((left, right) => compareByStringId(left[0], right[0]));
+}
+
+function createPackageConflictMap(entriesByKey) {
+  const conflictsByPackageId = new Map();
+  for (const [key, owners] of entriesByKey) {
+    for (const owner of owners) {
+      const existing = conflictsByPackageId.get(owner.packageId) ?? [];
+      existing.push(key);
+      conflictsByPackageId.set(owner.packageId, existing);
+    }
+  }
+  return conflictsByPackageId;
+}
+
+function createDuplicateEntryDiagnostics(entriesByKey, label, idSelector = (item) => item.id) {
+  return entriesByKey.map(([key, owners]) =>
+    createRegistryDiagnostic(
+      'registry.id-conflict',
+      `Registered ${label} entries conflict on canonical ID "${key}".`,
+      {
+        origin: {
+          ruleId: `${label}:${key}`,
+        },
+        related: owners.map((owner) => ({
+          message: `${idSelector(owner)} from ${owner.packageId}`,
+        })),
+      },
+    ));
+}
+
+function createDuplicateCapabilityDiagnostics(entriesByKey) {
+  return entriesByKey.map(([key, owners]) =>
+    createRegistryDiagnostic(
+      'registry.capability-conflict',
+      `Registered capabilities conflict on canonical ID "${key}".`,
+      {
+        origin: {
+          ruleId: `capability:${key}`,
+        },
+        related: owners.map((owner) => ({
+          message: `${owner.id} from ${owner.packageId}`,
+        })),
+      },
+    ));
+}
+
+function resolveRegistryDependency(dependency, manifestsByPackageId, packageStatesById) {
+  const dependencyManifest = manifestsByPackageId.get(dependency.packageId);
+  if (!dependencyManifest) {
+    return {
+      ...dependency,
+      resolvedVersion: undefined,
+      status: 'missingDependency',
+      reasonCode: 'missing-package',
+    };
+  }
+
+  const dependencyPackageState = packageStatesById.get(dependency.packageId);
+  if (dependencyPackageState?.status === 'disabled') {
+    return {
+      ...dependency,
+      resolvedVersion: dependencyManifest.version,
+      status: 'missingDependency',
+      reasonCode: 'dependency-disabled',
+    };
+  }
+
+  if (dependencyPackageState?.status === 'failedToInitialize') {
+    return {
+      ...dependency,
+      resolvedVersion: dependencyManifest.version,
+      status: 'missingDependency',
+      reasonCode: 'dependency-failed',
+    };
+  }
+
+  if (dependencyPackageState && dependencyPackageState.status !== 'available') {
+    return {
+      ...dependency,
+      resolvedVersion: dependencyManifest.version,
+      status: 'missingDependency',
+      reasonCode: 'dependency-blocked',
+    };
+  }
+
+  if (dependency.versionRange && !isVersionRangeSatisfied(dependencyManifest.version, dependency.versionRange)) {
+    return {
+      ...dependency,
+      resolvedVersion: dependencyManifest.version,
+      status: 'incompatibleVersion',
+      reasonCode: 'version-mismatch',
+    };
+  }
+
+  return {
+    ...dependency,
+    resolvedVersion: dependencyManifest.version,
+    status: 'available',
+    reasonCode: undefined,
+  };
+}
+
+function resolveCapabilityState(capability, context = {}, packageStateById = new Map()) {
+  const packageState = packageStateById.get(capability.packageId);
+  if (packageState?.status === 'disabled') {
+    return 'disabled';
+  }
+
+  if (packageState && packageState.status !== 'available') {
+    return 'failed';
+  }
+
   const disabledCapabilityIds = normalizeIdSet(context.disabledCapabilityIds);
   const failedCapabilityIds = normalizeIdSet(context.failedCapabilityIds);
   const activeCapabilityIds = new Set([
@@ -756,14 +1100,23 @@ function resolveCapabilityState(capability, context = {}) {
   return 'available';
 }
 
-function resolveContributionState(contribution, capabilityStateById, context = {}) {
-  const packageStatus = context.packageStatuses?.[contribution.packageId] ?? 'available';
-  if (packageStatus === 'failed') {
+function resolveContributionState(contribution, capabilityStateById, context = {}, packageStateById = new Map()) {
+  const explicitPackageStatus = context.packageStatuses?.[contribution.packageId] ?? 'available';
+  if (explicitPackageStatus === 'failed') {
     return 'failed';
   }
 
-  if (packageStatus === 'disabled') {
+  if (explicitPackageStatus === 'disabled') {
     return 'disabled';
+  }
+
+  const packageState = packageStateById.get(contribution.packageId);
+  if (packageState?.status === 'disabled') {
+    return 'disabled';
+  }
+
+  if (packageState && packageState.status !== 'available') {
+    return 'failed';
   }
 
   const capabilityIds = normalizeContributionCapabilities(contribution);
@@ -787,14 +1140,11 @@ function resolveContributionState(contribution, capabilityStateById, context = {
 }
 
 function createRegistryConflictDiagnostic(name, contributions, kind) {
-  return createDiagnostic(
+  return createRegistryDiagnostic(
+    'registry.active-conflict',
     `Active ${kind} contributions conflict on short name "${name}".`,
-    'error',
     {
-      code: 'registry.active-conflict',
       origin: {
-        packageId: '@textforge/core',
-        subsystem: 'contribution-registry',
         ruleId: `${kind}:${name}`,
       },
       related: contributions.map((contribution) => ({
@@ -817,10 +1167,12 @@ export function createContributionRegistry(initialManifests = []) {
       return registry;
     },
     listManifests() {
-      return [...manifests.values()];
+      return [...manifests.values()].sort(compareManifestEntries);
     },
     listCapabilities() {
-      return registry.listManifests().flatMap((manifest) => manifest.capabilities ?? []);
+      return collectManifestCapabilities(registry.listManifests()).map((capability) => ({
+        ...capability,
+      }));
     },
     listCommands() {
       return collectManifestContributions(registry.listManifests(), 'commands');
@@ -835,29 +1187,146 @@ export function createContributionRegistry(initialManifests = []) {
       return collectManifestContributions(registry.listManifests(), 'markdownFenceHandlers');
     },
     resolve(context = {}) {
-      const capabilities = registry.listCapabilities().map((capability) => ({
+      const manifestsList = registry.listManifests();
+      const manifestsByPackageId = new Map(manifestsList.map((manifest) => [manifest.packageId, manifest]));
+      const externalPackageStatuses = context.packageStatuses ?? {};
+      const capabilitiesWithPackage = collectManifestCapabilities(manifestsList);
+      const duplicateCapabilities = collectDuplicateEntries(capabilitiesWithPackage, (capability) => capability.id);
+      const duplicateCommands = collectDuplicateEntries(registry.listCommands(), (command) => command.id);
+      const duplicateSurfaces = collectDuplicateEntries(registry.listSurfaces(), (surface) => surface.id);
+      const duplicatePipelines = collectDuplicateEntries(registry.listPipelines(), (pipeline) => pipeline.id);
+      const duplicateMarkdownFenceHandlers = collectDuplicateEntries(registry.listMarkdownFenceHandlers(), (handler) => handler.id);
+      const packageConflictKeysById = new Map();
+      for (const conflictMap of [
+        createPackageConflictMap(duplicateCapabilities),
+        createPackageConflictMap(duplicateCommands),
+        createPackageConflictMap(duplicateSurfaces),
+        createPackageConflictMap(duplicatePipelines),
+        createPackageConflictMap(duplicateMarkdownFenceHandlers),
+      ]) {
+        for (const [packageId, keys] of conflictMap) {
+          const existing = packageConflictKeysById.get(packageId) ?? [];
+          existing.push(...keys);
+          packageConflictKeysById.set(packageId, existing);
+        }
+      }
+
+      const packageStateById = new Map();
+      for (const manifest of manifestsList) {
+        let status = 'available';
+        let statusReason;
+        const explicitStatus = externalPackageStatuses[manifest.packageId];
+        if (explicitStatus === 'disabled') {
+          status = 'disabled';
+          statusReason = 'package-disabled';
+        } else if (explicitStatus === 'failed') {
+          status = 'failedToInitialize';
+          statusReason = 'package-failed';
+        } else if ((packageConflictKeysById.get(manifest.packageId) ?? []).length > 0) {
+          status = 'conflict';
+          statusReason = 'duplicate-canonical-id';
+        }
+
+        packageStateById.set(manifest.packageId, {
+          packageId: manifest.packageId,
+          name: manifest.name,
+          version: manifest.version,
+          description: manifest.description,
+          status,
+          statusReason,
+          dependencies: [],
+          capabilityIds: (manifest.capabilities ?? []).map((capability) => capability.id).sort(compareByStringId),
+          contributionCounts: {
+            commands: manifest.commands?.length ?? 0,
+            surfaces: manifest.surfaces?.length ?? 0,
+            pipelines: manifest.pipelines?.length ?? 0,
+            markdownFenceHandlers: manifest.markdownFenceHandlers?.length ?? 0,
+          },
+          contributionIds: {
+            commands: (manifest.commands ?? []).map((command) => command.id).sort(compareByStringId),
+            surfaces: (manifest.surfaces ?? []).map((surface) => surface.id).sort(compareByStringId),
+            pipelines: (manifest.pipelines ?? []).map((pipeline) => pipeline.id).sort(compareByStringId),
+            markdownFenceHandlers: (manifest.markdownFenceHandlers ?? []).map((handler) => handler.id).sort(compareByStringId),
+          },
+          conflicts: [...new Set((packageConflictKeysById.get(manifest.packageId) ?? []).sort(compareByStringId))],
+        });
+      }
+
+      for (let pass = 0; pass < manifestsList.length; pass += 1) {
+        let changed = false;
+        for (const manifest of manifestsList) {
+          const packageState = packageStateById.get(manifest.packageId);
+          const dependencies = (manifest.dependencies ?? []).map((dependency) =>
+            resolveRegistryDependency(dependency, manifestsByPackageId, packageStateById));
+          packageState.dependencies = dependencies;
+          if (packageState.status === 'available') {
+            const blockingDependency = dependencies.find((dependency) =>
+              dependency.optional !== true && dependency.status !== 'available');
+            if (blockingDependency) {
+              packageState.status = blockingDependency.status;
+              packageState.statusReason = blockingDependency.reasonCode;
+              changed = true;
+            }
+          }
+        }
+        if (!changed) {
+          break;
+        }
+      }
+
+      const packages = manifestsList.map((manifest) => packageStateById.get(manifest.packageId));
+      const capabilities = capabilitiesWithPackage.map((capability) => ({
         ...capability,
-        status: resolveCapabilityState(capability, context),
+        status: resolveCapabilityState(capability, context, packageStateById),
       }));
       const capabilityStateById = new Map(capabilities.map((capability) => [capability.id, capability]));
       const resolvedCommands = registry.listCommands().map((command) => ({
         ...command,
-        status: resolveContributionState(command, capabilityStateById, context),
+        status: resolveContributionState(command, capabilityStateById, context, packageStateById),
       }));
       const resolvedSurfaces = registry.listSurfaces().map((surface) => ({
         ...surface,
-        status: resolveContributionState(surface, capabilityStateById, context),
+        status: resolveContributionState(surface, capabilityStateById, context, packageStateById),
       }));
       const resolvedPipelines = registry.listPipelines().map((pipeline) => ({
         ...pipeline,
-        status: resolveContributionState(pipeline, capabilityStateById, context),
+        status: resolveContributionState(pipeline, capabilityStateById, context, packageStateById),
       }));
       const resolvedMarkdownFenceHandlers = registry.listMarkdownFenceHandlers().map((handler) => ({
         ...handler,
-        status: resolveContributionState(handler, capabilityStateById, context),
+        status: resolveContributionState(handler, capabilityStateById, context, packageStateById),
       }));
 
-      const diagnostics = [];
+      const diagnostics = [
+        ...createDuplicateCapabilityDiagnostics(duplicateCapabilities),
+        ...createDuplicateEntryDiagnostics(duplicateCommands, 'command'),
+        ...createDuplicateEntryDiagnostics(duplicateSurfaces, 'surface'),
+        ...createDuplicateEntryDiagnostics(duplicatePipelines, 'pipeline'),
+        ...createDuplicateEntryDiagnostics(duplicateMarkdownFenceHandlers, 'markdown-fence-handler'),
+      ];
+      for (const packageState of packages) {
+        for (const dependency of packageState.dependencies) {
+          if (dependency.status === 'available' || dependency.optional === true) {
+            continue;
+          }
+
+          diagnostics.push(createRegistryDiagnostic(
+            dependency.status === 'incompatibleVersion'
+              ? 'registry.package.incompatible-dependency'
+              : 'registry.package.missing-dependency',
+            dependency.status === 'incompatibleVersion'
+              ? `Package ${packageState.packageId} requires ${dependency.packageId} ${dependency.versionRange}, but ${dependency.resolvedVersion ?? 'an incompatible version'} is registered.`
+              : `Package ${packageState.packageId} requires ${dependency.packageId}, but it is not available to the bundled registry.`,
+            {
+              origin: {
+                packageId: packageState.packageId,
+                ruleId: `dependency:${dependency.packageId}`,
+              },
+            },
+          ));
+        }
+      }
+
       const activeFenceHandlers = resolvedMarkdownFenceHandlers.filter((handler) => handler.status === 'active');
       const fenceNameOwners = new Map();
       for (const handler of activeFenceHandlers) {
@@ -889,6 +1358,7 @@ export function createContributionRegistry(initialManifests = []) {
 
       return {
         manifests: registry.listManifests(),
+        packages,
         capabilities,
         commands: resolvedCommands,
         surfaces: resolvedSurfaces,

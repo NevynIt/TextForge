@@ -153,6 +153,10 @@ The package now owns the minimal shell-command substrate promised for Phase 3.3:
 
 The package now owns the stabilized Phase 4.1 foundation contracts: normalized `observation`/`information`/`warning`/`error` diagnostics with origin metadata, resource facts plus resource predicates, default Markdown fence-handler contribution metadata, and a lightweight contribution registry that can report active/available capability state and emit active short-name conflict diagnostics before Phase 5 expands package composition.
 
+## WP-05A progress note
+
+`@textforge/core` now owns the first canonical WP-05A registry layer rather than the narrower Phase 4.1 placeholder. Contribution manifests normalize bundled package dependency descriptors, package-local contribution names, and derived canonical IDs for surfaces, pipelines, and Markdown fence handlers. The registry read model now sorts deterministically, reports package/dependency/conflict state, and exposes a UI-friendly package status view without collapsing package availability into the later document-scoped capability resolver work that belongs to `WP-05B`.
+
 
 ## V16 backend-optional responsibilities
 

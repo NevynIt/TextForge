@@ -18,7 +18,7 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 
 | WP ID | Status | Evidence | Last updated | Notes |
 |---|---|---|---|---|
-| WP-05A | Ready / next | Phase 4.1 closed; Phase 5 grilling accepted | 2026-05-26 | Start here unless superseded. |
+| WP-05A | Validated | `roadmap/validation/workpackage-checklists/WP-05A-contribution-manifest-and-registry-model.md`; `corepack pnpm verify`; app `file://` build checks | 2026-05-26 | Canonical manifest normalization and deterministic bundled registry package model validated. |
 | WP-05B | Not started | Depends on WP-05A | 2026-05-26 | Capability activation/resolver context. |
 | WP-05C | Not started | Depends on WP-05A/WP-05B | 2026-05-26 | Contribution execution integration. |
 | WP-ID-01 | Not started | Can proceed after foundation | 2026-05-26 | Identity contract only; no Entra. |

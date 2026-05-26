@@ -111,6 +111,12 @@ export interface Capability {
   readonly scope?: 'document' | 'workspace' | 'session';
 }
 
+export interface ContributionPackageDependency {
+  readonly packageId: string;
+  readonly optional?: boolean;
+  readonly versionRange?: string;
+}
+
 export interface Command {
   readonly id: string;
   readonly label: string;
@@ -294,7 +300,12 @@ export interface ResourcePredicate {
   readonly fileExtensions?: ReadonlyArray<string>;
 }
 
+export interface RegisteredCapability extends Capability {
+  readonly packageId: string;
+}
+
 export interface ResolvedCapability extends Capability {
+  readonly packageId?: string;
   readonly status: 'available' | 'active' | 'disabled' | 'missing' | 'failed';
 }
 
@@ -303,8 +314,39 @@ export interface ResolvedContribution<TContribution> extends TContribution {
   readonly status: 'available' | 'active' | 'disabled' | 'missing' | 'failed';
 }
 
+export interface ContributionRegistryResolvedDependency extends ContributionPackageDependency {
+  readonly resolvedVersion?: string;
+  readonly status: 'available' | 'missingDependency' | 'incompatibleVersion';
+  readonly reasonCode?: string;
+}
+
+export interface ContributionRegistryPackage {
+  readonly packageId: string;
+  readonly name?: string;
+  readonly version?: string;
+  readonly description?: string;
+  readonly status: 'available' | 'disabled' | 'missingDependency' | 'incompatibleVersion' | 'conflict' | 'failedToInitialize';
+  readonly statusReason?: string;
+  readonly dependencies: ReadonlyArray<ContributionRegistryResolvedDependency>;
+  readonly capabilityIds: ReadonlyArray<string>;
+  readonly contributionCounts: {
+    readonly commands: number;
+    readonly surfaces: number;
+    readonly pipelines: number;
+    readonly markdownFenceHandlers: number;
+  };
+  readonly contributionIds: {
+    readonly commands: ReadonlyArray<string>;
+    readonly surfaces: ReadonlyArray<string>;
+    readonly pipelines: ReadonlyArray<string>;
+    readonly markdownFenceHandlers: ReadonlyArray<string>;
+  };
+  readonly conflicts: ReadonlyArray<string>;
+}
+
 export interface ContributionRegistryResolution {
   readonly manifests: ReadonlyArray<ContributionManifest>;
+  readonly packages: ReadonlyArray<ContributionRegistryPackage>;
   readonly capabilities: ReadonlyArray<ResolvedCapability>;
   readonly commands: ReadonlyArray<ResolvedContribution<CommandContribution>>;
   readonly surfaces: ReadonlyArray<ResolvedContribution<SurfaceContribution>>;
@@ -323,7 +365,7 @@ export interface ContributionRegistryContext {
 export interface ContributionRegistry {
   registerManifest(manifest: ContributionManifest | { readonly id?: string; readonly packageId?: string }): ContributionRegistry;
   listManifests(): ReadonlyArray<ContributionManifest>;
-  listCapabilities(): ReadonlyArray<Capability>;
+  listCapabilities(): ReadonlyArray<RegisteredCapability>;
   listCommands(): ReadonlyArray<CommandContribution>;
   listSurfaces(): ReadonlyArray<SurfaceContribution>;
   listPipelines(): ReadonlyArray<PipelineContribution>;
@@ -341,7 +383,7 @@ export interface ContributionManifest {
   readonly name?: string;
   readonly version?: string;
   readonly description?: string;
-  readonly dependencies?: ReadonlyArray<string>;
+  readonly dependencies?: ReadonlyArray<string | ContributionPackageDependency>;
   readonly capabilities?: ReadonlyArray<Capability>;
   readonly commands?: ReadonlyArray<CommandContribution>;
   readonly surfaces?: ReadonlyArray<SurfaceContribution>;
@@ -383,6 +425,7 @@ export const resourceKinds: ReadonlyArray<ResourceKind>;
 export const resourceRepresentations: ReadonlyArray<ResourceRepresentation>;
 export const resourceBadgePlacements: ReadonlyArray<'center' | 'top' | 'right' | 'bottom' | 'left'>;
 export const capabilityStates: ReadonlyArray<'available' | 'active' | 'disabled' | 'missing' | 'failed'>;
+export const contributionRegistryPackageStatuses: ReadonlyArray<'available' | 'disabled' | 'missingDependency' | 'incompatibleVersion' | 'conflict' | 'failedToInitialize'>;
 
 export const editorCapabilityIds: {
   readonly source: 'editor.source';
@@ -427,6 +470,8 @@ export declare function createMarkdownFenceHandlerContribution(
   id: string,
   overrides?: Partial<MarkdownFenceHandlerContribution>,
 ): MarkdownFenceHandlerContribution;
+export declare function createCanonicalContributionId(packageId: string, localName: string): string;
+export declare function deriveContributionLocalName(packageId: string, contributionId?: string): string | undefined;
 export declare function createContributionManifest(
   packageId: string,
   overrides?: Partial<ContributionManifest>,

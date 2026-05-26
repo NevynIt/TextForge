@@ -496,8 +496,9 @@ function createTextForgeWorkbenchController() {
     resolvedDefaultContributions.surfaces.filter((contribution) => contribution.status === 'active'),
   );
   contributionRegistry.registerManifest(createSurfaceContributionManifest(surfaceRegistry.list()));
+  const resolvedContributionRegistry = contributionRegistry.resolve();
   const commandRegistry = createCommandRegistry(contributionRegistry.listManifests());
-  const contributionPacks = contributionRegistry.listManifests();
+  const contributionPacks = resolvedContributionRegistry.packages;
   const mainHost = createMainSurfaceHost({
     hostId: 'main',
     registry: surfaceRegistry,
@@ -3098,6 +3099,19 @@ function WorkbenchDetailsCard() {
   );
 }
 
+function formatRegistryPackageStatus(status) {
+  switch (status) {
+    case 'missingDependency':
+      return 'Missing dependency';
+    case 'incompatibleVersion':
+      return 'Incompatible version';
+    case 'failedToInitialize':
+      return 'Failed to initialize';
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+}
+
 function ContributionRegistryView({ packs }) {
   return element(
     'div',
@@ -3105,14 +3119,60 @@ function ContributionRegistryView({ packs }) {
     ...packs.map((pack) =>
       element(
         'article',
-        { key: pack.packageId ?? pack.id, className: 'tf-registry__card' },
+        { key: pack.packageId, className: 'tf-registry__card' },
         element(
           'div',
           { className: 'tf-registry__header' },
-          element('strong', null, pack.packageId ?? pack.id),
-          element('span', null, `${pack.commands.length} commands / ${pack.surfaces.length} surfaces`),
+          element(
+            'div',
+            { className: 'tf-registry__identity' },
+            element('strong', null, pack.packageId),
+            element(
+              'span',
+              { className: `tf-registry__status tf-registry__status--${pack.status}` },
+              formatRegistryPackageStatus(pack.status),
+            ),
+          ),
+          element(
+            'span',
+            null,
+            `${pack.contributionCounts.commands} commands / ${pack.contributionCounts.surfaces} surfaces / ${pack.contributionCounts.pipelines} pipelines`,
+          ),
         ),
-        element('p', null, 'Package contribution pack available to the workbench shell.'),
+        element(
+          'p',
+          null,
+          pack.status === 'available'
+            ? 'Bundled static contribution pack registered through the canonical core manifest.'
+            : `Bundled static contribution pack is present but blocked: ${pack.statusReason ?? pack.status}.`,
+        ),
+        element(
+          'dl',
+          { className: 'tf-registry__meta' },
+          element('div', null, element('dt', null, 'Version'), element('dd', null, pack.version ?? 'workspace')),
+          element('div', null, element('dt', null, 'Capabilities'), element('dd', null, String(pack.capabilityIds.length))),
+          element('div', null, element('dt', null, 'Fence handlers'), element('dd', null, String(pack.contributionCounts.markdownFenceHandlers))),
+        ),
+        pack.dependencies.length > 0
+          ? element(
+            'ul',
+            { className: 'tf-registry__list' },
+            ...pack.dependencies.map((dependency) =>
+              element(
+                'li',
+                { key: `${pack.packageId}:${dependency.packageId}` },
+                `${dependency.packageId}${dependency.versionRange ? ` ${dependency.versionRange}` : ''} - ${formatRegistryPackageStatus(dependency.status)}`,
+              )),
+          )
+          : null,
+        pack.conflicts.length > 0
+          ? element(
+            'ul',
+            { className: 'tf-registry__list' },
+            ...pack.conflicts.map((conflictKey) =>
+              element('li', { key: `${pack.packageId}:${conflictKey}` }, `Conflict: ${conflictKey}`)),
+          )
+          : null,
       )),
   );
 }

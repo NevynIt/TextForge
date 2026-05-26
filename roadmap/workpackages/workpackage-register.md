@@ -23,7 +23,7 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 
 | WP ID | Legacy source | Title | Type | Status | Depends on | Enables | Can be skipped/deferred? | Production required? | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| WP-05A | Phase 5 | Contribution manifest and registry model | Core gate | Ready / next | Phase 4.1 closed | WP-05B, WP-05C, WP-RES-01, WP-ITM-01, WP-SET-01 | No | Yes | Split from Phase 5 to isolate canonical manifests and default contribution records. |
+| WP-05A | Phase 5 | Contribution manifest and registry model | Core gate | Validated | Phase 4.1 closed | WP-05B, WP-05C, WP-RES-01, WP-ITM-01, WP-SET-01 | No | Yes | Canonical bundled manifest normalization, deterministic registry package read model, dependency/conflict diagnostics, and shell registry inspector landed; document capability activation stays in WP-05B. |
 | WP-05B | Phase 5 | Capability activation and resolver context | Core gate | Not started | WP-05A | WP-05C, WP-05D, WP-ITM-02, WP-REPO-01 | No | Yes | Document-scoped active capability context, short-name conflict diagnostics, deterministic resolver inputs. |
 | WP-05C | Phase 5 | Pipeline/contribution execution integration | Core gate | Not started | WP-05A, WP-05B | WP-ITM-VISUALS, WP-LUA, WP-SERVICES-LOCAL, WP-PIPELINE-EDITOR | No | Yes | Replace temporary shell adapter with canonical contribution execution. |
 | WP-05D | Phase 5 | Minimal package/capability inspector | Feature / diagnostics | Not started | WP-05A, WP-05B | All capability-heavy UX | Yes | No | Useful for debugging; not necessarily blocking for non-UI implementation. |

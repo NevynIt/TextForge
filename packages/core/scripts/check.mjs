@@ -6,12 +6,15 @@ import { fileURLToPath } from 'node:url';
 import {
   contributionKinds,
   contributions,
+  contributionRegistryPackageStatuses,
+  createCanonicalContributionId,
   createCapability,
   createCanonicalPatch,
   createCommand,
   createContributionManifest,
   createContributionRegistry,
   createDiagnostic,
+  deriveContributionLocalName,
   createMarkdownFenceHandlerContribution,
   createPipelineValue,
   createResourceFacts,
@@ -41,7 +44,10 @@ assert.equal(inferLanguageId({ path: '/docs/model.yaml' }), 'yaml');
 assert.equal(editorCapabilityIds.languageMode, 'editor.language-mode');
 assert.equal(contributionKinds.surfaces, 'surfaces');
 assert.equal(contributionKinds.markdownFenceHandlers, 'markdown-fence-handlers');
+assert.deepEqual(contributionRegistryPackageStatuses, ['available', 'disabled', 'missingDependency', 'incompatibleVersion', 'conflict', 'failedToInitialize']);
 assert.equal(contributions.id, '@textforge/core');
+assert.equal(createCanonicalContributionId('@textforge/example', 'preview'), '@textforge/example/preview');
+assert.equal(deriveContributionLocalName('@textforge/example', '@textforge/example/preview'), 'preview');
 
 const ref = createResourceRef('resource-1', { path: '/docs/note.md', kind: 'resource', representation: 'text' });
 assert.equal(ref.resourceId, 'resource-1');
@@ -93,6 +99,7 @@ const contributionRegistry = createContributionRegistry([
   }),
 ]);
 assert.equal(contributionRegistry.createMarkdownFenceHandlerMap().handlers.json.id, '@textforge/markdown/json');
+assert.equal(contributionRegistry.resolve().packages[0]?.packageId, '@textforge/markdown');
 
 const workspaceRoot = fileURLToPath(new URL('..\\..\\..', import.meta.url));
 const auditedFiles = [
