@@ -9,6 +9,7 @@ This cluster holds the executable extension/composition model.
 | WP-05A | Contribution manifest and registry model | Canonical package contribution descriptions. |
 | WP-05B | Capability activation and resolver context | Active document capability set and conflict diagnostics. |
 | WP-05C | Pipeline/contribution execution integration | Canonical execution and intermediate-value routing. |
+| WP-05D | Minimal package/capability inspector | Optional diagnostics-oriented shell visibility over package and capability state. |
 | WP-LUA | Lua automation | Optional sandboxed automation behind capabilities. |
 | WP-PIPELINE-EDITOR | Pipeline/diagram editor surfaces | Optional visual authoring for pipelines. |
 

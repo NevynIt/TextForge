@@ -33,13 +33,15 @@ The structural change from V16/V17 is deliberate:
 
 ## Current implementation posture
 
-The next open implementation path remains the former Phase 5 contribution/capability work, now split into:
+The former Phase 5 contribution/capability spine is now validated:
 
 ```text
 WP-05A Contribution manifest and registry model
   -> WP-05B Capability activation and resolver context
   -> WP-05C Pipeline/contribution execution integration
 ```
+
+The next ready options are `WP-05D` diagnostics polish and `WP-RES-01` provider-aware resource descriptors. `WP-ID-01`, `WP-SET-01`, and `WP-ITM-01` are also startable under the current dependency posture.
 
 The backend path is enabled by contracts and fixtures, not by Entra SSO:
 

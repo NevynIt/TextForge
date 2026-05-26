@@ -77,7 +77,9 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 
 ## Current reading
 
-- The immediate implementation path remains `WP-05A -> WP-05B -> WP-05C`, because Phase 5 is still the next open implementation action after Phase 4.1 closure.
+- The former Phase 5 contribution/capability spine `WP-05A -> WP-05B -> WP-05C` is now validated.
+- The nearest ready follow-on slices are `WP-05D` diagnostics polish and `WP-RES-01` provider-aware resource descriptors.
+- `WP-ID-01`, `WP-SET-01`, and `WP-ITM-01` are also startable foundation workpackages under the current dependency posture.
 - Resource-provider, identity-contract, and settings-core work can be developed as independent foundations once their small prerequisites are met.
 - Entra SSO is now explicitly deferred as `WP-SSO-ENTRA`, a standalone production adapter that does not block local backend development.
 - Backend private/group spaces, roaming settings, GitLab, service jobs, leases, and AI should depend on provider-neutral identity/policy plus a dev fixture first, not on Entra itself.

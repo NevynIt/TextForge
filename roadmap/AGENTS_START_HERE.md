@@ -29,8 +29,10 @@ The workpackage register is the canonical current planning source.
 Unless a newer RAPID entry supersedes this, the next implementation path is:
 
 ```text
-WP-05A -> WP-05B -> WP-05C
+WP-05D or WP-RES-01
 ```
+
+`WP-05A`, `WP-05B`, and `WP-05C` are now validated. `WP-ID-01`, `WP-SET-01`, and `WP-ITM-01` are also startable under the current dependency posture.
 
 These workpackages preserve the accepted Phase 5 grilling decisions around contribution manifests, capability activation, resolver context, contribution execution, `%require` diagnostics, package composition, active capability context, and surface reopening for intermediate values.
 

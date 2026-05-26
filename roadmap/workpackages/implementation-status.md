@@ -9,7 +9,7 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 | Area | Current state |
 |---|---|
 | Foundation phases | Phase -1 through Phase 4.1 are treated as closed foundation history unless explicitly reopened. |
-| Next implementation path | `WP-05A -> WP-05B -> WP-05C`. |
+| Next implementation options | `WP-05D` or `WP-RES-01`; `WP-ID-01`, `WP-SET-01`, and `WP-ITM-01` are also startable. |
 | Backend identity | Develop against `WP-ID-DEV` fixture identity; Entra is optional later adapter. |
 | Backend profile | Not started. May be developed locally with Node/container and one approved local backend origin. |
 | Roadmap structure | V18 workpackage-first structure active. V16/V17 source preserved in archive. |
