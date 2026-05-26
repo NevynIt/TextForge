@@ -2405,6 +2405,11 @@ body {
   cursor: move;
 }
 
+.tf-popup-host__header:focus-visible {
+  outline: 2px solid rgba(126, 231, 216, 0.92);
+  outline-offset: -2px;
+}
+
 .tf-popup-host__copy {
   min-width: 0;
 }

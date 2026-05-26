@@ -148,7 +148,7 @@ test('ui package renders react shell primitives from chrome models', () => {
   assert.match(html, /Workspace/);
   assert.match(html, /Command palette/);
   assert.match(html, /notes\.md badge/);
-  assert.match(html, /Popup surfaces/);
+  assert.match(html, /system\.svg/);
   assert.match(html, /Popup body/);
   assert.match(html, /No popup sessions/);
   assert.match(html, /Inspector card/);

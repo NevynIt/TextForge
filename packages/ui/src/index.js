@@ -1111,15 +1111,17 @@ export function TextForgeUtilityPane({
 export function TextForgePopupHost({
   children,
   frameModel,
-  onCloseTab,
   onRequestTabContextMenu,
-  onSelectTab,
   onClose,
   title = 'Popup surface',
 }) {
-  if ((frameModel?.tabs ?? []).length === 0) {
+  const tabs = frameModel?.tabs ?? [];
+  if (tabs.length === 0) {
     return null;
   }
+
+  const activeTab = tabs.find((tab) => tab.id === frameModel.activeTabId) ?? tabs[0];
+  const popupTitle = activeTab?.title ?? title;
 
   const hostRef = React.useRef(null);
   const scrimRef = React.useRef(null);
@@ -1294,6 +1296,14 @@ export function TextForgePopupHost({
     document.body.style.setProperty('user-select', 'none');
   }
 
+  function openActivePopupContextMenu(anchor) {
+    if (!activeTab?.id) {
+      return;
+    }
+
+    onRequestTabContextMenu?.(activeTab.id, anchor);
+  }
+
   return element(
     'div',
     { ref: scrimRef, className: 'tf-popup-host__scrim' },
@@ -1304,7 +1314,7 @@ export function TextForgePopupHost({
         className: 'tf-popup-host',
         role: 'dialog',
         'aria-modal': 'false',
-        'aria-label': title,
+        'aria-label': popupTitle,
         'data-pane': 'popup',
         style: {
           height: `${size.height}px`,
@@ -1318,11 +1328,29 @@ export function TextForgePopupHost({
         {
           className: 'tf-popup-host__header',
           onPointerDown: handleHeaderPointerDown,
+          onContextMenu: (event) => {
+            event.preventDefault();
+            openActivePopupContextMenu({
+              x: event.clientX,
+              y: event.clientY,
+            });
+          },
+          onKeyDown: (event) => {
+            if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+              event.preventDefault();
+              const rect = event.currentTarget.getBoundingClientRect();
+              openActivePopupContextMenu({
+                x: rect.left + (rect.width / 2),
+                y: rect.bottom,
+              });
+            }
+          },
+          tabIndex: 0,
         },
         element(
           'div',
           { className: 'tf-popup-host__copy' },
-          element('h2', { className: 'tf-popup-host__title' }, title),
+          element('h2', { className: 'tf-popup-host__title' }, popupTitle),
         ),
         onClose
           ? element(
@@ -1330,7 +1358,7 @@ export function TextForgePopupHost({
             {
               type: 'button',
               className: 'tf-popup-host__close',
-              'aria-label': `Close ${title}`,
+              'aria-label': `Close ${popupTitle}`,
               onClick: onClose,
             },
             element(IconGlyph, { className: 'tf-popup-host__close-icon', name: 'close', size: 14 }),
@@ -1341,13 +1369,6 @@ export function TextForgePopupHost({
       element(
         'div',
         { className: 'tf-popup-host__body' },
-        element(TextForgeSessionTabStrip, {
-          emptyLabel: 'No popup sessions are open',
-          frameModel,
-          onCloseTab,
-          onRequestTabContextMenu,
-          onSelectTab,
-        }),
         children,
       ),
       element('div', {
