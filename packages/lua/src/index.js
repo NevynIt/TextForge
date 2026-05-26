@@ -161,7 +161,6 @@ function createDefaultConsoleState() {
     historyIndex: 0,
     transcript: [
       'TextForge Lua Console',
-      'Fresh Lua state per command. No DOM, network, or local filesystem access.',
     ],
     currentInput: '',
   };
@@ -410,7 +409,7 @@ export function createLuaConsoleSurface(options = {}) {
 export const luaConsoleSurfaceContribution = {
   id: `${packageId}/console`,
   label: 'Lua Console',
-  description: 'xterm.js-backed local Lua console with fresh-state command execution.',
+  description: 'xterm.js-backed local Lua console with a persistent sandboxed session.',
   localName: 'console',
   capabilities: [luaCapabilityIds.console],
   defaultActive: true,
@@ -419,7 +418,7 @@ export const luaConsoleSurfaceContribution = {
   open(execution = {}) {
     return {
       mountId: `lua-console:${execution.resource?.resourceId ?? 'session'}`,
-      summary: 'Local Lua console with fresh sandboxed state per command.',
+      summary: 'Local Lua console with a persistent sandboxed session.',
       detail: 'Interactive xterm.js surface; no DOM, network, or local filesystem access.',
       readOnly: false,
       surface: createLuaConsoleSurface({
@@ -1181,6 +1180,40 @@ function loadAndExecuteChunk(L, source, scriptPath, inputValue) {
   }
 }
 
+function loadConsoleChunk(L, command, scriptPath) {
+  const normalizedCommand = String(command ?? '');
+  const trimmedCommand = normalizedCommand.trim();
+  const chunkName = `@${normalizeWorkspacePath(scriptPath ?? luaConsoleResourcePath)}`;
+  const tryLoad = (source) => {
+    const sourceBytes = to_luastring(source);
+    return lauxlib.luaL_loadbuffer(L, sourceBytes, sourceBytes.length, to_luastring(chunkName));
+  };
+
+  const expressionSource = trimmedCommand.startsWith('=')
+    ? `return ${trimmedCommand.slice(1).trim()}`
+    : `return ${normalizedCommand}`;
+  const primarySource = trimmedCommand.startsWith('=') ? expressionSource : normalizedCommand;
+  const fallbackSource = trimmedCommand.startsWith('=') ? undefined : expressionSource;
+
+  const primaryStatus = tryLoad(primarySource);
+  if (primaryStatus === lua.LUA_OK) {
+    return;
+  }
+
+  const primaryError = getLuaErrorMessage(L);
+  if (!fallbackSource) {
+    throw new Error(primaryError);
+  }
+
+  const fallbackStatus = tryLoad(fallbackSource);
+  if (fallbackStatus === lua.LUA_OK) {
+    return;
+  }
+
+  lua.lua_pop(L, 1);
+  throw new Error(primaryError);
+}
+
 function readLuaStringField(L, tableIndex, fieldName) {
   lua.lua_getfield(L, tableIndex, to_luastring(fieldName));
   const value = lua.lua_isnil(L, -1) ? undefined : lua.lua_tojsstring(L, -1);
@@ -1377,6 +1410,69 @@ export function runLuaScript(options = {}) {
   }
 }
 
+function syncConsoleRuntimeState(runtime, runOptions = {}, automationDefinitions = [], pipelineDefinitions = []) {
+  Object.assign(runtime.limits, createLuaExecutionLimits(runOptions.limits));
+  runtime.workspaceIndex = createWorkspaceTextResourceIndex(runOptions.workspace);
+  runtime.automationRoot = normalizeWorkspacePath(runOptions.automationRoot ?? defaultAutomationRoot);
+  runtime.automationDefinitions = [...automationDefinitions];
+  runtime.pipelineDefinitions = [...pipelineDefinitions];
+  runtime.invokePipelineStep = runOptions.invokePipelineStep;
+  runtime.invokeActionStep = runOptions.invokeActionStep;
+  runtime.consoleLines.length = 0;
+  runtime.currentScriptPaths.length = 0;
+}
+
+function runLuaConsoleCommand(session, command, runOptions = {}, automationDefinitions = [], pipelineDefinitions = []) {
+  syncConsoleRuntimeState(session.runtime, runOptions, automationDefinitions, pipelineDefinitions);
+  installInstructionHook(session.L, session.runtime.limits);
+  const scriptPath = normalizeWorkspacePath(runOptions.scriptPath ?? luaConsoleResourcePath);
+  const baseTop = lua.lua_gettop(session.L);
+
+  session.runtime.currentScriptPaths.push(scriptPath);
+  try {
+    pushPipelineValueTable(session.L, runOptions.input ?? createPipelineValue('text', ''));
+    lua.lua_setglobal(session.L, to_luastring('input'));
+    loadConsoleChunk(session.L, command, scriptPath);
+    const callStatus = lua.lua_pcall(session.L, 0, lua.LUA_MULTRET, 0);
+    if (callStatus !== lua.LUA_OK) {
+      throw new Error(getLuaErrorMessage(session.L));
+    }
+
+    const resultCount = lua.lua_gettop(session.L) - baseTop;
+    let rawValue;
+    if (resultCount === 1) {
+      rawValue = luaValueToJs(session.L, -1);
+    } else if (resultCount > 1) {
+      rawValue = [];
+      for (let index = baseTop + 1; index <= lua.lua_gettop(session.L); index += 1) {
+        rawValue.push(luaValueToJs(session.L, index));
+      }
+    }
+
+    return {
+      ok: true,
+      diagnostics: [],
+      value: resultCount > 0
+        ? createPipelineValue('json', cloneJsonSafe(rawValue))
+        : undefined,
+      consoleLines: [...session.runtime.consoleLines],
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      value: createPipelineValue('diagnostics', []),
+      diagnostics: [
+        createLuaDiagnostic('lua.runtime-error', error?.message ?? 'Lua execution failed.'),
+      ],
+      consoleLines: [...session.runtime.consoleLines],
+      definitions: [],
+    };
+  } finally {
+    session.runtime.currentScriptPaths.pop();
+    lua.lua_settop(session.L, baseTop);
+  }
+}
+
 export function runLuaAutomationDefinition(definition, options = {}) {
   const inputValue = options.input?.kind
     ? options.input
@@ -1460,6 +1556,7 @@ export function discoverLuaAutomations(options = {}) {
 export function createLuaExecutionService(options = {}) {
   let automationDefinitions = [...(options.automationDefinitions ?? [])];
   let pipelineDefinitions = [...(options.pipelineDefinitions ?? [])];
+  const consoleSessions = new Map();
 
   return {
     getAutomationDefinitions() {
@@ -1480,6 +1577,34 @@ export function createLuaExecutionService(options = {}) {
         automationDefinitions,
         pipelineDefinitions,
       });
+    },
+    runConsoleCommand(sessionKey, command, runOptions = {}) {
+      const normalizedKey = String(sessionKey ?? 'default');
+      let session = consoleSessions.get(normalizedKey);
+      if (!session) {
+        const runtime = createRuntimeContext({
+          ...options,
+          ...runOptions,
+          automationDefinitions,
+          pipelineDefinitions,
+        });
+        session = {
+          runtime,
+          L: createLuaState(runtime),
+        };
+        consoleSessions.set(normalizedKey, session);
+      }
+
+      return runLuaConsoleCommand(
+        session,
+        command,
+        {
+          ...options,
+          ...runOptions,
+        },
+        automationDefinitions,
+        pipelineDefinitions,
+      );
     },
     runAutomation(automationId, runOptions = {}) {
       const definition = automationDefinitions.find((entry) =>

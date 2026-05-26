@@ -132,6 +132,11 @@ export interface LuaExecutionService {
   setAutomationDefinitions(definitions?: ReadonlyArray<LuaAutomationDefinition>): ReadonlyArray<LuaAutomationDefinition>;
   setPipelineDefinitions(definitions?: ReadonlyArray<LuaAutomationDefinition>): ReadonlyArray<LuaAutomationDefinition>;
   runSnippet(runOptions?: Parameters<typeof runLuaScript>[0]): LuaRunResult;
+  runConsoleCommand(
+    sessionKey: string,
+    command: string,
+    runOptions?: Parameters<typeof runLuaScript>[0],
+  ): LuaRunResult;
   runAutomation(
     automationId: string,
     runOptions?: Parameters<typeof runLuaScript>[0],

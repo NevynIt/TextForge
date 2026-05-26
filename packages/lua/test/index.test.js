@@ -133,6 +133,37 @@ test('runtime reports blocked modules, blocked globals, and hard instruction lim
   assert.match(timeout.diagnostics[0]?.message ?? '', /instruction limit/i);
 });
 
+test('console sessions keep globals across commands and treat bare expressions as results', () => {
+  const workspace = createWorkspace();
+  const service = createLuaExecutionService();
+
+  const printed = service.runConsoleCommand('console', 'print(2 + 2)', {
+    workspace,
+    scriptPath: '/.textforge/runtime/lua-console.session',
+  });
+  assert.equal(printed.ok, true);
+  assert.deepEqual(printed.diagnostics, []);
+  assert.equal(printed.consoleLines[0]?.text, '4');
+  assert.equal(printed.value, undefined);
+
+  const assigned = service.runConsoleCommand('console', 'a = 5', {
+    workspace,
+    scriptPath: '/.textforge/runtime/lua-console.session',
+  });
+  assert.equal(assigned.ok, true);
+  assert.deepEqual(assigned.diagnostics, []);
+  assert.equal(assigned.value, undefined);
+
+  const evaluated = service.runConsoleCommand('console', 'a', {
+    workspace,
+    scriptPath: '/.textforge/runtime/lua-console.session',
+  });
+  assert.equal(evaluated.ok, true);
+  assert.deepEqual(evaluated.diagnostics, []);
+  assert.equal(evaluated.value?.kind, 'json');
+  assert.equal(evaluated.value?.value, 5);
+});
+
 test('execution service materializes discovered automations into contribution manifests', () => {
   const workspace = createWorkspace();
   workspace.createFolder({ path: '/.textforge', title: '.textforge' });

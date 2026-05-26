@@ -1426,7 +1426,6 @@ function createTextForgeWorkbenchController() {
       historyIndex: 0,
       transcript: [
         'TextForge Lua Console',
-        'Fresh Lua state per command. No DOM, network, or local filesystem access.',
       ],
       currentInput: '',
     };
@@ -1505,8 +1504,7 @@ function createTextForgeWorkbenchController() {
     }
 
     const resource = await ensureLuaConsoleResource();
-    const result = luaExecutionService.runSnippet({
-      source: bootstrapOptions.luaConsoleCommand,
+    const result = luaExecutionService.runConsoleCommand(resource.id, bootstrapOptions.luaConsoleCommand, {
       scriptPath: resource.path,
       workspace,
       input: createLuaInputValue(resource.id),
@@ -1879,7 +1877,7 @@ function createTextForgeWorkbenchController() {
         luaConsoleStateByResourceId.set(resource.id, nextState);
       },
       runConsoleCommand(command) {
-        return luaExecutionService.runSnippet({
+        return luaExecutionService.runConsoleCommand(resource.id, command, {
           source: command,
           scriptPath: resource.path,
           workspace,
