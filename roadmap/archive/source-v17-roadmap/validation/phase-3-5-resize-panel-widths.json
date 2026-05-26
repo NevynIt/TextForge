@@ -1,0 +1,53 @@
+{
+  "panelWidthsMain": [
+    421,
+    1032,
+    459
+  ],
+  "panelWidthsNarrow": [
+    306,
+    1032,
+    574
+  ],
+  "panelWidthsWide": [
+    535,
+    1032,
+    344
+  ],
+  "panelWidthsDragBefore": [
+    421,
+    1032,
+    459
+  ],
+  "panelWidthsDragAfterRight": [
+    421,
+    892,
+    599
+  ],
+  "followUpRefinement2026-05-25": {
+    "defaultStartupCollapsed": [
+      0,
+      876,
+      0
+    ],
+    "panelsWideContentFill": {
+      "editorWidth": 577,
+      "mountWidth": 577,
+      "sidebarContentWidth": 316,
+      "sidebarPanelWidth": 316,
+      "treeWidth": 315
+    },
+    "utilityCollapseEditorExpansion": {
+      "after": [
+        248,
+        843,
+        5
+      ],
+      "before": [
+        248,
+        577,
+        271
+      ]
+    }
+  }
+}

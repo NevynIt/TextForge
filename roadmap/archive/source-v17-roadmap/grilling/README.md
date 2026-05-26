@@ -1,7 +1,3 @@
-# Grilling Records
-
-These records remain binding when referenced by a workpackage. Earlier records are preserved; append new grilling outputs rather than editing prior decisions.
-
 # Phase Grilling Records and Prompt
 
 This folder records focused grilling sessions used to test TextForge roadmap phases before implementation changes are proposed or applied.
