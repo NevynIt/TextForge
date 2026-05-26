@@ -1553,6 +1553,185 @@ export function resolveDocumentContributionContext(input = {}) {
   };
 }
 
+function sortActivationSources(sources = []) {
+  const activationSourceOrder = new Map([
+    ['explicit', 0],
+    ['document', 1],
+    ['workspace', 2],
+    ['app', 3],
+    ['core', 4],
+  ]);
+  return [...new Set(sources)].sort((left, right) =>
+    (activationSourceOrder.get(left) ?? Number.POSITIVE_INFINITY)
+      - (activationSourceOrder.get(right) ?? Number.POSITIVE_INFINITY));
+}
+
+function createInspectorContributionEntry(contribution, kind) {
+  return {
+    id: contribution.id,
+    packageId: contribution.packageId,
+    kind,
+    label: contribution.label,
+    localName: contribution.localName,
+    status: contribution.status,
+    capabilityIds: normalizeContributionCapabilities(contribution).sort(compareByStringId),
+    ...(kind === 'markdownFenceHandlers'
+      ? {
+        fenceNames: [...new Set((contribution.fenceNames ?? []).map((name) => String(name).trim()).filter(Boolean))]
+          .sort(compareByStringId),
+      }
+      : {}),
+  };
+}
+
+function collectInspectorPackageDiagnostics(packageId, diagnostics = []) {
+  return diagnostics
+    .filter((diagnostic) =>
+      diagnostic.origin?.packageId === packageId
+      || diagnostic.related?.some((related) => related.message?.includes(packageId)))
+    .map((diagnostic) => ({
+      code: diagnostic.code,
+      severity: diagnostic.severity,
+      message: diagnostic.message,
+    }))
+    .sort((left, right) => {
+      const severityComparison = compareByStringId(left.severity, right.severity);
+      if (severityComparison !== 0) {
+        return severityComparison;
+      }
+      const codeComparison = compareByStringId(left.code, right.code);
+      if (codeComparison !== 0) {
+        return codeComparison;
+      }
+      return compareByStringId(left.message, right.message);
+    });
+}
+
+export function createContributionInspectorModel(input = {}) {
+  const resolution = input.resolution;
+  if (!resolution?.packages || !resolution?.capabilities) {
+    throw new Error('createContributionInspectorModel requires a contribution registry resolution.');
+  }
+
+  const documentContext = input.documentContext;
+  const packageEntries = documentContext?.packages ?? resolution.packages;
+  const capabilities = documentContext?.capabilities ?? resolution.capabilities;
+  const commands = documentContext?.commands ?? resolution.commands;
+  const surfaces = documentContext?.surfaces ?? resolution.surfaces;
+  const pipelines = documentContext?.pipelines ?? resolution.pipelines;
+  const markdownFenceHandlers = documentContext?.markdownFenceHandlers ?? resolution.markdownFenceHandlers;
+  const diagnostics = documentContext?.diagnostics ?? resolution.diagnostics;
+  const activationSourcesByCapabilityId = new Map();
+  const requirementNamesByCapabilityId = new Map();
+
+  for (const activation of documentContext?.activationOrder ?? []) {
+    const currentSources = activationSourcesByCapabilityId.get(activation.capabilityId) ?? [];
+    currentSources.push(activation.source);
+    activationSourcesByCapabilityId.set(
+      activation.capabilityId,
+      sortActivationSources(currentSources),
+    );
+  }
+
+  for (const requirement of documentContext?.requirements ?? []) {
+    if (!requirement.matchedCapabilityId) {
+      continue;
+    }
+
+    const currentNames = requirementNamesByCapabilityId.get(requirement.matchedCapabilityId) ?? [];
+    const requirementLabel = requirement.name ?? requirement.capabilityId;
+    if (requirementLabel) {
+      currentNames.push(requirementLabel);
+      requirementNamesByCapabilityId.set(
+        requirement.matchedCapabilityId,
+        [...new Set(currentNames)].sort(compareByStringId),
+      );
+    }
+  }
+
+  const contributionsByKind = {
+    commands: commands.map((command) => createInspectorContributionEntry(command, 'commands')),
+    surfaces: surfaces.map((surface) => createInspectorContributionEntry(surface, 'surfaces')),
+    pipelines: pipelines.map((pipeline) => createInspectorContributionEntry(pipeline, 'pipelines')),
+    markdownFenceHandlers: markdownFenceHandlers.map((handler) => createInspectorContributionEntry(handler, 'markdownFenceHandlers')),
+  };
+
+  const packages = packageEntries.map((entry) => {
+    const packageCapabilities = capabilities
+      .filter((capability) => capability.packageId === entry.packageId)
+      .map((capability) => ({
+        id: capability.id,
+        packageId: capability.packageId,
+        localName: capability.localName,
+        aliases: [...(capability.aliases ?? [])].sort(compareByStringId),
+        status: capability.status,
+        activationSources: activationSourcesByCapabilityId.get(capability.id) ?? [],
+        matchedRequirementNames: requirementNamesByCapabilityId.get(capability.id) ?? [],
+      }))
+      .sort(compareContributionEntries);
+    const packageContributions = {
+      commands: contributionsByKind.commands
+        .filter((contribution) => contribution.packageId === entry.packageId)
+        .sort(compareContributionEntries),
+      surfaces: contributionsByKind.surfaces
+        .filter((contribution) => contribution.packageId === entry.packageId)
+        .sort(compareContributionEntries),
+      pipelines: contributionsByKind.pipelines
+        .filter((contribution) => contribution.packageId === entry.packageId)
+        .sort(compareContributionEntries),
+      markdownFenceHandlers: contributionsByKind.markdownFenceHandlers
+        .filter((contribution) => contribution.packageId === entry.packageId)
+        .sort(compareContributionEntries),
+    };
+
+    return {
+      packageId: entry.packageId,
+      name: entry.name,
+      version: entry.version,
+      description: entry.description,
+      status: entry.status,
+      statusReason: entry.statusReason,
+      dependencies: entry.dependencies,
+      conflicts: entry.conflicts,
+      capabilities: packageCapabilities,
+      contributions: packageContributions,
+      activeCapabilityCount: packageCapabilities.filter((capability) => capability.status === 'active').length,
+      activeContributionCounts: {
+        commands: packageContributions.commands.filter((contribution) => contribution.status === 'active').length,
+        surfaces: packageContributions.surfaces.filter((contribution) => contribution.status === 'active').length,
+        pipelines: packageContributions.pipelines.filter((contribution) => contribution.status === 'active').length,
+        markdownFenceHandlers: packageContributions.markdownFenceHandlers.filter((contribution) => contribution.status === 'active').length,
+      },
+      diagnostics: collectInspectorPackageDiagnostics(entry.packageId, diagnostics),
+    };
+  });
+
+  return {
+    summary: {
+      packageCount: packages.length,
+      availablePackageCount: packages.filter((entry) => entry.status === 'available').length,
+      blockedPackageCount: packages.filter((entry) => entry.status !== 'available').length,
+      capabilityCount: capabilities.length,
+      activeCapabilityCount: capabilities.filter((capability) => capability.status === 'active').length,
+      activeSurfaceCount: surfaces.filter((surface) => surface.status === 'active').length,
+      activePipelineCount: pipelines.filter((pipeline) => pipeline.status === 'active').length,
+      activeMarkdownFenceHandlerCount: markdownFenceHandlers.filter((handler) => handler.status === 'active').length,
+      diagnosticCount: diagnostics.length,
+    },
+    document: documentContext
+      ? {
+        resource: documentContext.document,
+        requirements: documentContext.requirements,
+        activationOrder: documentContext.activationOrder,
+        shortNameConflicts: documentContext.shortNameConflicts,
+        diagnostics: documentContext.diagnostics,
+      }
+      : undefined,
+    packages,
+    diagnostics,
+  };
+}
+
 export function createContributionRegistry(initialManifests = []) {
   const manifests = new Map();
 

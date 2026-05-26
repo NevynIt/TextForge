@@ -5,6 +5,7 @@ import {
   createCommandDispatcher,
   createCommandRegistry,
   createContributionRegistry,
+  createContributionInspectorModel,
   getLanguageDefinition,
   inferLanguageId,
   inferResourceRepresentation,
@@ -479,7 +480,6 @@ function createTextForgeWorkbenchController() {
   contributionRegistry.registerManifest(createSurfaceContributionManifest(surfaceRegistry.list()));
   const resolvedContributionRegistry = contributionRegistry.resolve();
   const commandRegistry = createCommandRegistry(contributionRegistry.listManifests());
-  const contributionPacks = resolvedContributionRegistry.packages;
   const mainHost = createMainSurfaceHost({
     hostId: 'main',
     registry: surfaceRegistry,
@@ -2621,6 +2621,10 @@ function createTextForgeWorkbenchController() {
     const documentContributionContext = isWorkspaceResource(inspectedDocumentEntry)
       ? resolveDocumentContributionContextForEntry(inspectedDocumentEntry)
       : undefined;
+    const contributionInspectorModel = createContributionInspectorModel({
+      resolution: resolvedContributionRegistry,
+      documentContext: documentContributionContext,
+    });
     const chromeModel = createWorkbenchChromeModel({
       workspaceTree: createWorkspaceTreeFrameModel({
         items: treeItems,
@@ -2689,7 +2693,7 @@ function createTextForgeWorkbenchController() {
       commandMenus,
       commandPaletteEntries,
       contextMenu,
-      contributionPacks,
+      contributionInspectorModel,
       documentContributionContext,
       inspectedDocumentEntry: isWorkspaceResource(inspectedDocumentEntry) ? inspectedDocumentEntry : undefined,
       badgeDiagnostics,
@@ -3053,16 +3057,83 @@ function formatCapabilityLabel(capability) {
     : capability.id;
 }
 
-function ContributionRegistryView({ packs, documentContext, inspectedDocumentEntry }) {
-  const capabilityById = new Map((documentContext?.capabilities ?? []).map((capability) => [capability.id, capability]));
+function formatCapabilityState(status) {
+  switch (status) {
+    case 'active':
+      return 'Active';
+    case 'available':
+      return 'Inactive';
+    case 'failed':
+      return 'Blocked';
+    default:
+      return formatRegistryPackageStatus(status);
+  }
+}
+
+function formatContributionKindLabel(kind) {
+  switch (kind) {
+    case 'markdownFenceHandlers':
+      return 'Fence handlers';
+    case 'pipelines':
+      return 'Pipelines';
+    case 'surfaces':
+      return 'Surfaces';
+    default:
+      return 'Commands';
+  }
+}
+
+function renderRegistryItems(items, formatter) {
+  return element(
+    'ul',
+    { className: 'tf-registry__list' },
+    ...items.map((item, index) =>
+      element('li', { key: `${index}:${formatter(item)}` }, formatter(item))),
+  );
+}
+
+function ContributionRegistryView({ inspectorModel, inspectedDocumentEntry }) {
+  const documentContext = inspectorModel.document;
+  const packs = inspectorModel.packages;
   const documentHeadline = inspectedDocumentEntry?.path ?? 'No active document';
-  const activeSurfaceIds = (documentContext?.activeSurfaces ?? []).map((surface) => surface.id);
-  const activePipelineIds = (documentContext?.activePipelines ?? []).map((pipeline) => pipeline.id);
-  const activeFenceHandlerIds = (documentContext?.activeMarkdownFenceHandlers ?? []).map((handler) => handler.id);
 
   return element(
     'div',
     { className: 'tf-registry' },
+    element(
+      'article',
+      { className: 'tf-registry__card' },
+      element(
+        'div',
+        { className: 'tf-registry__header' },
+        element(
+          'div',
+          { className: 'tf-registry__identity' },
+          element('strong', null, 'Registry overview'),
+          element(
+            'span',
+            { className: 'tf-registry__status tf-registry__status--available' },
+            `${inspectorModel.summary.availablePackageCount}/${inspectorModel.summary.packageCount} ready`,
+          ),
+        ),
+        element('span', null, 'Bundled static only'),
+      ),
+      element(
+        'p',
+        null,
+        'The inspector reports bundled package state, current-document capability activation, exposed contributions, and diagnostics without introducing plugin installs or remote loading.',
+      ),
+      element(
+        'dl',
+        { className: 'tf-registry__meta' },
+        element('div', null, element('dt', null, 'Packages'), element('dd', null, String(inspectorModel.summary.packageCount))),
+        element('div', null, element('dt', null, 'Blocked packs'), element('dd', null, String(inspectorModel.summary.blockedPackageCount))),
+        element('div', null, element('dt', null, 'Capabilities'), element('dd', null, String(inspectorModel.summary.capabilityCount))),
+        element('div', null, element('dt', null, 'Active capabilities'), element('dd', null, String(inspectorModel.summary.activeCapabilityCount))),
+        element('div', null, element('dt', null, 'Active surfaces'), element('dd', null, String(inspectorModel.summary.activeSurfaceCount))),
+        element('div', null, element('dt', null, 'Diagnostics'), element('dd', null, String(inspectorModel.summary.diagnosticCount))),
+      ),
+    ),
     element(
       'article',
       { className: 'tf-registry__card' },
@@ -3095,65 +3166,97 @@ function ContributionRegistryView({ packs, documentContext, inspectedDocumentEnt
           element(
             'dl',
             { className: 'tf-registry__meta' },
-            element('div', null, element('dt', null, 'Active capabilities'), element('dd', null, String(documentContext.activeCapabilities.length))),
-            element('div', null, element('dt', null, 'Diagnostics'), element('dd', null, String(documentContext.diagnostics.length))),
             element('div', null, element('dt', null, 'Requirements'), element('dd', null, String(documentContext.requirements.length))),
+            element('div', null, element('dt', null, 'Conflicts'), element('dd', null, String(documentContext.shortNameConflicts.length))),
+            element('div', null, element('dt', null, 'Diagnostics'), element('dd', null, String(documentContext.diagnostics.length))),
           ),
           documentContext.activationOrder.length > 0
             ? element(
-              'ul',
-              { className: 'tf-registry__list' },
-              ...documentContext.activationOrder.map((activation) => {
-                const capability = capabilityById.get(activation.capabilityId);
-                return element(
-                  'li',
-                  { key: `${activation.source}:${activation.capabilityId}` },
-                  `${formatActivationSource(activation.source)}: ${formatCapabilityLabel(capability ?? { id: activation.capabilityId })}`,
-                );
-              }),
+              'div',
+              { className: 'tf-registry__section' },
+              element('h4', null, 'Activation order'),
+              renderRegistryItems(documentContext.activationOrder, (activation) =>
+                `${formatActivationSource(activation.source)}: ${activation.capabilityId}`),
+            )
+            : null,
+          packs.some((pack) => pack.activeCapabilityCount > 0)
+            ? element(
+              'div',
+              { className: 'tf-registry__section' },
+              element('h4', null, 'Active capability routing'),
+              element(
+                'div',
+                { className: 'tf-registry__capability-groups' },
+                ...packs
+                  .filter((pack) => pack.activeCapabilityCount > 0)
+                  .map((pack) =>
+                    element(
+                      'section',
+                      { key: `${pack.packageId}:capabilities`, className: 'tf-registry__group' },
+                      element('strong', null, pack.packageId),
+                      renderRegistryItems(
+                        pack.capabilities.filter((capability) => capability.status === 'active'),
+                        (capability) =>
+                          `${formatCapabilityLabel(capability)} - ${capability.activationSources.map(formatActivationSource).join(', ')}`,
+                      ),
+                    )),
+              ),
             )
             : null,
           documentContext.requirements.length > 0
             ? element(
-              'ul',
-              { className: 'tf-registry__list' },
-              ...documentContext.requirements.map((requirement, index) =>
-                element(
-                  'li',
-                  { key: `${requirement.name ?? requirement.capabilityId ?? 'requirement'}:${index}` },
-                  `%require ${requirement.name ?? requirement.capabilityId} - ${formatRequirementStatus(requirement.status)}`,
-                )),
+              'div',
+              { className: 'tf-registry__section' },
+              element('h4', null, 'Document requirements'),
+              renderRegistryItems(documentContext.requirements, (requirement) =>
+                `%require ${requirement.name ?? requirement.capabilityId} - ${formatRequirementStatus(requirement.status)}${requirement.matchedCapabilityId ? ` (${requirement.matchedCapabilityId})` : ''}`),
             )
             : null,
-          element(
-            'ul',
-            { className: 'tf-registry__list' },
-            element('li', { key: 'surfaces' }, `Active surfaces: ${activeSurfaceIds.length > 0 ? activeSurfaceIds.join(', ') : 'none'}`),
-            element('li', { key: 'pipelines' }, `Active pipelines: ${activePipelineIds.length > 0 ? activePipelineIds.join(', ') : 'none'}`),
-            element('li', { key: 'handlers' }, `Active fence handlers: ${activeFenceHandlerIds.length > 0 ? activeFenceHandlerIds.join(', ') : 'none'}`),
-          ),
+          ['surfaces', 'pipelines', 'markdownFenceHandlers'].some((kind) =>
+            packs.some((pack) => pack.activeContributionCounts[kind] > 0))
+            ? element(
+              'div',
+              { className: 'tf-registry__section' },
+              element('h4', null, 'Exposed contributions'),
+              element(
+                'div',
+                { className: 'tf-registry__contribution-groups' },
+                ...['surfaces', 'pipelines', 'markdownFenceHandlers'].map((kind) => {
+                  const activeItems = packs.flatMap((pack) =>
+                    pack.contributions[kind].filter((entry) => entry.status === 'active'));
+                  if (activeItems.length === 0) {
+                    return null;
+                  }
+
+                  return element(
+                    'section',
+                    { key: kind, className: 'tf-registry__group' },
+                    element('strong', null, formatContributionKindLabel(kind)),
+                    renderRegistryItems(activeItems, (entry) =>
+                      entry.kind === 'markdownFenceHandlers'
+                        ? `${entry.localName ?? entry.id} (${entry.fenceNames?.join(', ') ?? 'no fence names'})`
+                        : `${entry.localName ?? entry.id} (${entry.id})`),
+                  );
+                }).filter(Boolean),
+              ),
+            )
+            : null,
           documentContext.shortNameConflicts.length > 0
             ? element(
-              'ul',
-              { className: 'tf-registry__list' },
-              ...documentContext.shortNameConflicts.map((conflict) =>
-                element(
-                  'li',
-                  { key: `${conflict.kind}:${conflict.localName}` },
-                  `Conflict: ${conflict.kind} short name "${conflict.localName}" -> ${conflict.contributionIds.join(', ')}`,
-                )),
+              'div',
+              { className: 'tf-registry__section' },
+              element('h4', null, 'Active-context conflicts'),
+              renderRegistryItems(documentContext.shortNameConflicts, (conflict) =>
+                `${conflict.kind} short name "${conflict.localName}" -> ${conflict.contributionIds.join(', ')}`),
             )
             : null,
           documentContext.diagnostics.length > 0
             ? element(
-              'ul',
-              { className: 'tf-registry__list' },
-              ...documentContext.diagnostics.map((diagnostic, index) =>
-                element(
-                  'li',
-                  { key: `${diagnostic.code ?? 'diagnostic'}:${index}` },
-                  `${diagnostic.code ?? 'diagnostic'}: ${diagnostic.message}`,
-                )),
+              'div',
+              { className: 'tf-registry__section' },
+              element('h4', null, 'Inspector diagnostics'),
+              renderRegistryItems(documentContext.diagnostics, (diagnostic) =>
+                `${diagnostic.code ?? 'diagnostic'}: ${diagnostic.message}`),
             )
             : null,
         )
@@ -3179,7 +3282,7 @@ function ContributionRegistryView({ packs, documentContext, inspectedDocumentEnt
           element(
             'span',
             null,
-            `${pack.contributionCounts.commands} commands / ${pack.contributionCounts.surfaces} surfaces / ${pack.contributionCounts.pipelines} pipelines`,
+            `${pack.contributions.commands.length} commands / ${pack.contributions.surfaces.length} surfaces / ${pack.contributions.pipelines.length} pipelines`,
           ),
         ),
         element(
@@ -3193,27 +3296,71 @@ function ContributionRegistryView({ packs, documentContext, inspectedDocumentEnt
           'dl',
           { className: 'tf-registry__meta' },
           element('div', null, element('dt', null, 'Version'), element('dd', null, pack.version ?? 'workspace')),
-          element('div', null, element('dt', null, 'Capabilities'), element('dd', null, String(pack.capabilityIds.length))),
-          element('div', null, element('dt', null, 'Fence handlers'), element('dd', null, String(pack.contributionCounts.markdownFenceHandlers))),
+          element('div', null, element('dt', null, 'Capabilities'), element('dd', null, String(pack.capabilities.length))),
+          element('div', null, element('dt', null, 'Active capabilities'), element('dd', null, String(pack.activeCapabilityCount))),
+          element('div', null, element('dt', null, 'Active surfaces'), element('dd', null, String(pack.activeContributionCounts.surfaces))),
         ),
         pack.dependencies.length > 0
           ? element(
-            'ul',
-            { className: 'tf-registry__list' },
-            ...pack.dependencies.map((dependency) =>
-              element(
-                'li',
-                { key: `${pack.packageId}:${dependency.packageId}` },
-                `${dependency.packageId}${dependency.versionRange ? ` ${dependency.versionRange}` : ''} - ${formatRegistryPackageStatus(dependency.status)}`,
-              )),
+            'div',
+            { className: 'tf-registry__section' },
+            element('h4', null, 'Dependencies'),
+            renderRegistryItems(pack.dependencies, (dependency) =>
+              `${dependency.packageId}${dependency.versionRange ? ` ${dependency.versionRange}` : ''} - ${formatRegistryPackageStatus(dependency.status)}`),
           )
           : null,
         pack.conflicts.length > 0
           ? element(
-            'ul',
-            { className: 'tf-registry__list' },
-            ...pack.conflicts.map((conflictKey) =>
-              element('li', { key: `${pack.packageId}:${conflictKey}` }, `Conflict: ${conflictKey}`)),
+            'div',
+            { className: 'tf-registry__section' },
+            element('h4', null, 'Conflicts'),
+            renderRegistryItems(pack.conflicts, (conflictKey) => `Conflict: ${conflictKey}`),
+          )
+          : null,
+        pack.capabilities.length > 0
+          ? element(
+            'div',
+            { className: 'tf-registry__section' },
+            element('h4', null, 'Provided capabilities'),
+            renderRegistryItems(pack.capabilities, (capability) => {
+              const aliasText = capability.aliases.length > 0 ? ` aliases: ${capability.aliases.join(', ')}` : '';
+              const activationText = capability.activationSources.length > 0
+                ? ` via ${capability.activationSources.map(formatActivationSource).join(', ')}`
+                : '';
+              const requirementText = capability.matchedRequirementNames.length > 0
+                ? ` required by ${capability.matchedRequirementNames.join(', ')}`
+                : '';
+              return `${formatCapabilityLabel(capability)} - ${formatCapabilityState(capability.status)}${activationText}${requirementText}${aliasText}`;
+            }),
+          )
+          : null,
+        ['surfaces', 'pipelines', 'markdownFenceHandlers'].map((kind) => {
+          if (pack.contributions[kind].length === 0) {
+            return null;
+          }
+
+          return element(
+            'div',
+            { key: `${pack.packageId}:${kind}`, className: 'tf-registry__section' },
+            element('h4', null, formatContributionKindLabel(kind)),
+            renderRegistryItems(pack.contributions[kind], (entry) => {
+              const fenceText = entry.kind === 'markdownFenceHandlers' && entry.fenceNames?.length
+                ? ` fences: ${entry.fenceNames.join(', ')}`
+                : '';
+              const capabilityText = entry.capabilityIds.length > 0
+                ? ` capabilities: ${entry.capabilityIds.join(', ')}`
+                : '';
+              return `${entry.localName ?? entry.id} - ${formatCapabilityState(entry.status)}${fenceText}${capabilityText}`;
+            }),
+          );
+        }).filter(Boolean),
+        pack.diagnostics.length > 0
+          ? element(
+            'div',
+            { className: 'tf-registry__section' },
+            element('h4', null, 'Package diagnostics'),
+            renderRegistryItems(pack.diagnostics, (diagnostic) =>
+              `${diagnostic.code ?? diagnostic.severity}: ${diagnostic.message}`),
           )
           : null,
       )),
@@ -3508,8 +3655,7 @@ function TextForgeWorkbenchApp({ controller }) {
             : showStoragePane
               ? element(StoragePaneView, { controller, snapshot })
               : element(ContributionRegistryView, {
-                packs: snapshot.contributionPacks,
-                documentContext: snapshot.documentContributionContext,
+                inspectorModel: snapshot.contributionInspectorModel,
                 inspectedDocumentEntry: snapshot.inspectedDocumentEntry,
               }),
         ),

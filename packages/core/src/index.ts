@@ -412,6 +412,76 @@ export interface DocumentContributionContext {
   readonly shortNameConflicts: ReadonlyArray<ActiveShortNameConflict>;
 }
 
+export interface ContributionInspectorContributionEntry {
+  readonly id: string;
+  readonly packageId: string;
+  readonly kind: 'commands' | 'surfaces' | 'pipelines' | 'markdownFenceHandlers';
+  readonly label?: string;
+  readonly localName?: string;
+  readonly status: 'available' | 'active' | 'disabled' | 'missing' | 'failed';
+  readonly capabilityIds: ReadonlyArray<string>;
+  readonly fenceNames?: ReadonlyArray<string>;
+}
+
+export interface ContributionInspectorCapabilityEntry {
+  readonly id: string;
+  readonly packageId: string;
+  readonly localName?: string;
+  readonly aliases: ReadonlyArray<string>;
+  readonly status: 'available' | 'active' | 'disabled' | 'missing' | 'failed';
+  readonly activationSources: ReadonlyArray<DocumentCapabilityActivation['source']>;
+  readonly matchedRequirementNames: ReadonlyArray<string>;
+}
+
+export interface ContributionInspectorPackageEntry {
+  readonly packageId: string;
+  readonly name?: string;
+  readonly version?: string;
+  readonly description?: string;
+  readonly status: ContributionRegistryPackage['status'];
+  readonly statusReason?: string;
+  readonly dependencies: ReadonlyArray<ContributionRegistryResolvedDependency>;
+  readonly conflicts: ReadonlyArray<string>;
+  readonly capabilities: ReadonlyArray<ContributionInspectorCapabilityEntry>;
+  readonly contributions: {
+    readonly commands: ReadonlyArray<ContributionInspectorContributionEntry>;
+    readonly surfaces: ReadonlyArray<ContributionInspectorContributionEntry>;
+    readonly pipelines: ReadonlyArray<ContributionInspectorContributionEntry>;
+    readonly markdownFenceHandlers: ReadonlyArray<ContributionInspectorContributionEntry>;
+  };
+  readonly activeCapabilityCount: number;
+  readonly activeContributionCounts: {
+    readonly commands: number;
+    readonly surfaces: number;
+    readonly pipelines: number;
+    readonly markdownFenceHandlers: number;
+  };
+  readonly diagnostics: ReadonlyArray<Pick<Diagnostic, 'code' | 'severity' | 'message'>>;
+}
+
+export interface ContributionInspectorModel {
+  readonly summary: {
+    readonly packageCount: number;
+    readonly availablePackageCount: number;
+    readonly blockedPackageCount: number;
+    readonly capabilityCount: number;
+    readonly activeCapabilityCount: number;
+    readonly activeSurfaceCount: number;
+    readonly activePipelineCount: number;
+    readonly activeMarkdownFenceHandlerCount: number;
+    readonly diagnosticCount: number;
+  };
+  readonly document?: {
+    readonly resource?: ResourceRef;
+    readonly requirements: ReadonlyArray<DocumentContributionContext['requirements'][number]>;
+    readonly activationOrder: ReadonlyArray<DocumentCapabilityActivation>;
+    readonly shortNameConflicts: ReadonlyArray<ActiveShortNameConflict>;
+    readonly diagnostics: ReadonlyArray<Diagnostic>;
+  };
+  readonly packages: ReadonlyArray<ContributionInspectorPackageEntry>;
+  readonly diagnostics: ReadonlyArray<Diagnostic>;
+}
+
 export interface DocumentContributionResolverOptions extends ContributionRegistryContext {
   readonly document?: Partial<ResourceRef> & { readonly id?: string };
   readonly explicitRequirements?: ReadonlyArray<string | CapabilityRequirement>;
@@ -570,6 +640,10 @@ export declare function createContributionRegistry(
 export declare function resolveDocumentContributionContext(input: {
   readonly registry: ContributionRegistry;
 } & DocumentContributionResolverOptions): DocumentContributionContext;
+export declare function createContributionInspectorModel(input: {
+  readonly resolution: ContributionRegistryResolution;
+  readonly documentContext?: DocumentContributionContext;
+}): ContributionInspectorModel;
 
 export declare const defaultContributionManifest: ContributionManifest;
 

@@ -105,9 +105,9 @@ if (!workbenchJs.includes('createOpenWithSelection') || !workbenchJs.includes('l
   throw new Error('workbench.js must preserve package-backed open-with and language control chrome');
 }
 
-for (const requiredPhase5Signal of ['resolveDocumentContext', 'parseMarkdownCapabilityRequirements', 'Current document capability context', '%require']) {
+for (const requiredPhase5Signal of ['resolveDocumentContext', 'createContributionInspectorModel', 'parseMarkdownCapabilityRequirements', 'Registry overview', 'Active capability routing', 'Inspector diagnostics', '%require']) {
   if (!workbenchJs.includes(requiredPhase5Signal)) {
-    throw new Error(`workbench.js must surface ${requiredPhase5Signal} for WP-05B document capability resolution`);
+    throw new Error(`workbench.js must surface ${requiredPhase5Signal} for the WP-05B/WP-05D capability inspector flow`);
   }
 }
 

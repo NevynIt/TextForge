@@ -694,6 +694,43 @@ select {
   color: var(--muted);
 }
 
+.tf-registry__section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(126, 140, 165, 0.18);
+}
+
+.tf-registry__section h4 {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tf-registry__capability-groups,
+.tf-registry__contribution-groups {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.tf-registry__group {
+  padding: 10px 12px;
+  border: 1px solid rgba(126, 140, 165, 0.16);
+  border-radius: 12px;
+  background: rgba(18, 26, 43, 0.58);
+}
+
+.tf-registry__group strong {
+  display: block;
+  font-size: 0.82rem;
+}
+
+.tf-registry__group .tf-registry__list {
+  margin-top: 8px;
+}
+
 .tf-callout {
   display: grid;
   gap: 12px;

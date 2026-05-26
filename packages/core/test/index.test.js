@@ -13,6 +13,7 @@ import {
   createDiagnostic,
   createMarkdownFenceHandlerContribution,
   createCapability,
+  createContributionInspectorModel,
   createResourceFacts,
   createResourcePredicate,
   createResourceRef,
@@ -284,4 +285,126 @@ test('document contribution context resolves explicit requirements and document 
   assert.equal(resolved.requirements[1]?.status, 'missing');
   assert.equal(resolved.activeMarkdownFenceHandlers.some((handler) => handler.id === '@textforge/diagrams/json'), true);
   assert.equal(resolved.diagnostics.some((diagnostic) => diagnostic.code === 'resolver.requirement.missing'), true);
+});
+
+test('contribution inspector model stays deterministic across package and document state', () => {
+  const registry = createContributionRegistry([
+    createContributionManifest('@textforge/beta', {
+      capabilities: [
+        createCapability('@textforge/beta/capability/source', {
+          localName: 'source',
+          aliases: ['text-source'],
+          defaultActive: true,
+          documentPredicate: createResourcePredicate({ representations: ['text'] }),
+        }),
+        createCapability('@textforge/beta/capability/json', {
+          localName: 'json',
+          aliases: ['json'],
+          defaultActive: false,
+          documentPredicate: createResourcePredicate({ languageIds: ['markdown'] }),
+        }),
+      ],
+      surfaces: [
+        createSurfaceContribution('@textforge/beta/source', {
+          localName: 'source',
+          capabilities: ['@textforge/beta/capability/source'],
+          resourcePredicate: createResourcePredicate({ representations: ['text'] }),
+        }),
+      ],
+      markdownFenceHandlers: [
+        createMarkdownFenceHandlerContribution('@textforge/beta/json', {
+          localName: 'json',
+          capabilities: ['@textforge/beta/capability/json'],
+          fenceNames: ['json'],
+        }),
+      ],
+    }),
+    createContributionManifest('@textforge/alpha', {
+      dependencies: [{ packageId: '@textforge/missing', versionRange: '^1.0.0' }],
+      capabilities: [
+        createCapability('@textforge/alpha/capability/source', {
+          localName: 'source',
+          defaultActive: false,
+          documentPredicate: createResourcePredicate({ representations: ['text'] }),
+        }),
+      ],
+      surfaces: [
+        createSurfaceContribution('@textforge/alpha/source', {
+          localName: 'source',
+          capabilities: ['@textforge/alpha/capability/source'],
+          resourcePredicate: createResourcePredicate({ representations: ['text'] }),
+        }),
+      ],
+    }),
+  ]);
+
+  const resolution = registry.resolve();
+  const documentContext = registry.resolveDocumentContext({
+    document: createResourceRef('resource-markdown', {
+      path: '/docs/example.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    }),
+    explicitRequirements: ['json', 'missing-capability'],
+  });
+  const inspector = createContributionInspectorModel({
+    resolution,
+    documentContext,
+  });
+
+  assert.deepEqual(inspector.summary, {
+    packageCount: 2,
+    availablePackageCount: 1,
+    blockedPackageCount: 1,
+    capabilityCount: 3,
+    activeCapabilityCount: 2,
+    activeSurfaceCount: 1,
+    activePipelineCount: 0,
+    activeMarkdownFenceHandlerCount: 1,
+    diagnosticCount: documentContext.diagnostics.length,
+  });
+  assert.equal(inspector.document?.requirements[0]?.matchedCapabilityId, '@textforge/beta/capability/json');
+  assert.equal(inspector.document?.requirements[1]?.status, 'missing');
+  assert.deepEqual(inspector.packages.map((entry) => entry.packageId), ['@textforge/alpha', '@textforge/beta']);
+  assert.equal(inspector.packages[0]?.status, 'missingDependency');
+  assert.equal(inspector.packages[0]?.diagnostics[0]?.code, 'registry.package.missing-dependency');
+  assert.equal(inspector.packages[1]?.activeCapabilityCount, 2);
+  assert.deepEqual(
+    inspector.packages[1]?.capabilities.map((capability) => ({
+      id: capability.id,
+      status: capability.status,
+      activationSources: capability.activationSources,
+      matchedRequirementNames: capability.matchedRequirementNames,
+    })),
+    [
+      {
+        id: '@textforge/beta/capability/json',
+        status: 'active',
+        activationSources: ['explicit'],
+        matchedRequirementNames: ['json'],
+      },
+      {
+        id: '@textforge/beta/capability/source',
+        status: 'active',
+        activationSources: ['document'],
+        matchedRequirementNames: [],
+      },
+    ],
+  );
+  assert.deepEqual(
+    inspector.packages[1]?.contributions.markdownFenceHandlers.map((entry) => ({
+      id: entry.id,
+      status: entry.status,
+      fenceNames: entry.fenceNames,
+    })),
+    [
+      {
+        id: '@textforge/beta/json',
+        status: 'active',
+        fenceNames: ['json'],
+      },
+    ],
+  );
 });
