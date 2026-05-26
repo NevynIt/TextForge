@@ -15,12 +15,12 @@ Many files are also promoted or copied into canonical V18 locations.
 | V17 source file | V18 preservation / promoted location |
 |---|---|
 | `00_package_aware_roadmap.md` | `archive/v16-linear-roadmap.md + archive/source-v17-roadmap/00_package_aware_roadmap.md` |
-| `00_workpackage_roadmap_v17_draft.md` | `archive/ and/or validation/ + archive/source-v17-roadmap/00_workpackage_roadmap_v17_draft.md` |
+| `00_workpackage_roadmap_v17_draft.md` | `archive/source-v17-roadmap/00_workpackage_roadmap_v17_draft.md` |
 | `01_repository_and_package_strategy.md` | `specs/architecture/ + archive/source-v17-roadmap/01_repository_and_package_strategy.md` |
 | `02_architecture_paragraph_reference_index.md` | `specs/architecture/ + archive/source-v17-roadmap/02_architecture_paragraph_reference_index.md` |
-| `02_phase_architecture_pnpm_matrix.md` | `archive/ and/or validation/ + archive/source-v17-roadmap/02_phase_architecture_pnpm_matrix.md` |
-| `03_package_dependency_activity_diagram.md` | `archive/ and/or validation/ + archive/source-v17-roadmap/03_package_dependency_activity_diagram.md` |
-| `04_phase_3_5_screenshot_validation_checklist.md` | `archive/ and/or validation/ + archive/source-v17-roadmap/04_phase_3_5_screenshot_validation_checklist.md` |
+| `02_phase_architecture_pnpm_matrix.md` | `archive/v16-phase-package-matrix.md + archive/source-v17-roadmap/02_phase_architecture_pnpm_matrix.md` |
+| `03_package_dependency_activity_diagram.md` | `archive/v16-package-dependency-activity-diagram.md + archive/source-v17-roadmap/03_package_dependency_activity_diagram.md` |
+| `04_phase_3_5_screenshot_validation_checklist.md` | `validation/ui/04_phase_3_5_screenshot_validation_checklist.md + archive/source-v17-roadmap/04_phase_3_5_screenshot_validation_checklist.md` |
 | `AGENTS_START_HERE.md` | `archive/source-v17-roadmap/AGENTS_START_HERE.md` |
 | `RAPID.md` | `decisions/RAPID.md + archive/source-v17-roadmap/RAPID.md` |
 | `README.md` | `archive/source-v17-roadmap/README.md` |
@@ -51,10 +51,10 @@ Many files are also promoted or copied into canonical V18 locations.
 | `validation/phase-3-5-reference-antipattern.png` | `validation/ui/phase-3-5-reference-antipattern.png + archive/source-v17-roadmap/validation/phase-3-5-reference-antipattern.png` |
 | `validation/phase-3-5-resize-panel-widths.json` | `validation/ui/phase-3-5-resize-panel-widths.json + archive/source-v17-roadmap/validation/phase-3-5-resize-panel-widths.json` |
 | `validation/phase-3-5-validation-report.json` | `validation/ui/phase-3-5-validation-report.json + archive/source-v17-roadmap/validation/phase-3-5-validation-report.json` |
-| `workpackages/dependency-reassessment-v17.md` | `workpackages/ or archive/v17-* + archive/source-v17-roadmap/workpackages/dependency-reassessment-v17.md` |
-| `workpackages/workpackage-dependency-map.md` | `workpackages/ or archive/v17-* + archive/source-v17-roadmap/workpackages/workpackage-dependency-map.md` |
-| `workpackages/workpackage-register.md` | `workpackages/ or archive/v17-* + archive/source-v17-roadmap/workpackages/workpackage-register.md` |
-| `workpackages/workpackage-template.md` | `workpackages/ or archive/v17-* + archive/source-v17-roadmap/workpackages/workpackage-template.md` |
+| `workpackages/dependency-reassessment-v17.md` | `archive/source-v17-roadmap/workpackages/dependency-reassessment-v17.md` |
+| `workpackages/workpackage-dependency-map.md` | `workpackages/dependency-map.md + archive/v17-workpackage-dependency-map.md + archive/source-v17-roadmap/workpackages/workpackage-dependency-map.md` |
+| `workpackages/workpackage-register.md` | `workpackages/workpackage-register.md + archive/v17-workpackage-register.md + archive/source-v17-roadmap/workpackages/workpackage-register.md` |
+| `workpackages/workpackage-template.md` | `workpackages/templates/workpackage-template.md + archive/source-v17-roadmap/workpackages/workpackage-template.md` |
 
 ## Rule for future cleanups
 

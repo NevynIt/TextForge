@@ -36,7 +36,7 @@ Exact V16/V17 text is preserved in:
 
 - `archive/v16-linear-roadmap.md`
 - `archive/source-v17-roadmap/00_package_aware_roadmap.md`
-- `archive/source-v17-roadmap/decisions/RAPID.md` equivalent in the source package
+- `archive/source-v17-roadmap/RAPID.md` equivalent in the source package
 
 ## Reopen rule
 

@@ -21,3 +21,12 @@ This folder is the canonical V18 planning layer from WP5 onward.
 | `08-distribution-security-accreditation.md` | Security invariants, distributions, release evidence. |
 | `09-optional-adapters.md` | Entra, OIDC/SAML, GitLab, AI, SharePoint-like adapters. |
 | `10-later-investigations.md` | True live collaboration, advanced editing, future wrappers. |
+
+## Dependency map styling guidance
+
+When updating `dependency-map.md`, keep status coloring aligned with `implementation-status.md`:
+
+- color completed baseline work green;
+- color currently startable workpackages blue;
+- color the direct edge from completed work to each currently startable workpackage blue;
+- keep all other nodes/edges in the default Mermaid style.

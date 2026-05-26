@@ -56,8 +56,25 @@ flowchart TD
   RES03 --> RELEASE
   BEPERSIST --> RELEASE
   MDREPORT --> RELEASE
+
+  classDef done fill:#2e7d32,stroke:#1b5e20,color:#ffffff,stroke-width:2px;
+  classDef startable fill:#1565c0,stroke:#0d47a1,color:#ffffff,stroke-width:2px;
+
+  class F done;
+  class WP05A,RES01,ID01 startable;
+
+  linkStyle 0 stroke:#1565c0,stroke-width:2px;
+  linkStyle 6 stroke:#1565c0,stroke-width:2px;
+  linkStyle 13 stroke:#1565c0,stroke-width:2px;
 ```
 
 ## Reading rule
 
 The graph shows dependency direction only. It is not a mandatory calendar sequence. Optional adapters should be scheduled only when a release profile needs them.
+
+## Status coloring guidance
+
+- Green nodes are completed baseline work (currently the foundation history).
+- Blue nodes can be started now according to current status/dependency posture.
+- Blue edges indicate a direct dependency path from completed work to a startable node.
+- Nodes without explicit styling are not currently startable or not yet marked as completed.
