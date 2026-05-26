@@ -9,6 +9,7 @@ export default defineConfig(({ command }) => ({
   base: './',
   define: {
     'process.env.NODE_ENV': JSON.stringify(command === 'build' ? 'production' : 'development'),
+    'process.env.FENGARICONF': 'undefined',
   },
   build: command === 'build'
     ? {
