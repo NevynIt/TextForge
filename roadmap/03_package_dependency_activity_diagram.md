@@ -1,4 +1,4 @@
-# TextForge Package Dependency Activity Diagram
+# TextForge Package Dependency Activity Diagram — V16
 
 Direction convention: `A ->> B` means **package A starts consuming or depending on package B** at that phase.
 
@@ -23,6 +23,11 @@ sequenceDiagram
   participant BPMN as @textforge/bpmn
   participant Tables as @textforge/tables
   participant Archi as @textforge/archimate
+  participant Repo as repository/provider contracts
+  participant Settings as user-settings packages
+  participant Server as backend/server packages
+  participant Identity as identity/private-space packages
+  participant AI as AI packages
 
   rect rgb(245,245,245)
     Note over App,Docs: Phase -1 — repository pivot and archival preservation
@@ -203,6 +208,21 @@ sequenceDiagram
     Sec->>App: verify static bundled composition and %require no-fetch/no-load behavior
   end
 
+
+
+  rect rgb(235,255,245)
+    Note over Core,Settings: Phases 5.1–5.3 — provider contracts, identity contract, local settings
+    Core->>Repo: define provider-aware ResourceDescriptor, revisions, changesets, repository diagnostics
+    WS->>Repo: expose IndexedDB/ZIP/generated resources as local providers
+    ITM->>Repo: store repository declarations without frontend fetch
+    MD->>Repo: preserve repository/include declarations as provider references
+    Core->>Identity: define neutral identity and permission diagnostic contracts
+    Core->>Settings: define local settings and command preference contracts
+    WS->>Settings: persist local settings in browser-managed storage
+    UI->>Settings: consume settings without granting permissions
+    Sec->>Repo: enforce local provider allowlists and no File System Access API
+  end
+
   rect rgb(245,245,245)
     Note over ITM,MD: Phase 6 — ITM integration and model/report foundation
     ITM->>Core: consume diagnostics, source ranges, model contracts
@@ -212,11 +232,32 @@ sequenceDiagram
     MD->>ITM: embed TF-MD itm and itm-pub blocks, diagnostics, publication views, and report fragments
   end
 
+
+
+  rect rgb(250,255,245)
+    Note over ITM,Repo: Phase 6.1 — provider-backed repository resolver
+    ITM->>Repo: resolve %repository/%include through active providers
+    MD->>Repo: reuse repository diagnostics before full report composition
+    WS->>Repo: expose local bundle/package roots
+    Sec->>Repo: reject arbitrary frontend fetch from repository values
+  end
+
   rect rgb(235,245,255)
     Note over ITM,Diag: Phase 7 — ITM visual projections
     Surf->>ITM: register ITM projection surfaces
     Diag->>ITM: consume tree/graph/mindmap/catalogue/matrix projection APIs
     Diag->>Pipe: expose ITM-to-Mermaid/Graphviz/Cytoscape/Sigma adapters
+  end
+
+
+
+  rect rgb(245,255,255)
+    Note over WS,Settings: Phases 7.1–7.2 — service-folder conventions and settings UI
+    WS->>Repo: add local /services, /packages, /templates data-plane conventions
+    Pipe->>Repo: classify generated outputs as source/derived/controlled-generated
+    Assets->>Repo: show provenance and persistence state for generated artifacts
+    UI->>Settings: add settings UI for commands, menus, palette, layout, profiles
+    Sec->>WS: verify service folders do not become fake control APIs
   end
 
   rect rgb(240,255,240)
@@ -228,6 +269,16 @@ sequenceDiagram
     Lua->>Edit: reuse Lua CodeMirror mode and action helpers
   end
 
+
+
+  rect rgb(255,245,250)
+    Note over Identity,UI: Phase 8.1 — private/group space contracts
+    Core->>Identity: define private/group roots, ownership metadata, permission diagnostics
+    WS->>Identity: support contract fixtures only, not local enforcement claims
+    UI->>Identity: keep private/group roots hidden until backend policy exists
+    Sec->>Identity: prevent misleading local privacy/group claims
+  end
+
   rect rgb(255,250,235)
     Note over MD,ITM: Phase 9 — Markdown + ITM report generation
     ITM->>Pipe: expose report-oriented model fragment export
@@ -235,6 +286,21 @@ sequenceDiagram
     MD->>WS: resolve TF-MD includes and repository-qualified Markdown references
     MD->>Diag: consume generated SVG/PNG report assets
     Diag->>WS: store reportable generated diagram assets
+  end
+
+
+
+  rect rgb(235,240,255)
+    Note over App,Server: Phases 9.1–9.7 — enterprise backend profile and persistence
+    Server->>App: serve compiled frontend from one approved enterprise origin
+    Server->>Server: expose /api, /schemas, /health, fail-fast manifest
+    WS->>Server: register optional backend provider only from approved manifest
+    Server->>Repo: implement data plane, provider endpoints, revisions, changesets
+    Server->>Identity: enforce SSO/session/policy and capability filtering
+    Server->>Settings: sync roaming settings without granting permissions
+    Server->>Repo: expose private/group roots after policy enables them
+    Server->>Server: keep GitLab adapter backend-only behind resource/changeset API
+    Sec->>Server: verify no backend-only adapter leaks into frontend-safe packages
   end
 
   rect rgb(255,245,245)
@@ -245,6 +311,17 @@ sequenceDiagram
     BPMN->>Core: consume controlled write-back contracts
   end
 
+
+
+  rect rgb(240,250,255)
+    Note over Server,UI: Phases 10.1–10.2 — backend services and soft collaboration leases
+    Server->>WS: expose server-backed /services artifacts through providers
+    Pipe->>Server: create/cancel/check backend jobs through explicit APIs
+    Server->>UI: expose advisory time-bound lease state and stale revision diagnostics
+    UI->>Server: renew/release leases and prompt after inactivity
+    Sec->>Server: verify data-plane/control-plane split and no permanent locks
+  end
+
   rect rgb(245,250,255)
     Note over Tables,BPMN: Phase 11 — tables, catalogues, matrices
     Tables->>Core: consume patch/write-back contracts
@@ -252,6 +329,18 @@ sequenceDiagram
     Tables->>UI: consume table toolbar/filter/sort components
     Tables->>ITM: consume node/relationship catalogue and matrix projections
     BPMN->>Tables: optionally expose BPMN task/event/gateway catalogues
+  end
+
+
+
+  rect rgb(245,240,255)
+    Note over AI,UI: Phases 11.1–11.3 — backend-mediated AI, chat, preferences
+    AI->>Server: mediate AI through backend policy, scope, redaction, audit
+    UI->>AI: provide chat surface for selected document/folder context
+    AI->>WS: read explicit authorized context only
+    AI->>UI: return explanations, summaries, and unapplied patch text
+    Settings->>AI: apply AI preferences without expanding permissions
+    Sec->>AI: verify no direct frontend LLM provider calls and no silent mutation
   end
 
   rect rgb(250,245,255)
@@ -282,7 +371,7 @@ sequenceDiagram
 
   rect rgb(235,245,255)
     Note over Sec,Docs: Phase 19 — release-envelope verification and accreditation evidence
-    Sec->>App: verify static/extension/PWA browser envelope and generate evidence artifacts
+    Sec->>App: verify static/extension/PWA browser envelope and enterprise one-origin backend profile evidence
     Docs->>Sec: publish release checklist, accreditation examples, tutorial workspace
   end
 ```

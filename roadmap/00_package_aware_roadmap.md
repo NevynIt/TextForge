@@ -1,4 +1,4 @@
-# TextForge V15n Package-Aware Roadmap
+# TextForge V16 Package-Aware Roadmap
 
 This roadmap interweaves the architecture milestones with the package split. It is intentionally package-oriented: every phase states which packages are created or updated and what each package receives.
 
@@ -31,6 +31,7 @@ The TextForge Markdown Profile source specification lives at `roadmap/specs/text
 | Phase 4.1 | Stabilize the shared diagnostic contract, default-contribution shape, command/action spine, public package API boundaries, and resource-fact/surface-predicate seam that Phase 5 will use. | No new TF-MD conformance level; mandatory stabilization before the Level 4 machinery is implemented. |
 | Phase 5 | Replace provisional block dispatch with contribution/capability-aware registration and `%require` diagnostics using package manifests. | Adds Level 4 machinery, but cumulative conformance is not claimed past Level 2 until Phase 9 completes composition. |
 | Phase 6 | Add model-aware Markdown by connecting `itm` and `itm-pub` fenced blocks to the ITM parser, diagnostics, model fragments, and publication views. | Adds Level 5 local model-aware capability, while cumulative conformance still waits for Phase 9 Level 3 composition. |
+| Phase 6.1 | Connect `%repository`/`%include` resolution to provider-aware repository contracts and diagnostics without enabling arbitrary frontend fetches. | Prepares Level 3 composition while preserving local/offline restrictions. |
 | Phase 9 | Add `%include`, `%repository`, repository-qualified references, circular-include diagnostics, resolved Markdown output, and report-generation behavior. | Completes Level 3 and makes resolved Markdown/report output a first-class pipeline value. |
 | Phase 14 | Add optional rich Markdown editing only behind a feature flag, with source fallback and round-trip tests for every TF-MD construct already implemented. | Rich editor must not become the canonical TF-MD parser. |
 
@@ -55,6 +56,64 @@ Phase 1 and later milestones add substantive workbench behavior. They do not rep
 
 Operationally, treat this as Phase 0.5: the first runnable shell sits between the repository pivot and Phase 1 workspace/surface skeleton work. Recovery phases may be inserted later when implementation deliberately deferred promised value; those phases must be explicit, package-scoped, and must not silently pull unrelated later milestones forward.
 
+
+
+## V16 backend-optional architecture integration rule
+
+The backend-optional architecture is accepted as a roadmap extension, not a replacement for existing phases. Existing phase order and accepted `X.Y` phases remain stable. Existing Phase 5 contribution/capability work remains binding and must not be reopened by provider/backend work.
+
+The backend extension adds the following architectural direction:
+
+- resources become provider-backed, revision-aware, capability-aware, provenance-aware, and changeset-aware;
+- resource providers are workspace/storage/repository abstractions, not executable contribution registries;
+- repository references such as `%repository` are declarations resolved by the active provider/backend, not direct frontend fetch instructions;
+- local/offline builds keep IndexedDB, manual file/ZIP/folder import, and manual export as the storage boundary;
+- enterprise builds use one approved backend origin, a fail-fast backend manifest, server-side identity/policy, and backend-only adapters;
+- user settings are personalization only and never grant permissions;
+- GitLab, Entra, backend persistence, private/group enforcement, service control APIs, and AI provider access remain backend-only;
+- initial AI is read/suggest only and must not mutate workspace resources.
+
+Required cross-cutting references:
+
+- `roadmap/textforge_backend_optional_architecture_whitepaper.md`
+- `roadmap/grilling/backend-grilling.md`
+- `roadmap/packages/backend-optional.md`
+
+### Backend-optional security invariants
+
+Every affected phase must preserve these invariants:
+
+1. Local/offline mode remains fully supported.
+2. Local/offline mode has no File System Access API, persistent directory handles, silent local reads/writes, or background folder sync.
+3. Local/offline mode has no arbitrary network providers.
+4. Enterprise mode uses one approved backend origin per app session/deployment.
+5. Backend-only adapters never leak into frontend-safe packages.
+6. Settings personalize UI/defaults only; they do not grant permissions.
+7. Backend-backed writes use revisions and multi-resource changesets.
+8. AI is backend-mediated and non-mutating at first.
+9. Optional backend capabilities hide/disable actions or emit diagnostics; they do not change document semantics.
+
+### Planned package split
+
+The package split is explicit but staged. Initial phases may implement logical slices inside existing packages, but physical extraction should happen when a real dependency/security boundary exists.
+
+| Package family | Planned packages | Extraction rule |
+|---|---|---|
+| Workspace/repository | `workspace-core`, `workspace-indexeddb`, `workspace-zip`, `workspace-services`, `repository-core`, `repository-itm` | Start by extending existing `@textforge/workspace` and `@textforge/itm`; extract when provider/repository boundaries stabilize. |
+| User settings | `user-settings-core`, `user-settings-local`, `user-settings-ui`, `user-settings-server-sync` | Implement local settings before backend sync; settings never grant permissions. |
+| Persistence/backend | `persistence-client`, `persistence-server-contract`, `persistence-server-reference`, `persistence-gitlab-adapter` | Frontend may depend on contracts/client only; GitLab and server code stay backend-only. |
+| Identity/spaces | `identity-contract`, `identity-entra-server`, `private-spaces-contract`, `private-spaces-server` | Define contracts before implementation; real enforcement is backend-only. |
+| AI | `ai-contract`, `ai-client`, `ai-server-mediator`, `ai-chat-surface` | Initial AI suggests only; mutation requires later explicit changeset workflow. |
+| Distribution | `app-distribution`, `server-app-host`, `enterprise-container`, `browser-extension-wrapper`, `local-static-build` | Local static and browser extension stay thin wrappers; enterprise container serves app and API from one origin. |
+
+### Provider allowlist by profile
+
+| Profile/distribution | Allowed providers | Explicitly not allowed |
+|---|---|---|
+| Local static | IndexedDB, ZIP/folder import/export, generated resources, local service-folder conventions. | File System Access API, persistent directory handles, arbitrary network providers, GitLab/AI direct frontend calls. |
+| Browser extension wrapper | Same as local static, with stricter CSP/permissions. | Extension-only product divergence, arbitrary host permissions, native filesystem sync. |
+| Enterprise frontend/container | One approved backend provider from the backend manifest. | User-entered backend origins, random endpoint probing, direct GitLab/AI/provider calls. |
+| Backend server | Approved GitLab, Entra, AI, persistence, service, private/group, publication, and audit adapters. | Adapter leakage into frontend-safe packages. |
 
 ## Agent operating model
 
@@ -569,6 +628,103 @@ Phase 5 acceptance criteria: every Phase 5 contribution registers through the ca
 
 Phase 5 scope boundary: keep `%include`, `%repository`, remote package loading, ITM publication, runtime plugin installation, package marketplace behavior, and editable package configuration out of this phase.
 
+
+### Phase 5.1 — Workspace and repository provider contracts
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 7, 8, 9, 14, 15, and 16; `roadmap/grilling/backend-grilling.md` Q1-Q5, Q11, Q13-Q22, Q26-Q28.
+
+Preconditions: Phase 5 must be closed. The Phase 5 contribution/capability registry remains the only executable contribution mechanism; provider work must not create a second registry.
+
+Purpose: evolve the existing workspace/resource facts into provider-aware descriptors so local resources, generated artifacts, repository references, and later backend resources share one model.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Add provider/resource descriptor, revision, changeset, provider capability, provenance, and repository diagnostic contracts. | No new package install. |
+| `@textforge/workspace` | Implement local provider wrappers over IndexedDB, ZIP import/export, generated resources, dirty state, base revisions, and local changeset creation. | No new package install. |
+| `@textforge/itm` | Prepare repository declaration data structures without direct fetch behaviour. | No new package install. |
+| `@textforge/markdown` | Preserve TF-MD repository/include declarations as unresolved provider references until later resolver phases. | No new package install. |
+| `@textforge/security-profile` | Add provider allowlist checks for local static and browser extension profiles. | No new package install. |
+| `roadmap/` | Keep backend-optional package split and provider invariants visible. | No pnpm package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/core` | Update | Define `ResourceDescriptor`, `ResourceProvider` contract shape, provider capability facts, revision/base-revision identifiers, multi-resource `Changeset`, source/derived/controlled-generated resource categories, and repository diagnostic codes. |
+| `@textforge/workspace` | Update | Map existing resource facts into provider-aware descriptors without breaking local/offline operation; keep IndexedDB and ZIP import/export as the first providers. |
+| `@textforge/itm` | Update | Store `%repository` declarations as provider-resolved references; do not fetch arbitrary URLs in the frontend. |
+| `@textforge/markdown` | Update | Preserve repository-qualified references as declarations/diagnostics until Phase 6.1/9 composition resolves them. |
+| `@textforge/security-profile` | Update | Assert that local/offline providers cannot silently read/write local files, hold directory handles, background sync folders, or call arbitrary network locations. |
+
+Outputs: provider-aware resource contracts, changeset/revision contracts, local provider implementation seams, provider allowlist validation, and updated tests/fixtures for text, SVG-as-text, byte assets, generated artifacts, and repository declarations.
+
+Non-goals: no backend server, no GitLab adapter, no Entra, no AI, no private/group UI, no true collaboration, no arbitrary repository fetch.
+
+Validation checks: provider contracts are storage/repository-only; contribution/capability registries remain under Phase 5; local static and extension profiles forbid File System Access API and arbitrary network providers; changesets can represent one-file and multi-file edits; generated artifacts are not persisted unless explicitly selected or workflow-approved.
+
+### Phase 5.2 — Identity contract
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 11, 13, 14, 16, and 18; `roadmap/grilling/backend-grilling.md` Q6-Q7, Q15, Q26-Q28.
+
+Preconditions: Phase 5.1 provider/resource contracts exist. No backend identity implementation is required.
+
+Purpose: let packages describe current user, groups, claims, and permission diagnostics without introducing Entra or treating frontend state as authority.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Add neutral identity and policy-diagnostic contracts, or create/extract `identity-contract` when warranted. | No new package install. |
+| `@textforge/security-profile` | Check that frontend identity metadata is never treated as permission authority. | No new package install. |
+| `roadmap/` | Keep package split staged; record whether `identity-contract` remains logical or physical. | No pnpm package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/core` | Update | Define user identity metadata, group references, capability claims, policy decision metadata, and permission diagnostic shapes. |
+| `@textforge/security-profile` | Update | Validate that identity metadata may hide/show UI or explain diagnostics but cannot grant repository, service, AI, publication, or write permissions. |
+
+Outputs: neutral identity contracts, permission diagnostic conventions, and frontend-safe policy metadata.
+
+Non-goals: no Microsoft Entra implementation, no login flow, no private/group enforcement, no settings sync, no permission grants from frontend settings.
+
+Validation checks: server policy remains authoritative by contract; local/offline mode may use anonymous/local identity metadata only for display/testing; docs explicitly state that `identity-entra-server` comes later.
+
+### Phase 5.3 — User settings core and local storage
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` section 13; `roadmap/grilling/backend-grilling.md` Q6, Q15, Q26-Q28.
+
+Preconditions: Phase 5 command/contribution metadata and Phase 5.2 identity contracts exist. No backend sync required.
+
+Purpose: add local personalization for menus, command visibility/order, default document profiles, default layout/surface preferences, and default capability activation without confusing settings with permissions.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Add user-setting schema and command preference metadata if not extracted. | No new package install. |
+| `@textforge/workspace` | Persist local user settings in browser-managed storage or a dedicated logical store. | No new package install. |
+| `@textforge/ui` | Consume settings read model for menu/order/visibility defaults without adding the full settings UI yet. | No new package install. |
+| `@textforge/security-profile` | Validate settings do not grant permissions or enable unavailable providers. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/core` | Update | Define settings keys, precedence metadata, command preference records, and capability/default-profile preferences. |
+| `@textforge/workspace` | Update | Store local settings in app-managed browser storage; keep settings separate from workspace document semantics. |
+| `@textforge/ui` | Update | Respect hidden/pinned/order/default preferences only within available capabilities. |
+| `@textforge/security-profile` | Update | Add tests/assertions that settings never grant repository access, write rights, AI rights, publication rights, group membership, or backend service access. |
+
+Outputs: local settings contract, local persistence, command/menu preference read model, and tests showing permissions are unaffected.
+
+Non-goals: no backend settings sync, no organization/group defaults, no private/group UI, no AI preferences beyond inert placeholders.
+
+Validation checks: unavailable capabilities stay unavailable even when selected in settings; settings affect UI/actions only, not parsing or document semantics.
+
 ### Phase 6 — ITM integration and model/report foundation
 
 #### Architecture and pnpm implementation anchors
@@ -591,6 +747,39 @@ Package dependency actions for this phase:
 | `@textforge/editors` | Update | Update. Add ITM source assistance and diagnostics integration. |
 | `@textforge/markdown` | Update | Update. Add TF-MD model-aware `itm` and `itm-pub` fenced blocks, ITM diagnostics projection into Markdown source ranges, local embedded model selection, and ITM-driven report fragments. |
 
+
+### Phase 6.1 — Repository resolver integration
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 7, 9, and 16; `roadmap/grilling/backend-grilling.md` Q16-Q17, Q20, Q28. ITM repository semantics also align with `roadmap/textforge_backend_optional_architecture_whitepaper.md` and the ITM repository direction already captured in the roadmap.
+
+Preconditions: Phase 6 ITM integration and Phase 5.1 provider contracts exist.
+
+Purpose: connect ITM and TF-MD repository/include declarations to the provider abstraction and diagnostic model while keeping local/offline mode safe.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Repository diagnostic codes and resolver result contracts. | No new package install. |
+| `@textforge/workspace` | Expose provider-backed repository roots and local bundle/package roots. | No new package install. |
+| `@textforge/itm` | Implement `%repository` and `%include` resolver integration against provider contracts. | No new package install. |
+| `@textforge/markdown` | Share resolver diagnostics for TF-MD declarations but defer full report composition to Phase 9. | No new package install. |
+| `@textforge/security-profile` | Confirm local profile never turns URL-like repository values into frontend fetches. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/itm` | Update | Resolve repository declarations through active providers; distinguish unresolved, unsupported reference, unauthorized, unavailable, conflicting alias, and version/capability mismatch diagnostics. |
+| `@textforge/markdown` | Update | Reuse repository diagnostics for TF-MD include/repository declarations without claiming full Level 3 report composition yet. |
+| `@textforge/workspace` | Update | Provide local package/bundle roots and provider facts needed by the resolver. |
+
+Outputs: provider-backed repository resolver seam, diagnostic taxonomy, local resolver fixtures, and no-fetch security tests.
+
+Non-goals: no GitLab, no backend repository provider, no arbitrary web fetch, no full TF-MD report pipeline beyond resolver plumbing.
+
+Validation checks: URL-like repository declarations are treated as provider/backend inputs, not direct frontend fetch instructions; local mode reports unavailable/unsupported rather than fetching; diagnostics are precise enough for authoring and CI.
+
 ### Phase 7 — ITM visual projections
 
 #### Architecture and pnpm implementation anchors
@@ -611,6 +800,68 @@ Package dependency actions for this phase:
 | `@textforge/itm` | Update | Update. Add projection APIs for tree, graph, mindmap, catalogue, matrix, and report fragments. |
 | `@textforge/diagrams` | Update | Update. Add ITM-to-Mermaid, ITM-to-Graphviz, ITM-to-Cytoscape/Sigma adapters where appropriate. |
 
+
+### Phase 7.1 — Local service-folder convention
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 3.3, 10, and 16; `roadmap/grilling/backend-grilling.md` Q5, Q22, Q28.
+
+Preconditions: Phase 5.1 provider/resource descriptors and Phase 7 ITM projections exist.
+
+Purpose: introduce local service-folder conventions for file-shaped inputs/outputs so later backend services can reuse the same data-plane shape without turning files into fake control APIs.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/workspace` | Add `/services`, `/packages`, `/templates`, generated-output, diagnostics-output, and controlled-generated resource conventions. | No new package install. |
+| `@textforge/pipeline` | Emit service-compatible output descriptors for validation/render/export jobs where useful. | No new package install. |
+| `@textforge/assets` | Display service/generated artifacts with provenance and explicit persistence state. | No new package install. |
+| `@textforge/security-profile` | Validate that local service folders do not imply backend commands, auth, approvals, or AI policy. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/workspace` | Update | Add local service-folder layout and helper functions for validation/render/export artifacts. |
+| `@textforge/pipeline` | Update | Mark generated outputs as derived or controlled-generated resources and require explicit inclusion in changesets. |
+| `@textforge/assets` | Update | Show provenance for generated artifacts and prevent accidental persistence of ephemeral outputs. |
+
+Outputs: local service-folder layout, generated artifact categories, provenance display, and examples under `/services/validate`, `/services/render`, `/services/export`, `/packages`, and `/templates`.
+
+Non-goals: no explicit backend API, no job creation/cancel/status API, no auth/approval/AI policy through files, no background service worker processing unless separately approved.
+
+Validation checks: file-shaped artifacts work locally; control-plane actions remain explicit future APIs; service outputs do not automatically become persisted workspace changes.
+
+### Phase 7.2 — User settings UI
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` section 13; `roadmap/grilling/backend-grilling.md` Q6 and Q28.
+
+Preconditions: Phase 5.3 local settings core exists and Phase 7 visual projections have increased command/surface volume.
+
+Purpose: provide UI for command visibility/order, pinned actions, command-palette preferences, default document profile, default capabilities, and layout preferences.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/ui` | Settings surface/panel components for command/menu/layout defaults. | No new package install by default. |
+| `@textforge/core` | Extend settings metadata only if UI needs stable option descriptors. | No new package install. |
+| `@textforge/workspace` | Persist UI preference changes through local settings storage. | No new package install. |
+| `@textforge/security-profile` | Validate that settings UI cannot enable unavailable capabilities or providers. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/ui` | Update | Add settings UI for hidden/pinned commands, menu ordering, palette priority, default profile/capability/layout preferences, and reset-to-default. |
+| `@textforge/workspace` | Update | Save settings changes in browser-managed storage with import/export compatibility if needed. |
+
+Outputs: settings UI, local persistence flow, reset/default behavior, and unavailable-capability diagnostics.
+
+Non-goals: no backend roaming settings, no organization/group defaults, no permission management UI.
+
+Validation checks: settings UI can only customize available actions; hidden commands remain callable only when otherwise authorized/available; document parsing/semantics do not change.
+
 ### Phase 8 — Lua automation
 
 #### Architecture and pnpm implementation anchors
@@ -630,6 +881,38 @@ Package dependency actions for this phase:
 | `@textforge/pipeline` | Update | Update. Add Lua-backed pipeline step type and diagnostics mapping. |
 | `@textforge/editors` | Update | Update. Add Lua source editor mode and action/snippet authoring helpers. |
 | `@textforge/lua` | Create | Create. Fengari worker, sandbox, tf.* capability bridge, Lua editor/console surfaces, action discovery, pipeline action adapter. |
+
+
+### Phase 8.1 — Private and group space contracts
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 11, 14, 16, and 18; `roadmap/grilling/backend-grilling.md` Q7, Q15, Q20, Q26-Q28.
+
+Preconditions: Phase 5.2 identity contracts and Phase 5.1 provider/resource descriptors exist.
+
+Purpose: define private and group workspace roots, ownership metadata, and permission diagnostics as contracts before any backend enforcement exists.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Add private/group space descriptors or extract `private-spaces-contract` if the dependency boundary is justified. | No new package install. |
+| `@textforge/workspace` | Recognize private/group roots as contract shapes or test fixtures only; do not expose real UI roots yet. | No new package install. |
+| `@textforge/ui` | Keep private/group UI gated and hidden until backend identity/policy enforcement exists. | No new package install. |
+| `@textforge/security-profile` | Validate that local mode does not claim enterprise privacy/group enforcement. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `@textforge/core` | Update | Define owner kind, owner id, private/group root descriptors, membership metadata, and permission diagnostic types. |
+| `@textforge/workspace` | Update | Support simulated/test roots only where needed for contract tests. |
+| `@textforge/ui` | Update | Ensure private/group roots and actions are not shown before backend identity and policy enforcement. |
+
+Outputs: private/group space contracts, owner metadata on resource descriptors, and UI gating tests.
+
+Non-goals: no server enforcement, no Entra, no group membership lookup, no local-only private/group security claim, no user-facing private/group roots by default.
+
+Validation checks: contract tests can represent `/private/me/` and `/groups/{groupId}/`; normal local UI does not expose them; docs state real implementation is backend-only.
 
 ### Phase 9 — Markdown + ITM report generation
 
@@ -652,6 +935,214 @@ Package dependency actions for this phase:
 | `@textforge/markdown` | Update | Update. Add TF-MD `%include` and `%repository` resolution, repository-qualified references, circular include diagnostics, resolved Markdown output, unified/remark/rehype report pipeline, section generation, local asset embedding/resolution, and report preview surface. |
 | `@textforge/diagrams` | Update | Update. Ensure generated SVG/PNG assets can be stored and referenced in reports. |
 
+
+### Phase 9.1 — Enterprise distribution profile
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 4, 5, 6, 14, 15, 16, and 18; `roadmap/grilling/backend-grilling.md` Q4, Q10, Q12, Q25-Q27.
+
+Preconditions: Phase 9 report generation exists; local/offline and browser-extension distributions remain valid.
+
+Purpose: introduce the enterprise deployment profile as one container/one origin serving the frontend plus skeletal `/api`, `/schemas`, `/health`, and manifest endpoints before adding real backend services.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `apps/textforge-web` | Produce frontend build consumable by the server app host. | No new package install. |
+| `server-app-host` / `enterprise-container` | Create logical or physical package for Node.js/TypeScript app host when boundary is justified. | Candidate: `pnpm add -w fastify` or equivalent only after RAPID dependency decision. |
+| `@textforge/security-profile` | Add enterprise one-origin/CSP/manifest checks. | No new package install by default. |
+| `roadmap/` | Record distribution profile split and manifest compatibility rules. | No pnpm package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `apps/textforge-web` | Update | Ensure compiled frontend can be served by the enterprise host without changing local static output. |
+| `server-app-host` / `enterprise-container` | Create | Serve frontend, expose `/api`, `/schemas`, `/health`, and a backend manifest with app/API/schema versions, enabled profile, provider roots, capabilities, and feature flags. |
+| `@textforge/security-profile` | Update | Verify enterprise profile uses one approved origin and local static/extension builds still work separately. |
+
+Outputs: enterprise container skeleton, backend manifest, health/schema endpoints, one-origin validation, and unchanged local static/browser-extension builds.
+
+Non-goals: no persistence server, no SSO, no private/group spaces, no GitLab, no AI, no service jobs beyond endpoint skeletons.
+
+Validation checks: missing/incompatible manifest fails fast in enterprise mode; local static mode does not require the backend; frontend does not probe random endpoints to discover capabilities.
+
+### Phase 9.2 — Backend API contract and optional frontend provider
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 3.2, 5, 7, 8, 14, 15, and 16; `roadmap/grilling/backend-grilling.md` Q2-Q4, Q10-Q12, Q26-Q28.
+
+Preconditions: Phase 9.1 enterprise host exists and Phase 5.1 provider contracts exist.
+
+Purpose: define the backend provider API contract and optional frontend provider client without making backend mandatory.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-client` | Optional frontend-safe provider client package or logical slice. | No new package install by default. |
+| `persistence-server-contract` | Shared DTO/schema package or logical slice. | No new package install by default. |
+| `@textforge/workspace` | Register backend provider only from approved manifest. | No new package install. |
+| `@textforge/security-profile` | Ensure no direct GitLab/AI/Entra/adapter dependencies enter frontend. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `persistence-client` | Create | Frontend-safe provider client for list/read/stat/capabilities and changeset submission against the approved backend origin. |
+| `persistence-server-contract` | Create | API DTOs, schema versions, error/diagnostic shapes, and manifest compatibility contracts. |
+| `@textforge/workspace` | Update | Treat backend provider as optional and manifest-enabled; retain local providers as default. |
+
+Outputs: backend provider contract, frontend-safe client seam, manifest-driven registration, and compatibility diagnostics.
+
+Non-goals: no real persistence implementation, no GitLab, no SSO, no AI, no multi-origin federation.
+
+Validation checks: frontend uses backend only when manifest enables it; backend unavailability disables/hides actions or emits diagnostics without changing document semantics.
+
+### Phase 9.3 — Reference persistence server
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 3.3, 5, 6, 7, 8, 10, 14, 15, 16, and 18; `roadmap/grilling/backend-grilling.md` Q5, Q10-Q14, Q20-Q22, Q26-Q28.
+
+Preconditions: Phase 9.2 API contract exists.
+
+Purpose: implement the first real backend data/control-plane server behind the enterprise host.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-server-reference` | Reference server implementation. | Add server dependencies only after RAPID license/dependency decision. |
+| `persistence-server-contract` | Contract tests and schema compatibility. | No new package install by default. |
+| `@textforge/security-profile` | Enterprise-origin, manifest, schema, and adapter-boundary checks. | No new package install by default. |
+
+| Package | Action | Content |
+|---|---|---|
+| `persistence-server-reference` | Create | Implement data-plane resources/folders/files, control-plane changeset submission, revision checks, schema/manifest/health endpoints, and initial audit hooks. |
+| `persistence-server-contract` | Update | Add contract tests for manifest fail-fast, stale revision diagnostics, and multi-resource changesets. |
+
+Outputs: reference persistence server, data/control-plane split, revisions, changesets, conflict diagnostics, manifest/schema compatibility checks, and audit hooks.
+
+Non-goals: no Entra, no GitLab adapter, no AI, no private/group enforcement beyond placeholders, no live collaboration.
+
+Validation checks: backend-backed writes go through changesets; stale base revisions produce diagnostics; direct overwrite bypasses are rejected or limited to explicitly local flows.
+
+### Phase 9.4 — Enterprise SSO and server-side policy
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 3.4, 11, 14, 15, 16, and 18; `roadmap/grilling/backend-grilling.md` Q6-Q7, Q10, Q15, Q26-Q28.
+
+Preconditions: Phase 9.3 reference server exists and Phase 5.2 identity contract exists.
+
+Purpose: make identity and permissions authoritative on the backend through Microsoft Entra / Teams-aligned SSO or a compatible enterprise identity adapter.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `identity-entra-server` | Backend-only identity adapter. | Add Entra/auth libraries only after RAPID dependency/security decision. |
+| `identity-contract` / `@textforge/core` | Align frontend metadata with server policy decisions. | No new package install. |
+| `persistence-server-reference` | Enforce policy on resource/provider actions. | No new package install by default. |
+
+| Package | Action | Content |
+|---|---|---|
+| `identity-entra-server` | Create | Implement SSO/session handling, user/group metadata, capability filtering, and policy decision hooks. |
+| `persistence-server-reference` | Update | Enforce authorization for read/write/list/changeset/service actions. |
+
+Outputs: enterprise SSO, server-side policy enforcement, capability filtering, and permission diagnostics.
+
+Non-goals: no frontend permission authority, no GitLab, no AI, no private/group storage implementation beyond policy hooks.
+
+Validation checks: server hard permissions always win over user settings; unauthorized access is denied server-side and represented as diagnostics without leaking unnecessary details.
+
+### Phase 9.5 — Private and group spaces server
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 11 and 16; `roadmap/grilling/backend-grilling.md` Q15, Q20, Q24, Q26-Q28.
+
+Preconditions: Phase 9.4 server-side identity/policy and Phase 8.1 private/group contracts exist.
+
+Purpose: implement server-enforced private and group workspace roots.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `private-spaces-server` | Backend-only private/group space implementation. | No new package install by default. |
+| `persistence-server-reference` | Add `/private/me/` and `/groups/{groupId}/` roots with policy. | No new package install by default. |
+| `@textforge/ui` | Show private/group roots only when manifest and policy enable them. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `private-spaces-server` | Create | Implement private user folders, group folders, ownership metadata, group membership resolution, and audit metadata. |
+| `@textforge/ui` | Update | Reveal private/group roots only after backend manifest, identity, and authorization confirm availability. |
+
+Outputs: private/group roots, server-enforced permissions, UI gating, and audit metadata.
+
+Non-goals: no local private/group security claim, no GitLab, no live collaboration.
+
+Validation checks: users see only authorized roots/actions; local mode still hides private/group roots by default.
+
+### Phase 9.6 — Roaming user settings
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` section 13; `roadmap/grilling/backend-grilling.md` Q6, Q26-Q28.
+
+Preconditions: Phase 5.3/7.2 local settings and Phase 9.4 identity/policy exist.
+
+Purpose: sync user settings across devices while keeping settings separate from permissions.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `user-settings-server-sync` | Backend sync client/server slice. | No new package install by default. |
+| `@textforge/ui` | Indicate sync state and policy-disabled preferences. | No new package install. |
+| `persistence-server-reference` | Store SSO-bound preferences and optional group/org defaults. | No new package install by default. |
+
+| Package | Action | Content |
+|---|---|---|
+| `user-settings-server-sync` | Create | Sync local settings to backend, merge precedence levels, and preserve server hard permissions. |
+| `@textforge/ui` | Update | Show sync status/conflicts and disabled-by-policy diagnostics. |
+
+Outputs: roaming settings, settings precedence, sync diagnostics, and policy override behavior.
+
+Non-goals: no permission grants, no repository/service/AI authorization from settings, no document semantic changes.
+
+Validation checks: server hard permissions override settings; disabled capabilities remain unavailable after sync.
+
+### Phase 9.7 — GitLab adapter behind the persistence server
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 8, 9, 14, 15, and 16; `roadmap/grilling/backend-grilling.md` Q8, Q10-Q11, Q16-Q17, Q21-Q22, Q26-Q28.
+
+Preconditions: Phase 9.3 persistence server, Phase 9.4 server-side policy, and changeset model exist.
+
+Purpose: integrate controlled GitLab repositories through the backend while the frontend continues to see resources, repositories, and changesets.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-gitlab-adapter` | Backend-only GitLab adapter. | Add GitLab client only after RAPID dependency/security decision. |
+| `persistence-server-reference` | Map provider roots to GitLab projects/branches and changesets to commits/MRs. | No new package install by default. |
+| `@textforge/security-profile` | Verify GitLab SDKs/tokens/URLs do not enter frontend packages. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `persistence-gitlab-adapter` | Create | Implement GitLab repository mapping, branch/workspace mapping, changeset-to-commit mapping, optional merge request workflow, and conflict diagnostics. |
+| `persistence-server-reference` | Update | Expose GitLab-backed repositories only as backend policy-approved provider roots. |
+
+Outputs: backend-mediated GitLab provider, changeset-to-commit/MR mapping, conflict diagnostics, and frontend-neutral repository UI.
+
+Non-goals: no frontend GitLab SDK, no token exposure, no user-entered GitLab URLs in normal frontend workflows, no GitLab-specific document semantics.
+
+Validation checks: frontend package dependency graph contains no GitLab adapter/client; GitLab unavailable disables submit/review actions without changing parsing/rendering.
+
 ### Phase 10 — BPMN support and first mature visual editor
 
 #### Architecture and pnpm implementation anchors
@@ -670,6 +1161,67 @@ Package dependency actions for this phase:
 | `@textforge/surfaces` | Update | Update. Ensure controlled-write-back capability is represented in surface chrome. |
 | `@textforge/pipeline` | Update | Update. Add BPMN XML value and optional BPMN-to-ITM/ITM-to-BPMN extension points. |
 | `@textforge/bpmn` | Create | Create. BPMN XML language integration, bpmn-js viewer/modeler surfaces, controlled edit mode, XML patch preview/apply/discard, diagnostics refresh. |
+
+
+### Phase 10.1 — Backend-backed service folders
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 3.3, 10, and 16; `roadmap/grilling/backend-grilling.md` Q5, Q22, Q26-Q28.
+
+Preconditions: Phase 7.1 local service-folder convention and Phase 9.3/9.4 backend persistence/policy exist.
+
+Purpose: add server-backed `/services` data-plane folders and explicit control-plane APIs for validation/render/export jobs.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-server-reference` | Add service job APIs and service artifact storage. | No new package install by default. |
+| `@textforge/workspace` | Show server-backed service folders as provider resources. | No new package install. |
+| `@textforge/pipeline` | Submit controlled backend jobs where enabled. | No new package install by default. |
+| `@textforge/security-profile` | Validate data-plane/control-plane split and policy enforcement. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `persistence-server-reference` | Update | Implement job creation/cancel/status APIs and service-folder artifact layout for validation/render/export results. |
+| `@textforge/workspace` | Update | Surface service artifacts through provider descriptors with provenance and explicit persistence state. |
+| `@textforge/pipeline` | Update | Route enabled backend jobs through explicit APIs, not file writes pretending to be commands. |
+
+Outputs: server-backed service folders, job APIs, status diagnostics, generated artifact provenance, and policy checks.
+
+Non-goals: no AI, no publication approval workflow unless separately scoped, no service control by writing magic files.
+
+Validation checks: data-plane artifacts are files/folders; job creation/cancel/status are explicit APIs; unauthorized service use is denied server-side.
+
+### Phase 10.2 — Soft collaboration leases
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 8 and 17; `roadmap/grilling/backend-grilling.md` Q23-Q24.
+
+Preconditions: Phase 9.3 revision/changeset persistence and Phase 9.4 identity/policy exist.
+
+Purpose: provide early collaboration safety through revisions, stale warnings, conflict diagnostics, and advisory time-bound file leases without true live editing.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-server-reference` | Advisory lease API, inactivity expiry, logout/session release. | No new package install by default. |
+| `persistence-client` | Lease status, renew/release calls, and stale revision diagnostics. | No new package install. |
+| `@textforge/ui` | Show lease owner/status, renewal prompts, stale warnings, and conflict diagnostics. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `persistence-server-reference` | Update | Implement advisory time-bound leases, renewal, release on logout/session expiry, and stale revision detection. |
+| `@textforge/ui` | Update | Prompt after inactivity, show lease state, and keep revision checks visible even when a lease exists. |
+
+Outputs: advisory lease contract, lease UI/status, inactivity renewal prompt, logout/session release behavior, and conflict diagnostics.
+
+Non-goals: no CRDT/OT, no presence/live cursors, no live collaborative text editing, no compare/merge/review workflow in this phase.
+
+Validation checks: locks are time-bound leases, not permanent hard locks; stale revision checks remain mandatory; user inactivity prompts before renewal; logout releases leases by default.
 
 ### Phase 11 — Tables, catalogues, and matrices
 
@@ -691,6 +1243,95 @@ Package dependency actions for this phase:
 | `@textforge/ui` | Update | Update. Common table toolbar/filter/sort components. |
 | `@textforge/bpmn` | Update | Update. Add BPMN task/event/gateway catalogue surfaces if useful. |
 | `@textforge/tables` | Create | Create. TanStack Table semantic table surfaces, CSV/TSV grid editor, catalogue/matrix abstractions, validation issue table. |
+
+
+### Phase 11.1 — AI contract and backend mediator
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 12, 14, 15, 16, and 18; `roadmap/grilling/backend-grilling.md` Q9, Q10, Q14, Q26-Q28.
+
+Preconditions: Phase 9.4 identity/policy, Phase 9.3 persistence/audit hooks, and Phase 10.1 service-control split exist.
+
+Purpose: define backend-mediated AI as an enterprise-governed service with scoped context, policy, audit, redaction seams, and no direct frontend LLM provider calls.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `ai-contract` | Request/response, context scope, policy, redaction, audit, patch-suggestion contracts. | No new package install by default. |
+| `ai-server-mediator` | Backend-only AI mediator seam. | Add provider SDKs only after RAPID security/dependency decision. |
+| `@textforge/security-profile` | Verify no LLM provider access in frontend packages. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `ai-contract` | Create | Define AI request model, allowed context scopes, non-mutating suggestion shape, audit metadata, redaction hooks, and policy diagnostics. |
+| `ai-server-mediator` | Create | Backend mediator for approved model/provider routing, identity/policy checks, scope enforcement, audit, rate limits, and prompt policy seams. |
+
+Outputs: AI contract, backend mediator skeleton, policy/audit/redaction seams, and no-frontend-provider validation.
+
+Non-goals: no chat UI, no patch application, no autonomous editing, no direct LLM calls from frontend.
+
+Validation checks: frontend dependency graph contains no LLM provider SDK/API keys; AI requests require backend policy; all initial outputs are non-mutating suggestions/explanations.
+
+### Phase 11.2 — AI client and chat surface
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` section 12; `roadmap/grilling/backend-grilling.md` Q9, Q14, Q28.
+
+Preconditions: Phase 11.1 AI contract/mediator exists.
+
+Purpose: deliver a simple “talk with your docs” surface for selected document/folder context, explain/summarize/Q&A, and suggested edits as unapplied patch text.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `ai-client` | Frontend-safe AI client against approved backend origin. | No new package install by default. |
+| `ai-chat-surface` / `@textforge/ui` | Chat surface components. | Add UI dependencies only after RAPID decision; prefer existing UI first. |
+| `@textforge/workspace` | Provide explicit context selection/read-only snapshots. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `ai-client` | Create | Call backend mediator, handle capability/permission diagnostics, and expose read/suggest-only operations. |
+| `ai-chat-surface` / `@textforge/ui` | Create/Update | Add chat surface for selected document/folder context, explain/summarize/Q&A, and suggested patch text display. |
+| `@textforge/workspace` | Update | Provide explicit context selection and ensure AI cannot silently read outside selected/authorized scope. |
+
+Outputs: AI chat surface, selected-context flow, non-applied patch suggestions, and capability-unavailable behavior.
+
+Non-goals: no automatic patch application, no silent file mutation, no tool execution, no pipeline-running AI agent.
+
+Validation checks: AI actions are hidden/disabled when backend capability unavailable; suggested edits are displayed as text and require future explicit changeset integration to apply.
+
+### Phase 11.3 — AI preference integration
+
+#### Architecture and pnpm implementation anchors
+
+Backend references to consider: `roadmap/textforge_backend_optional_architecture_whitepaper.md` sections 12 and 13; `roadmap/grilling/backend-grilling.md` Q6, Q9, Q28.
+
+Preconditions: Phase 11.2 AI chat surface and Phase 7.2/9.6 settings exist.
+
+Purpose: let users configure AI UI behavior and default context preferences within allowed capabilities.
+
+Package dependency actions for this phase:
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `user-settings-core` / `@textforge/core` | AI preference keys and precedence rules. | No new package install. |
+| `ai-client` / `ai-chat-surface` | Respect preferences without changing permissions. | No new package install. |
+| `@textforge/security-profile` | Validate AI preferences do not expand context or rights. | No new package install. |
+
+| Package | Action | Content |
+|---|---|---|
+| `ai-chat-surface` | Update | Respect preferred assistant mode, default context scope, explain-vs-patch preference, and hidden/disabled AI command preferences. |
+| `user-settings-core` / `@textforge/core` | Update | Store AI preferences as personalization only, under server hard-permission precedence. |
+
+Outputs: AI preference settings, policy-aware UI behavior, and disabled-by-policy diagnostics.
+
+Non-goals: no permission grants, no patch application, no autonomous editing.
+
+Validation checks: preferences cannot increase context scope beyond backend policy; unavailable AI remains unavailable; document semantics do not change.
 
 ### Phase 12 — Enterprise architecture and ArchiMate foundation
 
@@ -833,6 +1474,17 @@ Package dependency actions for this phase:
 |---|---|---|
 | `@textforge/assets` | Update | Update. Optional PDF annotation layer over PDF.js; store annotations as separate workspace resources/deltas. |
 | `@textforge/markdown` | Update | Update. Evaluate local Markdown/HTML-to-PDF pipeline after print HTML stabilizes. |
+
+
+### Later backend-dependent work — AI editing, compare/merge, review, and true live collaboration
+
+These items are deliberately not inserted as early backend phases. They require stable revisions, changesets, identity, audit, user settings, service control APIs, and soft leases first.
+
+- AI patch application must be user-approved and produce explicit changesets.
+- Advanced compare/merge and review workflows belong after early lease-based soft collaboration.
+- True live collaborative editing requires a separate design decision around CRDT/OT, presence, shared undo/redo, live cursors, low-latency sync, and offline conflict behavior.
+
+Validation gate: no earlier phase may silently introduce autonomous AI file mutation, CRDT/OT editing, live cursors, or review/merge workflow scope without a new RAPID decision and roadmap update.
 
 ### Phase 19 — Release-envelope verification and accreditation evidence
 

@@ -206,3 +206,8 @@ The package now surfaces generated-asset provenance and stale-state cues through
 ## Phase 4.1 closure note
 
 The package now exposes its viewers and asset commands as default-active contributions with stable capability IDs, while the package checks also validate public-entrypoint consumption instead of cross-package `src/` imports. SVG remains the key dual-eligibility case: the same text-stored resource can still route to source editing and to the registered SVG viewer without reviving a hard storage-based split.
+
+
+## V16 backend-optional responsibilities
+
+`@textforge/assets` must display provenance and persistence state for generated and service-produced artifacts. Derived resources should remain ephemeral unless explicitly selected or produced by an approved workflow as controlled-generated resources.

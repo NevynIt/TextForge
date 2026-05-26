@@ -109,3 +109,8 @@ Do not import app-shell internals. Do not bypass contribution registries. Do not
 ## Repository and workspace workflow
 
 This package lives inside the main TextForge Git repository as an npm workspace package. It should remain independently buildable and testable, but it should not be managed as a Git submodule. Cross-package changes may be made in one branch by one agent, with commits scoped by package where practical. Package dependencies should use `workspace:*` references, and public integration should happen through contribution manifests or stable exported contracts rather than direct app-shell coupling.
+
+
+## V16 backend-optional responsibilities
+
+`@textforge/itm` must treat `%repository` as a provider-resolved declaration. Repository values may look like aliases, URLs, URIs, or hints, but the frontend must not fetch them directly. Resolver diagnostics must distinguish unresolved, unsupported, unauthorized, unavailable, conflicting alias, and version/capability mismatch cases.

@@ -1,10 +1,10 @@
-# TextForge Rebuild Roadmap Package V15n
+# TextForge Rebuild Roadmap Package V16
 
 This package is arranged as a single drop-in `roadmap/` folder for the TextForge repository. Copy or merge this folder into the repository root. After that, every coding agent should start from `roadmap/AGENTS_START_HERE.md`.
 
-The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, reference specifications, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V15n marks Phase 4 as completed, inserts Phase 4.1 as the mandatory foundation-stabilization gate before Phase 5, and keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every phase/package row. It also keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
+The roadmap folder contains the standalone architecture body, the authoritative implementation roadmap set, package guides, reference specifications, and the append-only RAPID log for risks, actions, progress, issues, and decisions. V16 marks the backend-optional architecture integration. It preserves the existing phase order and Phase 5 contribution/capability roadmap, adds backend/resource-provider work as explicit later sub-phases, stores the backend whitepaper and grilling record, and keeps exact architecture-paragraph anchors plus explicit pnpm dependency actions for every existing and new phase/package row. It also keeps reverse traceability paragraphs after the architecture source blocks so implementers can see the responsible phase/package from the architecture document itself.
 
-The roadmap also includes exact architecture-reference anchors, a consolidated pnpm install matrix, and a phase-sequenced package dependency activity diagram that shows when each package starts depending on other packages and app surfaces across Phases -1 through 19, including the 3.6/3.7 pre-Phase-4 corrections and the new Phase 4.1 pre-Phase-5 stabilization gate.
+The roadmap also includes exact architecture-reference anchors, a consolidated pnpm install matrix, and a phase-sequenced package dependency activity diagram that shows when each package starts depending on other packages and app surfaces across Phases -1 through 19, including the 3.6/3.7 pre-Phase-4 corrections, the Phase 4.1 pre-Phase-5 stabilization gate, and the V16 backend-optional sub-phase sequence from 5.1 onward.
 
 For runnable local artifacts, the live instruction set now assumes a source-owned bootstrap path: a canonical file-launch HTML document plus a deterministic classic loader bundle, not a shipped module-script HTML entry repaired by post-build rewriting.
 
@@ -25,13 +25,15 @@ Authority split:
 - `grilling/README.md` - reusable phase-grilling prompt, usage rules, and index of phase grilling records.
 - `grilling/phase-4.1-grilling.md` - accepted grilling record that introduced Phase 4.1 as the pre-Phase-5 foundation stabilization gate.
 - `grilling/phase-5-grilling.md` - accepted Phase 5 contribution/capability registry grilling record.
+- `grilling/backend-grilling.md` - accepted backend-optional architecture grilling record.
+- `textforge_backend_optional_architecture_whitepaper.md` - standalone backend-optional architecture update whitepaper.
 - `specs/textforge_markdown_profile.md` - TF-MD source specification used to phase Markdown-profile implementation across Phases 4, 5, 6, 9, and 14.
 - `validation/phase-3-5-reference-antipattern.png` - reference screenshot showing the layout anti-patterns Phase 3.5 must eliminate.
 - `validation/phase-3-5-validation-report.json` - browser-measured Phase 3.5 layout, overflow, popup, and duplicate-title metrics at the required desktop states.
 - `validation/phase-3-5-resize-panel-widths.json` - Phase 3.5 width evidence for default, narrow, wide, and dragged shell-panel states.
 - `RAPID.md` - repository-local append-only RAPID log.
 - `textforge_rebuild_whitepaper_main.md` - main standalone architecture body; it deliberately does not own phase sequencing.
-- `packages/*.md` - one implementation guide per package, including Phase 3.1/3.2/3.3/3.4/3.5 recovery, pull-forward, readability, resource-identity, popup usability, resizable-panel, screenshot-validation responsibilities, and phased TF-MD implementation responsibilities or compatibility notes.
+- `packages/*.md` - one implementation guide per package, including Phase 3.1/3.2/3.3/3.4/3.5 recovery, pull-forward, readability, resource-identity, popup usability, resizable-panel, screenshot-validation responsibilities, phased TF-MD implementation responsibilities, and V16 backend-optional package-split guidance.
 
 ## How to use
 
@@ -57,13 +59,16 @@ roadmap/
   03_package_dependency_activity_diagram.md
   RAPID.md
   textforge_rebuild_whitepaper_main.md
+  textforge_backend_optional_architecture_whitepaper.md
   specs/
     textforge_markdown_profile.md
   grilling/
     README.md
     phase-4.1-grilling.md
     phase-5-grilling.md
+    backend-grilling.md
   packages/
+    backend-optional.md
     core.md
     workspace.md
     surfaces.md

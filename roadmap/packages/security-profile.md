@@ -189,3 +189,8 @@ The default profile now also checks the local command-dispatch boundary introduc
 ## Phase 3.5 closure note
 
 The default profile now also includes a local UI state boundary check for popup overlays and resizable shell rails. Phase 3.5 validation confirms that popup visibility, inspector placement, and panel-size preferences stay ordinary browser-local UI state documented in `docs/specs/local-shell-ui-state.md`, while detached windows, remote popup content, background sync, remote sync, File System Access API usage, and silent local-file probing remain rejected.
+
+
+## V16 backend-optional responsibilities
+
+`@textforge/security-profile` must verify both clean claims: local/offline mode uses app-managed browser storage and explicit user import/export only; enterprise mode communicates with one approved backend origin and keeps GitLab, Entra, AI provider SDKs, backend persistence, and private/group enforcement out of frontend-safe packages.

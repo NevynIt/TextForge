@@ -146,3 +146,8 @@ Single-folder ZIP handling is now intentionally split from whole-workspace dumps
 ## Phase 4.1 closure note
 
 The package now consumes `@textforge/core` only through its public workspace entrypoint and keeps resource identity/content facts separate from surface eligibility. The stabilized audit also confirms that unified resources, including text-stored SVG, continue to flow into the shell as facts for contribution predicates rather than through a reintroduced text-versus-binary routing split.
+
+
+## V16 backend-optional responsibilities
+
+`@textforge/workspace` owns the first local provider implementation seams: IndexedDB, ZIP/folder import/export, generated resources, local service-folder conventions, dirty state, base revisions, and local changeset assembly. It must keep local/offline storage app-managed and must not introduce File System Access API, persistent directory handles, silent file reads/writes, background sync, or arbitrary network providers.

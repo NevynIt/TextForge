@@ -163,3 +163,8 @@ The package now delivers the Phase 4 TF-MD baseline: a Markdown preview surface,
 ## Phase 4.1 closure note
 
 The package now keeps the fenced-block dispatcher explicitly provisional by shaping its built-ins as default contribution records with stable IDs, capability associations, and structured diagnostics. Markdown preview resolution now consumes the shared contribution registry for active fence handlers, reports active handler conflicts or unavailable registered handlers through the shared diagnostic shape, and preserves the local-artifact-safe preview path.
+
+
+## V16 backend-optional responsibilities
+
+`@textforge/markdown` must preserve TF-MD document semantics independently from optional backend capabilities. `%include` and `%repository` resolution must use provider/repository contracts and diagnostics. Missing backend/GitLab/AI/service capabilities may disable actions or emit diagnostics, but must not change how Markdown is parsed.

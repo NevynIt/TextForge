@@ -202,3 +202,8 @@ The package now exports the bounded popup and shell-resize primitives promised f
 The Phase 3.5 chrome also syncs collapse and expand state with real width release, keeps stable pane markers for validation, and leaves advanced tab movement, split panes, saved layouts, and other Phase 13 behavior out of scope.
 
 As a pre-Phase-4 shell follow-up, the workspace tree rows and the main tab strip now also act as file drop targets: dropping files on a folder uploads into that folder without opening them, while dropping files on the tab strip uploads into `/upload` and opens the first dropped resource in the main surface. Keep the workspace menu labels for file upload/download and folder ZIP import/export explicit enough that these flows remain discoverable without relying on drag and drop.
+
+
+## V16 backend-optional responsibilities
+
+`@textforge/ui` may expose provider, settings, private/group, service, AI, and backend actions only when the active profile/manifest/capability state allows them. Private/group roots must not appear before backend identity and policy enforcement. Settings UI customizes presentation/defaults only and never grants permissions.

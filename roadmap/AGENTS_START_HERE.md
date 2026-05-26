@@ -6,7 +6,7 @@ This is the first document a coding agent must read before working on the TextFo
 
 The goal is to let any agent understand the architecture, locate the current phase, continue the next useful work, and leave the repository more understandable than it found it.
 
-TextForge is being rebuilt as a React-based, local-first, text-first workbench with a pnpm-workspace monorepo, package-level contribution boundaries, ITM as the canonical structural model, a virtual workspace, stable document identity badges, a readable overflow-safe workbench shell, Surface-based editors/viewers, restricted Lua automation, progressively implemented TF-MD Markdown/report generation, BPMN and enterprise architecture support, and a reusable browser-envelope security profile.
+TextForge is being rebuilt as a React-based, local-first, text-first workbench with a pnpm-workspace monorepo, package-level contribution boundaries, ITM as the canonical structural model, a virtual workspace, stable document identity badges, a readable overflow-safe workbench shell, Surface-based editors/viewers, restricted Lua automation, progressively implemented TF-MD Markdown/report generation, BPMN and enterprise architecture support, a reusable browser-envelope security profile, and a V16 backend-optional enterprise path based on provider contracts, revisions/changesets, manifests, one approved backend origin, and backend-enforced policy.
 
 ## Repository-local roadmap folder
 
@@ -24,13 +24,16 @@ roadmap/
   03_package_dependency_activity_diagram.md
   RAPID.md
   textforge_rebuild_whitepaper_main.md
+  textforge_backend_optional_architecture_whitepaper.md
   specs/
     textforge_markdown_profile.md
   grilling/
     README.md
     phase-4.1-grilling.md
     phase-5-grilling.md
+    backend-grilling.md
   packages/
+    backend-optional.md
     core.md
     workspace.md
     surfaces.md
@@ -62,12 +65,27 @@ Before changing code, do the following:
 5. Read `roadmap/02_phase_architecture_pnpm_matrix.md` for the active phase's architecture anchors and pnpm dependency commands.
 6. Read `roadmap/03_package_dependency_activity_diagram.md` for cross-package phase sequencing context.
 7. For Markdown work, read `roadmap/specs/textforge_markdown_profile.md` before implementing any TF-MD parsing, directive, include, block-registry, or rich-editor behavior.
-8. Inspect `git status`, current branch, recent commits, and package structure.
-9. Determine the current phase and the next incomplete step.
-10. Check whether the roadmap still matches the repository reality.
-11. Proceed only within the next coherent phase or phase slice.
+8. For backend-optional, provider, settings, identity, persistence, service-folder, GitLab, AI, private/group space, or enterprise-container work, read `roadmap/textforge_backend_optional_architecture_whitepaper.md`, `roadmap/grilling/backend-grilling.md`, and `roadmap/packages/backend-optional.md` before implementation.
+9. Inspect `git status`, current branch, recent commits, and package structure.
+10. Determine the current phase and the next incomplete step.
+11. Check whether the roadmap still matches the repository reality.
+12. Proceed only within the next coherent phase or phase slice.
 
 Do not start by guessing from file names alone. The RAPID log and roadmap are the authoritative operational context.
+
+
+## V16 backend-optional rule
+
+Backend work is an optional enterprise extension, not a replacement for the local/offline roadmap. Agents must preserve these V16 invariants whenever touching provider, repository, service, persistence, identity, settings, GitLab, AI, or deployment code:
+
+- local/offline TextForge remains fully supported;
+- local/offline mode has no File System Access API, persistent directory handles, silent local file reads/writes, background folder sync, or arbitrary network providers;
+- enterprise mode uses one approved backend origin and a fail-fast backend manifest;
+- backend-only adapters never enter frontend-safe packages;
+- settings personalize UI/defaults only and never grant permissions;
+- backend-backed writes use revisions and multi-resource changesets;
+- GitLab, Entra, AI providers, private/group enforcement, and backend persistence remain server-side;
+- initial AI is read/suggest only and non-mutating.
 
 ## Required phase plan shape
 

@@ -199,3 +199,8 @@ Popup sessions now stay separate from the main document strip and reopen through
 ## Phase 4.1 closure note
 
 The package now resolves open-with compatibility through shared resource predicates over representation, MIME type, language ID, and extension facts, and it emits a structured diagnostic when no registered surface can open a resource. The context-menu and surface-command projection remains on the single command spine, while the app-shell surface-mount adapter is explicitly marked as temporary Phase 5 follow-up work rather than hidden shell coupling.
+
+
+## V16 backend-optional responsibilities
+
+`@textforge/surfaces` must keep openability based on resource facts, active capabilities, and provider affordances. Optional backend capability absence should remove or disable actions, not change document semantics or bypass the Phase 5 contribution model.

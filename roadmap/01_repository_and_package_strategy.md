@@ -1,4 +1,4 @@
-# TextForge V15n Repository and Package Strategy
+# TextForge V16 Repository and Package Strategy
 
 ## Purpose
 
@@ -74,6 +74,17 @@ textforge/
     tables/
     archimate/
     examples-docs/
+
+  # V16 planned/staged backend-optional package families, extracted only when boundaries justify it:
+  packages or logical slices:
+    workspace-core / workspace-indexeddb / workspace-zip / workspace-services
+    repository-core / repository-itm
+    user-settings-core / user-settings-local / user-settings-ui / user-settings-server-sync
+    persistence-client / persistence-server-contract / persistence-server-reference / persistence-gitlab-adapter
+    identity-contract / identity-entra-server
+    private-spaces-contract / private-spaces-server
+    ai-contract / ai-client / ai-server-mediator / ai-chat-surface
+    app-distribution / server-app-host / enterprise-container / browser-extension-wrapper / local-static-build
 ```
 
 Each package has its own `package.json`, build script, test script, TypeScript configuration, public exports, and documentation. The application under `apps/textforge-web` composes package contributions into the final browser workbench.
@@ -210,6 +221,28 @@ pnpm add -D -w <npm-package>
 If implementation chooses a different package than the roadmap candidate, the agent must record the reason in `roadmap/RAPID.md`, update the relevant package guide, and keep the security/license gate green.
 
 ---
+
+
+## V16 package-split staging rule
+
+The backend-optional architecture introduces planned package families for providers, repositories, user settings, persistence, identity, private/group spaces, AI, and distribution. These names are intentional roadmap targets, but they are not a command to explode the monorepo immediately.
+
+Extraction should be progressive:
+
+1. Start by adding logical slices to the existing frontend-safe packages when that is the least disruptive route.
+2. Extract a new package when it represents a real dependency boundary, security boundary, backend-only adapter, independently testable contract, or distribution boundary.
+3. Keep frontend-safe contracts separate from backend-only implementations.
+4. Never let backend-only dependencies such as GitLab, Entra, LLM provider SDKs, or server persistence adapters leak into the browser app shell.
+5. Record each physical extraction in RAPID and update `02_phase_architecture_pnpm_matrix.md` with the exact workspace dependency commands.
+
+Recommended dependency rule:
+
+```text
+Frontend packages may depend on contracts and frontend clients.
+Frontend packages must not depend on backend-only adapters.
+Backend packages may depend on contracts and backend adapters.
+Adapters must not leak into the app shell.
+```
 
 ## Package-level commits without package-level Git repositories
 

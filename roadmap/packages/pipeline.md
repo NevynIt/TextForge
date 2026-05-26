@@ -127,3 +127,8 @@ The package now exposes the Phase 4 baseline runtime: generated-resource descrip
 ## Phase 4.1 closure note
 
 The package now aligns step identity and failure reporting with the shared diagnostic contract. Missing or failing pipeline steps emit structured diagnostics with machine-readable codes and origin metadata instead of relying only on raw thrown errors, while the package also exposes its runtime as a default-active pipeline capability ready for Phase 5 composition.
+
+
+## V16 backend-optional responsibilities
+
+`@textforge/pipeline` should represent generated outputs as source, derived, or controlled-generated resources and integrate with changesets only when explicit. Backend-backed service execution must use explicit job APIs, not file writes as fake commands. AI-generated patch text must remain non-mutating until a later user-approved changeset workflow exists.

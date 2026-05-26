@@ -152,3 +152,8 @@ The package now owns the minimal shell-command substrate promised for Phase 3.3:
 ## Phase 4.1 closure note
 
 The package now owns the stabilized Phase 4.1 foundation contracts: normalized `observation`/`information`/`warning`/`error` diagnostics with origin metadata, resource facts plus resource predicates, default Markdown fence-handler contribution metadata, and a lightweight contribution registry that can report active/available capability state and emit active short-name conflict diagnostics before Phase 5 expands package composition.
+
+
+## V16 backend-optional responsibilities
+
+`@textforge/core` is the preferred starting point for frontend-safe contracts: provider-aware resource descriptors, revisions, changesets, repository diagnostics, identity metadata, permission diagnostics, settings schemas, and AI/persistence contract placeholders where physical extraction is not yet justified. Keep these as contracts and pure helpers. Do not import backend-only adapters.

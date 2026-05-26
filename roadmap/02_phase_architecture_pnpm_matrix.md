@@ -1,4 +1,4 @@
-# Phase Architecture References and pnpm Package Install Matrix
+# Phase Architecture References and pnpm Package Install Matrix — V16
 
 This matrix is the consolidated implementation dependency companion to `00_package_aware_roadmap.md`. It makes two things explicit for every phase:
 
@@ -6,6 +6,11 @@ This matrix is the consolidated implementation dependency companion to `00_packa
 2. the pnpm workspace or third-party packages that should be installed for each package touched in that phase.
 
 Architecture anchors resolve through `02_architecture_paragraph_reference_index.md`. Commands omit pinned versions by default so the lockfile, license gate, and RAPID log remain the control points for actual resolved versions.
+
+
+## V16 backend-optional reference rule
+
+Backend-related sub-phases use `roadmap/textforge_backend_optional_architecture_whitepaper.md` and `roadmap/grilling/backend-grilling.md` as architecture references in addition to the original `ARCH-*` anchors. These phases preserve existing phase numbering and add explicit package/dependency actions without replacing Phase 5 contribution/capability work.
 
 ## Phase -1 — Repository pivot and archival preservation
 
@@ -210,6 +215,39 @@ Architecture paragraphs: `ARCH-6.7-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.11-P0
 | `@textforge/markdown` | `%require` as activation/check only, default Markdown capabilities, capability-aware fenced-block handlers, and source-identifiable diagnostics. | No new package install. |
 | `@textforge/security-profile` | Verify static bundled package composition and `%require` no-fetch/no-load behavior. | No new package install. |
 
+
+## Phase 5.1 — Workspace and repository provider contracts
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 7-9, 14-16; `grilling/backend-grilling.md` Q1-Q5, Q11, Q13-Q22, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Provider/resource descriptor, revisions, changesets, provenance, repository diagnostics. | No new package install. |
+| `@textforge/workspace` | Local provider wrappers over IndexedDB, ZIP, generated resources, dirty state, changesets. | No new package install. |
+| `@textforge/itm` | Repository declaration structures without frontend fetch. | No new package install. |
+| `@textforge/markdown` | Preserve repository/include declarations as provider references. | No new package install. |
+| `@textforge/security-profile` | Provider allowlist and forbidden local file API checks. | No new package install. |
+
+## Phase 5.2 — Identity contract
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 11, 13, 14, 16, 18; `grilling/backend-grilling.md` Q6-Q7, Q15, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` or `identity-contract` | Neutral user/group/claim/policy diagnostic contracts. | No new package install. |
+| `@textforge/security-profile` | Validate identity metadata is not permission authority. | No new package install. |
+
+## Phase 5.3 — User settings core and local storage
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` section 13; `grilling/backend-grilling.md` Q6, Q15, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` or `user-settings-core` | Settings schema, command preference metadata, precedence metadata. | No new package install. |
+| `@textforge/workspace` or `user-settings-local` | Local settings persistence in browser-managed storage. | No new package install. |
+| `@textforge/ui` | Consume settings read model. | No new package install. |
+| `@textforge/security-profile` | Validate settings never grant permissions/providers. | No new package install. |
+
 ## Phase 6 — ITM integration and model/report foundation
 
 Architecture paragraphs: `ARCH-6.6-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.9-P01..P07`, `ARCH-6.18-P01..P12`, `ARCH-11.2-P01..P02`, `ARCH-12.2-P01`
@@ -220,6 +258,19 @@ Architecture paragraphs: `ARCH-6.6-P01..P07`, `ARCH-6.8-P01..P06`, `ARCH-6.9-P01
 | `@textforge/pipeline` | ITM model value and transformation step contracts. | No new package install. |
 | `@textforge/markdown` | TF-MD model-aware `itm` and `itm-pub` fenced blocks. | `pnpm --filter @textforge/markdown add @textforge/itm@workspace:*` |
 
+
+## Phase 6.1 — Repository resolver integration
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 7, 9, 16; `grilling/backend-grilling.md` Q16-Q17, Q20, Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` | Repository diagnostics and resolver result contracts. | No new package install. |
+| `@textforge/workspace` | Provider-backed repository roots and local bundle/package roots. | No new package install. |
+| `@textforge/itm` | `%repository`/`%include` resolver integration through provider contracts. | No new package install. |
+| `@textforge/markdown` | Share resolver diagnostics; defer full report composition to Phase 9. | No new package install. |
+| `@textforge/security-profile` | No arbitrary frontend fetch from URL-like repository values. | No new package install. |
+
 ## Phase 7 — ITM visual projections
 
 Architecture paragraphs: `ARCH-5.12-P01..P04`, `ARCH-6.9-P01..P07`, `ARCH-6.18-P01..P25`, `ARCH-6.21-P01..P04`, `ARCH-11.5-P01..P03`
@@ -229,6 +280,28 @@ Architecture paragraphs: `ARCH-5.12-P01..P04`, `ARCH-6.9-P01..P07`, `ARCH-6.18-P
 | `@textforge/itm` | Projection APIs and generated asset provenance. | No new package install. |
 | `@textforge/diagrams` | ITM-to-graph/mindmap adapters and viewers. | `pnpm --filter @textforge/diagrams add cytoscape graphology sigma jsmind` |
 
+
+## Phase 7.1 — Local service-folder convention
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 3.3, 10, 16; `grilling/backend-grilling.md` Q5, Q22, Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/workspace` or `workspace-services` | `/services`, `/packages`, `/templates`, generated-output conventions. | No new package install. |
+| `@textforge/pipeline` | Service-compatible output descriptors and explicit generated-resource categories. | No new package install. |
+| `@textforge/assets` | Generated/service artifact provenance display. | No new package install. |
+| `@textforge/security-profile` | Validate service folders are data-plane only. | No new package install. |
+
+## Phase 7.2 — User settings UI
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` section 13; `grilling/backend-grilling.md` Q6, Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/ui` or `user-settings-ui` | Settings surface/panel components. | No new package install by default. |
+| `@textforge/workspace` or `user-settings-local` | Persist UI preference changes. | No new package install. |
+| `@textforge/security-profile` | Validate settings UI cannot enable unavailable capabilities/providers. | No new package install. |
+
 ## Phase 8 — Lua automation
 
 Architecture paragraphs: `ARCH-5.15-P01..P04`, `ARCH-6.19-P01..P06`, `ARCH-7.10-P01..P05`, `ARCH-11.1-P01..P02`
@@ -237,6 +310,18 @@ Architecture paragraphs: `ARCH-5.15-P01..P04`, `ARCH-6.19-P01..P06`, `ARCH-7.10-
 |---|---|---|
 | `@textforge/lua` | Restricted Fengari runtime, API allow-list, Lua console surface. | `pnpm --filter @textforge/lua add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* fengari` |
 | `@textforge/pipeline` | Lua script pipeline step type. | No new package install. |
+
+
+## Phase 8.1 — Private and group space contracts
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 11, 14, 16, 18; `grilling/backend-grilling.md` Q7, Q15, Q20, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `@textforge/core` or `private-spaces-contract` | Private/group root descriptors, owner metadata, permission diagnostics. | No new package install. |
+| `@textforge/workspace` | Contract/test roots only; no real local enforcement claim. | No new package install. |
+| `@textforge/ui` | Gate/hide private/group roots until backend identity/policy exists. | No new package install. |
+| `@textforge/security-profile` | Validate no local enterprise privacy claim. | No new package install. |
 
 ## Phase 9 — Markdown + ITM report generation
 
@@ -248,6 +333,78 @@ Architecture paragraphs: `ARCH-5.10-P01..P04`, `ARCH-6.18-P01..P25`, `ARCH-11.5-
 | `@textforge/itm` | Report fragment model integration. | No new package install. |
 | `@textforge/diagrams` | Report asset embedding integration. | No new package install. |
 
+
+## Phase 9.1 — Enterprise distribution profile
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 4-6, 14-16, 18; `grilling/backend-grilling.md` Q4, Q10, Q12, Q25-Q27.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `apps/textforge-web` | Frontend build consumable by server host. | No new package install. |
+| `server-app-host` / `enterprise-container` | Node app host, `/api`, `/schemas`, `/health`, manifest. | Add server runtime only after RAPID dependency decision. |
+| `@textforge/security-profile` | Enterprise one-origin/CSP/manifest checks. | No new package install by default. |
+
+## Phase 9.2 — Backend API contract and optional frontend provider
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 3.2, 5, 7, 8, 14-16; `grilling/backend-grilling.md` Q2-Q4, Q10-Q12, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-client` | Frontend-safe optional backend provider client. | No new package install by default. |
+| `persistence-server-contract` | DTO/schema/version/diagnostic contracts. | No new package install by default. |
+| `@textforge/workspace` | Register backend provider only from approved manifest. | No new package install. |
+| `@textforge/security-profile` | No direct GitLab/AI/Entra/adapters in frontend. | No new package install. |
+
+## Phase 9.3 — Reference persistence server
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 3.3, 5-8, 10, 14-16, 18; `grilling/backend-grilling.md` Q5, Q10-Q14, Q20-Q22, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-server-reference` | Reference data/control-plane server. | Add server dependencies only after RAPID license/dependency decision. |
+| `persistence-server-contract` | Contract tests and schema compatibility. | No new package install by default. |
+| `@textforge/security-profile` | Manifest/schema/adapter-boundary checks. | No new package install by default. |
+
+## Phase 9.4 — Enterprise SSO and server-side policy
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 3.4, 11, 14-16, 18; `grilling/backend-grilling.md` Q6-Q7, Q10, Q15, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `identity-entra-server` | Backend-only identity adapter. | Add Entra/auth libraries only after RAPID decision. |
+| `identity-contract` / `@textforge/core` | Align frontend metadata with server policy decisions. | No new package install. |
+| `persistence-server-reference` | Enforce policy on provider/resource actions. | No new package install by default. |
+
+## Phase 9.5 — Private and group spaces server
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 11, 16; `grilling/backend-grilling.md` Q15, Q20, Q24, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `private-spaces-server` | Backend-only private/group storage. | No new package install by default. |
+| `persistence-server-reference` | `/private/me/` and `/groups/{groupId}/` roots with policy. | No new package install by default. |
+| `@textforge/ui` | Show roots only when manifest/policy enable them. | No new package install. |
+
+## Phase 9.6 — Roaming user settings
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` section 13; `grilling/backend-grilling.md` Q6, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `user-settings-server-sync` | Backend sync client/server slice. | No new package install by default. |
+| `@textforge/ui` | Sync state and policy-disabled preferences. | No new package install. |
+| `persistence-server-reference` | SSO-bound preferences and optional org/group defaults. | No new package install by default. |
+
+## Phase 9.7 — GitLab adapter behind the persistence server
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 8, 9, 14-16; `grilling/backend-grilling.md` Q8, Q10-Q11, Q16-Q17, Q21-Q22, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-gitlab-adapter` | Backend-only GitLab adapter. | Add GitLab client only after RAPID dependency/security decision. |
+| `persistence-server-reference` | GitLab-backed provider roots and changeset-to-commit/MR mapping. | No new package install by default. |
+| `@textforge/security-profile` | Verify GitLab SDK/tokens/URLs do not enter frontend. | No new package install. |
+
 ## Phase 10 — BPMN support and first mature visual editor
 
 Architecture paragraphs: `ARCH-5.13-P01..P05`, `ARCH-5.3-P01..P08`, `ARCH-6.12-P01..P05`, `ARCH-6.16-P01..P04`, `ARCH-14.1-P01..P02`
@@ -255,6 +412,28 @@ Architecture paragraphs: `ARCH-5.13-P01..P05`, `ARCH-5.3-P01..P08`, `ARCH-6.12-P
 | Package | pnpm packages / dependency action | Command |
 |---|---|---|
 | `@textforge/bpmn` | BPMN XML support, bpmn-js viewer/modeler, controlled write-back. | `pnpm --filter @textforge/bpmn add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/editors@workspace:* @textforge/itm@workspace:* bpmn-js bpmn-moddle` |
+
+
+## Phase 10.1 — Backend-backed service folders
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 3.3, 10, 16; `grilling/backend-grilling.md` Q5, Q22, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-server-reference` | Service job APIs and service artifact storage. | No new package install by default. |
+| `@textforge/workspace` | Server-backed service folders as provider resources. | No new package install. |
+| `@textforge/pipeline` | Explicit backend jobs where enabled. | No new package install by default. |
+| `@textforge/security-profile` | Data-plane/control-plane and policy checks. | No new package install. |
+
+## Phase 10.2 — Soft collaboration leases
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 8, 17; `grilling/backend-grilling.md` Q23-Q24.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `persistence-server-reference` | Advisory lease API, inactivity expiry, logout/session release. | No new package install by default. |
+| `persistence-client` | Lease status and stale revision diagnostics. | No new package install. |
+| `@textforge/ui` | Lease owner/status, renewal prompts, stale warnings. | No new package install. |
 
 ## Phase 11 — Tables, catalogues, and matrices
 
@@ -264,6 +443,37 @@ Architecture paragraphs: `ARCH-5.4-P01..P03`, `ARCH-6.15-P01..P04`, `ARCH-6.21-P
 |---|---|---|
 | `@textforge/tables` | Semantic table surfaces, CSV/TSV grid, catalogue/matrix abstractions. | `pnpm --filter @textforge/tables add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/ui@workspace:* @textforge/itm@workspace:* @tanstack/react-table` |
 | `@textforge/bpmn` | Optional BPMN catalogues. | No new package install. |
+
+
+## Phase 11.1 — AI contract and backend mediator
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 12, 14-16, 18; `grilling/backend-grilling.md` Q9, Q10, Q14, Q26-Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `ai-contract` | Request/response, context, policy, audit, patch suggestion contracts. | No new package install by default. |
+| `ai-server-mediator` | Backend-only AI mediator seam. | Add provider SDKs only after RAPID decision. |
+| `@textforge/security-profile` | No LLM provider access in frontend. | No new package install. |
+
+## Phase 11.2 — AI client and chat surface
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` section 12; `grilling/backend-grilling.md` Q9, Q14, Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `ai-client` | Frontend-safe client to approved backend origin. | No new package install by default. |
+| `ai-chat-surface` / `@textforge/ui` | Chat surface components. | Add UI dependencies only after RAPID decision. |
+| `@textforge/workspace` | Explicit read-only selected-context snapshots. | No new package install. |
+
+## Phase 11.3 — AI preference integration
+
+Backend references: `textforge_backend_optional_architecture_whitepaper.md` sections 12, 13; `grilling/backend-grilling.md` Q6, Q9, Q28.
+
+| Package | pnpm packages / dependency action | Command |
+|---|---|---|
+| `user-settings-core` / `@textforge/core` | AI preference keys and precedence rules. | No new package install. |
+| `ai-client` / `ai-chat-surface` | Respect preferences without changing permissions. | No new package install. |
+| `@textforge/security-profile` | Validate preferences do not expand context or rights. | No new package install. |
 
 ## Phase 12 — Enterprise architecture and ArchiMate foundation
 
