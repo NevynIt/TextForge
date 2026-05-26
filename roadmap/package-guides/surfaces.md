@@ -204,6 +204,10 @@ The package now resolves open-with compatibility through shared resource predica
 
 Surface open-with eligibility now also respects the resolved document capability context instead of assuming globally active bundled surfaces. The package still stays runtime-light, but the request contract now accepts active capability/contribution filters so the shell can reopen resources through the document-scoped resolver rather than a global everything-active view.
 
+## WP-05C progress note
+
+The package now participates in canonical execution rather than stopping at metadata and selection. Surface contributions may open package-owned runtime views directly from their registered contribution records, and the package can synthesize surface-open requests for pipeline values so intermediate outputs reopen through the same active-context compatibility logic as ordinary resources, with source-editor fallback when no richer active surface is available.
+
 
 ## V16 backend-optional responsibilities
 

@@ -119,3 +119,7 @@ The package now owns the Phase 4 diagram baseline: Mermaid and Graphviz fenced-b
 ## Phase 4.1 closure note
 
 The package now registers Mermaid and Graphviz fenced-block renderers as default contributions with stable IDs, default-active capability associations, and local-artifact compatibility. The diagram package therefore enters Phase 5 with package-owned handler metadata instead of a shell-owned dispatch table, while preserving the current browser-only rendering and rasterization boundary.
+
+## WP-05C progress note
+
+The diagram package now routes Mermaid and Graphviz fenced-block execution through canonical active pipeline contributions. The registered diagram pipelines own Mermaid-to-SVG, Graphviz-to-SVG, and SVG-to-PNG execution, while the registered fence handlers delegate to those pipeline contributions through the current document context instead of bypassing the pipeline layer.

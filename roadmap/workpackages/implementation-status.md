@@ -20,7 +20,7 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 |---|---|---|---|---|
 | WP-05A | Validated | `roadmap/validation/workpackage-checklists/WP-05A-contribution-manifest-and-registry-model.md`; `corepack pnpm verify`; app `file://` build checks | 2026-05-26 | Canonical manifest normalization and deterministic bundled registry package model validated. |
 | WP-05B | Validated | `roadmap/validation/workpackage-checklists/WP-05B-capability-activation-and-resolver-context.md`; focused package tests/checks; app `file://` build checks | 2026-05-26 | Document-scoped capability resolver, `%require` activation, active-context surface filtering, and current-document inspector shipped. |
-| WP-05C | Not started | Depends on WP-05A/WP-05B | 2026-05-26 | Contribution execution integration. |
+| WP-05C | Validated | `roadmap/validation/workpackage-checklists/WP-05C-pipeline-contribution-execution-integration.md`; focused package tests/checks; app `file://` build checks; `corepack pnpm verify` | 2026-05-26 | Canonical surface/pipeline/fence-handler execution, active-context pipeline resolution, and intermediate surface reopening shipped. |
 | WP-ID-01 | Not started | Can proceed after foundation | 2026-05-26 | Identity contract only; no Entra. |
 | WP-ID-DEV | Not started | Depends on WP-ID-01 | 2026-05-26 | Required to keep local backend development unblocked. |
 | WP-SSO-ENTRA | Deferred / standalone | Depends on identity/policy/backend manifest | 2026-05-26 | Does not block generic roadmap progress. |

@@ -161,6 +161,10 @@ The package now owns the stabilized Phase 4.1 foundation contracts: normalized `
 
 `@textforge/core` now also owns the pure WP-05B document resolver. Capabilities carry package-local names, aliases, and document predicates; the resolver accepts explicit `%require`-style inputs, computes deterministic activation order across explicit/document/workspace/app/core sources, preserves the bundled-static boundary, and emits active short-name plus missing/ambiguous requirement diagnostics without reintroducing package-local registries.
 
+## WP-05C progress note
+
+`@textforge/core` now carries the canonical bundled runtime hooks alongside the validated registry/resolver contract: surface contributions may expose package-owned `open(...)` execution, pipeline contributions may expose package-owned `run(...)` execution, and Markdown fence handlers remain contribution-owned runtime entries. The shell therefore consumes execution through canonical registered contributions rather than through its old local `contributionId` adapter table.
+
 
 ## V16 backend-optional responsibilities
 

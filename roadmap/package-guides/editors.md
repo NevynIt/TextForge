@@ -188,3 +188,7 @@ The editor surface keeps the same CodeMirror ownership and language workflow, bu
 ## Phase 4.1 closure note
 
 The package now exposes the CodeMirror source editor and language-mode actions as default-active contributions with stable capability IDs so the shell can consume them through registration rather than bespoke editor lists. The runtime persistence wiring in the app remains an explicitly marked temporary adapter for Phase 5, but the editor-facing metadata and selection of active built-ins is now package-registered.
+
+## WP-05C progress note
+
+The CodeMirror source-editor contribution now owns its registered opening path as well as its metadata. The shell provides persistence callbacks and current-session state, but it no longer switches on the editor contribution ID to decide how to mount the runtime surface.

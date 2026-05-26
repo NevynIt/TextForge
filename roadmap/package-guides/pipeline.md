@@ -128,6 +128,10 @@ The package now exposes the Phase 4 baseline runtime: generated-resource descrip
 
 The package now aligns step identity and failure reporting with the shared diagnostic contract. Missing or failing pipeline steps emit structured diagnostics with machine-readable codes and origin metadata instead of relying only on raw thrown errors, while the package also exposes its runtime as a default-active pipeline capability ready for Phase 5 composition.
 
+## WP-05C progress note
+
+The package now executes active pipeline contributions directly from the validated document contribution context. Short names and qualified IDs both resolve over active bundled contributions, ambiguous short-name execution fails diagnostically, successful runs keep deterministic trace output plus intermediate values with representation metadata, and document-scoped runners can be created directly from the resolved WP-05B context for later reopening through surfaces.
+
 
 ## V16 backend-optional responsibilities
 

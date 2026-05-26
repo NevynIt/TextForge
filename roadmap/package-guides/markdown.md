@@ -168,6 +168,10 @@ The package now keeps the fenced-block dispatcher explicitly provisional by shap
 
 The package now parses `%require` as capability activation input for the shared document resolver instead of reporting it as an unsupported TF-MD directive. Markdown preview consumes the resolved document capability context, keeps Mermaid/math/Graphviz plus base Markdown defaults active for Markdown resources, and leaves SVG/JSON/YAML fenced-block renderers inactive until the document explicitly activates them.
 
+## WP-05C progress note
+
+The package now resolves active fence handlers directly from the current document contribution context and creates a document-scoped pipeline runner for fence execution. Mermaid and Graphviz blocks therefore run through canonical active pipeline contributions rather than ad hoc shell runtime adapters, while the preview surface itself now opens through package-owned contribution execution instead of a shell-local `contributionId` branch.
+
 
 ## V16 backend-optional responsibilities
 
