@@ -13,6 +13,8 @@
     "test": "corepack pnpm -r test",
     "lint": "corepack pnpm -r lint",
     "typecheck": "corepack pnpm -r typecheck",
+    "roadmap:dependency-map": "node roadmap/scripts/generate-dependency-map.mjs",
+    "roadmap:dependency-map:check": "node roadmap/scripts/generate-dependency-map.mjs --check",
     "verify": "corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test && corepack pnpm build"
   }
 }
