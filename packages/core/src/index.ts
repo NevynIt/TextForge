@@ -13,6 +13,18 @@ export interface SourceRange {
 
 export type ResourceKind = 'resource' | 'generated' | 'virtual';
 export type ResourceRepresentation = 'text' | 'bytes';
+export type ResourceCapabilityId =
+  | 'resource.read'
+  | 'resource.list'
+  | 'resource.open'
+  | 'resource.view'
+  | 'resource.copy'
+  | 'resource.export'
+  | 'resource.create-child'
+  | 'resource.write'
+  | 'resource.rename'
+  | 'resource.move'
+  | 'resource.delete';
 export type LanguageId =
   | 'plaintext'
   | 'markdown'
@@ -45,6 +57,13 @@ export interface ResourceRef {
   readonly languageId?: LanguageId | string;
   readonly parentResourceId?: string;
   readonly badge?: ResourceBadgeToken;
+  readonly providerId?: string;
+  readonly revision?: string;
+  readonly capabilityIds?: ReadonlyArray<ResourceCapabilityId | string>;
+  readonly ownerKind?: string;
+  readonly ownerId?: string;
+  readonly provenance?: ResourceProvenance;
+  readonly diagnostics?: ReadonlyArray<Diagnostic>;
 }
 
 export interface ResourceBadgeToken {
@@ -59,6 +78,39 @@ export interface ResourceBadgeToken {
   readonly description?: string;
   readonly repairedFromKey?: string;
 }
+
+export interface ResourceGeneratedProvenance {
+  readonly kind: 'generated';
+  readonly pipelineId: string;
+  readonly sourceResourceId: string;
+  readonly sourcePath: string;
+  readonly sourceUpdatedAt: string;
+  readonly generatedAt: string;
+  readonly blockId?: string;
+  readonly blockKind?: string;
+  readonly format?: 'svg' | 'png' | 'html' | string;
+}
+
+export interface ResourceBundledProvenance {
+  readonly kind: 'bundled';
+  readonly bundleId: string;
+  readonly sourcePath: string;
+  readonly bundledAt?: string;
+}
+
+export interface ResourceCopyProvenance {
+  readonly kind: 'copy';
+  readonly sourceProviderId: string;
+  readonly sourceResourceId: string;
+  readonly sourcePath: string;
+  readonly copiedAt: string;
+}
+
+export type ResourceProvenance =
+  | ResourceGeneratedProvenance
+  | ResourceBundledProvenance
+  | ResourceCopyProvenance
+  | { readonly kind: string; readonly [key: string]: unknown };
 
 export interface DiagnosticRelatedInformation {
   readonly message: string;
@@ -147,6 +199,11 @@ export interface CommandContextSelection {
   readonly path?: string;
   readonly mimeType?: string;
   readonly languageId?: string;
+  readonly providerId?: string;
+  readonly capabilityIds?: ReadonlyArray<ResourceCapabilityId | string>;
+  readonly revision?: string;
+  readonly ownerKind?: string;
+  readonly ownerId?: string;
 }
 
 export interface CommandContextSurface {
@@ -181,6 +238,8 @@ export interface CommandWhen {
   readonly selectionKinds?: ReadonlyArray<string>;
   readonly selectionRepresentations?: ReadonlyArray<string>;
   readonly selectionLanguageIds?: ReadonlyArray<string>;
+  readonly selectionProviderIds?: ReadonlyArray<string>;
+  readonly selectionCapabilityIds?: ReadonlyArray<ResourceCapabilityId | string>;
   readonly activeSurfaceRequired?: boolean;
   readonly activeSurfacePlacements?: ReadonlyArray<string>;
   readonly activeSurfaceResourceKinds?: ReadonlyArray<string>;
@@ -297,6 +356,13 @@ export interface ResourceFacts {
   readonly mimeType?: string;
   readonly languageId?: LanguageId | string;
   readonly fileExtension?: string;
+  readonly providerId?: string;
+  readonly revision?: string;
+  readonly capabilityIds: ReadonlyArray<ResourceCapabilityId | string>;
+  readonly ownerKind?: string;
+  readonly ownerId?: string;
+  readonly provenanceKind?: string;
+  readonly diagnosticCount: number;
 }
 
 export interface ResourcePredicate {
@@ -552,6 +618,7 @@ export const contributionKinds: {
 export const languageDefinitions: ReadonlyArray<LanguageDefinition>;
 export const resourceKinds: ReadonlyArray<ResourceKind>;
 export const resourceRepresentations: ReadonlyArray<ResourceRepresentation>;
+export const resourceCapabilityIds: ReadonlyArray<ResourceCapabilityId>;
 export const resourceBadgePlacements: ReadonlyArray<'center' | 'top' | 'right' | 'bottom' | 'left'>;
 export const capabilityStates: ReadonlyArray<'available' | 'active' | 'disabled' | 'missing' | 'failed'>;
 export const contributionRegistryPackageStatuses: ReadonlyArray<'available' | 'disabled' | 'missingDependency' | 'incompatibleVersion' | 'conflict' | 'failedToInitialize'>;
@@ -617,6 +684,10 @@ export declare function createCanonicalPatch(
   overrides?: Partial<CanonicalPatch>,
 ): CanonicalPatch;
 export declare function createResourceFacts(input?: Partial<ResourceRef> & { readonly id?: string }): ResourceFacts;
+export declare function hasResourceCapability(
+  resource: Partial<ResourceRef> | undefined,
+  capabilityId: ResourceCapabilityId | string,
+): boolean;
 export declare function createResourcePredicate(overrides?: Partial<ResourcePredicate>): ResourcePredicate;
 export declare function matchesResourcePredicate(
   predicate: ResourcePredicate,

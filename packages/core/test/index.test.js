@@ -17,6 +17,7 @@ import {
   createResourceFacts,
   createResourcePredicate,
   createResourceRef,
+  hasResourceCapability,
   createSurfaceContribution,
   createSourcePosition,
   createSourceRange,
@@ -26,12 +27,18 @@ import {
 } from '../src/index.js';
 
 test('core constructors build stable value objects', () => {
-  const ref = createResourceRef('resource-1', { path: '/docs/note.md' });
+  const ref = createResourceRef('resource-1', {
+    path: '/docs/note.md',
+    providerId: 'workspace-local',
+    capabilityIds: ['resource.read', 'resource.write', 'resource.read'],
+  });
   const range = createSourceRange(createSourcePosition(1, 1), createSourcePosition(1, 4, 3));
   const diagnostic = createDiagnostic('Missing heading', 'info', { resource: ref, source: range });
   const manifest = createContributionManifest('@textforge/core');
 
   assert.equal(ref.resourceId, 'resource-1');
+  assert.equal(ref.providerId, 'workspace-local');
+  assert.deepEqual(ref.capabilityIds, ['resource.read', 'resource.write']);
   assert.equal(diagnostic.severity, 'information');
   assert.equal(diagnostic.source?.end.offset, 3);
   assert.equal(inferLanguageId({ path: '/docs/notes.md' }), 'markdown');
@@ -39,6 +46,7 @@ test('core constructors build stable value objects', () => {
   assert.equal(createCanonicalContributionId('@textforge/example', 'preview'), '@textforge/example/preview');
   assert.equal(deriveContributionLocalName('@textforge/example', '@textforge/example/preview'), 'preview');
   assert.equal(deriveCapabilityLocalName('@textforge/example/capability/preview'), 'preview');
+  assert.equal(hasResourceCapability(ref, 'resource.write'), true);
 });
 
 test('command registry filters context-sensitive commands and dispatches local handlers', async () => {
@@ -52,7 +60,12 @@ test('command registry filters context-sensitive commands and dispatches local h
         }),
         createCommand('workspace.export-folder', 'Export selected folder ZIP', {
           menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 20 },
-          when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder'] },
+          when: {
+            workspaceReady: true,
+            selectionRequired: true,
+            selectionKinds: ['folder'],
+            selectionCapabilityIds: ['resource.export'],
+          },
         }),
         createCommand('lua.run-selected-resource', 'Run selected Lua file', {
           menu: { id: 'lua', label: 'Lua', groupOrder: 30, order: 10 },
@@ -78,7 +91,12 @@ test('command registry filters context-sensitive commands and dispatches local h
   const folderContext = {
     runtimeStatus: 'ready',
     workspaceReady: true,
-    selection: { resourceId: 'folder-1', kind: 'folder' },
+    selection: {
+      resourceId: 'folder-1',
+      kind: 'folder',
+      providerId: 'workspace-local',
+      capabilityIds: ['resource.export', 'resource.create-child'],
+    },
     activeSurface: {
       sessionId: 'surface-1',
       contributionId: '@textforge/editors/code-mirror-text',
@@ -90,7 +108,13 @@ test('command registry filters context-sensitive commands and dispatches local h
   const textContext = {
     runtimeStatus: 'ready',
     workspaceReady: true,
-    selection: { resourceId: 'resource-1', kind: 'resource', representation: 'text' },
+    selection: {
+      resourceId: 'resource-1',
+      kind: 'resource',
+      representation: 'text',
+      providerId: 'bundled-docs',
+      capabilityIds: ['resource.read', 'resource.copy'],
+    },
     activeSurface: {
       sessionId: 'surface-1',
       contributionId: '@textforge/editors/code-mirror-text',
@@ -118,6 +142,10 @@ test('command registry filters context-sensitive commands and dispatches local h
       selection: { ...textContext.selection, languageId: 'lua' },
     }).some((command) => command.id === 'lua.run-selected-resource' && command.visible),
     true,
+  );
+  assert.equal(
+    registry.resolve(textContext).some((command) => command.id === 'workspace.export-folder' && command.visible),
+    false,
   );
 
   const calls = [];
@@ -188,9 +216,13 @@ test('contribution registry resolves active fence handlers and emits active conf
     representation: 'text',
     mimeType: 'image/svg+xml',
     languageId: 'svg',
+    providerId: 'generated-artifact',
+    capabilityIds: ['resource.read', 'resource.view', 'resource.export'],
   });
 
   assert.equal(matchesResourcePredicate(predicate, resourceFacts), true);
+  assert.equal(resourceFacts.providerId, 'generated-artifact');
+  assert.deepEqual(resourceFacts.capabilityIds, ['resource.export', 'resource.read', 'resource.view']);
 });
 
 test('contribution registry derives canonical local IDs and exposes deterministic package read models', () => {

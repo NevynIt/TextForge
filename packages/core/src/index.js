@@ -7,6 +7,19 @@ export const legacySeverityAliases = {
 
 export const resourceKinds = ['resource', 'generated', 'virtual'];
 export const resourceRepresentations = ['text', 'bytes'];
+export const resourceCapabilityIds = [
+  'resource.read',
+  'resource.list',
+  'resource.open',
+  'resource.view',
+  'resource.copy',
+  'resource.export',
+  'resource.create-child',
+  'resource.write',
+  'resource.rename',
+  'resource.move',
+  'resource.delete',
+];
 export const capabilityStates = ['available', 'active', 'disabled', 'missing', 'failed'];
 export const contributionRegistryPackageStatuses = [
   'available',
@@ -61,6 +74,14 @@ function extensionFromPath(path) {
   const fileName = path?.split(/[\\/]/).pop() ?? '';
   const index = fileName.lastIndexOf('.');
   return index >= 0 ? fileName.slice(index + 1).toLowerCase() : '';
+}
+
+function normalizeCapabilityIdArray(values = []) {
+  return [...new Set(
+    values
+      .map((value) => String(value ?? '').trim())
+      .filter(Boolean),
+  )].sort(compareByStringId);
 }
 
 function normalizeContributionCapabilities(contribution) {
@@ -320,6 +341,8 @@ export function createResourceRef(resourceId, overrides = {}) {
     ...overrides,
     kind,
     representation,
+    capabilityIds: normalizeCapabilityIdArray(overrides.capabilityIds),
+    diagnostics: overrides.diagnostics ?? [],
   };
 }
 
@@ -485,6 +508,20 @@ export function matchesCommandContext(command, context = {}) {
   if (when.selectionLanguageIds?.length > 0) {
     const selectedLanguageId = effectiveSelection?.languageId;
     if (!selectedLanguageId || !when.selectionLanguageIds.includes(selectedLanguageId)) {
+      return false;
+    }
+  }
+
+  if (when.selectionProviderIds?.length > 0) {
+    const selectedProviderId = effectiveSelection?.providerId;
+    if (!selectedProviderId || !when.selectionProviderIds.includes(selectedProviderId)) {
+      return false;
+    }
+  }
+
+  if (when.selectionCapabilityIds?.length > 0) {
+    const selectedCapabilities = new Set(normalizeCapabilityIdArray(effectiveSelection?.capabilityIds));
+    if (!when.selectionCapabilityIds.every((capabilityId) => selectedCapabilities.has(capabilityId))) {
       return false;
     }
   }
@@ -774,7 +811,23 @@ export function createResourceFacts(input = {}) {
     mimeType: input.mimeType,
     languageId: input.languageId,
     fileExtension: extensionFromPath(input.path),
+    providerId: input.providerId,
+    revision: input.revision,
+    capabilityIds: normalizeCapabilityIdArray(input.capabilityIds),
+    ownerKind: input.ownerKind,
+    ownerId: input.ownerId,
+    provenanceKind: input.provenance?.kind,
+    diagnosticCount: Array.isArray(input.diagnostics) ? input.diagnostics.length : 0,
   };
+}
+
+export function hasResourceCapability(resource, capabilityId) {
+  const normalizedCapabilityId = String(capabilityId ?? '').trim();
+  if (!normalizedCapabilityId) {
+    return false;
+  }
+
+  return normalizeCapabilityIdArray(resource?.capabilityIds).includes(normalizedCapabilityId);
 }
 
 export function createResourcePredicate(overrides = {}) {
