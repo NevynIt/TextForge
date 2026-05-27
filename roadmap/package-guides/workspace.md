@@ -153,6 +153,10 @@ The package now consumes `@textforge/core` only through its public workspace ent
 
 The bundled docs subtree is now expected to project into the live workspace as a rebuild-time overlay rather than as duplicated persisted user data. IndexedDB should retain only the user-managed workspace state plus local `.textforge` working folders, while `/.textforge/resources` is rebuilt from the bundled app artifact on each load.
 
+## WP-REPO-01 progress note
+
+`@textforge/workspace` now exposes frontend-safe repository-root helpers for local resolution: `createDefaultWorkspaceRepositoryRoots(...)` defines the default writable-workspace and bundled-docs roots, and `resolveWorkspaceRepositoryLocation(...)` resolves workspace paths, relative paths, provider-URI hints such as `bundled://...`, and explicit logical alias fixtures down to canonical workspace paths without direct fetch behavior. This keeps repository/include resolution on the same provider-aware resource model introduced by `WP-RES-01` instead of inventing a second repository metadata stack.
+
 
 ## V16 backend-optional responsibilities
 

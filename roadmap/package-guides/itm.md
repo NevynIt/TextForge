@@ -15,6 +15,7 @@ When this package is updated, the agent must also update `roadmap/RAPID.md` and 
 Current validated implementation note:
 
 - TextForge vendors the current upstream `nevynit/ITM` runtime under `packages/itm/src/upstream/` and layers TextForge-owned workspace include resolution, resolver diagnostic taxonomy helpers, Markdown `itm`/`itm-pub` contribution integration, and vendored profile fixtures on top of that runtime.
+- `WP-REPO-01` now extends that wrapper with provider-backed `%repository`/`%include` handling for local workspace paths, bundled roots, provider-URI hints, and explicit logical alias fixtures, while URL-like repository values remain diagnostics-producing declarations in local/offline mode rather than direct frontend fetch instructions.
 
 ## Allowed dependencies
 

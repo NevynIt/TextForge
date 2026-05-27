@@ -41,9 +41,10 @@ WP-05A Contribution manifest and registry model
   -> WP-05C Pipeline/contribution execution integration
 WP-05D Minimal package/capability inspector
 WP-RES-01 Provider-aware resource descriptors
+WP-REPO-01 Repository reference and include resolver
 ```
 
-The canonical WP5+ planning sequence now lives in `workpackages/workpackage-register.md`: `WP-REPO-01 -> WP-ITM-02 -> WP-ITM-VISUALS -> WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`. Completing that sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-ITM-VISUALS`, and `WP-TABLES` remain startable outside that sequence.
+The canonical WP5+ planning sequence now lives in `workpackages/workpackage-register.md`: `WP-ITM-02 -> WP-ITM-VISUALS -> WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`, with `WP-REPO-01` now validated ahead of that run. Completing the remaining sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-ITM-VISUALS`, and `WP-TABLES` remain startable outside that sequence.
 
 The backend path is enabled by contracts and fixtures, not by Entra SSO:
 

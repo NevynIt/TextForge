@@ -221,3 +221,32 @@ title: "Roadmap summary"
   assert.match(result.html, /Capability roadmap/);
   assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
 });
+
+test('renderMarkdownDocument surfaces provider-backed repository resolver diagnostics from itm fences', async () => {
+  const contributionRegistry = createContributionRegistry([
+    contributions,
+    itmContributions,
+  ]);
+
+  const result = await renderMarkdownDocument(`\`\`\`itm
+%repository shared https://example.org/itm
+%include shared:profiles/core.itm
+&root Root capability
+\`\`\`
+`, {
+    resource: {
+      resourceId: 'markdown-5',
+      path: '/docs/repository-preview.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+    contributionRegistry,
+  });
+
+  assert.equal(
+    result.diagnostics.some((diagnostic) => diagnostic.code === 'itm.resolve.unsupported'),
+    true,
+  );
+});

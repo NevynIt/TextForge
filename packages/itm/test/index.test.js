@@ -73,6 +73,50 @@ test('loadItmDocument composes workspace includes through the TextForge include 
   assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
 });
 
+test('loadItmDocument resolves repository-backed includes through logical aliases without frontend fetch', async () => {
+  const workspace = {
+    getEntryByPath(path) {
+      if (path === '/.textforge/resources/docs/examples/itm/repositories/org-reference-models/main.itm') {
+        return {
+          kind: 'resource',
+          representation: 'text',
+          path,
+          text: '%include ./nested.itm\n&shared Shared capability',
+        };
+      }
+      if (path === '/.textforge/resources/docs/examples/itm/repositories/org-reference-models/nested.itm') {
+        return {
+          kind: 'resource',
+          representation: 'text',
+          path,
+          text: '&nested Nested capability',
+        };
+      }
+      return undefined;
+    },
+  };
+
+  const loaded = await loadItmDocument(`%repository shared org-reference-models
+%include shared:main.itm
+&root Root capability`, {
+    uri: '/docs/roadmap.itm',
+    includeProviders: [createWorkspaceItmIncludeProvider(workspace, {
+      repositoryAliases: {
+        'org-reference-models': 'bundled://docs/examples/itm/repositories/org-reference-models',
+      },
+    })],
+    repositoryResolution: {
+      repositoryAliases: {
+        'org-reference-models': 'bundled://docs/examples/itm/repositories/org-reference-models',
+      },
+    },
+  });
+
+  assert.equal(loaded.document.entities.some((entity) => entity.label === 'Shared capability'), true);
+  assert.equal(loaded.document.entities.some((entity) => entity.label === 'Nested capability'), true);
+  assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.code === itmResolverDiagnosticCodes.unsupported), false);
+});
+
 test('renderItmPublicationHtml renders projected view content', () => {
   const document = parseDocument(`%viewpoint capability_view
 {
@@ -116,7 +160,9 @@ test('validateItmDocument surfaces stable include and repository resolver diagno
 %include offline:profile.itm
 %include missing:ghost.itm
 &root Root capability
-`);
+`, {
+    uri: '/docs/root.itm',
+  });
 
   document.repositories.find((repository) => repository.name === 'private').allowed = false;
   document.repositories.find((repository) => repository.name === 'offline').resolved = false;
@@ -133,6 +179,80 @@ test('validateItmDocument surfaces stable include and repository resolver diagno
   assert.equal(codes.has(itmResolverDiagnosticCodes.unsupported), true);
   assert.equal(codes.has(itmResolverDiagnosticCodes.unauthorized), true);
   assert.equal(codes.has(itmResolverDiagnosticCodes.unavailable), true);
+});
+
+test('validateItmDocument treats unsupported repository locations as explicit resolver diagnostics', () => {
+  const document = parseDocument(`%repository shared https://example.org/itm
+%include shared:profiles/core.itm
+&root Root capability
+`);
+
+  const diagnostics = validateItmDocument(document);
+
+  assert.equal(
+    diagnostics.some((diagnostic) => diagnostic.code === itmResolverDiagnosticCodes.unsupported),
+    true,
+  );
+});
+
+test('loadItmDocument reports unauthorized and unavailable repository aliases distinctly', async () => {
+  const unauthorized = await loadItmDocument(`%repository shared locked-library
+%include shared:secret.itm
+`, {
+    includeProviders: [createWorkspaceItmIncludeProvider({
+      getEntryByPath() {
+        return undefined;
+      },
+    }, {
+      repositoryAliases: {
+        'locked-library': {
+          location: 'bundled://docs/examples/itm/repositories/locked-library',
+          allowed: false,
+        },
+      },
+    })],
+    repositoryResolution: {
+      repositoryAliases: {
+        'locked-library': {
+          location: 'bundled://docs/examples/itm/repositories/locked-library',
+          allowed: false,
+        },
+      },
+    },
+  });
+  const unavailable = await loadItmDocument(`%repository shared offline-library
+%include shared:missing.itm
+`, {
+    includeProviders: [createWorkspaceItmIncludeProvider({
+      getEntryByPath() {
+        return undefined;
+      },
+    }, {
+      repositoryAliases: {
+        'offline-library': {
+          location: 'bundled://docs/examples/itm/repositories/offline-library',
+          available: false,
+        },
+      },
+    })],
+    repositoryResolution: {
+      repositoryAliases: {
+        'offline-library': {
+          location: 'bundled://docs/examples/itm/repositories/offline-library',
+          available: false,
+        },
+      },
+    },
+  });
+
+  assert.equal(
+    unauthorized.diagnostics.some((diagnostic) => diagnostic.code === itmResolverDiagnosticCodes.unauthorized),
+    true,
+  );
+  assert.equal(
+    unavailable.diagnostics.some((diagnostic) => diagnostic.code === itmResolverDiagnosticCodes.unavailable),
+    true,
+  );
 });
 
 test('createItmResolverDiagnostic exposes stable mismatch categories for downstream resolvers', () => {

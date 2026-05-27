@@ -3,7 +3,10 @@ import type {
   ContributionManifest,
   MarkdownFenceHandlerContribution,
 } from '@textforge/core';
-import type { WorkspaceService } from '@textforge/workspace';
+import type {
+  WorkspaceRepositoryResolverOptions,
+  WorkspaceService,
+} from '@textforge/workspace';
 
 export * from './upstream/index.js';
 
@@ -20,11 +23,18 @@ export interface LoadItmDocumentOptions {
   readonly includeStdProfiles?: boolean;
   readonly sourceProvider?: ItmSourceProvider;
   readonly maxIncludeDepth?: number;
+  readonly repositoryResolution?: ItmRepositoryResolutionOptions;
 }
 
-export interface CreateWorkspaceItmIncludeProviderOptions {
+export interface ItmRepositoryResolutionOptions extends WorkspaceRepositoryResolverOptions {}
+
+export interface CreateWorkspaceItmIncludeProviderOptions extends ItmRepositoryResolutionOptions {
   readonly name?: string;
   readonly basePath?: string;
+}
+
+export interface ValidateItmDocumentOptions {
+  readonly repositoryResolution?: ItmRepositoryResolutionOptions;
 }
 
 export interface ProjectItmDocumentOptions {
@@ -85,7 +95,10 @@ export declare function createWorkspaceItmIncludeProvider(
 ): ItmIncludeProvider;
 export declare const createWorkspaceItmResolver: typeof createWorkspaceItmIncludeProvider;
 export declare function loadItmDocument(source: string, options?: LoadItmDocumentOptions): Promise<ItmLoadDocumentResult>;
-export declare function validateItmDocument(document: ItmDocument | ResolvedItmDocument): ReadonlyArray<ItmDiagnostic>;
+export declare function validateItmDocument(
+  document: ItmDocument | ResolvedItmDocument,
+  options?: ValidateItmDocumentOptions,
+): ReadonlyArray<ItmDiagnostic>;
 export declare function projectItmDocument(
   input: ItmDocument | ResolvedItmDocument,
   options?: ProjectItmDocumentOptions,

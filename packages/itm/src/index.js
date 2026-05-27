@@ -9,9 +9,7 @@ import {
   createResourcePredicate,
 } from '@textforge/core';
 import {
-  dirnameWorkspacePath,
-  joinWorkspacePath,
-  normalizeWorkspacePath,
+  resolveWorkspaceRepositoryLocation,
 } from '@textforge/workspace';
 
 export * from './upstream/index.js';
@@ -204,55 +202,19 @@ function splitRepositoryTarget(target) {
   };
 }
 
-function resolveRepositoryLocation(location, fromPath) {
-  if (!location || looksLikeUrl(location)) {
-    return undefined;
-  }
-
-  if (looksLikeWorkspacePath(location)) {
-    return normalizeWorkspacePath(location);
-  }
-
-  if (location.startsWith('./') || location.startsWith('../')) {
-    if (!fromPath || !looksLikeWorkspacePath(fromPath)) {
-      return undefined;
-    }
-    return joinWorkspacePath(dirnameWorkspacePath(fromPath), location);
-  }
-
-  return undefined;
-}
-
 function resolveWorkspaceIncludeTarget(target, context = {}, options = {}) {
   const rawTarget = String(target ?? '').trim();
   if (rawTarget === '' || rawTarget.startsWith('std:') || rawTarget.startsWith('std://')) {
     return undefined;
   }
-
-  if (looksLikeWorkspacePath(rawTarget)) {
-    return normalizeWorkspacePath(rawTarget);
-  }
-
-  const repositoryReference = splitRepositoryTarget(rawTarget);
-  if (repositoryReference) {
-    const repository = context.sourceDocument?.repositories?.find((candidate) =>
-      candidate?.name === repositoryReference.repositoryName);
-    const repositoryBasePath = resolveRepositoryLocation(
-      repository?.location,
-      options.basePath ?? context.sourceDocument?.uri,
-    );
-    if (!repositoryBasePath) {
-      return undefined;
-    }
-    return joinWorkspacePath(repositoryBasePath, repositoryReference.path);
-  }
-
-  const basePath = options.basePath ?? context.sourceDocument?.uri;
-  if (looksLikeWorkspacePath(basePath)) {
-    return joinWorkspacePath(dirnameWorkspacePath(basePath), rawTarget);
-  }
-
-  return undefined;
+  const resolvedTarget = resolveWorkspaceRepositoryLocation(rawTarget, {
+    basePath: options.basePath ?? context.sourceDocument?.uri,
+    repositoryAliases: options.repositoryAliases,
+    repositoryRoots: options.repositoryRoots,
+  });
+  return resolvedTarget.status === 'resolved'
+    ? resolvedTarget.resolvedPath
+    : undefined;
 }
 
 export function createWorkspaceItmIncludeProvider(workspace, options = {}) {
@@ -305,7 +267,12 @@ export async function loadItmDocument(source, options = {}) {
   }
 
   const resolvedDocument = resolveDocument(document);
-  diagnostics = mergeDiagnostics(diagnostics, resolvedDocument.diagnostics, document.diagnostics);
+  diagnostics = mergeDiagnostics(
+    diagnostics,
+    resolvedDocument.diagnostics,
+    document.diagnostics,
+    createIncludeResolutionDiagnostics(resolvedDocument, options.repositoryResolution),
+  );
 
   return {
     document,
@@ -326,7 +293,31 @@ function findConflictingRepositoryAliases(document) {
   return [...repositoriesByName.entries()].filter(([, repositories]) => repositories.length > 1);
 }
 
-function createIncludeResolutionDiagnostics(document) {
+function resolveRepositoryStatus(repository, document, options = {}) {
+  if (!repository?.location) {
+    return {
+      status: 'unsupported',
+      allowed: false,
+      available: false,
+    };
+  }
+
+  return resolveWorkspaceRepositoryLocation(repository.location, {
+    basePath: document.uri,
+    repositoryAliases: options.repositoryAliases,
+    repositoryRoots: options.repositoryRoots,
+  });
+}
+
+function resolveIncludeTargetStatus(includeTarget, document, options = {}) {
+  return resolveWorkspaceRepositoryLocation(includeTarget, {
+    basePath: document.uri,
+    repositoryAliases: options.repositoryAliases,
+    repositoryRoots: options.repositoryRoots,
+  });
+}
+
+function createIncludeResolutionDiagnostics(document, options = {}) {
   const diagnostics = [];
   const repositoriesByName = new Map((document.repositories ?? []).map((repository) => [repository.name, repository]));
 
@@ -364,7 +355,28 @@ function createIncludeResolutionDiagnostics(document) {
       continue;
     }
 
-    if (repository?.allowed === false) {
+    const repositoryStatus = repository
+      ? resolveRepositoryStatus(repository, document, options)
+      : resolveIncludeTargetStatus(include.target, document, options);
+
+    if (repositoryStatus.status === 'unsupported') {
+      diagnostics.push(createItmResolverDiagnostic(
+        'unsupported',
+        repository
+          ? `Repository alias '${repository.name}' uses an unsupported location '${repository.location}' for include target '${include.target}'.`
+          : `Include target '${include.target}' uses an unsupported repository or provider location in the active local resolver.`,
+        {
+          includeTarget: include.target,
+          repositoryRef: repository?.name ?? repositoryReference?.repositoryName,
+          uri: document.uri,
+          file: include.source?.file ?? document.uri,
+          range: include.source,
+        },
+      ));
+      continue;
+    }
+
+    if (repository?.allowed === false || repositoryStatus.status === 'unauthorized') {
       diagnostics.push(createItmResolverDiagnostic(
         'unauthorized',
         `Repository alias '${repository.name}' is not authorized for include target '${include.target}'.`,
@@ -379,7 +391,7 @@ function createIncludeResolutionDiagnostics(document) {
       continue;
     }
 
-    if (repository && repository.resolved === false) {
+    if ((repository && repository.resolved === false) || repositoryStatus.status === 'unavailable') {
       diagnostics.push(createItmResolverDiagnostic(
         'unavailable',
         `Repository alias '${repository.name}' is currently unavailable for include target '${include.target}'.`,
@@ -455,11 +467,11 @@ function createIncludeResolutionDiagnostics(document) {
   return diagnostics;
 }
 
-export function validateItmDocument(document) {
+export function validateItmDocument(document, options = {}) {
   const resolvedDocument = isResolvedDocument(document) ? document : resolveDocument(document);
   return mergeDiagnostics(
     resolvedDocument.diagnostics,
-    createIncludeResolutionDiagnostics(resolvedDocument),
+    createIncludeResolutionDiagnostics(resolvedDocument, options.repositoryResolution),
   );
 }
 
@@ -1815,9 +1827,11 @@ function findRequestedModel(state, request) {
 async function parseEmbeddedItmBlock(execution) {
   const includeProviders = [];
   const workspace = execution.hostServices?.workspace;
+  const repositoryResolution = execution.hostServices?.repositoryResolution;
   if (workspace?.getEntryByPath) {
     includeProviders.push(createWorkspaceItmIncludeProvider(workspace, {
       basePath: execution.sourceResource?.path,
+      ...(repositoryResolution ?? {}),
     }));
   }
 
@@ -1825,6 +1839,7 @@ async function parseEmbeddedItmBlock(execution) {
     strict: false,
     uri: execution.sourceResource?.path,
     includeProviders,
+    repositoryResolution,
   });
   return result;
 }
