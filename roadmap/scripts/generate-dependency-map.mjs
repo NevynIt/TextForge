@@ -16,6 +16,7 @@ const includedWorkpackageIds = [
   'WP-SET-01',
   'WP-ITM-01',
   'WP-LUA',
+  'WP-LUA-POWER-SESSION',
   'WP-RES-01',
   'WP-RES-02',
   'WP-RES-03',
@@ -223,6 +224,7 @@ function buildDocument({ orderedIds, registerById, completedIds, startableIds, e
   lines.push('');
   lines.push('- Green nodes are completed or validated workpackages in the current roadmap baseline.');
   lines.push('- Blue nodes can be started now according to the current implementation baseline.');
+  lines.push('- Candidate workpackages with satisfied dependencies should still appear as blue/startable when they are included in the current dependency view; sequencing remains a manual per-slice decision.');
   lines.push('- Blue edges indicate a direct dependency path from completed work to a startable node.');
   lines.push('- Nodes without explicit styling are not currently startable or not yet marked as completed.');
   lines.push('');

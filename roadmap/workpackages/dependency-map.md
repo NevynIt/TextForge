@@ -12,6 +12,7 @@ flowchart TD
   WP_05B[WP-05B\nCapability activation and resolver context] --> WP_05D[WP-05D\nMinimal package/capability inspector]
   FOUNDATION[Foundation history\nPhases -1 to 4.1] --> WP_SET_01[WP-SET-01\nUser settings core and local persistence]
   WP_05C[WP-05C\nPipeline/contribution execution integration] --> WP_LUA[WP-LUA\nLua automation]
+  WP_LUA[WP-LUA\nLua automation] --> WP_LUA_POWER_SESSION[WP-LUA-POWER-SESSION\nLua self-escalation session and one-click recovery]
   FOUNDATION[Foundation history\nPhases -1 to 4.1] --> WP_RES_01[WP-RES-01\nProvider-aware resource descriptors]
   WP_RES_01[WP-RES-01\nProvider-aware resource descriptors] --> WP_RES_02[WP-RES-02\nRevisions, dirty state, and conflict diagnostics]
   WP_RES_02[WP-RES-02\nRevisions, dirty state, and conflict diagnostics] --> WP_RES_03[WP-RES-03\nMulti-resource changesets and provider allowlists]
@@ -75,16 +76,17 @@ flowchart TD
   classDef startable fill:#1565c0,stroke:#0d47a1,color:#ffffff,stroke-width:2px;
 
   class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D,WP_ITM_01,WP_LUA done;
-  class WP_SET_01,WP_RES_01,WP_ITM_02,WP_ID_01,WP_TABLES,WP_ITM_VISUALS startable;
+  class WP_SET_01,WP_LUA_POWER_SESSION,WP_RES_01,WP_ITM_02,WP_ID_01,WP_TABLES,WP_ITM_VISUALS startable;
 
   linkStyle 6 stroke:#1565c0,stroke-width:2px;
   linkStyle 8 stroke:#1565c0,stroke-width:2px;
-  linkStyle 13 stroke:#1565c0,stroke-width:2px;
+  linkStyle 9 stroke:#1565c0,stroke-width:2px;
   linkStyle 14 stroke:#1565c0,stroke-width:2px;
-  linkStyle 17 stroke:#1565c0,stroke-width:2px;
-  linkStyle 57 stroke:#1565c0,stroke-width:2px;
+  linkStyle 15 stroke:#1565c0,stroke-width:2px;
+  linkStyle 18 stroke:#1565c0,stroke-width:2px;
   linkStyle 58 stroke:#1565c0,stroke-width:2px;
   linkStyle 59 stroke:#1565c0,stroke-width:2px;
+  linkStyle 60 stroke:#1565c0,stroke-width:2px;
 ```
 
 ## Reading rule
@@ -95,5 +97,6 @@ The graph shows dependency direction only. It is not a mandatory calendar sequen
 
 - Green nodes are completed or validated workpackages in the current roadmap baseline.
 - Blue nodes can be started now according to the current implementation baseline.
+- Candidate workpackages with satisfied dependencies should still appear as blue/startable when they are included in the current dependency view; sequencing remains a manual per-slice decision.
 - Blue edges indicate a direct dependency path from completed work to a startable node.
 - Nodes without explicit styling are not currently startable or not yet marked as completed.

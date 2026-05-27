@@ -54,11 +54,25 @@ Create. Fengari worker, sandbox, tf.* capability bridge, Lua editor/console surf
 
 Security-profile integration for this phase is package-owned: keep Lua sandbox/security checks inside `WP-LUA` acceptance evidence rather than modeling a separate Lua-only security workpackage gate.
 
+### Phase 8 follow-on candidate — WP-LUA-POWER-SESSION
+
+Implementation anchors:
+
+- workpackage: `roadmap/workpackages/WP-LUA-POWER-SESSION-RECOVERY.md`
+- app shell/runtime integration: `apps/textforge-web/src/workbench.js`
+- Lua runtime/service integration: `packages/lua/src/index.js`
+
+Candidate follow-on after validated `WP-LUA`. Keep the base `tf.*` bridge as the default mode, then add an explicit session-scoped elevated mode where Lua can self-escalate into an approved host-object surface, the console shows a clear elevated badge, and recovery is one click with a restart plus a one-shot skip-Lua-preload marker on the next boot.
+
+This follow-on should stay deliberately scoped: no second confirmation, no auto-expire timer, no permanent workspace-wide power default, and no arbitrary exposure of shell internals beyond the approved host-object list for the selected rollout level.
+
 ## Tests and definition of done
 
 Sandbox tests, tf.* capability tests, no DOM/network/filesystem tests, action discovery tests.
 
 Validation evidence must include security-profile-compatible checks for fresh-state execution isolation, module/bridge restrictions, xterm console behavior, and diagnostics when blocked APIs or capabilities are requested. For the current `file://` static build profile, the execution boundary may stay in-process as long as the runtime remains local-only, capability-gated, bounded by instruction/wall-time limits, and free of DOM/network/filesystem access.
+
+For `WP-LUA-POWER-SESSION`, validation should additionally cover self-escalation without a second prompt, persistent elevated-state badge visibility, lack of auto-expire behavior, one-click recovery restart, one-shot preload skip on the next boot, preserved saved workspace state, and expected loss of prior console transcript after restart.
 
 ## Non-goals
 

@@ -24,15 +24,15 @@ status + dependencies + selected release scope + validation readiness
 
 The workpackage register is the canonical current planning source.
 
-## Current next implementation path
+## Current implementation posture
 
-Unless a newer RAPID entry supersedes this, the next implementation path is:
+Unless a newer RAPID entry supersedes this, the default recommendation remains:
 
 ```text
 WP-RES-01
 ```
 
-`WP-05A`, `WP-05B`, `WP-05C`, `WP-05D`, `WP-ITM-01`, and `WP-LUA` are now validated. `WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable under the current dependency posture.
+`WP-05A`, `WP-05B`, `WP-05C`, `WP-05D`, `WP-ITM-01`, and `WP-LUA` are now validated. `WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable under the current dependency posture. Dependency-satisfied candidates, including `WP-LUA-POWER-SESSION`, should be shown as startable as well; pick the actual execution order one slice at a time.
 
 These workpackages preserve the accepted Phase 5 grilling decisions around contribution manifests, capability activation, resolver context, contribution execution, `%require` diagnostics, package composition, active capability context, and surface reopening for intermediate values.
 
