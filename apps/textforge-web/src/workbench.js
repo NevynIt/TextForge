@@ -106,6 +106,7 @@ import {
   createWorkspaceTreeFrameModel,
 } from '@textforge/ui';
 import { bundledDocFolders, bundledDocs } from './generated/bundledDocs.js';
+import { createMarkdownPreviewRequestManager } from './markdownPreviewState.js';
 
 const element = React.createElement;
 const textEncoder = new TextEncoder();
@@ -758,7 +759,6 @@ function createTextForgeWorkbenchController() {
   const activeTextDocuments = new Map();
   const assetLeaseByResourceId = new Map();
   const documentContributionContextByResourceId = new Map();
-  const markdownPreviewStateByResourceId = new Map();
   const luaConsoleStateByResourceId = new Map();
   const luaConsoleSessionStateByResourceId = new Map();
   const listeners = new Set();
@@ -791,6 +791,13 @@ function createTextForgeWorkbenchController() {
       listener();
     }
   }
+
+  const markdownPreviewRequests = createMarkdownPreviewRequestManager({
+    emit,
+    renderPreview(resource) {
+      return renderMarkdownResource(resource);
+    },
+  });
 
   function closeContextMenu() {
     if (!state.contextMenu) {
@@ -933,7 +940,7 @@ function createTextForgeWorkbenchController() {
     }
     assetLeaseByResourceId.clear();
     activeTextDocuments.clear();
-    markdownPreviewStateByResourceId.clear();
+    markdownPreviewRequests.clear();
     luaConsoleStateByResourceId.clear();
     luaConsoleSessionStateByResourceId.clear();
     state.activeMainSessionId = undefined;
@@ -2210,42 +2217,7 @@ function createTextForgeWorkbenchController() {
   }
 
   function requestMarkdownPreview(resource) {
-    const currentState = markdownPreviewStateByResourceId.get(resource.id);
-    if (currentState?.status === 'ready' && currentState.updatedAt === resource.metadata.updatedAt) {
-      return currentState;
-    }
-
-    if (currentState?.status === 'rendering' && currentState.updatedAt === resource.metadata.updatedAt) {
-      return currentState;
-    }
-
-    const nextState = {
-      status: 'rendering',
-      updatedAt: resource.metadata.updatedAt,
-      result: currentState?.result,
-      error: undefined,
-    };
-    markdownPreviewStateByResourceId.set(resource.id, nextState);
-    void renderMarkdownResource(resource)
-      .then((result) => {
-        markdownPreviewStateByResourceId.set(resource.id, {
-          status: 'ready',
-          updatedAt: resource.metadata.updatedAt,
-          result,
-          error: undefined,
-        });
-        emit();
-      })
-      .catch((error) => {
-        markdownPreviewStateByResourceId.set(resource.id, {
-          status: 'error',
-          updatedAt: resource.metadata.updatedAt,
-          result: undefined,
-          error,
-        });
-        emit();
-      });
-    return nextState;
+    return markdownPreviewRequests.request(resource);
   }
 
   function createOpenWithControl(session, resource) {
@@ -3808,6 +3780,7 @@ function createTextForgeWorkbenchController() {
     }
     assetLeaseByResourceId.clear();
     activeTextDocuments.clear();
+    markdownPreviewRequests.clear();
     listeners.clear();
     disposePersistedWorkspace();
   }
