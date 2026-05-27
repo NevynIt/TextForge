@@ -156,7 +156,8 @@ It is useful for:
 - running the active Lua document;
 - running only the selected Lua text;
 - listing registered Lua actions;
-- executing built-in pipeline bridges;
+- inspecting the active pipeline catalog for the current document;
+- inspecting the read-only registry snapshot available to an elevated power session;
 - opening the previous result as a generated workspace file.
 
 ## 11. Manage Internal Plugins And Pipelines

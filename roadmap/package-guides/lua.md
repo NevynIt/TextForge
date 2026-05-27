@@ -62,9 +62,11 @@ Implementation anchors:
 - app shell/runtime integration: `apps/textforge-web/src/workbench.js`
 - Lua runtime/service integration: `packages/lua/src/index.js`
 
-Implemented follow-on after validated `WP-LUA`. Keep the base `tf.*` bridge as the default mode, then add an explicit session-scoped elevated mode where Lua can self-escalate into an approved host-object surface, the console shows a clear elevated badge, and recovery is one click with a restart plus a one-shot skip-Lua-preload marker on the next boot.
+Implemented follow-on after validated `WP-LUA`. Keep the base `tf.*` bridge as the default mode, then add an explicit session-scoped elevated mode where Lua can self-escalate into an approved host-object surface, the console shows a clear elevated badge, and recovery is one click with a restart plus a one-shot skip-Lua-preload marker on the next boot. The current shipped console also reflects the active pipeline catalog for the current document through `tf.pipeline.list()`.
 
-The shipped rollout stays deliberately scoped: no second confirmation, no auto-expire timer, no permanent workspace-wide power default, and no arbitrary exposure of shell internals beyond the approved host-object list for the selected rollout level. The current approved host-object surface is `workspace`, `automation`, and `surfaces`.
+The shipped rollout stays deliberately scoped: no second confirmation, no auto-expire timer, no permanent workspace-wide power default, and no arbitrary exposure of shell internals beyond the approved host-object list for the selected rollout level. The current approved host-object surface is `workspace`, `automation`, `surfaces`, and the read-only `registry` inspector view.
+
+The remaining gap is deliberate: `tf.pipeline.list()` can now surface the active pipeline catalog for the current document, but broad built-in pipeline execution through `tf.pipeline.run(...)` still needs a selective follow-up because many bundled pipeline contributions are asynchronous while the current Lua bridge remains synchronous.
 
 ## Tests and definition of done
 

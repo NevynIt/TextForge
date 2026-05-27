@@ -547,7 +547,6 @@ function createTextForgeWorkbenchController() {
       contribution.status !== 'failed' && contribution.status !== 'disabled'),
   );
   contributionRegistry.registerManifest(createSurfaceContributionManifest(surfaceRegistry.list()));
-  const resolvedContributionRegistry = contributionRegistry.resolve();
   const commandRegistry = createCommandRegistry(contributionRegistry.listManifests());
   const mainHost = createMainSurfaceHost({
     hostId: 'main',
@@ -1576,8 +1575,99 @@ function createTextForgeWorkbenchController() {
     window.location.assign(url.toString());
   }
 
+  function resolveContributionInspectorModelForEntry(entry) {
+    return createContributionInspectorModel({
+      resolution: contributionRegistry.resolve(),
+      documentContext: isWorkspaceResource(entry)
+        ? resolveDocumentContributionContextForEntry(entry)
+        : undefined,
+    });
+  }
+
+  function serializeLuaRegistryContribution(contribution, kind) {
+    return {
+      id: contribution.id,
+      packageId: contribution.packageId,
+      kind,
+      label: contribution.label,
+      description: contribution.description,
+      localName: contribution.localName,
+      status: contribution.status,
+      capabilityIds: [...(contribution.capabilities ?? [])],
+      input: contribution.input,
+      output: contribution.output,
+      fenceNames: [...(contribution.fenceNames ?? [])],
+    };
+  }
+
+  function listLuaRegistryContributions(resourceId, kind) {
+    const entry = getEntry(resourceId);
+    const documentContext = isWorkspaceResource(entry)
+      ? resolveDocumentContributionContextForEntry(entry)
+      : undefined;
+    const resolution = contributionRegistry.resolve();
+    const contributions = {
+      commands: documentContext?.commands ?? resolution.commands,
+      surfaces: documentContext?.surfaces ?? resolution.surfaces,
+      pipelines: documentContext?.pipelines ?? resolution.pipelines,
+      markdownFenceHandlers: documentContext?.markdownFenceHandlers ?? resolution.markdownFenceHandlers,
+    };
+    return contributions[kind].map((contribution) => serializeLuaRegistryContribution(contribution, kind));
+  }
+
+  function createLuaPipelineDefinitions(resourceId) {
+    const entry = getEntry(resourceId);
+    const documentContext = isWorkspaceResource(entry)
+      ? resolveDocumentContributionContextForEntry(entry)
+      : undefined;
+    return (documentContext?.activePipelines ?? []).map((pipeline) => ({
+      id: pipeline.id,
+      name: pipeline.localName ?? pipeline.id,
+      input: pipeline.input ? [pipeline.input] : ['text'],
+      output: pipeline.output ?? 'text',
+      category: pipeline.packageId,
+      description: pipeline.description,
+      localName: pipeline.localName ?? pipeline.id,
+      contributionId: pipeline.id,
+      sourcePath: `bundled:${pipeline.id}`,
+    }));
+  }
+
   function createLuaPowerSessionHostObjects(resourceId) {
     return {
+      registry: {
+        label: 'Registry',
+        description: 'Inspect a read-only contribution registry snapshot and current-document routing.',
+        api: {
+          snapshot() {
+            return resolveContributionInspectorModelForEntry(getEntry(resourceId));
+          },
+          summary() {
+            return resolveContributionInspectorModelForEntry(getEntry(resourceId)).summary;
+          },
+          document() {
+            return resolveContributionInspectorModelForEntry(getEntry(resourceId)).document;
+          },
+          packages() {
+            return resolveContributionInspectorModelForEntry(getEntry(resourceId)).packages;
+          },
+          diagnostics() {
+            return resolveContributionInspectorModelForEntry(getEntry(resourceId)).diagnostics;
+          },
+          listCommands() {
+            return listLuaRegistryContributions(resourceId, 'commands');
+          },
+          listSurfaces() {
+            return listLuaRegistryContributions(resourceId, 'surfaces');
+          },
+          listPipelines() {
+            return listLuaRegistryContributions(resourceId, 'pipelines');
+          },
+          listMarkdownFenceHandlers() {
+            return listLuaRegistryContributions(resourceId, 'markdownFenceHandlers');
+          },
+        },
+      },
       workspace: {
         label: 'Workspace',
         description: 'Inspect and mutate the browser-managed workspace through the public workspace service.',
@@ -1709,6 +1799,7 @@ function createTextForgeWorkbenchController() {
       scriptPath: resource.path,
       workspace,
       input: createLuaInputValue(resource.id),
+      pipelineDefinitions: createLuaPipelineDefinitions(resource.id),
       powerSession: {
         hostObjects: createLuaPowerSessionHostObjects(resource.id),
         requestRecovery: requestLuaPowerSessionRecovery,
@@ -2469,6 +2560,7 @@ function createTextForgeWorkbenchController() {
       scriptPath: entry.path,
       workspace,
       input: createLuaInputValue(entry.id),
+      pipelineDefinitions: createLuaPipelineDefinitions(entry.id),
       powerSession: {
         hostObjects: createLuaPowerSessionHostObjects(entry.id),
       },
@@ -3250,10 +3342,7 @@ function createTextForgeWorkbenchController() {
     const documentContributionContext = isWorkspaceResource(inspectedDocumentEntry)
       ? resolveDocumentContributionContextForEntry(inspectedDocumentEntry)
       : undefined;
-    const contributionInspectorModel = createContributionInspectorModel({
-      resolution: resolvedContributionRegistry,
-      documentContext: documentContributionContext,
-    });
+    const contributionInspectorModel = resolveContributionInspectorModelForEntry(inspectedDocumentEntry);
     const chromeModel = createWorkbenchChromeModel({
       workspaceTree: createWorkspaceTreeFrameModel({
         items: treeItems,

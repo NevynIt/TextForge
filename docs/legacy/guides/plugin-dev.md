@@ -45,9 +45,8 @@ return {
 - `input:emit_json(value)`
 - `input:emit_itm(nodes)`
 - `input:emit_csv(table, delimiter?)`
-- `tf.pipeline.run("itm-to-tree", input)`
-- `tf.pipeline.run("itm-to-graph", input)`
-- `tf.pipeline.run("markdown-heading-tree", input)`
+- `tf.pipeline.list()`
+- `tf.pipeline.run("id", input)` for Lua-defined or selectively runtime-wired steps
 - `tf.actions.run("action-id", input)`
 
 ## Bundled Modules

@@ -40,9 +40,8 @@ return {
 - `input:emit_json(value)`
 - `input:emit_itm(nodes)`
 - `input:emit_csv(table, delimiter?)`
-- `tf.pipeline.run("itm-to-tree", input)`
-- `tf.pipeline.run("itm-to-graph", input)`
-- `tf.pipeline.run("markdown-heading-tree", input)`
+- `tf.pipeline.list()`
+- `tf.pipeline.run("id", input)` for Lua-defined or selectively runtime-wired steps
 - `tf.actions.run("action-id", input)`
 - Console helper: `run("itm-to-graph")`
 - Console helper: `run_action("action-id")`
@@ -78,7 +77,8 @@ The current console is a persistent Lua session. Variables defined in one comman
 - `input`, which mirrors the focused text resource as a pipeline-style value.
 - `print(...)` for plain console output.
 - `require("tf")` for emit helpers.
-- `require("tf.pipeline").list()` and `require("tf.pipeline").run("id", input)`.
+- `require("tf.pipeline").list()`, which reflects the active pipeline catalog for the current document.
+- `require("tf.pipeline").run("id", input)` for Lua-defined or selectively runtime-wired steps.
 - `require("tf.actions").list()` and `require("tf.actions").run("id", input)`.
 - `require("tf.console").inspect(value)` for structured inspection.
 - `require("tf.power").status()` for current power-session state.
@@ -86,6 +86,7 @@ The current console is a persistent Lua session. Variables defined in one comman
 - `require("tf.power").workspace()` for approved workspace inspection and text-resource mutation helpers.
 - `require("tf.power").automation()` for discovered Lua automation inspection and reload/run helpers.
 - `require("tf.power").surfaces()` for approved surface/session listing, open, focus, and close helpers.
+- `require("tf.power").registry()` for a read-only inspector-style registry snapshot, package summaries, commands, surfaces, pipelines, and Markdown fence handlers.
 
 ## Power Session
 
@@ -107,7 +108,8 @@ When the session is elevated, the console shows a visible `Power session active.
 
 The console still does not expose stable helpers for:
 
-- direct contribution-registry mutation or shell-command dispatcher access;
+- shell-command dispatcher access or command execution through the registry surface;
+- broad built-in bundled pipeline execution through `tf.pipeline.run(...)` beyond selectively wired steps;
 - arbitrary workbench/internal shell object access outside the approved power-session host-object list;
 - unrestricted browser, DOM, network, filesystem, or JavaScript interop.
 

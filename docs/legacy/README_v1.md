@@ -50,14 +50,14 @@ The Lua feature set includes:
 
 - restricted Fengari runtime with no browser globals, DOM, network, filesystem, or unrestricted JS interop;
 - bundled modules such as `tf`, `tf.tree`, `tf.graph`, `tf.table`, `tf.stringx`, `tf.itm`, `tf.markdown`, `tf.pipeline`, `tf.actions`, and `tf.console`;
-- built-in bridges for parsing ITM, Markdown, and CSV, emitting text/ITM/JSON/CSV, and calling named pipeline steps;
+- built-in bridges for parsing ITM, Markdown, and CSV, emitting text/ITM/JSON/CSV, inspecting the current pipeline catalog, and calling Lua-defined or selectively wired pipeline steps;
 - automatic discovery of named Lua actions only from `/.textforge/automation/lua/**/*.lua`;
 - workspace-local `require()` resolution for Lua libraries under the active script folder, `/lua`, `/lib`, and `/.textforge/automation/lua`;
 - execution in a worker-backed sandbox with diagnostics routed back to the editor or selected source block, plus execution limits for time, instructions, output size, recursion depth, and model/table growth.
 
 Ordinary `.lua` files stay inert by default. A Lua file anywhere in the workspace can still be run manually when open. Promotion into the automation root is explicit.
 
-The Lua Console can run quick snippets, run the active Lua document, run selected Lua text, list registered actions, invoke built-in pipeline bridges, and store the previous result as a generated workspace file.
+The Lua Console can run quick snippets, run the active Lua document, run selected Lua text, inspect the active pipeline catalog, list registered Lua actions, inspect a read-only registry snapshot through the power-session host objects, and store the previous result as a generated workspace file.
 
 ## Bundled Resources
 

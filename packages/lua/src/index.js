@@ -254,14 +254,14 @@ function createLuaConsoleHelpLines() {
     '  input                         Pipeline-style input value for the focused text resource.',
     '  print(value, ...)             Write values into the console transcript.',
     '  require("tf")                Emit structured values.',
-    '  require("tf.pipeline").list() List registered pipeline IDs.',
-    '  require("tf.pipeline").run("id", input)',
+    '  require("tf.pipeline").list() List active pipeline local names for the current document.',
+    '  require("tf.pipeline").run("id", input) when that pipeline is wired into the current runtime.',
     '  require("tf.actions").list()  List discovered Lua actions.',
     '  require("tf.actions").run("id", input)',
     '  require("tf.console").inspect(value)',
     '  require("tf.power").status()  Inspect power-session state.',
     '  require("tf.power").elevate() Enable the elevated power session.',
-    '  require("tf.power").workspace() / automation() / surfaces()',
+    '  require("tf.power").workspace() / automation() / surfaces() / registry()',
     'See /docs/legacy/guides/lua-guide.md for the current console guide.',
   ];
 }
@@ -1843,22 +1843,26 @@ export function createLuaExecutionService(options = {}) {
       return session ? createPowerSessionState(session.runtime.power) : undefined;
     },
     runSnippet(runOptions = {}) {
+      const nextAutomationDefinitions = [...(runOptions.automationDefinitions ?? automationDefinitions)];
+      const nextPipelineDefinitions = [...(runOptions.pipelineDefinitions ?? pipelineDefinitions)];
       return runLuaScript({
         ...options,
         ...runOptions,
-        automationDefinitions,
-        pipelineDefinitions,
+        automationDefinitions: nextAutomationDefinitions,
+        pipelineDefinitions: nextPipelineDefinitions,
       });
     },
     runConsoleCommand(sessionKey, command, runOptions = {}) {
       const normalizedKey = String(sessionKey ?? 'default');
+      const nextAutomationDefinitions = [...(runOptions.automationDefinitions ?? automationDefinitions)];
+      const nextPipelineDefinitions = [...(runOptions.pipelineDefinitions ?? pipelineDefinitions)];
       let session = consoleSessions.get(normalizedKey);
       if (!session) {
         const runtime = createRuntimeContext({
           ...options,
           ...runOptions,
-          automationDefinitions,
-          pipelineDefinitions,
+          automationDefinitions: nextAutomationDefinitions,
+          pipelineDefinitions: nextPipelineDefinitions,
         });
         session = {
           runtime,
@@ -1874,12 +1878,14 @@ export function createLuaExecutionService(options = {}) {
           ...options,
           ...runOptions,
         },
-        automationDefinitions,
-        pipelineDefinitions,
+        nextAutomationDefinitions,
+        nextPipelineDefinitions,
       );
     },
     runAutomation(automationId, runOptions = {}) {
-      const definition = automationDefinitions.find((entry) =>
+      const nextAutomationDefinitions = [...(runOptions.automationDefinitions ?? automationDefinitions)];
+      const nextPipelineDefinitions = [...(runOptions.pipelineDefinitions ?? pipelineDefinitions)];
+      const definition = nextAutomationDefinitions.find((entry) =>
         entry.id === automationId || entry.contributionId === automationId || entry.name === automationId);
       if (!definition) {
         return {
@@ -1891,8 +1897,8 @@ export function createLuaExecutionService(options = {}) {
       const result = runLuaAutomationDefinition(definition, {
         ...options,
         ...runOptions,
-        automationDefinitions,
-        pipelineDefinitions,
+        automationDefinitions: nextAutomationDefinitions,
+        pipelineDefinitions: nextPipelineDefinitions,
       });
       return {
         output: result.value,

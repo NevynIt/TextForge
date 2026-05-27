@@ -6,7 +6,7 @@ import { yaml as yamlLanguage } from '@codemirror/lang-yaml';
 import { HighlightStyle, StreamLanguage, codeFolding, foldGutter, syntaxHighlighting } from '@codemirror/language';
 import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua';
 import { tags } from '@lezer/highlight';
-import { EditorView, lineNumbers } from '@codemirror/view';
+import { drawSelection, EditorView, lineNumbers } from '@codemirror/view';
 import {
   createCapability,
   createCommand,
@@ -418,6 +418,7 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
     lineNumbers(),
     foldGutter(),
     codeFolding(),
+    drawSelection(),
     ...(languageExtension ? [languageExtension] : []),
     syntaxHighlighting(textForgeHighlightStyle),
     EditorState.readOnly.of(model.readOnly),
@@ -450,6 +451,13 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
       },
       '.cm-content': {
         padding: '16px',
+        caretColor: '#3b82f6', // blue-500
+      },
+      '.cm-cursor, .cm-dropCursor': {
+        borderLeftColor: '#f7f7f7', // blue-500
+      },
+      '.cm-selectionBackground': {
+        background: '#2563eb !important', // blue-600
       },
       '.cm-line': {
         padding: '0',
