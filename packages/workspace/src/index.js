@@ -6,6 +6,7 @@ import {
   createContributionManifest,
   createResourceBadgeToken,
   createResourceRef,
+  hasResourceCapability,
 } from '@textforge/core';
 
 const textEncoder = new TextEncoder();
@@ -36,6 +37,11 @@ const legacyWorkspaceDexieSchema = {
 
 export const workspaceDexieSchemaVersion = 2;
 export const defaultWorkspaceDexieDatabaseName = 'textforge-workspace';
+export const workspaceProviderIds = {
+  local: 'workspace-local',
+  bundled: 'bundled-docs',
+  generated: 'generated-artifact',
+};
 export const workspaceStorageErrorCodes = {
   initializationFailed: 'workspace-storage-initialization-failed',
   loadFailed: 'workspace-storage-load-failed',
@@ -106,28 +112,60 @@ export const workspaceCommandContributions = [
     description: 'Download the selected folder subtree as a plain ZIP file tree without TextForge workspace metadata.',
     keywords: ['workspace', 'export', 'folder', 'zip', 'archive', 'download'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 50 },
-    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder'] },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['folder'],
+      selectionCapabilityIds: ['resource.export'],
+    },
   }),
   createCommand('workspace.download-selected-file', 'Download selected file', {
     category: 'workspace',
     description: 'Download the selected workspace file directly without exporting the whole workspace.',
     keywords: ['workspace', 'download', 'export', 'file'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 55 },
-    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['resource'] },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['resource'],
+      selectionCapabilityIds: ['resource.export'],
+    },
+  }),
+  createCommand('workspace.copy-selected-resource', 'Copy selected resource into workspace', {
+    category: 'workspace',
+    description: 'Create an editable workspace copy of the selected provider-backed resource.',
+    keywords: ['workspace', 'copy', 'resource', 'provider', 'bundled'],
+    menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 58 },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['resource'],
+      selectionCapabilityIds: ['resource.copy'],
+    },
   }),
   createCommand('workspace.rename-selected', 'Rename selected item...', {
     category: 'workspace',
     description: 'Rename the currently selected folder or resource.',
     keywords: ['workspace', 'rename', 'selected'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 60 },
-    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder', 'resource'] },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['folder', 'resource'],
+      selectionCapabilityIds: ['resource.rename'],
+    },
   }),
   createCommand('workspace.delete-selected', 'Delete selected item...', {
     category: 'workspace',
     description: 'Delete the currently selected folder or resource.',
     keywords: ['workspace', 'delete', 'remove', 'selected'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 70 },
-    when: { workspaceReady: true, selectionRequired: true, selectionKinds: ['folder', 'resource'] },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['folder', 'resource'],
+      selectionCapabilityIds: ['resource.delete'],
+    },
   }),
   createCommand('workspace.reset-storage', 'Reset browser workspace...', {
     category: 'workspace',
@@ -233,6 +271,84 @@ function cloneMetadata(metadata) {
     tags: normalizedMetadata.tags ? [...normalizedMetadata.tags] : undefined,
     badge: normalizedMetadata.badge ? createResourceBadgeToken({ ...normalizedMetadata.badge }) : undefined,
     provenance: normalizedMetadata.provenance ? { ...normalizedMetadata.provenance } : undefined,
+    capabilityIds: normalizedMetadata.capabilityIds ? [...normalizedMetadata.capabilityIds] : undefined,
+    diagnostics: normalizedMetadata.diagnostics
+      ? normalizedMetadata.diagnostics.map((diagnostic) => ({
+        ...diagnostic,
+        origin: diagnostic.origin ? { ...diagnostic.origin } : undefined,
+        resource: diagnostic.resource ? createResourceRef(diagnostic.resource.resourceId ?? '', diagnostic.resource) : undefined,
+        related: diagnostic.related ? diagnostic.related.map((entry) => ({
+          ...entry,
+          resource: entry.resource ? createResourceRef(entry.resource.resourceId ?? '', entry.resource) : undefined,
+        })) : undefined,
+      }))
+      : undefined,
+  };
+}
+
+function normalizeWorkspaceCapabilityIds(capabilityIds = []) {
+  return [...new Set(
+    capabilityIds
+      .map((capabilityId) => String(capabilityId ?? '').trim())
+      .filter(Boolean),
+  )].sort((left, right) => left.localeCompare(right));
+}
+
+function determineWorkspaceProviderId(entry) {
+  if (entry.metadata?.providerId) {
+    return entry.metadata.providerId;
+  }
+
+  if (entry.metadata?.provenance?.kind === 'generated') {
+    return workspaceProviderIds.generated;
+  }
+
+  if (entry.metadata?.provenance?.kind === 'bundled') {
+    return workspaceProviderIds.bundled;
+  }
+
+  return workspaceProviderIds.local;
+}
+
+function createWorkspaceCapabilityDefaults(entry, providerId) {
+  if (providerId === workspaceProviderIds.bundled) {
+    return entry.kind === 'folder'
+      ? ['resource.read', 'resource.list', 'resource.open', 'resource.view', 'resource.export']
+      : ['resource.read', 'resource.open', 'resource.view', 'resource.copy', 'resource.export'];
+  }
+
+  if (entry.kind === 'folder') {
+    return ['resource.read', 'resource.list', 'resource.open', 'resource.view', 'resource.export', 'resource.create-child', 'resource.rename', 'resource.move', 'resource.delete'];
+  }
+
+  return providerId === workspaceProviderIds.generated
+    ? ['resource.read', 'resource.open', 'resource.view', 'resource.export', 'resource.write', 'resource.rename', 'resource.move', 'resource.delete']
+    : ['resource.read', 'resource.open', 'resource.view', 'resource.export', 'resource.write', 'resource.rename', 'resource.move', 'resource.delete'];
+}
+
+function normalizeWorkspaceEntryDescriptor(entry, manifest) {
+  const metadata = cloneMetadata(entry.metadata);
+  const providerId = determineWorkspaceProviderId({ ...entry, metadata });
+  const capabilityIds = providerId === workspaceProviderIds.bundled
+    ? createWorkspaceCapabilityDefaults(entry, providerId)
+    : normalizeWorkspaceCapabilityIds(
+      metadata.capabilityIds ?? createWorkspaceCapabilityDefaults(entry, providerId),
+    );
+  return {
+    ...entry,
+    metadata: {
+      ...metadata,
+      providerId,
+      revision: metadata.revision ?? metadata.updatedAt,
+      capabilityIds,
+      ownerKind: providerId === workspaceProviderIds.bundled
+        ? (metadata.ownerKind ?? 'application')
+        : (metadata.ownerKind ?? 'workspace'),
+      ownerId: providerId === workspaceProviderIds.bundled
+        ? (metadata.ownerId ?? 'textforge')
+        : (metadata.ownerId ?? manifest.workspaceId),
+      diagnostics: metadata.diagnostics ? [...metadata.diagnostics] : [],
+    },
   };
 }
 
@@ -534,15 +650,15 @@ function createWorkspaceState(manifest, folders, resources) {
   };
   const nextFolders = folders
     .filter((folder) => folder.id !== 'root')
-    .map((folder) => ({
+    .map((folder) => normalizeWorkspaceEntryDescriptor({
       ...cloneWorkspaceFolder(folder),
       path: normalizeWorkspacePath(folder.path),
       childIds: [],
-    }));
-  const nextResources = resources.map((resource) => ({
+    }, nextManifest));
+  const nextResources = resources.map((resource) => normalizeWorkspaceEntryDescriptor({
     ...cloneWorkspaceResource(resource),
     path: normalizeWorkspacePath(resource.path),
-  }));
+  }, nextManifest));
   const badgedState = assignWorkspaceBadges(nextFolders, nextResources);
   const rootFolder = {
     kind: 'folder',
@@ -551,6 +667,12 @@ function createWorkspaceState(manifest, folders, resources) {
     parentId: undefined,
     metadata: {
       title: nextManifest.name,
+      providerId: workspaceProviderIds.local,
+      revision: nextManifest.updatedAt,
+      capabilityIds: createWorkspaceCapabilityDefaults({ kind: 'folder' }, workspaceProviderIds.local),
+      ownerKind: 'workspace',
+      ownerId: nextManifest.workspaceId,
+      diagnostics: [],
       createdAt: nextManifest.createdAt,
       updatedAt: nextManifest.updatedAt,
     },
@@ -810,6 +932,10 @@ function matchesWorkspaceQuery(entry, query) {
     return false;
   }
 
+  if (query.providerId && entry.metadata?.providerId !== query.providerId) {
+    return false;
+  }
+
   return true;
 }
 
@@ -912,6 +1038,13 @@ function toResourceRef(entry) {
     languageId: entry.kind === 'resource' && entry.representation === 'text' ? entry.languageId : undefined,
     parentResourceId: entry.parentId,
     badge: entry.metadata?.badge,
+    providerId: entry.metadata?.providerId,
+    revision: entry.metadata?.revision,
+    capabilityIds: entry.metadata?.capabilityIds,
+    ownerKind: entry.metadata?.ownerKind,
+    ownerId: entry.metadata?.ownerId,
+    provenance: entry.metadata?.provenance,
+    diagnostics: entry.metadata?.diagnostics,
   });
 }
 
@@ -1693,8 +1826,19 @@ export function createWorkspaceService(options = {}) {
     return allEntries().find((entry) => entry.kind === 'folder' && entry.path === parentPath);
   }
 
+  function assertWorkspaceCapability(entry, capabilityId, action) {
+    if (!entry) {
+      return;
+    }
+
+    if (!hasResourceCapability(workspaceEntryToResourceRef(entry), capabilityId)) {
+      throw new Error(`Workspace entry ${entry.path} does not allow ${action}.`);
+    }
+  }
+
   function createFolder(input) {
     const parent = resolveParentFolder(input.path);
+    assertWorkspaceCapability(parent, 'resource.create-child', 'creating child entries');
     const nextFolder = createFolderEntry(input, now, createUniqueId, parent?.id);
     folders = [...folders, nextFolder];
     touchManifest(nextFolder.metadata.updatedAt);
@@ -1704,6 +1848,7 @@ export function createWorkspaceService(options = {}) {
 
   function createResource(input) {
     const parent = resolveParentFolder(input.path);
+    assertWorkspaceCapability(parent, 'resource.create-child', 'creating child entries');
     const nextResource = input.representation === 'text'
       ? createTextEntry(input, now, createUniqueId, parent?.id)
       : createBinaryEntry(input, now, createUniqueId, parent?.id);
@@ -1732,6 +1877,7 @@ export function createWorkspaceService(options = {}) {
     if (!current) {
       throw new Error(`Unknown workspace resource: ${input.resourceId}`);
     }
+    assertWorkspaceCapability(current, 'resource.write', 'saving resource content');
 
     if (input.representation === 'text') {
       if (current.representation !== 'text') {
@@ -1796,6 +1942,7 @@ export function createWorkspaceService(options = {}) {
     if (!current) {
       return undefined;
     }
+    assertWorkspaceCapability(current, 'resource.rename', 'renaming');
 
     const nextPath = normalizeWorkspacePath(path);
     const updatedAt = now();
@@ -1810,6 +1957,7 @@ export function createWorkspaceService(options = {}) {
       }
 
       const parent = resolveParentFolder(nextPath);
+      assertWorkspaceCapability(parent, 'resource.create-child', 'creating child entries');
       const patchedFolder = {
         ...nextFolder,
         path: nextPath,
@@ -1824,6 +1972,7 @@ export function createWorkspaceService(options = {}) {
     }
 
     const parent = resolveParentFolder(nextPath);
+    assertWorkspaceCapability(parent, 'resource.create-child', 'creating child entries');
     const nextResource = {
       ...current,
       path: nextPath,
@@ -1841,11 +1990,13 @@ export function createWorkspaceService(options = {}) {
     if (!current) {
       return undefined;
     }
+    assertWorkspaceCapability(current, 'resource.move', 'moving');
 
     const parent = getEntryByPath(input.parentPath);
     if (!parent || parent.kind !== 'folder') {
       throw new Error(`Unknown workspace folder: ${input.parentPath}`);
     }
+    assertWorkspaceCapability(parent, 'resource.create-child', 'creating child entries');
 
     const baseTitle = input.title ?? current.metadata.title ?? basenameWorkspacePath(current.path);
     const title = baseTitle || current.id;
@@ -1857,6 +2008,7 @@ export function createWorkspaceService(options = {}) {
     if (!current) {
       return false;
     }
+    assertWorkspaceCapability(current, 'resource.delete', 'deleting');
 
     if (current.kind === 'folder') {
       const descendants = collectDescendants(allEntries(), current.id);

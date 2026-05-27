@@ -36,3 +36,15 @@ test('text editor selection and edit helpers preserve document metadata', () => 
   assert.equal(createEditorCommandContributions().some((command) => command.id === 'editor.set-language:yaml'), true);
   assert.equal(typeof surface.mount, 'function');
 });
+
+test('text editor surface preserves read-only documents', () => {
+  const document = createTextEditorDocument(
+    { resourceId: 'resource-readonly', path: '/.textforge/resources/docs/guide.md', kind: 'resource', representation: 'text' },
+    '# Guide\n',
+    { readOnly: true, languageId: 'markdown' },
+  );
+  const surface = createCodeMirrorTextEditorSurface({ document });
+
+  assert.equal(surface.model.readOnly, true);
+  assert.equal(surface.model.state, 'read-only');
+});

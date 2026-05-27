@@ -21,8 +21,10 @@ import {
   normalizeWorkspacePath,
   openWorkspaceDexieStorage,
   resetWorkspaceDexieStorage,
+  workspaceEntryToResourceRef,
   workspaceDexieSchema,
   workspaceDexieSchemaVersion,
+  workspaceProviderIds,
 } from '../src/index.js';
 
 const textEncoder = new TextEncoder();
@@ -171,11 +173,178 @@ test('workspace contribution manifest exposes the Phase 3.3 shell commands', () 
       'workspace.export-workspace',
       'workspace.export-selected-folder',
       'workspace.download-selected-file',
+      'workspace.copy-selected-resource',
       'workspace.rename-selected',
       'workspace.delete-selected',
       'workspace.reset-storage',
       'workspace.retry-storage',
     ],
+  );
+});
+
+test('workspace provider descriptors normalize bundled resources into read-only entries', () => {
+  const workspace = createWorkspaceService({
+    workspaceId: 'workspace-provider-test',
+    idFactory: createSequentialIdFactory('entry'),
+    now: fixedNow,
+    state: {
+      manifest: createWorkspaceManifest({
+        workspaceId: 'workspace-provider-test',
+        name: 'Provider test',
+        now: fixedNow,
+      }),
+      folders: [
+        {
+          kind: 'folder',
+          id: 'folder-bundled',
+          path: '/.textforge/resources',
+          parentId: 'root',
+          metadata: {
+            title: 'resources',
+            providerId: workspaceProviderIds.bundled,
+            createdAt: fixedNow(),
+            updatedAt: fixedNow(),
+          },
+          childIds: [],
+        },
+        {
+          kind: 'folder',
+          id: 'folder-bundled-docs',
+          path: '/.textforge/resources/docs',
+          parentId: 'folder-bundled',
+          metadata: {
+            title: 'docs',
+            providerId: workspaceProviderIds.bundled,
+            createdAt: fixedNow(),
+            updatedAt: fixedNow(),
+          },
+          childIds: [],
+        },
+      ],
+      resources: [
+        {
+          kind: 'resource',
+          id: 'resource-bundled',
+          path: '/.textforge/resources/docs/guide.md',
+          parentId: 'folder-bundled-docs',
+          representation: 'text',
+          text: '# Guide\n',
+          languageId: 'markdown',
+          mimeType: 'text/markdown',
+          metadata: {
+            title: 'guide.md',
+            providerId: workspaceProviderIds.bundled,
+            provenance: {
+              kind: 'bundled',
+              bundleId: 'textforge-docs',
+              sourcePath: '/docs/guide.md',
+              bundledAt: fixedNow(),
+            },
+            createdAt: fixedNow(),
+            updatedAt: fixedNow(),
+          },
+        },
+      ],
+    },
+  });
+
+  const bundledFolder = workspace.getEntryByPath('/.textforge/resources');
+  const bundledResource = workspace.getEntryByPath('/.textforge/resources/docs/guide.md');
+  const resourceRef = workspaceEntryToResourceRef(bundledResource);
+
+  assert.equal(bundledFolder?.metadata.providerId, workspaceProviderIds.bundled);
+  assert.equal(bundledFolder?.metadata.capabilityIds.includes('resource.create-child'), false);
+  assert.equal(bundledResource?.metadata.providerId, workspaceProviderIds.bundled);
+  assert.equal(bundledResource?.metadata.capabilityIds.includes('resource.copy'), true);
+  assert.equal(bundledResource?.metadata.capabilityIds.includes('resource.write'), false);
+  assert.equal(resourceRef.providerId, workspaceProviderIds.bundled);
+  assert.equal(resourceRef.provenance?.kind, 'bundled');
+  assert.equal(workspace.query({ providerId: workspaceProviderIds.bundled }).length, 3);
+});
+
+test('workspace provider descriptors block writes into bundled read-only providers', () => {
+  const workspace = createWorkspaceService({
+    workspaceId: 'workspace-provider-guard-test',
+    idFactory: createSequentialIdFactory('entry'),
+    now: fixedNow,
+    state: {
+      manifest: createWorkspaceManifest({
+        workspaceId: 'workspace-provider-guard-test',
+        name: 'Provider guard test',
+        now: fixedNow,
+      }),
+      folders: [
+        {
+          kind: 'folder',
+          id: 'folder-bundled',
+          path: '/.textforge/resources',
+          parentId: 'root',
+          metadata: {
+            title: 'resources',
+            providerId: workspaceProviderIds.bundled,
+            createdAt: fixedNow(),
+            updatedAt: fixedNow(),
+          },
+          childIds: [],
+        },
+        {
+          kind: 'folder',
+          id: 'folder-bundled-docs',
+          path: '/.textforge/resources/docs',
+          parentId: 'folder-bundled',
+          metadata: {
+            title: 'docs',
+            providerId: workspaceProviderIds.bundled,
+            createdAt: fixedNow(),
+            updatedAt: fixedNow(),
+          },
+          childIds: [],
+        },
+      ],
+      resources: [
+        {
+          kind: 'resource',
+          id: 'resource-bundled',
+          path: '/.textforge/resources/docs/guide.md',
+          parentId: 'folder-bundled-docs',
+          representation: 'text',
+          text: '# Guide\n',
+          languageId: 'markdown',
+          mimeType: 'text/markdown',
+          metadata: {
+            title: 'guide.md',
+            providerId: workspaceProviderIds.bundled,
+            createdAt: fixedNow(),
+            updatedAt: fixedNow(),
+          },
+        },
+      ],
+    },
+  });
+
+  assert.throws(
+    () => workspace.createTextResource({
+      path: '/.textforge/resources/docs/new.md',
+      text: '# New\n',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    }),
+    /does not allow creating child entries/i,
+  );
+  assert.throws(
+    () => workspace.saveTextResource({
+      resourceId: 'resource-bundled',
+      text: '# Updated\n',
+    }),
+    /does not allow saving resource content/i,
+  );
+  assert.throws(
+    () => workspace.renameEntry('resource-bundled', '/.textforge/resources/docs/renamed.md'),
+    /does not allow renaming/i,
+  );
+  assert.throws(
+    () => workspace.deleteEntry('resource-bundled'),
+    /does not allow deleting/i,
   );
 });
 

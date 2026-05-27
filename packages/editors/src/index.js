@@ -225,7 +225,7 @@ export const codeMirrorTextEditorSurfaceContribution = {
         workspaceResource.text,
         {
           languageId: workspaceResource.languageId,
-          readOnly: false,
+          readOnly: execution.readOnly ?? false,
         },
       );
     execution.setTextDocument?.(document);
@@ -245,10 +245,12 @@ export const codeMirrorTextEditorSurfaceContribution = {
       mountId: `${execution.session?.id ?? 'surface'}:${surface.model.languageMode.languageId}:${this.id}`,
       summary: surface.model.summary,
       detail: surface.model.languageLabel,
-      readOnly: false,
+      readOnly: surface.model.readOnly,
       inspectorSections: [],
       controls: execution.createLanguageControl
-        ? [execution.createLanguageControl(workspaceResource, surface.model)]
+        ? surface.model.readOnly
+          ? []
+          : [execution.createLanguageControl(workspaceResource, surface.model)]
         : [],
       surface,
     };

@@ -2,14 +2,19 @@ import type {
   CanonicalPatch,
   CommandContribution,
   ContributionManifest,
+  Diagnostic,
   PipelineValue,
   ResourceBadgeToken,
+  ResourceCapabilityId,
+  ResourceGeneratedProvenance,
+  ResourceProvenance,
   ResourceRepresentation,
   ResourceRef,
 } from '@textforge/core';
 
 export type WorkspaceEntryKind = 'folder' | 'resource';
 export type WorkspaceResourceRepresentation = ResourceRepresentation;
+export type WorkspaceProviderId = 'workspace-local' | 'bundled-docs' | 'generated-artifact' | string;
 export type WorkspaceArchiveResourceEncoding = 'utf8' | 'binary';
 export type WorkspaceImportConflictPolicy = 'error' | 'replace' | 'skip';
 export type WorkspaceStorageKind = 'indexeddb';
@@ -17,24 +22,20 @@ export type WorkspaceStorageDriver = 'dexie';
 export type WorkspaceStorageStatus = 'idle' | 'persisting' | 'error';
 export type WorkspaceHydrationSource = 'seed' | 'storage';
 
-export interface WorkspaceGeneratedProvenance {
-  readonly kind: 'generated';
-  readonly pipelineId: string;
-  readonly sourceResourceId: string;
-  readonly sourcePath: string;
-  readonly sourceUpdatedAt: string;
-  readonly generatedAt: string;
-  readonly blockId?: string;
-  readonly blockKind?: string;
-  readonly format?: 'svg' | 'png' | 'html' | string;
-}
+export type WorkspaceGeneratedProvenance = ResourceGeneratedProvenance;
 
 export interface WorkspaceMetadata {
   readonly title?: string;
   readonly description?: string;
   readonly tags?: ReadonlyArray<string>;
   readonly badge?: ResourceBadgeToken;
-  readonly provenance?: WorkspaceGeneratedProvenance;
+  readonly providerId?: WorkspaceProviderId;
+  readonly revision?: string;
+  readonly capabilityIds?: ReadonlyArray<ResourceCapabilityId | string>;
+  readonly ownerKind?: string;
+  readonly ownerId?: string;
+  readonly provenance?: ResourceProvenance;
+  readonly diagnostics?: ReadonlyArray<Diagnostic>;
   readonly createdAt: string;
   readonly updatedAt: string;
 }
@@ -158,6 +159,7 @@ export interface WorkspaceQuery {
   readonly languageId?: string;
   readonly mimeType?: string;
   readonly parentId?: string;
+  readonly providerId?: WorkspaceProviderId;
 }
 
 export interface WorkspaceReferenceResolver {
@@ -361,6 +363,11 @@ export interface WorkspaceCanonicalPatch extends CanonicalPatch {
 
 export declare const workspaceDexieSchemaVersion: 2;
 export declare const defaultWorkspaceDexieDatabaseName: 'textforge-workspace';
+export declare const workspaceProviderIds: {
+  readonly local: 'workspace-local';
+  readonly bundled: 'bundled-docs';
+  readonly generated: 'generated-artifact';
+};
 export declare const workspaceStorageErrorCodes: {
   readonly initializationFailed: 'workspace-storage-initialization-failed';
   readonly loadFailed: 'workspace-storage-load-failed';

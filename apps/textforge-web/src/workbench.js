@@ -28,6 +28,7 @@ import {
   normalizeWorkspacePath,
   resetWorkspaceDexieStorage,
   workspaceEntryToResourceRef,
+  workspaceProviderIds,
   workspaceStorageErrorCodes,
 } from '@textforge/workspace';
 import {
@@ -110,7 +111,7 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const workspaceDatabaseName = 'textforge-workspace';
 const sampleResourcePaths = {
-  notes: '/docs/design/README.md',
+  notes: '/.textforge/resources/docs/design/capability-model.md',
 };
 const utilitySections = [
   { id: 'inspector', label: 'Inspector', icon: 'status' },
@@ -187,6 +188,7 @@ const workspaceFolderContextCommandIds = [
 ];
 
 const workspaceResourceContextCommandIds = [
+  'workspace.copy-selected-resource',
   'lua.run-selected-resource',
   'lua.promote-selected-to-automation',
   'workspace.download-selected-file',
@@ -272,6 +274,10 @@ function createTimestampFactory() {
   return () => new Date().toISOString();
 }
 
+function createBundledWorkspacePath(path) {
+  return normalizeWorkspacePath(`/.textforge/resources${normalizeWorkspacePath(path)}`);
+}
+
 function createSeedWorkspaceState() {
   const now = createTimestampFactory();
   const workspace = createWorkspaceService({
@@ -282,18 +288,53 @@ function createSeedWorkspaceState() {
   });
 
   workspace.createFolder({ path: '/docs', title: 'docs' });
+  workspace.createFolder({ path: '/examples', title: 'examples' });
   workspace.createFolder({ path: '/roadmap', title: 'roadmap' });
+  workspace.createFolder({ path: '/.textforge', title: '.textforge' });
+  workspace.createFolder({ path: '/.textforge/resources', title: 'resources' });
   for (const folderPath of bundledDocFolders) {
     workspace.createFolder({
-      path: folderPath,
+      path: createBundledWorkspacePath(folderPath),
       title: basenameWorkspacePath(folderPath),
     });
   }
   for (const resource of bundledDocs) {
-    workspace.createTextResource(resource);
+    workspace.createTextResource({
+      ...resource,
+      path: createBundledWorkspacePath(resource.path),
+    });
   }
 
-  return workspace.snapshot();
+  const state = workspace.snapshot();
+  return {
+    ...state,
+    folders: state.folders.map((folder) =>
+      folder.path.startsWith('/.textforge/resources')
+        ? {
+          ...folder,
+          metadata: {
+            ...folder.metadata,
+            providerId: workspaceProviderIds.bundled,
+          },
+        }
+        : folder),
+    resources: state.resources.map((resource) =>
+      resource.path.startsWith('/.textforge/resources')
+        ? {
+          ...resource,
+          metadata: {
+            ...resource.metadata,
+            providerId: workspaceProviderIds.bundled,
+            provenance: {
+              kind: 'bundled',
+              bundleId: 'textforge-docs',
+              sourcePath: resource.path.slice('/.textforge/resources'.length) || resource.path,
+              bundledAt: now(),
+            },
+          },
+        }
+        : resource),
+  };
 }
 
 function createBlobUrlDriver() {
@@ -1018,6 +1059,9 @@ function createTextForgeWorkbenchController() {
     if (!isWorkspaceResource(currentResource) || currentResource.representation !== 'text') {
       return;
     }
+    if (!isWorkspaceResourceWritable(currentResource)) {
+      throw new Error(`Workspace resource ${currentResource.path} is read-only.`);
+    }
 
     const nextLanguageMode = languageModes.find((mode) => mode.languageId === languageId);
     const currentDocument = activeTextDocuments.get(resourceId) ?? createTextEditorDocument(
@@ -1025,7 +1069,7 @@ function createTextForgeWorkbenchController() {
       currentResource.text,
       {
         languageId: currentResource.languageId,
-        readOnly: false,
+        readOnly: !isWorkspaceResourceWritable(currentResource),
       },
     );
     const nextResource = workspace.saveTextResource({
@@ -1060,7 +1104,13 @@ function createTextForgeWorkbenchController() {
       return '/';
     }
 
-    return entry.kind === 'folder' ? entry.path : dirnameWorkspacePath(entry.path);
+    const preferredPath = entry.kind === 'folder' ? entry.path : dirnameWorkspacePath(entry.path);
+    const preferredFolder = workspace.getEntryByPath(preferredPath);
+    if (preferredFolder?.kind === 'folder' && !supportsWorkspaceCapability(preferredFolder, 'resource.create-child')) {
+      return '/docs';
+    }
+
+    return preferredPath;
   }
 
   function createAvailableWorkspacePath(path) {
@@ -1078,6 +1128,59 @@ function createTextForgeWorkbenchController() {
       counter += 1;
     }
     return candidate;
+  }
+
+  function isBundledWorkspaceEntry(entry) {
+    return entry?.metadata?.providerId === workspaceProviderIds.bundled;
+  }
+
+  function supportsWorkspaceCapability(entry, capabilityId) {
+    return Boolean(entry?.metadata?.capabilityIds?.includes(capabilityId));
+  }
+
+  function isWorkspaceResourceWritable(entry) {
+    return supportsWorkspaceCapability(entry, 'resource.write');
+  }
+
+  function createCopiedWorkspaceResource(targetPath, sourceEntry) {
+    const normalizedPath = createAvailableWorkspacePath(targetPath);
+    ensureWorkspaceFolder(dirnameWorkspacePath(normalizedPath));
+    const metadata = {
+      provenance: {
+        kind: 'copy',
+        sourceProviderId: sourceEntry.metadata?.providerId ?? workspaceProviderIds.local,
+        sourceResourceId: sourceEntry.id,
+        sourcePath: sourceEntry.path,
+        copiedAt: new Date().toISOString(),
+      },
+    };
+
+    if (sourceEntry.representation === 'text') {
+      return workspace.createTextResource({
+        path: normalizedPath,
+        title: basenameWorkspacePath(normalizedPath),
+        text: sourceEntry.text,
+        languageId: sourceEntry.languageId,
+        mimeType: sourceEntry.mimeType,
+        metadata,
+      });
+    }
+
+    return workspace.createBinaryResource({
+      path: normalizedPath,
+      title: basenameWorkspacePath(normalizedPath),
+      bytes: sourceEntry.bytes,
+      mimeType: sourceEntry.mimeType,
+      metadata,
+    });
+  }
+
+  function resolveWorkspaceCopyTargetPath(entry) {
+    if (isBundledWorkspaceEntry(entry) && entry.path.startsWith('/.textforge/resources/')) {
+      return normalizeWorkspacePath(entry.path.slice('/.textforge/resources'.length));
+    }
+
+    return joinWorkspacePath('/docs', basenameWorkspacePath(entry.path) || 'resource-copy');
   }
 
   function inferImportedLanguageId(path, mimeType) {
@@ -1263,6 +1366,11 @@ function createTextForgeWorkbenchController() {
       languageId: isWorkspaceResource(entry) && entry.representation === 'text'
         ? entry.languageId
         : undefined,
+      providerId: entry.metadata?.providerId,
+      capabilityIds: entry.metadata?.capabilityIds,
+      revision: entry.metadata?.revision,
+      ownerKind: entry.metadata?.ownerKind,
+      ownerId: entry.metadata?.ownerId,
     };
   }
 
@@ -2060,7 +2168,7 @@ function createTextForgeWorkbenchController() {
       resource.text,
       {
         languageId: resource.languageId,
-        readOnly: false,
+        readOnly: !isWorkspaceResourceWritable(resource),
       },
     );
     const selection = currentDocument.selection ?? { anchor: currentDocument.text.length, head: currentDocument.text.length };
@@ -2178,6 +2286,26 @@ function createTextForgeWorkbenchController() {
     };
   }
 
+  function createResourceDescriptorInspectorSection(resource) {
+    if (!resource) {
+      return undefined;
+    }
+
+    return {
+      eyebrow: 'Descriptor',
+      icon: 'status',
+      title: 'Provider descriptor',
+      rows: [
+        { label: 'Provider', value: resource.metadata?.providerId ?? 'workspace-local' },
+        { label: 'Revision', value: resource.metadata?.revision ?? resource.metadata?.updatedAt ?? 'n/a' },
+        { label: 'Owner', value: resource.metadata?.ownerId ? `${resource.metadata.ownerKind ?? 'owner'}:${resource.metadata.ownerId}` : (resource.metadata?.ownerKind ?? 'n/a') },
+        { label: 'Capabilities', value: resource.metadata?.capabilityIds?.join(', ') ?? 'none' },
+        { label: 'Provenance', value: resource.metadata?.provenance?.kind ?? 'none' },
+        { label: 'Diagnostics', value: String(resource.metadata?.diagnostics?.length ?? 0) },
+      ],
+    };
+  }
+
   function createSurfaceView(session) {
     const resource = getEntry(session.resource.resourceId);
     if (!resource) {
@@ -2214,7 +2342,7 @@ function createTextForgeWorkbenchController() {
         resource.text,
         {
           languageId: resource.languageId,
-          readOnly: false,
+          readOnly: !isWorkspaceResourceWritable(resource),
         },
       ),
       setTextDocument(nextDocument) {
@@ -2278,7 +2406,10 @@ function createTextForgeWorkbenchController() {
       placement: session.placement,
       detail: runtimeView?.detail ?? 'Runtime unavailable',
       readOnly: runtimeView?.readOnly ?? true,
-      inspectorSections: runtimeView?.inspectorSections ?? [],
+      inspectorSections: [
+        ...((runtimeView?.inspectorSections) ?? []),
+        createResourceDescriptorInspectorSection(resource),
+      ].filter(Boolean),
       controls: [...controls, ...(runtimeView?.controls ?? [])],
       surface,
     };
@@ -2522,9 +2653,41 @@ function createTextForgeWorkbenchController() {
     const allowedIds = model.kind === 'workspace-item'
       ? (target.selection?.kind === 'folder' ? workspaceFolderContextCommandIds : workspaceResourceContextCommandIds)
       : (model.kind === 'main-session' ? mainSessionContextCommandIds : popupSessionContextCommandIds);
-    const items = visibleCommands.filter((command) =>
-      allowedIds.includes(command.id) || isOpenWithCommand(command.id),
-    );
+    const targetEntry = resolveTargetEntryForCommands(commandContext);
+    const items = visibleCommands.filter((command) => {
+      if (!(allowedIds.includes(command.id) || isOpenWithCommand(command.id))) {
+        return false;
+      }
+
+      if (!targetEntry || model.kind !== 'workspace-item') {
+        return true;
+      }
+
+      if (command.id === 'workspace.new-folder'
+        || command.id === 'workspace.new-resource'
+        || command.id === 'workspace.upload-file'
+        || command.id === 'workspace.import-folder-zip') {
+        return supportsWorkspaceCapability(targetEntry, 'resource.create-child');
+      }
+
+      if (command.id === 'workspace.export-selected-folder' || command.id === 'workspace.download-selected-file') {
+        return supportsWorkspaceCapability(targetEntry, 'resource.export');
+      }
+
+      if (command.id === 'workspace.copy-selected-resource') {
+        return supportsWorkspaceCapability(targetEntry, 'resource.copy');
+      }
+
+      if (command.id === 'workspace.rename-selected') {
+        return supportsWorkspaceCapability(targetEntry, 'resource.rename');
+      }
+
+      if (command.id === 'workspace.delete-selected') {
+        return supportsWorkspaceCapability(targetEntry, 'resource.delete');
+      }
+
+      return true;
+    });
 
     return {
       x: model.x,
@@ -2813,6 +2976,18 @@ function createTextForgeWorkbenchController() {
     }
 
     downloadBytes(filename, entry.bytes, entry.mimeType || 'application/octet-stream');
+  }
+
+  async function copySelectedResourceCommand(commandContext) {
+    const entry = resolveTargetResourceForCommands(commandContext);
+    if (!entry) {
+      return;
+    }
+
+    const copied = createCopiedWorkspaceResource(resolveWorkspaceCopyTargetPath(entry), entry);
+    await persistWorkspace('workspace.copy-selected-resource');
+    expandFolderAncestors(copied.path);
+    openResourceEntry(copied, { placement: 'main' });
   }
 
   async function renameSelectedEntryCommand(commandContext) {
@@ -3123,6 +3298,7 @@ function createTextForgeWorkbenchController() {
       .register('workspace.export-workspace', exportWorkspaceCommand)
       .register('workspace.export-selected-folder', ({ context }) => exportSelectedFolderCommand(context))
       .register('workspace.download-selected-file', ({ context }) => downloadSelectedFileCommand(context))
+      .register('workspace.copy-selected-resource', ({ context }) => copySelectedResourceCommand(context))
       .register('workspace.rename-selected', ({ context }) => renameSelectedEntryCommand(context))
       .register('workspace.delete-selected', ({ context }) => deleteSelectedEntryCommand(context))
       .register('workspace.reset-storage', requestWorkspaceResetCommand)
