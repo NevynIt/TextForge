@@ -147,6 +147,10 @@ Single-folder ZIP handling is now intentionally split from whole-workspace dumps
 
 The package now consumes `@textforge/core` only through its public workspace entrypoint and keeps resource identity/content facts separate from surface eligibility. The stabilized audit also confirms that unified resources, including text-stored SVG, continue to flow into the shell as facts for contribution predicates rather than through a reintroduced text-versus-binary routing split.
 
+## WP-RES-01 progress note
+
+`@textforge/workspace` now treats provider-aware resource descriptors as part of the canonical workspace entry metadata rather than as side data. Workspace entries normalize provider IDs, revision IDs, capability IDs, owner/provenance metadata, and diagnostics; bundled docs resolve through a read-only provider baseline; and workspace mutations now enforce resource capabilities such as write, rename, move, delete, and create-child before mutating state.
+
 
 ## V16 backend-optional responsibilities
 

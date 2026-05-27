@@ -33,16 +33,17 @@ The structural change from V16/V17 is deliberate:
 
 ## Current implementation posture
 
-The former Phase 5 contribution/capability spine plus the minimal inspector are now validated:
+The former Phase 5 contribution/capability spine plus the minimal inspector and provider-aware resource foundation are now validated:
 
 ```text
 WP-05A Contribution manifest and registry model
   -> WP-05B Capability activation and resolver context
   -> WP-05C Pipeline/contribution execution integration
 WP-05D Minimal package/capability inspector
+WP-RES-01 Provider-aware resource descriptors
 ```
 
-The next ready option is `WP-RES-01` provider-aware resource descriptors. `WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable under the current dependency posture now that `WP-ITM-01`, `WP-LUA`, and `WP-LUA-POWER-SESSION` are validated. Actual execution order is chosen one slice at a time.
+The canonical WP5+ planning sequence now lives in `workpackages/workpackage-register.md`: `WP-REPO-01 -> WP-ITM-02 -> WP-ITM-VISUALS -> WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`. Completing that sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-ITM-VISUALS`, and `WP-TABLES` remain startable outside that sequence.
 
 The backend path is enabled by contracts and fixtures, not by Entra SSO:
 

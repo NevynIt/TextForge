@@ -169,6 +169,10 @@ The package now owns the stabilized Phase 4.1 foundation contracts: normalized `
 
 `@textforge/core` now also owns the minimal package/capability inspector read model instead of leaving package-state projection inside the shell. `createContributionInspectorModel(...)` derives deterministic package summaries, per-package capability/contribution state, current-document activation order, `%require` status, active-context conflicts, and diagnostics from the validated registry/resolver outputs so later UX can inspect capability-heavy behavior without recreating registry logic in the app.
 
+## WP-RES-01 progress note
+
+`@textforge/core` now extends the canonical resource and command-context contracts for provider-aware resource descriptors instead of introducing a second metadata model. `ResourceRef`, `ResourceFacts`, and command selection context now carry provider IDs, revision IDs, capability IDs, owner/provenance metadata, and resource diagnostics, with shared helpers for provider-aware capability checks consumed by workspace and shell code.
+
 
 ## V16 backend-optional responsibilities
 

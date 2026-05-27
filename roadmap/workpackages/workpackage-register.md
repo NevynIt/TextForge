@@ -27,7 +27,7 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 | WP-05B | Phase 5 | Capability activation and resolver context | Core gate | Validated | WP-05A | WP-05C, WP-05D, WP-ITM-02, WP-REPO-01 | No | Yes | Pure document-scoped resolver, deterministic activation ordering, `%require` capability matching, active short-name diagnostics, and shell inspector context landed on top of the validated WP-05A registry. |
 | WP-05C | Phase 5 | Pipeline/contribution execution integration | Core gate | Validated | WP-05A, WP-05B | WP-ITM-VISUALS, WP-LUA, WP-SERVICES-LOCAL, WP-PIPELINE-EDITOR | No | Yes | Canonical contribution execution now replaces the remaining shell runtime adapter and active-context pipeline execution records intermediate reopening metadata. |
 | WP-05D | Phase 5 | Minimal package/capability inspector | Feature / diagnostics | Validated | WP-05A, WP-05B | All capability-heavy UX | Yes | No | Core-owned inspector read model, current-document capability routing, packaged contribution state cards, and shell-visible diagnostics now sit on top of the validated WP-05A/WP-05B registry/resolver contracts. |
-| WP-RES-01 | Phase 5.1 | Provider-aware resource descriptors | Core foundation | Not started | Phase 4.1 resource facts | WP-RES-02, WP-REPO-01, WP-BE-API | No | Yes | May start after 4.1; does not need Entra or backend. |
+| WP-RES-01 | Phase 5.1 | Provider-aware resource descriptors | Core foundation | Validated | Phase 4.1 resource facts | WP-RES-02, WP-REPO-01, WP-BE-API | No | Yes | Canonical resource facts now carry provider, revision, capability, owner, provenance, and diagnostics data across core/workspace/app flows; bundled docs are exposed as read-only provider-backed resources with validated copy-into-workspace flow. |
 | WP-RES-02 | Phase 5.1 | Revisions, dirty state, and conflict diagnostics | Core foundation | Not started | WP-RES-01 | WP-RES-03, WP-BE-PERSIST, WP-COLLAB-LEASES | No | Yes | Separates local revision model from backend persistence. |
 | WP-RES-03 | Phase 5.1 | Multi-resource changesets and provider allowlists | Core foundation | Not started | WP-RES-02, WP-05B recommended | WP-BE-API, WP-GITLAB, WP-AI-MEDIATOR | No | Yes | Backend-backed writes and future Git/AI edits converge here. |
 | WP-ID-01 | Phase 5.2 | Identity contract | Core contract | Not started | Phase 4.1 | WP-ID-DEV, WP-POLICY-01, WP-PRIVATE-CONTRACT | No | Yes | Backend-neutral user/group/claims/session/diagnostics shape. |
@@ -78,12 +78,24 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 
 ## Current reading
 
-- The former Phase 5 contribution/capability spine plus the minimal inspector are now validated: `WP-05A -> WP-05B -> WP-05C`, with `WP-05D` landed on top of that registry/resolver baseline.
-- The nearest ready follow-on slice is `WP-RES-01` provider-aware resource descriptors.
-- `WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable foundation workpackages under the current dependency posture.
+- The former Phase 5 contribution/capability spine plus the minimal inspector and provider-aware resource foundation are now validated: `WP-05A -> WP-05B -> WP-05C`, `WP-05D`, and `WP-RES-01`.
+- Planned first-shippable implementation order:
+	1. `WP-REPO-01`
+	2. `WP-ITM-02`
+	3. `WP-ITM-VISUALS`
+	4. `WP-MD-REPORT`
+	5. `WP-BPMN-SEM`
+	6. `WP-BPMN-VISUAL`
+	7. `WP-TABLES`
+	8. `WP-SKETCH`
+	9. `WP-ARCHIMATE-SEM`
+	10. `WP-ARCHIMATE-VISUAL`
+	11. `WP-SET-01`
+- Completing that sequence defines the first version to polish and ship.
+- `WP-ID-01` remains a startable foundation slice under the current dependency posture, but it is outside this first-shippable sequence.
 - `WP-LUA-POWER-SESSION` is now validated on top of `WP-LUA`; the Lua follow-on backlog can move to broader, separately reviewed introspection or higher-level automation slices rather than reopening this delivered session/recovery behavior.
 - `WP-ITM-01` and `WP-LUA` are validated; the local ITM follow-on now moves to `WP-ITM-02`.
 - `WP-LUA` is validated on top of `WP-05C`; sandbox and security-profile checks remain part of `WP-LUA` evidence rather than a separate gating workpackage.
-- Resource-provider, identity-contract, and settings-core work can be developed as independent foundations once their small prerequisites are met.
+- `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-ITM-VISUALS`, and `WP-TABLES` are also startable under the current dependency posture, but `WP-REPO-01` is the main next recommended slice.
 - Entra SSO is now explicitly deferred as `WP-SSO-ENTRA`, a standalone production adapter that does not block local backend development.
 - Backend private/group spaces, roaming settings, GitLab, service jobs, leases, and AI should depend on provider-neutral identity/policy plus a dev fixture first, not on Entra itself.

@@ -2,6 +2,8 @@
 
 This cluster converts workspace content into provider-aware, revision-aware, capability-aware resources while preserving the local/offline security model.
 
+`WP-RES-01` is now validated and establishes the provider-aware descriptor baseline for `WP-RES-02`, `WP-REPO-01`, and later backend provider work.
+
 ## Workpackages
 
 | WP | Title | Depends on | Notes |

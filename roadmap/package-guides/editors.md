@@ -192,3 +192,7 @@ The package now exposes the CodeMirror source editor and language-mode actions a
 ## WP-05C progress note
 
 The CodeMirror source-editor contribution now owns its registered opening path as well as its metadata. The shell provides persistence callbacks and current-session state, but it no longer switches on the editor contribution ID to decide how to mount the runtime surface.
+
+## WP-RES-01 progress note
+
+The editor package now respects provider-aware read-only resource state instead of assuming all text-backed resources are writable. `createCodeMirrorTextEditorSurface(...)` preserves the document `readOnly` flag so bundled/provider-locked text resources stay non-editable in the shell while copied local workspace resources reopen as normal writable editor documents.
