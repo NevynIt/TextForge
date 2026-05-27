@@ -10,6 +10,7 @@ const outputPath = resolve(rootDir, 'src', 'generated', 'bundledDocs.js');
 const mimeTypeByExtension = {
   '.md': 'text/markdown',
   '.txt': 'text/plain',
+  '.itm': 'text/x-itm',
   '.yaml': 'text/yaml',
   '.yml': 'text/yaml',
   '.json': 'application/json',
@@ -19,6 +20,7 @@ const mimeTypeByExtension = {
 
 const languageIdByExtension = {
   '.md': 'markdown',
+  '.itm': 'itm',
   '.yaml': 'yaml',
   '.yml': 'yaml',
   '.json': 'json',

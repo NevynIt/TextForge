@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "sync:bundled-docs": "node scripts/sync-bundled-docs.mjs",
+    "postinstall": "node scripts/sync-bundled-docs.mjs",
     "prebuild": "node scripts/sync-bundled-docs.mjs",
     "predev": "node scripts/sync-bundled-docs.mjs",
     "pretest": "node scripts/sync-bundled-docs.mjs",

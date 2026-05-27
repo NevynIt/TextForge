@@ -5,3 +5,4 @@ tsconfig.tsbuildinfo
 .tmp-playwright
 .vscode
 tmp
+apps/textforge-web/src/generated/bundledDocs.js
