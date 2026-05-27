@@ -11,6 +11,7 @@ import {
   defaultLuaExecutionLimits,
   discoverLuaAutomations,
   formatLuaConsoleCommandTranscript,
+  isLuaConsoleMultilineInput,
   isLuaAutomationPath,
   navigateLuaConsoleHistory,
   listLuaAutomationFiles,
@@ -172,6 +173,12 @@ test('lua console transcript formatting preserves multi-line commands', () => {
     'lua> print("a")',
     '...  print("b")',
   ]);
+});
+
+test('lua console multiline detection treats embedded newlines as multi-line input', () => {
+  assert.equal(isLuaConsoleMultilineInput('print("a")'), false);
+  assert.equal(isLuaConsoleMultilineInput('print("a")\nprint("b")'), true);
+  assert.equal(isLuaConsoleMultilineInput('print("a")\r\nprint("b")'), true);
 });
 
 test('lua console history navigation preserves the unsent draft', () => {

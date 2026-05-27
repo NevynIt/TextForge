@@ -325,6 +325,10 @@ export function formatLuaConsoleCommandTranscript(command) {
   return normalized.split('\n').map((line, index) => `${index === 0 ? formatPlainLuaConsolePrompt() : '...  '}${line}`);
 }
 
+export function isLuaConsoleMultilineInput(command) {
+  return String(command ?? '').replaceAll('\r\n', '\n').replaceAll('\r', '\n').includes('\n');
+}
+
 function writeConsoleTranscript(terminal, state) {
   for (const line of state.transcript) {
     terminal.writeln(line);
@@ -363,7 +367,7 @@ export function createLuaConsoleSurface(options = {}) {
         '<section class="tf-lua-console__composer" aria-label="Lua prompt composer">',
         '<div class="tf-lua-console__composer-header">',
         '<div class="tf-lua-console__composer-title">Interactive prompt</div>',
-        '<div class="tf-lua-console__composer-hint">Ctrl+Enter runs. Shift+Enter adds a new line. Alt+Up and Alt+Down browse history.</div>',
+        '<div class="tf-lua-console__composer-hint">Enter runs single-line input. Ctrl+Enter runs multi-line input. Alt+Up and Alt+Down browse history.</div>',
         '</div>',
         '<textarea class="tf-lua-console__input" data-lua-input rows="5" spellcheck="false" placeholder="Write Lua here. Multi-line input is supported."></textarea>',
         '<div class="tf-lua-console__composer-actions">',
@@ -598,10 +602,14 @@ export function createLuaConsoleSurface(options = {}) {
       });
 
       inputHost.addEventListener('keydown', (event) => {
-        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-          event.preventDefault();
-          void handleSubmit(inputHost.value);
-          return;
+        if (event.key === 'Enter' && !event.altKey) {
+          const multiline = isLuaConsoleMultilineInput(inputHost.value);
+          const submitWithModifier = event.ctrlKey || event.metaKey;
+          if ((!multiline && !submitWithModifier && !event.shiftKey) || (multiline && submitWithModifier)) {
+            event.preventDefault();
+            void handleSubmit(inputHost.value);
+            return;
+          }
         }
 
         if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.key === 'ArrowUp') {

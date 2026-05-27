@@ -139,6 +139,7 @@ export declare function navigateLuaConsoleHistory<T extends {
   readonly currentInput: string;
 };
 export declare function formatLuaConsoleCommandTranscript(command: unknown): ReadonlyArray<string>;
+export declare function isLuaConsoleMultilineInput(command: unknown): boolean;
 export declare function runLuaScript(options?: {
   readonly source?: string;
   readonly scriptPath?: string;
