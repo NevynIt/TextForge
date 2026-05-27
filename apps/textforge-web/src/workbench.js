@@ -3966,6 +3966,7 @@ function TextForgeWorkbenchApp({ controller }) {
         }),
         sidebar: element(TextForgeWorkspaceSidebar, {
           collapsed: snapshot.state.workspaceTreeCollapsed,
+          onClose: () => controller.actions.setWorkspaceTreeCollapsed(true),
           onDropFilesToFolder: controller.actions.dropFilesOnWorkspaceFolder,
           onRequestItemContextMenu: controller.actions.openWorkspaceItemContextMenu,
           onSelectItem: controller.actions.selectWorkspaceItem,
@@ -3980,6 +3981,7 @@ function TextForgeWorkbenchApp({ controller }) {
           TextForgeUtilityPane,
           {
             activeSectionId: snapshot.state.utilitySectionId,
+            onClose: () => controller.actions.setUtilityPaneCollapsed(true),
             onSelectSection: controller.actions.setUtilitySection,
             sections: snapshot.utilitySections,
             title: activeUtilitySection?.label ?? 'Inspector',

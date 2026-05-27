@@ -307,6 +307,42 @@ select {
   font-size: 0.96rem;
 }
 
+.tf-pane__close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(126, 231, 216, 0.2);
+  border-radius: 8px;
+  background: rgba(10, 16, 30, 0.72);
+  color: var(--muted);
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.tf-pane__close:hover,
+.tf-pane__close:focus-visible {
+  border-color: rgba(126, 231, 216, 0.52);
+  background: rgba(17, 25, 42, 0.92);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.tf-pane__close:focus-visible {
+  outline: 2px solid rgba(126, 231, 216, 0.32);
+  outline-offset: 2px;
+}
+
+.tf-pane__close-icon {
+  pointer-events: none;
+}
+
 .tf-pane__subtitle {
   margin: 4px 0 0;
   font-size: 0.84rem;

@@ -91,10 +91,12 @@ const html = renderToStaticMarkup(
       }),
       sidebar: React.createElement(TextForgeWorkspaceSidebar, {
         collapsed: false,
+        onClose: () => {},
         workspaceTree: chrome.workspaceTree,
       }),
       utility: React.createElement(TextForgeUtilityPane, {
         activeSectionId: 'registry',
+        onClose: () => {},
         sections: [{ id: 'registry', label: 'Contribution Packs' }],
         title: 'Utility',
       }, React.createElement('div', null, 'Registry content')),
@@ -136,5 +138,7 @@ assert.match(html, /role="img"/);
 assert.match(html, /is-placement-center/);
 assert.match(html, /notes\.md badge/);
 assert.match(html, /No popup sessions/);
+assert.match(html, /Collapse Workspace/);
+assert.match(html, /Collapse Utility/);
 
 console.info('ui package checks passed');

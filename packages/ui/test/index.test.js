@@ -90,10 +90,12 @@ test('ui package renders react shell primitives from chrome models', () => {
         }),
         sidebar: React.createElement(TextForgeWorkspaceSidebar, {
           collapsed: false,
+          onClose: () => {},
           workspaceTree: chrome.workspaceTree,
         }),
         utility: React.createElement(TextForgeUtilityPane, {
           activeSectionId: 'registry',
+          onClose: () => {},
           sections: [{ id: 'registry', label: 'Contribution Packs' }],
           title: 'Utility',
         }, React.createElement('div', null, 'Registry content')),
@@ -162,4 +164,6 @@ test('ui package renders react shell primitives from chrome models', () => {
   assert.match(html, /tabindex="0"/);
   assert.match(html, /data-pane="workspace"/);
   assert.match(html, /data-pane="popup"/);
+  assert.match(html, /Collapse Workspace/);
+  assert.match(html, /Collapse Utility/);
 });

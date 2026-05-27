@@ -71,6 +71,18 @@ function isEffectivelyCollapsed(panelSize, collapsedSize) {
   return panelSize.inPixels <= 1;
 }
 
+function coerceExpandedPanelSize(size, fallbackSize) {
+  if (size === undefined || size === null || size === '') {
+    return fallbackSize;
+  }
+
+  return size;
+}
+
+function isDoubleClickActivation(event) {
+  return event?.detail === 2;
+}
+
 function IconGlyph({ className, name, size = 16, strokeWidth = 1.9 }) {
   const Icon = iconRegistry[name];
   if (!Icon) {
@@ -679,6 +691,7 @@ export function TextForgeTopBar({
 export function TextForgeWorkspaceSidebar({
   collapsed = false,
   footer,
+  onClose,
   onDropFilesToFolder,
   onRequestItemContextMenu,
   onSelectItem,
@@ -691,6 +704,19 @@ export function TextForgeWorkspaceSidebar({
     'div',
     { className: 'tf-pane__header' },
     element('h2', { className: 'tf-pane__title' }, workspaceTree.title),
+    onClose
+      ? element(
+        'button',
+        {
+          type: 'button',
+          className: 'tf-pane__close',
+          'aria-label': `Collapse ${workspaceTree.title}`,
+          title: `Collapse ${workspaceTree.title}`,
+          onClick: () => onClose(),
+        },
+        element(IconGlyph, { className: 'tf-pane__close-icon', name: 'close', size: 13 }),
+      )
+      : null,
   );
 
   const items = collapsed
@@ -1061,6 +1087,7 @@ export function TextForgeSelectField({ control }) {
 export function TextForgeUtilityPane({
   activeSectionId,
   children,
+  onClose,
   onSelectSection,
   sections = [],
   title = 'Utility',
@@ -1075,6 +1102,19 @@ export function TextForgeUtilityPane({
       'div',
       { className: 'tf-pane__header' },
       element('h2', { className: 'tf-pane__title' }, title),
+      onClose
+        ? element(
+          'button',
+          {
+            type: 'button',
+            className: 'tf-pane__close',
+            'aria-label': `Collapse ${title}`,
+            title: `Collapse ${title}`,
+            onClick: () => onClose(),
+          },
+          element(IconGlyph, { className: 'tf-pane__close-icon', name: 'close', size: 13 }),
+        )
+        : null,
     ),
     sections.length > 0
       ? element(
@@ -1569,6 +1609,8 @@ export function TextForgeAppFrame({
 }) {
   const sidebarPanelRef = React.useRef(null);
   const utilityPanelRef = React.useRef(null);
+  const sidebarExpandedSizeRef = React.useRef(undefined);
+  const utilityExpandedSizeRef = React.useRef(undefined);
   const sidebarConfig = normalizePanelConfig(panelLayout?.sidebar, {
     defaultSize: '22',
     minSize: '0',
@@ -1615,11 +1657,73 @@ export function TextForgeAppFrame({
   }, [utilityOpen, utility]);
 
   function handleSidebarResize(panelSize) {
+    if (!isEffectivelyCollapsed(panelSize, sidebarConfig.collapsedSize)) {
+      sidebarExpandedSizeRef.current = `${panelSize.asPercentage}`;
+    }
+
     onSidebarCollapsedChange?.(isEffectivelyCollapsed(panelSize, sidebarConfig.collapsedSize));
   }
 
   function handleUtilityResize(panelSize) {
+    if (!isEffectivelyCollapsed(panelSize, utilityConfig.collapsedSize)) {
+      utilityExpandedSizeRef.current = `${panelSize.asPercentage}`;
+    }
+
     onUtilityCollapsedChange?.(isEffectivelyCollapsed(panelSize, utilityConfig.collapsedSize));
+  }
+
+  function handleSidebarHandleDoubleClick() {
+    const panel = sidebarPanelRef.current;
+    if (panel?.isCollapsed?.()) {
+      panel.expand?.();
+      if (isEffectivelyCollapsed(panel.getSize?.() ?? { asPercentage: 0, inPixels: 0 }, sidebarConfig.collapsedSize)) {
+        panel.resize?.(coerceExpandedPanelSize(sidebarExpandedSizeRef.current, sidebarConfig.defaultSize));
+      }
+      onSidebarCollapsedChange?.(false);
+      return;
+    }
+
+    const size = panel?.getSize?.();
+    if (size && !isEffectivelyCollapsed(size, sidebarConfig.collapsedSize)) {
+      sidebarExpandedSizeRef.current = `${size.asPercentage}`;
+    }
+
+    onSidebarCollapsedChange?.(!sidebarCollapsed);
+  }
+
+  function handleUtilityHandleDoubleClick() {
+    const panel = utilityPanelRef.current;
+    if (panel?.isCollapsed?.()) {
+      panel.expand?.();
+      if (isEffectivelyCollapsed(panel.getSize?.() ?? { asPercentage: 0, inPixels: 0 }, utilityConfig.collapsedSize)) {
+        panel.resize?.(coerceExpandedPanelSize(utilityExpandedSizeRef.current, utilityConfig.defaultSize));
+      }
+      onUtilityCollapsedChange?.(false);
+      return;
+    }
+
+    const size = panel?.getSize?.();
+    if (size && !isEffectivelyCollapsed(size, utilityConfig.collapsedSize)) {
+      utilityExpandedSizeRef.current = `${size.asPercentage}`;
+    }
+
+    onUtilityCollapsedChange?.(utilityOpen);
+  }
+
+  function handleSidebarHandleClick(event) {
+    if (!isDoubleClickActivation(event)) {
+      return;
+    }
+
+    handleSidebarHandleDoubleClick();
+  }
+
+  function handleUtilityHandleClick(event) {
+    if (!isDoubleClickActivation(event)) {
+      return;
+    }
+
+    handleUtilityHandleDoubleClick();
   }
 
   return element(
@@ -1647,7 +1751,7 @@ export function TextForgeAppFrame({
               Panel,
               {
                 key: 'sidebar-panel',
-                ref: sidebarPanelRef,
+                panelRef: sidebarPanelRef,
                 className: classNames('tf-panel', 'tf-panel--sidebar', sidebarCollapsed && 'is-collapsed'),
                 collapsible: true,
                 collapsedSize: sidebarConfig.collapsedSize,
@@ -1666,6 +1770,8 @@ export function TextForgeAppFrame({
               {
                 key: 'sidebar-resize',
                 className: 'tf-panel-resize-handle',
+                disableDoubleClick: true,
+                onClick: handleSidebarHandleClick,
               },
               element('span', {
                 className: 'tf-panel-resize-handle__grip',
@@ -1691,6 +1797,8 @@ export function TextForgeAppFrame({
               {
                 key: 'utility-resize',
                 className: classNames('tf-panel-resize-handle', !utilityOpen && 'is-collapsed'),
+                disableDoubleClick: true,
+                onClick: handleUtilityHandleClick,
               },
               element('span', {
                 className: 'tf-panel-resize-handle__grip',
@@ -1701,7 +1809,7 @@ export function TextForgeAppFrame({
               Panel,
               {
                 key: 'utility-panel',
-                ref: utilityPanelRef,
+                panelRef: utilityPanelRef,
                 className: classNames('tf-panel', 'tf-panel--utility', !utilityOpen && 'is-collapsed'),
                 collapsible: true,
                 collapsedSize: utilityConfig.collapsedSize,

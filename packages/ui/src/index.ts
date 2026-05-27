@@ -242,6 +242,7 @@ export interface TextForgeTopBarProps {
 export interface TextForgeWorkspaceSidebarProps {
   readonly collapsed?: boolean;
   readonly footer?: ReactNode;
+  readonly onClose?: () => void;
   readonly onDropFilesToFolder?: (itemId: string, files: ReadonlyArray<File>) => void;
   readonly onRequestItemContextMenu?: (itemId: string, anchor: ContextMenuAnchor) => void;
   readonly onSelectItem?: (itemId: string) => void;
