@@ -13,6 +13,10 @@ The console reflects the active pipeline catalog for the current document throug
 - No broad built-in pipeline execution through `tf.pipeline.run(...)` (only Lua-defined or selectively runtime-wired steps).
 - Many bundled pipeline contributions are asynchronous while the current Lua bridge remains synchronous.
 
+## Examples
+
+The bundled [Lua Guide](lua-guide.md) now includes practical console sessions, reusable script examples, local-module examples, and power-session workflows that match the current shipped surface.
+
 ## See Also
 - [Lua Guide](lua-guide.md)
 - [Plugin Development Guide](plugin-dev.md)
