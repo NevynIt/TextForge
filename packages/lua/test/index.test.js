@@ -6,11 +6,13 @@ import { createPipelineValue } from '@textforge/core';
 import { createWorkspaceService } from '@textforge/workspace';
 
 import {
+  applyLuaConsoleInputEdit,
   createLuaContributionManifest,
   createLuaExecutionService,
   defaultLuaExecutionLimits,
   discoverLuaAutomations,
   isLuaAutomationPath,
+  normalizeLuaConsoleCursorOffset,
   listLuaAutomationFiles,
   resolveLuaModuleCandidatePaths,
   runLuaScript,
@@ -163,6 +165,45 @@ test('console sessions keep globals across commands and treat bare expressions a
   assert.deepEqual(evaluated.diagnostics, []);
   assert.equal(evaluated.value?.kind, 'json');
   assert.equal(evaluated.value?.value, 5);
+});
+
+test('lua console input edits support cursor movement and in-line insertion', () => {
+  const inserted = applyLuaConsoleInputEdit({
+    currentInput: 'print()',
+    cursorOffset: 6,
+  }, {
+    type: 'insert-text',
+    text: '"ok"',
+  });
+  assert.equal(inserted.currentInput, 'print("ok")');
+  assert.equal(inserted.cursorOffset, 10);
+
+  const movedLeft = applyLuaConsoleInputEdit(inserted, {
+    type: 'move-cursor',
+    delta: -2,
+  });
+  assert.equal(movedLeft.cursorOffset, 8);
+
+  const removed = applyLuaConsoleInputEdit(movedLeft, {
+    type: 'backspace',
+  });
+  assert.equal(removed.currentInput, 'print("k")');
+  assert.equal(removed.cursorOffset, 7);
+
+  const deleted = applyLuaConsoleInputEdit({
+    currentInput: 'abc',
+    cursorOffset: 1,
+  }, {
+    type: 'delete-forward',
+  });
+  assert.equal(deleted.currentInput, 'ac');
+  assert.equal(deleted.cursorOffset, 1);
+});
+
+test('lua console cursor offsets clamp to the available input range', () => {
+  assert.equal(normalizeLuaConsoleCursorOffset('hello', undefined), 5);
+  assert.equal(normalizeLuaConsoleCursorOffset('hello', -4), 0);
+  assert.equal(normalizeLuaConsoleCursorOffset('hello', 99), 5);
 });
 
 test('power sessions self-elevate and expose approved host objects per console session', () => {

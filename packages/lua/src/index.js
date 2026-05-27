@@ -232,7 +232,98 @@ function createDefaultConsoleState() {
       'TextForge Lua Console',
     ],
     currentInput: '',
+    cursorOffset: 0,
   };
+}
+
+export function normalizeLuaConsoleCursorOffset(currentInput, cursorOffset) {
+  const text = typeof currentInput === 'string'
+    ? currentInput
+    : String(currentInput ?? '');
+  const fallback = text.length;
+  const nextOffset = Number.isFinite(cursorOffset)
+    ? Math.trunc(cursorOffset)
+    : fallback;
+  return Math.max(0, Math.min(text.length, nextOffset));
+}
+
+function normalizeLuaConsoleState(state) {
+  const nextState = {
+    ...createDefaultConsoleState(),
+    ...(state ?? {}),
+  };
+  nextState.currentInput = typeof nextState.currentInput === 'string'
+    ? nextState.currentInput
+    : String(nextState.currentInput ?? '');
+  nextState.cursorOffset = normalizeLuaConsoleCursorOffset(nextState.currentInput, nextState.cursorOffset);
+  return nextState;
+}
+
+export function applyLuaConsoleInputEdit(state, edit = {}) {
+  const nextState = normalizeLuaConsoleState(state);
+  const currentInput = nextState.currentInput;
+  const cursorOffset = nextState.cursorOffset;
+  switch (edit.type) {
+    case 'insert-text': {
+      const text = typeof edit.text === 'string' ? edit.text : String(edit.text ?? '');
+      if (!text) {
+        return nextState;
+      }
+      return {
+        ...nextState,
+        currentInput: `${currentInput.slice(0, cursorOffset)}${text}${currentInput.slice(cursorOffset)}`,
+        cursorOffset: cursorOffset + text.length,
+      };
+    }
+    case 'backspace': {
+      if (cursorOffset <= 0) {
+        return nextState;
+      }
+      return {
+        ...nextState,
+        currentInput: `${currentInput.slice(0, cursorOffset - 1)}${currentInput.slice(cursorOffset)}`,
+        cursorOffset: cursorOffset - 1,
+      };
+    }
+    case 'delete-forward': {
+      if (cursorOffset >= currentInput.length) {
+        return nextState;
+      }
+      return {
+        ...nextState,
+        currentInput: `${currentInput.slice(0, cursorOffset)}${currentInput.slice(cursorOffset + 1)}`,
+        cursorOffset,
+      };
+    }
+    case 'move-cursor': {
+      return {
+        ...nextState,
+        cursorOffset: normalizeLuaConsoleCursorOffset(currentInput, cursorOffset + (Number(edit.delta) || 0)),
+      };
+    }
+    case 'move-cursor-start': {
+      return {
+        ...nextState,
+        cursorOffset: 0,
+      };
+    }
+    case 'move-cursor-end': {
+      return {
+        ...nextState,
+        cursorOffset: currentInput.length,
+      };
+    }
+    case 'replace-input': {
+      const text = typeof edit.text === 'string' ? edit.text : String(edit.text ?? '');
+      return {
+        ...nextState,
+        currentInput: text,
+        cursorOffset: normalizeLuaConsoleCursorOffset(text, edit.cursorOffset ?? text.length),
+      };
+    }
+    default:
+      return nextState;
+  }
 }
 
 function formatLuaConsolePrompt() {
@@ -270,10 +361,29 @@ function writeConsoleTranscript(terminal, state) {
   for (const line of state.transcript) {
     terminal.writeln(line);
   }
+  writeLuaConsolePrompt(terminal, state);
+}
+
+function writeLuaConsolePrompt(terminal, state) {
+  const nextState = normalizeLuaConsoleState(state);
   terminal.write(formatLuaConsolePrompt());
-  if (state.currentInput) {
-    terminal.write(state.currentInput);
+  if (nextState.currentInput) {
+    terminal.write(nextState.currentInput);
+    const moveLeft = nextState.currentInput.length - nextState.cursorOffset;
+    if (moveLeft > 0) {
+      terminal.write(`\x1b[${moveLeft}D`);
+    }
   }
+}
+
+function sanitizeLuaConsoleInsertText(data) {
+  if (typeof data !== 'string' || data.length === 0) {
+    return '';
+  }
+  return [...data].filter((character) => {
+    const codePoint = character.codePointAt(0) ?? 0;
+    return codePoint >= 0x20 && codePoint !== 0x7f;
+  }).join('');
 }
 
 function formatLuaConsoleResult(result) {
@@ -321,13 +431,10 @@ export function createLuaConsoleSurface(options = {}) {
       let fitAddon;
       let busy = false;
       let recoveryPending = false;
-      let state = {
-        ...createDefaultConsoleState(),
-        ...(typeof options.getState === 'function' ? options.getState() : {}),
-      };
+      let state = normalizeLuaConsoleState(typeof options.getState === 'function' ? options.getState() : {});
 
       const syncState = (nextState) => {
-        state = nextState;
+        state = normalizeLuaConsoleState(nextState);
         options.setState?.(state);
       };
 
@@ -362,10 +469,7 @@ export function createLuaConsoleSurface(options = {}) {
         }
 
         terminal.write('\r\x1b[2K');
-        terminal.write(formatLuaConsolePrompt());
-        if (state.currentInput) {
-          terminal.write(state.currentInput);
-        }
+        writeLuaConsolePrompt(terminal, state);
       };
 
       const handleSubmit = async (command) => {
@@ -379,10 +483,11 @@ export function createLuaConsoleSurface(options = {}) {
           history: nextHistory,
           historyIndex: nextHistory.length,
           currentInput: '',
+          cursorOffset: 0,
         });
         terminal?.write('\r\n');
         if (!trimmed) {
-          terminal?.write(formatLuaConsolePrompt());
+          writeLuaConsolePrompt(terminal, state);
           return;
         }
 
@@ -397,8 +502,9 @@ export function createLuaConsoleSurface(options = {}) {
             history: nextHistory,
             historyIndex: nextHistory.length,
             currentInput: '',
+            cursorOffset: 0,
           });
-          terminal?.write(formatLuaConsolePrompt());
+          writeLuaConsolePrompt(terminal, state);
           return;
         }
 
@@ -415,6 +521,7 @@ export function createLuaConsoleSurface(options = {}) {
             history: nextHistory,
             historyIndex: nextHistory.length,
             currentInput: '',
+            cursorOffset: 0,
           });
           renderSessionState();
         } catch (error) {
@@ -426,11 +533,12 @@ export function createLuaConsoleSurface(options = {}) {
             history: nextHistory,
             historyIndex: nextHistory.length,
             currentInput: '',
+            cursorOffset: 0,
           });
           renderSessionState();
         } finally {
           busy = false;
-          terminal?.write(formatLuaConsolePrompt());
+          writeLuaConsolePrompt(terminal, state);
         }
       };
 
@@ -493,20 +601,15 @@ export function createLuaConsoleSurface(options = {}) {
               ...state,
               transcript: nextTranscript,
               currentInput: '',
+              cursorOffset: 0,
             });
             terminal.write('^C\r\n');
-            terminal.write(formatLuaConsolePrompt());
+            writeLuaConsolePrompt(terminal, state);
             return;
           }
 
-          if (data === '\u007f') {
-            if (!state.currentInput) {
-              return;
-            }
-            syncState({
-              ...state,
-              currentInput: state.currentInput.slice(0, -1),
-            });
+          if (data === '\u0008' || data === '\u007f') {
+            syncState(applyLuaConsoleInputEdit(state, { type: 'backspace' }));
             redrawCurrentPrompt();
             return;
           }
@@ -519,7 +622,10 @@ export function createLuaConsoleSurface(options = {}) {
             syncState({
               ...state,
               historyIndex: nextIndex,
-              currentInput: state.history[nextIndex] ?? '',
+              ...applyLuaConsoleInputEdit(state, {
+                type: 'replace-input',
+                text: state.history[nextIndex] ?? '',
+              }),
             });
             redrawCurrentPrompt();
             return;
@@ -533,19 +639,54 @@ export function createLuaConsoleSurface(options = {}) {
             syncState({
               ...state,
               historyIndex: nextIndex,
-              currentInput: state.history[nextIndex] ?? '',
+              ...applyLuaConsoleInputEdit(state, {
+                type: 'replace-input',
+                text: state.history[nextIndex] ?? '',
+              }),
             });
             redrawCurrentPrompt();
             return;
           }
 
-          if (data >= ' ') {
-            syncState({
-              ...state,
-              currentInput: `${state.currentInput}${data}`,
-            });
-            terminal.write(data);
+          if (data === '\u001b[D') {
+            syncState(applyLuaConsoleInputEdit(state, { type: 'move-cursor', delta: -1 }));
+            redrawCurrentPrompt();
+            return;
           }
+
+          if (data === '\u001b[C') {
+            syncState(applyLuaConsoleInputEdit(state, { type: 'move-cursor', delta: 1 }));
+            redrawCurrentPrompt();
+            return;
+          }
+
+          if (data === '\u001b[H' || data === '\u001bOH') {
+            syncState(applyLuaConsoleInputEdit(state, { type: 'move-cursor-start' }));
+            redrawCurrentPrompt();
+            return;
+          }
+
+          if (data === '\u001b[F' || data === '\u001bOF') {
+            syncState(applyLuaConsoleInputEdit(state, { type: 'move-cursor-end' }));
+            redrawCurrentPrompt();
+            return;
+          }
+
+          if (data === '\u001b[3~') {
+            syncState(applyLuaConsoleInputEdit(state, { type: 'delete-forward' }));
+            redrawCurrentPrompt();
+            return;
+          }
+
+          const insertText = sanitizeLuaConsoleInsertText(data);
+          if (!insertText) {
+            return;
+          }
+          syncState(applyLuaConsoleInputEdit(state, {
+            type: 'insert-text',
+            text: insertText,
+          }));
+          redrawCurrentPrompt();
         }));
         const resizeObserver = new ResizeObserver(() => fitAddon?.fit());
         resizeObserver.observe(host);

@@ -127,6 +127,26 @@ export declare function createLuaContributionManifest(options?: {
   readonly executionService?: LuaExecutionService;
 }): ContributionManifest;
 export declare const contributions: ContributionManifest;
+export declare function normalizeLuaConsoleCursorOffset(currentInput: unknown, cursorOffset: unknown): number;
+export declare function applyLuaConsoleInputEdit<T extends {
+  readonly currentInput?: unknown;
+  readonly cursorOffset?: unknown;
+}>(state: T, edit?: {
+  readonly type?:
+    | 'insert-text'
+    | 'backspace'
+    | 'delete-forward'
+    | 'move-cursor'
+    | 'move-cursor-start'
+    | 'move-cursor-end'
+    | 'replace-input';
+  readonly text?: unknown;
+  readonly delta?: number;
+  readonly cursorOffset?: number;
+}): T & {
+  readonly currentInput: string;
+  readonly cursorOffset: number;
+};
 export declare function runLuaScript(options?: {
   readonly source?: string;
   readonly scriptPath?: string;

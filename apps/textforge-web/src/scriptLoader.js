@@ -1,3 +1,4 @@
+import '@textforge/vendor/xterm.css';
 import './styles.css';
 import { mountTextForgeShell } from './main.js';
 
