@@ -6,13 +6,13 @@ import { createPipelineValue } from '@textforge/core';
 import { createWorkspaceService } from '@textforge/workspace';
 
 import {
-  applyLuaConsoleInputEdit,
   createLuaContributionManifest,
   createLuaExecutionService,
   defaultLuaExecutionLimits,
   discoverLuaAutomations,
+  formatLuaConsoleCommandTranscript,
   isLuaAutomationPath,
-  normalizeLuaConsoleCursorOffset,
+  navigateLuaConsoleHistory,
   listLuaAutomationFiles,
   resolveLuaModuleCandidatePaths,
   runLuaScript,
@@ -167,43 +167,27 @@ test('console sessions keep globals across commands and treat bare expressions a
   assert.equal(evaluated.value?.value, 5);
 });
 
-test('lua console input edits support cursor movement and in-line insertion', () => {
-  const inserted = applyLuaConsoleInputEdit({
-    currentInput: 'print()',
-    cursorOffset: 6,
-  }, {
-    type: 'insert-text',
-    text: '"ok"',
-  });
-  assert.equal(inserted.currentInput, 'print("ok")');
-  assert.equal(inserted.cursorOffset, 10);
-
-  const movedLeft = applyLuaConsoleInputEdit(inserted, {
-    type: 'move-cursor',
-    delta: -2,
-  });
-  assert.equal(movedLeft.cursorOffset, 8);
-
-  const removed = applyLuaConsoleInputEdit(movedLeft, {
-    type: 'backspace',
-  });
-  assert.equal(removed.currentInput, 'print("k")');
-  assert.equal(removed.cursorOffset, 7);
-
-  const deleted = applyLuaConsoleInputEdit({
-    currentInput: 'abc',
-    cursorOffset: 1,
-  }, {
-    type: 'delete-forward',
-  });
-  assert.equal(deleted.currentInput, 'ac');
-  assert.equal(deleted.cursorOffset, 1);
+test('lua console transcript formatting preserves multi-line commands', () => {
+  assert.deepEqual(formatLuaConsoleCommandTranscript('print("a")\nprint("b")'), [
+    'lua> print("a")',
+    '...  print("b")',
+  ]);
 });
 
-test('lua console cursor offsets clamp to the available input range', () => {
-  assert.equal(normalizeLuaConsoleCursorOffset('hello', undefined), 5);
-  assert.equal(normalizeLuaConsoleCursorOffset('hello', -4), 0);
-  assert.equal(normalizeLuaConsoleCursorOffset('hello', 99), 5);
+test('lua console history navigation preserves the unsent draft', () => {
+  const previous = navigateLuaConsoleHistory({
+    history: ['print(1)', 'print(2)'],
+    historyIndex: 2,
+    historyDraft: '',
+    currentInput: 'return 42',
+  }, 'previous');
+  assert.equal(previous.historyIndex, 1);
+  assert.equal(previous.historyDraft, 'return 42');
+  assert.equal(previous.currentInput, 'print(2)');
+
+  const next = navigateLuaConsoleHistory(previous, 'next');
+  assert.equal(next.historyIndex, 2);
+  assert.equal(next.currentInput, 'return 42');
 });
 
 test('power sessions self-elevate and expose approved host objects per console session', () => {

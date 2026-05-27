@@ -127,26 +127,18 @@ export declare function createLuaContributionManifest(options?: {
   readonly executionService?: LuaExecutionService;
 }): ContributionManifest;
 export declare const contributions: ContributionManifest;
-export declare function normalizeLuaConsoleCursorOffset(currentInput: unknown, cursorOffset: unknown): number;
-export declare function applyLuaConsoleInputEdit<T extends {
+export declare function navigateLuaConsoleHistory<T extends {
+  readonly history?: ReadonlyArray<unknown>;
+  readonly historyIndex?: unknown;
+  readonly historyDraft?: unknown;
   readonly currentInput?: unknown;
-  readonly cursorOffset?: unknown;
-}>(state: T, edit?: {
-  readonly type?:
-    | 'insert-text'
-    | 'backspace'
-    | 'delete-forward'
-    | 'move-cursor'
-    | 'move-cursor-start'
-    | 'move-cursor-end'
-    | 'replace-input';
-  readonly text?: unknown;
-  readonly delta?: number;
-  readonly cursorOffset?: number;
-}): T & {
+}>(state: T, direction?: 'previous' | 'next'): T & {
+  readonly history: ReadonlyArray<string>;
+  readonly historyIndex: number;
+  readonly historyDraft: string;
   readonly currentInput: string;
-  readonly cursorOffset: number;
 };
+export declare function formatLuaConsoleCommandTranscript(command: unknown): ReadonlyArray<string>;
 export declare function runLuaScript(options?: {
   readonly source?: string;
   readonly scriptPath?: string;

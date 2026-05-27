@@ -228,23 +228,12 @@ function createDefaultConsoleState() {
   return {
     history: [],
     historyIndex: 0,
+    historyDraft: '',
     transcript: [
       'TextForge Lua Console',
     ],
     currentInput: '',
-    cursorOffset: 0,
   };
-}
-
-export function normalizeLuaConsoleCursorOffset(currentInput, cursorOffset) {
-  const text = typeof currentInput === 'string'
-    ? currentInput
-    : String(currentInput ?? '');
-  const fallback = text.length;
-  const nextOffset = Number.isFinite(cursorOffset)
-    ? Math.trunc(cursorOffset)
-    : fallback;
-  return Math.max(0, Math.min(text.length, nextOffset));
 }
 
 function normalizeLuaConsoleState(state) {
@@ -252,82 +241,56 @@ function normalizeLuaConsoleState(state) {
     ...createDefaultConsoleState(),
     ...(state ?? {}),
   };
+  nextState.history = Array.isArray(nextState.history)
+    ? nextState.history.map((entry) => String(entry ?? ''))
+    : [];
+  nextState.historyIndex = Number.isFinite(nextState.historyIndex)
+    ? Math.max(0, Math.min(nextState.history.length, Math.trunc(nextState.historyIndex)))
+    : nextState.history.length;
+  nextState.historyDraft = typeof nextState.historyDraft === 'string'
+    ? nextState.historyDraft
+    : String(nextState.historyDraft ?? '');
   nextState.currentInput = typeof nextState.currentInput === 'string'
     ? nextState.currentInput
     : String(nextState.currentInput ?? '');
-  nextState.cursorOffset = normalizeLuaConsoleCursorOffset(nextState.currentInput, nextState.cursorOffset);
   return nextState;
 }
 
-export function applyLuaConsoleInputEdit(state, edit = {}) {
+export function navigateLuaConsoleHistory(state, direction = 'previous') {
   const nextState = normalizeLuaConsoleState(state);
-  const currentInput = nextState.currentInput;
-  const cursorOffset = nextState.cursorOffset;
-  switch (edit.type) {
-    case 'insert-text': {
-      const text = typeof edit.text === 'string' ? edit.text : String(edit.text ?? '');
-      if (!text) {
-        return nextState;
-      }
-      return {
-        ...nextState,
-        currentInput: `${currentInput.slice(0, cursorOffset)}${text}${currentInput.slice(cursorOffset)}`,
-        cursorOffset: cursorOffset + text.length,
-      };
-    }
-    case 'backspace': {
-      if (cursorOffset <= 0) {
-        return nextState;
-      }
-      return {
-        ...nextState,
-        currentInput: `${currentInput.slice(0, cursorOffset - 1)}${currentInput.slice(cursorOffset)}`,
-        cursorOffset: cursorOffset - 1,
-      };
-    }
-    case 'delete-forward': {
-      if (cursorOffset >= currentInput.length) {
-        return nextState;
-      }
-      return {
-        ...nextState,
-        currentInput: `${currentInput.slice(0, cursorOffset)}${currentInput.slice(cursorOffset + 1)}`,
-        cursorOffset,
-      };
-    }
-    case 'move-cursor': {
-      return {
-        ...nextState,
-        cursorOffset: normalizeLuaConsoleCursorOffset(currentInput, cursorOffset + (Number(edit.delta) || 0)),
-      };
-    }
-    case 'move-cursor-start': {
-      return {
-        ...nextState,
-        cursorOffset: 0,
-      };
-    }
-    case 'move-cursor-end': {
-      return {
-        ...nextState,
-        cursorOffset: currentInput.length,
-      };
-    }
-    case 'replace-input': {
-      const text = typeof edit.text === 'string' ? edit.text : String(edit.text ?? '');
-      return {
-        ...nextState,
-        currentInput: text,
-        cursorOffset: normalizeLuaConsoleCursorOffset(text, edit.cursorOffset ?? text.length),
-      };
-    }
-    default:
-      return nextState;
+  if (nextState.history.length === 0) {
+    return nextState;
   }
-}
 
-function formatLuaConsolePrompt() {
-  return '\x1b[38;5;81mlua>\x1b[0m ';
+  if (direction === 'previous') {
+    const nextIndex = nextState.historyIndex >= nextState.history.length
+      ? nextState.history.length - 1
+      : Math.max(0, nextState.historyIndex - 1);
+    return {
+      ...nextState,
+      historyIndex: nextIndex,
+      historyDraft: nextState.historyIndex >= nextState.history.length
+        ? nextState.currentInput
+        : nextState.historyDraft,
+      currentInput: nextState.history[nextIndex] ?? '',
+    };
+  }
+
+  if (direction === 'next') {
+    if (nextState.historyIndex >= nextState.history.length) {
+      return nextState;
+    }
+    const nextIndex = Math.min(nextState.history.length, nextState.historyIndex + 1);
+    return {
+      ...nextState,
+      historyIndex: nextIndex,
+      currentInput: nextIndex >= nextState.history.length
+        ? nextState.historyDraft
+        : nextState.history[nextIndex] ?? '',
+    };
+  }
+
+  return nextState;
 }
 
 function formatPlainLuaConsolePrompt() {
@@ -357,33 +320,15 @@ function createLuaConsoleHelpLines() {
   ];
 }
 
+export function formatLuaConsoleCommandTranscript(command) {
+  const normalized = String(command ?? '').replaceAll('\r\n', '\n').replaceAll('\r', '\n');
+  return normalized.split('\n').map((line, index) => `${index === 0 ? formatPlainLuaConsolePrompt() : '...  '}${line}`);
+}
+
 function writeConsoleTranscript(terminal, state) {
   for (const line of state.transcript) {
     terminal.writeln(line);
   }
-  writeLuaConsolePrompt(terminal, state);
-}
-
-function writeLuaConsolePrompt(terminal, state) {
-  const nextState = normalizeLuaConsoleState(state);
-  terminal.write(formatLuaConsolePrompt());
-  if (nextState.currentInput) {
-    terminal.write(nextState.currentInput);
-    const moveLeft = nextState.currentInput.length - nextState.cursorOffset;
-    if (moveLeft > 0) {
-      terminal.write(`\x1b[${moveLeft}D`);
-    }
-  }
-}
-
-function sanitizeLuaConsoleInsertText(data) {
-  if (typeof data !== 'string' || data.length === 0) {
-    return '';
-  }
-  return [...data].filter((character) => {
-    const codePoint = character.codePointAt(0) ?? 0;
-    return codePoint >= 0x20 && codePoint !== 0x7f;
-  }).join('');
 }
 
 function formatLuaConsoleResult(result) {
@@ -415,12 +360,41 @@ export function createLuaConsoleSurface(options = {}) {
         '<button class="tf-lua-console__recovery" data-lua-recovery type="button" hidden>Restart In Safe Mode</button>',
         '</header>',
         '<div class="tf-lua-console__terminal" data-lua-terminal></div>',
+        '<section class="tf-lua-console__composer" aria-label="Lua prompt composer">',
+        '<div class="tf-lua-console__composer-header">',
+        '<div class="tf-lua-console__composer-title">Interactive prompt</div>',
+        '<div class="tf-lua-console__composer-hint">Ctrl+Enter runs. Shift+Enter adds a new line. Alt+Up and Alt+Down browse history.</div>',
+        '</div>',
+        '<textarea class="tf-lua-console__input" data-lua-input rows="5" spellcheck="false" placeholder="Write Lua here. Multi-line input is supported."></textarea>',
+        '<div class="tf-lua-console__composer-actions">',
+        '<div class="tf-lua-console__composer-history">',
+        '<button class="tf-lua-console__action tf-lua-console__action--secondary" data-lua-history-prev type="button">Previous</button>',
+        '<button class="tf-lua-console__action tf-lua-console__action--secondary" data-lua-history-next type="button">Next</button>',
+        '<button class="tf-lua-console__action tf-lua-console__action--secondary" data-lua-clear type="button">Clear input</button>',
+        '</div>',
+        '<button class="tf-lua-console__action tf-lua-console__action--primary" data-lua-run type="button">Run Lua</button>',
+        '</div>',
+        '</section>',
         '</section>',
       ].join('');
       const sessionStateHost = container.querySelector('[data-lua-session-state]');
       const recoveryButton = container.querySelector('[data-lua-recovery]');
       const host = container.querySelector('[data-lua-terminal]');
-      if (!host || !sessionStateHost || !recoveryButton) {
+      const inputHost = container.querySelector('[data-lua-input]');
+      const runButton = container.querySelector('[data-lua-run]');
+      const previousHistoryButton = container.querySelector('[data-lua-history-prev]');
+      const nextHistoryButton = container.querySelector('[data-lua-history-next]');
+      const clearButton = container.querySelector('[data-lua-clear]');
+      if (
+        !host
+        || !sessionStateHost
+        || !recoveryButton
+        || !inputHost
+        || !runButton
+        || !previousHistoryButton
+        || !nextHistoryButton
+        || !clearButton
+      ) {
         return () => {
           container.replaceChildren();
         };
@@ -463,33 +437,42 @@ export function createLuaConsoleSurface(options = {}) {
         renderSessionState();
       };
 
-      const redrawCurrentPrompt = () => {
-        if (!terminal || disposed) {
+      const syncComposerView = () => {
+        if (disposed) {
           return;
         }
-
-        terminal.write('\r\x1b[2K');
-        writeLuaConsolePrompt(terminal, state);
+        if (inputHost.value !== state.currentInput) {
+          inputHost.value = state.currentInput;
+        }
+        inputHost.disabled = busy;
+        previousHistoryButton.disabled = busy || state.history.length === 0;
+        nextHistoryButton.disabled = busy || state.historyIndex >= state.history.length;
+        clearButton.disabled = busy || state.currentInput.length === 0;
+        runButton.disabled = busy || state.currentInput.trim().length === 0;
+        runButton.textContent = busy ? 'Running...' : 'Run Lua';
       };
 
       const handleSubmit = async (command) => {
         const trimmed = command.trim();
-        const plainPrompt = formatPlainLuaConsolePrompt();
-        const nextTranscript = [...state.transcript, `${plainPrompt}${command}`];
-        const nextHistory = trimmed ? [...state.history, command] : [...state.history];
+        if (!trimmed) {
+          syncComposerView();
+          return;
+        }
+        const commandLines = formatLuaConsoleCommandTranscript(command);
+        const nextTranscript = [...state.transcript, ...commandLines];
+        const nextHistory = [...state.history, command];
         syncState({
           ...state,
           transcript: nextTranscript,
           history: nextHistory,
           historyIndex: nextHistory.length,
+          historyDraft: '',
           currentInput: '',
-          cursorOffset: 0,
         });
-        terminal?.write('\r\n');
-        if (!trimmed) {
-          writeLuaConsolePrompt(terminal, state);
-          return;
+        for (const line of commandLines) {
+          terminal?.writeln(line);
         }
+        syncComposerView();
 
         if (trimmed === 'help' || trimmed === ':help' || trimmed === '.help') {
           const nextLines = createLuaConsoleHelpLines();
@@ -501,14 +484,15 @@ export function createLuaConsoleSurface(options = {}) {
             transcript: [...nextTranscript, ...nextLines],
             history: nextHistory,
             historyIndex: nextHistory.length,
+            historyDraft: '',
             currentInput: '',
-            cursorOffset: 0,
           });
-          writeLuaConsolePrompt(terminal, state);
+          syncComposerView();
           return;
         }
 
         busy = true;
+        syncComposerView();
         try {
           const result = await options.runCommand?.(command);
           const nextLines = formatLuaConsoleResult(result ?? { ok: true, consoleLines: [], diagnostics: [] });
@@ -520,8 +504,8 @@ export function createLuaConsoleSurface(options = {}) {
             transcript: [...nextTranscript, ...nextLines],
             history: nextHistory,
             historyIndex: nextHistory.length,
+            historyDraft: '',
             currentInput: '',
-            cursorOffset: 0,
           });
           renderSessionState();
         } catch (error) {
@@ -532,13 +516,14 @@ export function createLuaConsoleSurface(options = {}) {
             transcript: [...nextTranscript, nextLine],
             history: nextHistory,
             historyIndex: nextHistory.length,
+            historyDraft: '',
             currentInput: '',
-            cursorOffset: 0,
           });
           renderSessionState();
         } finally {
           busy = false;
-          writeLuaConsolePrompt(terminal, state);
+          syncComposerView();
+          inputHost.focus();
         }
       };
 
@@ -553,7 +538,8 @@ export function createLuaConsoleSurface(options = {}) {
 
         terminal = new Terminal({
           convertEol: true,
-          cursorBlink: true,
+          cursorBlink: false,
+          disableStdin: true,
           fontFamily: '"Iosevka Term", Consolas, "SFMono-Regular", monospace',
           fontSize: 13,
           theme: {
@@ -584,114 +570,69 @@ export function createLuaConsoleSurface(options = {}) {
         requestAnimationFrame(() => fitAddon.fit());
         rerenderTranscript();
         renderSessionState();
-        terminal.focus();
-        disposeCallbacks.push(terminal.onData((data) => {
-          if (busy) {
-            return;
-          }
-
-          if (data === '\r') {
-            void handleSubmit(state.currentInput);
-            return;
-          }
-
-          if (data === '\u0003') {
-            const nextTranscript = [...state.transcript, `${formatPlainLuaConsolePrompt()}${state.currentInput}^C`];
-            syncState({
-              ...state,
-              transcript: nextTranscript,
-              currentInput: '',
-              cursorOffset: 0,
-            });
-            terminal.write('^C\r\n');
-            writeLuaConsolePrompt(terminal, state);
-            return;
-          }
-
-          if (data === '\u0008' || data === '\u007f') {
-            syncState(applyLuaConsoleInputEdit(state, { type: 'backspace' }));
-            redrawCurrentPrompt();
-            return;
-          }
-
-          if (data === '\u001b[A') {
-            if (state.history.length === 0) {
-              return;
-            }
-            const nextIndex = Math.max(0, state.historyIndex - 1);
-            syncState({
-              ...state,
-              historyIndex: nextIndex,
-              ...applyLuaConsoleInputEdit(state, {
-                type: 'replace-input',
-                text: state.history[nextIndex] ?? '',
-              }),
-            });
-            redrawCurrentPrompt();
-            return;
-          }
-
-          if (data === '\u001b[B') {
-            if (state.history.length === 0) {
-              return;
-            }
-            const nextIndex = Math.min(state.history.length, state.historyIndex + 1);
-            syncState({
-              ...state,
-              historyIndex: nextIndex,
-              ...applyLuaConsoleInputEdit(state, {
-                type: 'replace-input',
-                text: state.history[nextIndex] ?? '',
-              }),
-            });
-            redrawCurrentPrompt();
-            return;
-          }
-
-          if (data === '\u001b[D') {
-            syncState(applyLuaConsoleInputEdit(state, { type: 'move-cursor', delta: -1 }));
-            redrawCurrentPrompt();
-            return;
-          }
-
-          if (data === '\u001b[C') {
-            syncState(applyLuaConsoleInputEdit(state, { type: 'move-cursor', delta: 1 }));
-            redrawCurrentPrompt();
-            return;
-          }
-
-          if (data === '\u001b[H' || data === '\u001bOH') {
-            syncState(applyLuaConsoleInputEdit(state, { type: 'move-cursor-start' }));
-            redrawCurrentPrompt();
-            return;
-          }
-
-          if (data === '\u001b[F' || data === '\u001bOF') {
-            syncState(applyLuaConsoleInputEdit(state, { type: 'move-cursor-end' }));
-            redrawCurrentPrompt();
-            return;
-          }
-
-          if (data === '\u001b[3~') {
-            syncState(applyLuaConsoleInputEdit(state, { type: 'delete-forward' }));
-            redrawCurrentPrompt();
-            return;
-          }
-
-          const insertText = sanitizeLuaConsoleInsertText(data);
-          if (!insertText) {
-            return;
-          }
-          syncState(applyLuaConsoleInputEdit(state, {
-            type: 'insert-text',
-            text: insertText,
-          }));
-          redrawCurrentPrompt();
-        }));
+        syncComposerView();
+        inputHost.focus();
         const resizeObserver = new ResizeObserver(() => fitAddon?.fit());
         resizeObserver.observe(host);
         disposeCallbacks.push(() => resizeObserver.disconnect());
       };
+
+      const browseHistory = (direction) => {
+        if (busy) {
+          return;
+        }
+        syncState(navigateLuaConsoleHistory(state, direction));
+        syncComposerView();
+        inputHost.focus();
+      };
+
+      inputHost.addEventListener('input', () => {
+        syncState({
+          ...state,
+          currentInput: inputHost.value,
+          historyDraft: state.historyIndex >= state.history.length
+            ? inputHost.value
+            : state.historyDraft,
+        });
+        syncComposerView();
+      });
+
+      inputHost.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+          event.preventDefault();
+          void handleSubmit(inputHost.value);
+          return;
+        }
+
+        if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.key === 'ArrowUp') {
+          event.preventDefault();
+          browseHistory('previous');
+          return;
+        }
+
+        if (event.altKey && !event.ctrlKey && !event.metaKey && !event.shiftKey && event.key === 'ArrowDown') {
+          event.preventDefault();
+          browseHistory('next');
+        }
+      });
+
+      runButton.addEventListener('click', () => {
+        void handleSubmit(inputHost.value);
+      });
+      previousHistoryButton.addEventListener('click', () => browseHistory('previous'));
+      nextHistoryButton.addEventListener('click', () => browseHistory('next'));
+      clearButton.addEventListener('click', () => {
+        if (busy) {
+          return;
+        }
+        syncState({
+          ...state,
+          currentInput: '',
+          historyDraft: state.historyIndex >= state.history.length ? '' : state.historyDraft,
+        });
+        syncComposerView();
+        inputHost.focus();
+      });
 
       recoveryButton.addEventListener('click', async () => {
         if (recoveryPending || typeof options.requestRecovery !== 'function') {
