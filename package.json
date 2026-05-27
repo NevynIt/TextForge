@@ -9,12 +9,15 @@
     "packages/*"
   ],
   "scripts": {
+    "prebuild": "corepack pnpm roadmap:dependency-map:publish",
     "build": "corepack pnpm -r build",
     "test": "corepack pnpm -r test",
     "lint": "corepack pnpm -r lint",
     "typecheck": "corepack pnpm -r typecheck",
     "roadmap:dependency-map": "node roadmap/scripts/generate-dependency-map.mjs",
     "roadmap:dependency-map:check": "node roadmap/scripts/generate-dependency-map.mjs --check",
+    "roadmap:dependency-map:publish": "node roadmap/scripts/publish-dependency-map-docs.mjs",
+    "roadmap:dependency-map:publish:check": "node roadmap/scripts/publish-dependency-map-docs.mjs --check",
     "verify": "corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test && corepack pnpm build"
   }
 }
