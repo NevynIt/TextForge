@@ -1,0 +1,25 @@
+%style *
+{
+  font-size: 14
+  text-color: "#202225"
+}
+
+%style [risk]
+{
+  background-color: "#f1d8d5"
+  border-color: "#a94438"
+}
+
+%style @blocks:*
+{
+  stroke: "#b23b3b"
+  stroke-width: 3
+}
+
+&root [program] TextForge Lua pivot #product {owner: local-first}
+  &runtime [workstream] Lua runtime
+    &sandbox [risk] Sandbox boundary @blocks:plugins
+    &console [feature] Lua Console
+  &plugins [workstream] Trusted internal plugins
+    &markdown [feature] Markdown artifacts @depends:runtime
+    &views [feature] Tree and graph viewers

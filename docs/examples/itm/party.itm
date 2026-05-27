@@ -1,0 +1,161 @@
+%metadata
+{
+  title: Family birthday party plan
+  version: 1
+  defaultRelationshipType: related_to
+  author: Example
+}
+
+%include party-supplies.itm
+
+%style *
+{
+  font-size: "12px"
+}
+
+%style [event]
+{
+  shape: rounded-rectangle
+  fill: "#fff7d6"
+  stroke: "#d79b00"
+}
+
+%style [task]
+{
+  shape: rectangle
+  fill: "#e8f1ff"
+  stroke: "#3b73d9"
+}
+
+%style [risk]
+{
+  shape: hexagon
+  fill: "#ffe8e8"
+  stroke: "#cc3333"
+}
+
+%style #important
+{
+  font-weight: bold
+}
+
+%style {status=done}
+{
+  opacity: 0.65
+}
+
+%style &cake
+{
+  stroke-width: "3px"
+}
+
+%style @depends_on:*
+{
+  stroke-dasharray: "4 2"
+}
+
+%style @mitigated_by:*
+{
+  stroke: "#888"
+}
+
+%style @related_to:*
+{
+  stroke: "#888"
+}
+
+%style =>
+{
+  stroke: "#999"
+}
+
+%viewpoint full_party_viewpoint
+{
+  pipeline:
+    - select: "*"
+    - includeEdges: "=>"
+    - includeEdges: "@depends_on:*"
+    - includeEdges: "@mitigated_by:*"
+    - includeEdges: "@related_to:*"
+}
+
+%view full_party
+{
+  viewpoint: full_party_viewpoint
+}
+
+%viewpoint shopping_viewpoint
+{
+  pipeline:
+    - select: "#shopping AND NOT {status=done}"
+    - includeEdges: "@depends_on:*"
+}
+
+%view shopping
+{
+  viewpoint: shopping_viewpoint
+}
+
+%viewpoint risks_viewpoint
+{
+  pipeline:
+    - select: "[risk] AND NOT {status=closed}"
+    - includeEdges: "ANY(@mitigated_by:*, @related_to:*)"
+}
+
+%view risks
+{
+  viewpoint: risks_viewpoint
+}
+
+&party [event] Grandma's 80th birthday party #important #family {date: 2026-06-20, status: planned, location: garden} @depends_on:weather_plan @guest_list
+| A friendly garden party for family, neighbours, and a few old friends.
+| The main goal is a relaxed afternoon, not a formal event.
+
+  &guest_list [area] Guests and invitations #people {owner: Anna, status: active}
+    &family_guests [task] Confirm close family #important {due: 2026-05-25, status: active} @depends_on:save_the_date
+    &neighbours [task] Invite neighbours {due: 2026-05-28, status: draft}
+    &old_friends [task] Call old friends who do not use email #phone {due: 2026-05-30, status: active}
+    &save_the_date [task] Send save-the-date message #communication {status: done}
+    &rsvp_deadline [milestone] RSVP deadline #important {date: 2026-06-05} @depends_on:save_the_date
+
+  &food [area] Food and drinks #shopping {owner: Ben, status: active}
+    &cake [item] Birthday cake with candles #important #shopping {serves: 30, status: ordered} @depends_on:guest_list
+    | Order a light cake, not too sweet.
+    | Ask the bakery to write "Happy 80th Birthday" on top.
+    &sandwiches [item] Sandwich platters #shopping {serves: 25, status: draft} @depends_on:rsvp_deadline
+    &fruit [item] Fruit bowl #shopping #healthy {serves: 20, status: planned}
+    &tea_coffee [item] Tea and coffee station #shopping {status: planned}
+    &water [item] Water and soft drinks #shopping {status: planned}
+
+  &place [area] Place and setup #garden {owner: Clara, status: active}
+    &tables [task] Borrow folding tables #shopping {quantity: 4, status: planned}
+    &chairs [task] Arrange enough chairs #important {quantity: 30, status: active} @depends_on:guest_list
+    &shade [task] Put up shade tent #garden {status: planned} @depends_on:weather_plan
+    &music_corner [task] Prepare quiet music corner #atmosphere {status: optional}
+    &photo_table [task] Set up old family photo table #memory {status: planned}
+      &photo_scan [task] Scan five old photos #memory {status: active}
+      &photo_frames [item] Bring small photo frames #shopping {quantity: 5, status: planned}
+
+  &weather_plan [risk] Rain or strong sun may make the garden uncomfortable #risk #important {severity: medium, status: open} @mitigated_by:shade @mitigated_by:indoor_backup
+  | If the forecast is bad two days before the party, move the food table indoors
+  | and keep only the greeting area outside.
+
+  &indoor_backup [decision] Use living room as backup space #contingency {status: approved} @related_to:weather_plan
+    &clear_living_room [task] Move extra furniture to garage {due: 2026-06-19, status: planned}
+    &protect_floor [task] Put mats near the garden door {status: planned}
+
+  &activities [area] Simple activities #fun {owner: Dana, status: planned}
+    &toast [task] Short family toast #important {time: 15:00, status: planned} @depends_on:cake
+    &memory_cards [task] Ask guests to write memory cards #memory {status: planned}
+    &group_photo [task] Take group photo before people leave #memory {time: 16:30, status: planned}
+
+  &day_plan [schedule] Party day flow #timeline {status: draft}
+    &setup_time [milestone] Setup starts {time: 10:00}
+    &arrival_time [milestone] Guests arrive {time: 14:00} @depends_on:setup_time
+    &cake_time [milestone] Cake and toast {time: 15:00} @depends_on:cake @depends_on:toast
+    &cleanup_time [milestone] Light cleanup {time: 18:00}
+
+  &open_questions [area] Open questions #draft {status: draft}
+    &question_parking [note] Where should guests park? #transport {status: draft}
+    &question_gifts [note] Should we say no gifts? #etiquette {status: draft}
