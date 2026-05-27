@@ -112,7 +112,7 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const workspaceDatabaseName = 'textforge-workspace';
 const sampleResourcePaths = {
-  notes: '/.textforge/resources/docs/design/capability-model.md',
+  notes: '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md',
 };
 const utilitySections = [
   { id: 'inspector', label: 'Inspector', icon: 'status' },
@@ -178,6 +178,64 @@ const phase35ScreenshotPresets = {
   },
 };
 
+const workbenchTestProfiles = {
+  'markdown-phase4': {
+    openResourcePath: '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md',
+    preferredSurfaceId: '@textforge/markdown/preview',
+    openPlacement: 'main',
+  },
+  'itm-tree': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
+    preferredSurfaceId: '@textforge/itm/tree',
+    openPlacement: 'main',
+  },
+  'itm-graph': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
+    preferredSurfaceId: '@textforge/itm/graph',
+    openPlacement: 'main',
+  },
+  'itm-mindmap': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
+    preferredSurfaceId: '@textforge/itm/mindmap',
+    openPlacement: 'main',
+  },
+  'itm-catalogue': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
+    preferredSurfaceId: '@textforge/itm/catalogue',
+    openPlacement: 'main',
+  },
+  'itm-matrix': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
+    preferredSurfaceId: '@textforge/itm/matrix',
+    openPlacement: 'main',
+  },
+  'itm-report': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
+    preferredSurfaceId: '@textforge/itm/report',
+    openPlacement: 'main',
+  },
+  'itm-markdown-tree': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-markdown-tree.md',
+    preferredSurfaceId: '@textforge/markdown/preview',
+    openPlacement: 'main',
+  },
+  'itm-markdown-graph': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-markdown-graph.md',
+    preferredSurfaceId: '@textforge/markdown/preview',
+    openPlacement: 'main',
+  },
+  'itm-markdown-mindmap': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-markdown-mindmap.md',
+    preferredSurfaceId: '@textforge/markdown/preview',
+    openPlacement: 'main',
+  },
+  'itm-markdown-report': {
+    openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-markdown-report.md',
+    preferredSurfaceId: '@textforge/markdown/preview',
+    openPlacement: 'main',
+  },
+};
+
 const workspaceFolderContextCommandIds = [
   'workspace.new-folder',
   'workspace.new-resource',
@@ -222,6 +280,15 @@ function readPhase35ScreenshotPreset() {
 
   const presetId = new URL(window.location.href).searchParams.get('phase35');
   return phase35ScreenshotPresets[presetId] ?? phase35ScreenshotPresets.main;
+}
+
+function readWorkbenchTestProfile() {
+  if (typeof window === 'undefined') {
+    return undefined;
+  }
+
+  const profileId = new URL(window.location.href).searchParams.get('testProfile');
+  return workbenchTestProfiles[profileId] ?? undefined;
 }
 
 function readLuaBootstrapRecoveryState() {
@@ -642,6 +709,7 @@ function createStorageFailure(error) {
 
 function createTextForgeWorkbenchController() {
   const screenshotPreset = readPhase35ScreenshotPreset();
+  const workbenchTestProfile = readWorkbenchTestProfile();
   const luaBootstrapRecovery = readLuaBootstrapRecoveryState();
   const bootstrapOptions = readWorkbenchBootstrapOptions();
   let workspace = createWorkspaceService({
@@ -3481,14 +3549,16 @@ function createTextForgeWorkbenchController() {
       rememberSelection(selectedEntry?.id);
       normalizeActiveSessions();
 
-      const presetEntry = screenshotPreset.openResourcePath
-        ? workspace.getEntryByPath(screenshotPreset.openResourcePath)
+      const initialOpenProfile = workbenchTestProfile ?? screenshotPreset;
+      const presetEntry = initialOpenProfile?.openResourcePath
+        ? workspace.getEntryByPath(initialOpenProfile.openResourcePath)
         : undefined;
       const initialEntry = presetEntry ?? selectedEntry;
 
       if (initialEntry && initialEntry.kind !== 'folder' && listMainSessions().length === 0 && listPopupSessions().length === 0) {
         openResourceEntry(initialEntry, {
-          placement: screenshotPreset.openPlacement,
+          placement: initialOpenProfile?.openPlacement,
+          preferredSurfaceId: initialOpenProfile?.preferredSurfaceId,
         });
       } else {
         emit();

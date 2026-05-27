@@ -1,5 +1,8 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
 import {
   contributions,
@@ -18,6 +21,9 @@ import {
   createMarkdownFenceHandlerContribution,
   createResourcePredicate,
 } from '@textforge/core';
+
+const testDirectory = dirname(fileURLToPath(import.meta.url));
+const itmTestProfilesDirectory = resolve(testDirectory, '..', '..', '..', 'docs', 'examples', 'itm', 'test-profiles');
 
 test('markdown package exposes preview contribution and command surface', () => {
   assert.equal(contributions.packageId, '@textforge/markdown');
@@ -356,4 +362,86 @@ test('renderMarkdownDocument surfaces provider-backed repository resolver diagno
     result.diagnostics.some((diagnostic) => diagnostic.code === 'itm.resolve.unsupported'),
     true,
   );
+});
+
+test('renderMarkdownDocument renders focused ITM markdown smoke profiles incrementally', async () => {
+  const contributionRegistry = createContributionRegistry([
+    contributions,
+    itmContributions,
+    createContributionManifest('@textforge/test-diagrams', {
+      capabilities: [
+        createCapability('@textforge/test-diagrams/capability/graphviz', {
+          aliases: ['graphviz'],
+          defaultActive: true,
+          documentPredicate: createResourcePredicate({ languageIds: ['markdown'] }),
+        }),
+      ],
+      pipelines: [
+        {
+          id: '@textforge/test-diagrams/graphviz-svg',
+          localName: 'graphviz-svg',
+          capabilities: ['@textforge/test-diagrams/capability/graphviz'],
+          defaultActive: true,
+          inputKind: 'text',
+          outputKind: 'svg',
+          async run({ input }) {
+            const text = typeof input === 'string' ? input : String(input?.value ?? '');
+            return {
+              output: {
+                kind: 'svg',
+                value: `<svg data-smoke-dot="${text.length}"></svg>`,
+              },
+            };
+          },
+        },
+      ],
+    }),
+  ]);
+
+  const expectations = [
+    {
+      filename: 'itm-markdown-tree.md',
+      marker: /Tree smoke publication/,
+    },
+    {
+      filename: 'itm-markdown-graph.md',
+      marker: /Graph smoke publication/,
+      generatedResourceSuffix: '.svg',
+    },
+    {
+      filename: 'itm-markdown-mindmap.md',
+      marker: /Mindmap smoke publication/,
+    },
+    {
+      filename: 'itm-markdown-report.md',
+      marker: /Report smoke publication/,
+    },
+  ];
+
+  for (const expectation of expectations) {
+    const source = readFileSync(resolve(itmTestProfilesDirectory, expectation.filename), 'utf8');
+    const result = await renderMarkdownDocument(source, {
+      resource: {
+        resourceId: expectation.filename,
+        path: `/docs/examples/itm/test-profiles/${expectation.filename}`,
+        kind: 'resource',
+        representation: 'text',
+        languageId: 'markdown',
+        mimeType: 'text/markdown',
+      },
+      contributionRegistry,
+      fenceExecutionOptions: {
+        generatedAssetBasePath: `/generated/${expectation.filename.replace(/\.md$/i, '')}`,
+        includePng: false,
+      },
+    });
+
+    assert.match(result.html, expectation.marker);
+    if (expectation.generatedResourceSuffix) {
+      assert.equal(
+        result.generatedResources.some((resource) => resource.path.endsWith(expectation.generatedResourceSuffix)),
+        true,
+      );
+    }
+  }
 });

@@ -1,0 +1,25 @@
+%metadata
+{
+  title: ITM surface smoke model
+}
+
+%viewpoint capability_focus
+{
+  pipeline:
+    - select: "[Capability]"
+}
+
+%view capability_surface
+{
+  viewpoint: capability_focus
+}
+
+&roadmap [Capability] Capability roadmap
+  &foundation [Capability] Foundation
+  &delivery [Capability] Delivery
+  &retire [Capability] Retirement planning
+
+&dependency [Capability] External dependency
+
+roadmap => dependency
+delivery @depends_on:dependency

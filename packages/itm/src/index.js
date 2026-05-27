@@ -23,6 +23,7 @@ import {
   getStableRelationshipId,
   isEntityOfType,
   isResolvedDocument,
+  parseDocument,
   parseDocumentResult,
   resolveDocument,
 } from './upstream/index.js';
@@ -58,6 +59,13 @@ export const itmCapabilities = [
     defaultActive: true,
     scope: 'document',
     documentPredicate: markdownDocumentPredicate,
+  }),
+  createCapability('@textforge/itm/capability/view', {
+    description: 'Open `.itm` resources through package-owned projection surfaces.',
+    aliases: ['itm-view'],
+    defaultActive: true,
+    scope: 'document',
+    documentPredicate: itmDocumentPredicate,
   }),
   createCapability('@textforge/itm/capability/itm.core', {
     description: 'Provide the core ITM directive, type, and document-model semantics.',
@@ -3552,6 +3560,87 @@ function renderModelCollection(models, options = {}) {
     .join('\n');
 }
 
+function createStaticHtmlSurface(model) {
+  return {
+    id: model.id,
+    model,
+    mount(container) {
+      container.innerHTML = model.html;
+      return () => {
+        container.innerHTML = '';
+      };
+    },
+  };
+}
+
+function createItmProjectionSurfaceContribution(projectionKind, label, description) {
+  return {
+    id: `@textforge/itm/${projectionKind}`,
+    label,
+    description,
+    kind: 'itm-projection',
+    localName: projectionKind,
+    capabilities: ['@textforge/itm/capability/view'],
+    readOnly: true,
+    documentPredicate: itmDocumentPredicate,
+    open(execution = {}) {
+      const sourceText = execution.sourceText ?? '';
+      const resourceTitle = execution.resourceTitle ?? execution.resource?.path ?? label;
+
+      if (!sourceText.trim()) {
+        const surface = createStaticHtmlSurface({
+          id: `${projectionKind}:${execution.resource?.resourceId ?? 'virtual'}`,
+          title: resourceTitle,
+          projection: projectionKind,
+          html: '<section class="tf-itm-publication tf-itm-publication--error"><p>No ITM source is available for this surface.</p></section>',
+          diagnostics: [createDiagnostic('No ITM source is available for the requested ITM projection surface.', 'error', {
+            resource: execution.resource,
+            code: 'itm.surface.source-missing',
+            origin: {
+              packageId: '@textforge/itm',
+              subsystem: 'itm-surface',
+              contributionId: `@textforge/itm/${projectionKind}`,
+            },
+          })],
+        });
+        return {
+          mountId: `${execution.session?.id ?? 'surface'}:${projectionKind}:${execution.updatedAt ?? 'current'}`,
+          summary: `ITM ${projectionKind} projection unavailable.`,
+          detail: 'Missing source',
+          readOnly: true,
+          surface,
+        };
+      }
+
+      const parsed = parseDocument(sourceText, {
+        uri: execution.resource?.path,
+      });
+      const projected = projectItmDocument(parsed, {
+        projection: projectionKind,
+        title: resourceTitle,
+      });
+      const html = renderProjectedModel(projected, {
+        projection: projectionKind,
+        title: resourceTitle,
+      });
+      const surface = createStaticHtmlSurface({
+        id: `${projectionKind}:${execution.resource?.resourceId ?? 'virtual'}`,
+        title: resourceTitle,
+        projection: projectionKind,
+        html,
+        diagnostics: [],
+      });
+      return {
+        mountId: `${execution.session?.id ?? 'surface'}:${projectionKind}:${execution.updatedAt ?? 'current'}`,
+        summary: `Package-owned ITM ${projectionKind} projection surface.`,
+        detail: `ITM ${projectionKind}`,
+        readOnly: true,
+        surface,
+      };
+    },
+  };
+}
+
 export function renderItmPublicationHtml(input, options = {}) {
   if (Array.isArray(input)) {
     return renderModelCollection(input, options);
@@ -3897,10 +3986,18 @@ export const itmMarkdownFenceHandlerContributions = [
   }),
 ];
 
+const itmSurfaceContributions = itmProjectionKinds.map((projectionKind) =>
+  createItmProjectionSurfaceContribution(
+    projectionKind,
+    `ITM ${projectionKind[0].toUpperCase()}${projectionKind.slice(1)}`,
+    `Open ITM resources through the ${projectionKind} projection surface.`,
+  ));
+
 export function createItmContributionManifest() {
   return createContributionManifest('@textforge/itm', {
     capabilities: itmCapabilities,
     markdownFenceHandlers: itmMarkdownFenceHandlerContributions,
+    surfaces: itmSurfaceContributions,
   });
 }
 

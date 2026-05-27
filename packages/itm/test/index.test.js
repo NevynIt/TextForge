@@ -21,6 +21,7 @@ import {
 
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const examplesDirectory = resolve(testDirectory, '../src/examples');
+const docsExamplesDirectory = resolve(testDirectory, '..', '..', '..', 'docs', 'examples', 'itm', 'test-profiles');
 
 test('upstream parser is available through the package wrapper', () => {
   const document = parseDocument(`%metadata
@@ -202,6 +203,46 @@ test('ITM contribution manifest exposes markdown fence handlers', () => {
   assert.equal(contributions.packageId, '@textforge/itm');
   assert.equal(contributions.markdownFenceHandlers.some((handler) => handler.localName === 'itm'), true);
   assert.equal(contributions.markdownFenceHandlers.some((handler) => handler.localName === 'itm-pub'), true);
+});
+
+test('ITM contribution manifest exposes package-owned projection surfaces', () => {
+  assert.deepEqual(
+    contributions.surfaces.map((surface) => surface.id).sort(),
+    [
+      '@textforge/itm/catalogue',
+      '@textforge/itm/graph',
+      '@textforge/itm/matrix',
+      '@textforge/itm/mindmap',
+      '@textforge/itm/report',
+      '@textforge/itm/tree',
+    ],
+  );
+});
+
+test('ITM projection surfaces mount the focused smoke profile one projection at a time', () => {
+  const sourceText = readFileSync(resolve(docsExamplesDirectory, 'itm-surface-smoke.itm'), 'utf8');
+  for (const surfaceContribution of contributions.surfaces) {
+    const runtime = surfaceContribution.open({
+      resource: {
+        resourceId: 'itm-surface-smoke',
+        path: '/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
+        kind: 'resource',
+        representation: 'text',
+      },
+      resourceTitle: 'ITM surface smoke model',
+      sourceText,
+      updatedAt: '2026-05-27T00:00:00.000Z',
+    });
+    const container = {
+      innerHTML: '',
+    };
+
+    const dispose = runtime.surface.mount(container);
+    assert.match(container.innerHTML, /data-itm-projection=/);
+    assert.match(container.innerHTML, /Capability roadmap/);
+    dispose();
+    assert.equal(container.innerHTML, '');
+  }
 });
 
 test('validateItmDocument surfaces stable include and repository resolver diagnostics', () => {

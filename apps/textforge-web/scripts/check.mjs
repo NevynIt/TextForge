@@ -148,6 +148,12 @@ for (const requiredPhase4Signal of ['Markdown preview', 'generated diagram', 'TF
   }
 }
 
+for (const requiredTestProfileSignal of ['testProfile', '/docs/examples/itm/test-profiles/', '@textforge/itm/tree', '@textforge/itm/report']) {
+  if (!workbenchJs.includes(requiredTestProfileSignal)) {
+    throw new Error(`workbench.js must surface ${requiredTestProfileSignal} for the focused ITM rendering test profiles`);
+  }
+}
+
 for (const requiredLuaSignal of ['Lua Console', 'Reload Lua automation pipelines', 'xterm', 'lua.open-console', 'tf.power', 'Power session active', 'luaSkipPreload']) {
   if (!workbenchJs.includes(requiredLuaSignal)) {
     throw new Error(`workbench.js must surface ${requiredLuaSignal} for WP-LUA and WP-LUA-POWER-SESSION`);
