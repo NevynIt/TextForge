@@ -12,7 +12,7 @@ This cluster covers domain-specific profiles and domain-driven views.
 | WP-ARCHIMATE-VISUAL | ArchiMate visual editing investigation | Optional investigation, not guaranteed product feature. |
 | WP-TABLES | Tables, catalogues, and matrices | Catalogue/matrix UX over model content. |
 | WP-LUA | Lua automation | Optional pipeline automation; sandboxed/local/capability-gated. |
-| WP-LUA-POWER-SESSION | Lua self-escalation session and one-click recovery | Candidate follow-on that exposes approved host objects in a session-scoped elevated mode with explicit recovery. |
+| WP-LUA-POWER-SESSION | Lua self-escalation session and one-click recovery | Validated Lua follow-on that exposes approved host objects in a session-scoped elevated mode with explicit recovery. |
 | WP-ITM-VISUALS | ITM visual projections | Shared visual projection base for mindmaps/graphs/domain views. |
 
 ## General rule

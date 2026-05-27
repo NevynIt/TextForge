@@ -161,4 +161,4 @@ The nearest ready follow-on slice is:
 WP-RES-01
 ```
 
-`WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable. Dependency-satisfied candidates should be shown as startable as well, but actual execution order is selected one slice at a time rather than treated as a fixed queue. Reassess whether to proceed along the core resource/repository path, the next ITM/Markdown semantics slice, the Lua power-session follow-on, or the backend-preview path.
+`WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable. `WP-LUA-POWER-SESSION` is now validated on top of `WP-LUA`, so reassess whether to proceed along the core resource/repository path, the next ITM/Markdown semantics slice, a broader Lua follow-on, or the backend-preview path.

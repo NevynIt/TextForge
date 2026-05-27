@@ -42,7 +42,7 @@ WP-05A Contribution manifest and registry model
 WP-05D Minimal package/capability inspector
 ```
 
-The next ready option is `WP-RES-01` provider-aware resource descriptors. `WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable under the current dependency posture now that `WP-ITM-01` and `WP-LUA` are validated. Dependency-satisfied candidates, including `WP-LUA-POWER-SESSION`, should also be shown as startable; actual execution order is chosen one slice at a time.
+The next ready option is `WP-RES-01` provider-aware resource descriptors. `WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable under the current dependency posture now that `WP-ITM-01`, `WP-LUA`, and `WP-LUA-POWER-SESSION` are validated. Actual execution order is chosen one slice at a time.
 
 The backend path is enabled by contracts and fixtures, not by Entra SSO:
 

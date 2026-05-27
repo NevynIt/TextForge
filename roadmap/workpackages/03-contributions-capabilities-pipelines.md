@@ -11,7 +11,7 @@ This cluster holds the executable extension/composition model.
 | WP-05C | Pipeline/contribution execution integration | Canonical execution and intermediate-value routing. |
 | WP-05D | Minimal package/capability inspector | Optional diagnostics-oriented shell visibility over package and capability state. |
 | WP-LUA | Lua automation | Optional sandboxed automation behind capabilities. |
-| WP-LUA-POWER-SESSION | Lua self-escalation session and one-click recovery | Candidate follow-on for session-scoped elevated host-object access, explicit console state, and fast recovery. |
+| WP-LUA-POWER-SESSION | Lua self-escalation session and one-click recovery | Validated Lua follow-on for session-scoped elevated host-object access, explicit console state, and fast recovery. |
 | WP-PIPELINE-EDITOR | Pipeline/diagram editor surfaces | Optional visual authoring for pipelines. |
 
 ## Capability rules

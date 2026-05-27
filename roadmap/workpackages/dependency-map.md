@@ -75,11 +75,10 @@ flowchart TD
   classDef done fill:#2e7d32,stroke:#1b5e20,color:#ffffff,stroke-width:2px;
   classDef startable fill:#1565c0,stroke:#0d47a1,color:#ffffff,stroke-width:2px;
 
-  class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D,WP_ITM_01,WP_LUA done;
-  class WP_SET_01,WP_LUA_POWER_SESSION,WP_RES_01,WP_ITM_02,WP_ID_01,WP_TABLES,WP_ITM_VISUALS startable;
+  class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D,WP_ITM_01,WP_LUA,WP_LUA_POWER_SESSION done;
+  class WP_SET_01,WP_RES_01,WP_ITM_02,WP_ID_01,WP_TABLES,WP_ITM_VISUALS startable;
 
   linkStyle 6 stroke:#1565c0,stroke-width:2px;
-  linkStyle 8 stroke:#1565c0,stroke-width:2px;
   linkStyle 9 stroke:#1565c0,stroke-width:2px;
   linkStyle 14 stroke:#1565c0,stroke-width:2px;
   linkStyle 15 stroke:#1565c0,stroke-width:2px;

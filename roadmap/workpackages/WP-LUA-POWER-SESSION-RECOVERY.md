@@ -4,7 +4,7 @@
 |---|---|
 | Legacy source | User discussion (power mode simplification for Lua) |
 | Type | optional automation |
-| Status | candidate |
+| Status | validated |
 | Depends on | WP-LUA (validated), current Lua console/session runtime |
 | Enables | High-trust Lua workflows with fast recovery |
 | Can be deferred | yes |
@@ -12,9 +12,9 @@
 
 ## Purpose
 
-Define a focused follow-on workpackage that allows Lua to self-escalate into a higher-permission session mode with minimal friction, while preserving a strong recovery path.
+Deliver a focused follow-on workpackage that allows Lua to self-escalate into a higher-permission session mode with minimal friction, while preserving a strong recovery path.
 
-This page now records a canonical candidate workpackage in the V18 roadmap. It is startable once selected because it depends only on validated `WP-LUA`, but it does not imply implementation has started.
+This page now records the shipped and validated V18 follow-on after `WP-LUA`. The implementation keeps the base `tf.*` bridge as the default mode, adds explicit session-scoped elevation through `require("tf.power").elevate()`, surfaces a visible power-session marker and recovery action in the console, and skips Lua preload exactly once after recovery restart.
 
 ## What power mode is
 
@@ -24,25 +24,17 @@ In default mode, Lua stays inside the constrained bridge surface and cannot dire
 
 In power mode, Lua receives direct handles to approved host objects for advanced inspection and control. The point is to unlock high-agency local automation in one active session, with clear UI indication and fast recovery.
 
-### Example host objects and what they enable
+### Delivered host objects and what they enable
 
-The exact exposed object list is implementation-controlled. To keep rollout deliberate, power mode exposure is split into three levels.
+The exact exposed object list is implementation-controlled. The delivered rollout keeps the first validated slice deliberately narrow.
 
-### Minimum level
+### Delivered level
 
 | Example host object | Example methods/properties | What this enables in Lua |
 |---|---|---|
 | Workspace service object | getEntryByPath, createTextResource, createFolder, saveTextResource, resolveReference | Inspect workspace state, generate resources, run multi-step scripted refactors, and produce derived artifacts without manual UI steps. |
-| Lua execution service object | runSnippet, runConsoleCommand, discover, runAutomation, getAutomationDefinitions | Script higher-order Lua automation flows that discover, validate, and execute automations dynamically. |
-| Command dispatcher/registry object | execute(commandId), resolve(context) | Drive shell commands programmatically for repeatable workflows (open views, run actions, trigger exports, and batch operations). |
-
-### Expected level
-
-| Example host object | Example methods/properties | What this enables in Lua |
-|---|---|---|
-| Surface/session host object | listOpenSurfaceSessions, openResourceEntry, move/focus/close session actions | Orchestrate viewer/editor sessions from scripts, including opening targeted surfaces and managing layout flows. |
-| Contribution registry/context resolver object | resolveDocumentContext, registerManifest, manifest queries | Inspect active capabilities/contributions and build diagnostics or tooling that adapts to current capability context. |
-| Pipeline trace/runtime integration object | pipeline invocation hooks, trace metadata access | Build scripted pipeline orchestration and inspect intermediate outputs for debugging and quality checks. |
+| Lua automation service object | list discovered automations, rerun discovery, run automation by id | Script higher-order Lua automation flows that discover, validate, and execute automations dynamically. |
+| Surface/session host object | listOpenSurfaceSessions, openResourcePath, focusSession, closeSession | Orchestrate viewer/editor sessions from scripts, including opening targeted surfaces and managing layout flows. |
 
 ### Optional level
 
@@ -50,7 +42,7 @@ The exact exposed object list is implementation-controlled. To keep rollout deli
 |---|---|---|
 | Diagnostics aggregation object | current diagnostics list, publish/clear scoped diagnostics | Generate script-defined diagnostics and integrate script findings into normal diagnostics workflows. |
 
-These levels describe possible power-mode exposure targets and rollout priority, not a requirement to expose every internal object.
+These levels describe possible power-mode exposure targets and rollout priority, not a requirement to expose every internal object. Direct command-dispatch exposure and broader shell-registry mutation remain intentionally out of scope for this delivered slice.
 
 ## Scope
 
@@ -76,7 +68,7 @@ This workpackage covers only the behavior agreed in discussion:
 
 ## Current anchors in code
 
-Implementation should be planned around existing Lua/runtime integration points:
+Implementation landed around these existing Lua/runtime integration points:
 
 1. Lua console state/session handling in apps/textforge-web/src/workbench.js.
 2. Automation discovery trigger during workspace hydration in apps/textforge-web/src/workbench.js.
@@ -171,6 +163,16 @@ Implementation should be planned around existing Lua/runtime integration points:
 7. Workspace/editor saved content remains available after recovery restart.
 8. Console transcript is reset/lost after restart (same expected behavior as normal restart).
 
+## Validation evidence
+
+1. `corepack pnpm --filter @textforge/lua test`
+2. `corepack pnpm --filter @textforge/lua build`
+3. `corepack pnpm --filter @textforge/lua typecheck`
+4. `corepack pnpm --filter @textforge/textforge-web test`
+5. `corepack pnpm --filter @textforge/textforge-web build`
+6. `corepack pnpm verify`
+7. Manual in-app browser UI validation on 2026-05-27: elevated badge visible, recovery button visible, restart confirmed, one-shot `Lua preload skipped once` state visible after recovery, and a normal reload cleared the one-shot state.
+
 ## Test scenarios
 
 1. Open Lua console, execute escalation request, verify elevated badge appears immediately.
@@ -183,7 +185,7 @@ Implementation should be planned around existing Lua/runtime integration points:
 
 ## Canonical roadmap surfaces
 
-This candidate is tracked in:
+This workpackage is tracked in:
 
 1. roadmap/workpackages/workpackage-register.md
 2. roadmap/workpackages/implementation-status.md
@@ -193,4 +195,4 @@ This candidate is tracked in:
 ## Notes
 
 1. This proposal intentionally avoids adding requirements not explicitly agreed.
-2. This remains a planning artifact and does not imply implementation has started.
+2. The first validated rollout intentionally limits power-session host objects to approved `workspace`, `automation`, and `surfaces` helpers rather than exposing arbitrary shell internals.
