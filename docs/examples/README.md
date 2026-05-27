@@ -5,4 +5,4 @@ This folder contains Phase 4 example material that the browser-seeded workspace 
 - `phase-4-markdown-preview.tf.md` demonstrates TF-MD metadata, styles, local image resolution, Mermaid, and Graphviz.
 - `assets/phase-4-diagram.svg` is a local SVG asset used by the example Markdown file.
 - `diagrams/` contains the main-branch Graphviz and Mermaid example corpus.
-- `itm/` contains the main-branch ITM example models.
+- `itm/` contains the main-branch ITM example models plus the `itm-visual-projections.md` Markdown fixture for tree, graph, mindmap, catalogue, matrix, and report publication modes.

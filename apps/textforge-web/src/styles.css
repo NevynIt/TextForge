@@ -2684,6 +2684,267 @@ body {
   color: #fecaca;
 }
 
+.tf-itm-publication {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(14, 22, 36, 0.86), rgba(8, 15, 30, 0.96));
+}
+
+.tf-itm-publication__header {
+  display: grid;
+  gap: 6px;
+}
+
+.tf-itm-publication__header h3,
+.tf-itm-publication__header p {
+  margin: 0;
+}
+
+.tf-itm-publication__header p {
+  color: #94a3b8;
+}
+
+.tf-itm-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.tf-itm-summary div {
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.tf-itm-summary dt,
+.tf-itm-summary dd {
+  margin: 0;
+}
+
+.tf-itm-summary dt {
+  color: #94a3b8;
+  font-size: 0.76rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tf-itm-summary dd {
+  margin-top: 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.tf-itm-tree,
+.tf-itm-diagnostics,
+.tf-itm-graph-links,
+.tf-itm-mindmap__children,
+.tf-itm-report__section ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.tf-itm-tree {
+  display: grid;
+  gap: 12px;
+}
+
+.tf-itm-node,
+.tf-itm-mindmap__node,
+.tf-itm-mindmap__root {
+  display: grid;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.62);
+}
+
+.tf-itm-node__header,
+.tf-itm-mindmap__root,
+.tf-itm-mindmap__node {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tf-itm-node__label,
+.tf-itm-mindmap__root strong,
+.tf-itm-mindmap__node strong {
+  color: #f8fafc;
+}
+
+.tf-itm-node__type,
+.tf-itm-node__tag,
+.tf-itm-mindmap__root span,
+.tf-itm-mindmap__node span {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.14);
+  color: #99f6e4;
+  font-size: 0.76rem;
+}
+
+.tf-itm-node__description {
+  margin: 0;
+  color: #cbd5e1;
+}
+
+.tf-itm-diagnostics {
+  display: grid;
+  gap: 8px;
+}
+
+.tf-itm-diagnostics__item {
+  color: #f8fafc;
+}
+
+.tf-itm-diagnostics__item--warning {
+  color: #fcd34d;
+}
+
+.tf-itm-diagnostics__item--error {
+  color: #fca5a5;
+}
+
+.tf-itm-graph,
+.tf-itm-catalogue,
+.tf-itm-report {
+  display: grid;
+  gap: 16px;
+}
+
+.tf-itm-graph__stage {
+  padding: 16px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.97);
+  color: #111827;
+  overflow: auto;
+}
+
+.tf-itm-graph__stage svg {
+  width: 100%;
+  height: auto;
+}
+
+.tf-itm-graph__nodes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.tf-itm-graph-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.52);
+}
+
+.tf-itm-graph-card header,
+.tf-itm-graph-card dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.tf-itm-graph-card p,
+.tf-itm-graph-card dt,
+.tf-itm-graph-card dd,
+.tf-itm-graph__relationships h4,
+.tf-itm-report__section h4 {
+  margin: 0;
+}
+
+.tf-itm-graph-card dt,
+.tf-itm-graph-card span {
+  color: #94a3b8;
+}
+
+.tf-itm-graph-links {
+  display: grid;
+  gap: 8px;
+}
+
+.tf-itm-graph-links li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.tf-itm-mindmap {
+  display: grid;
+  gap: 14px;
+}
+
+.tf-itm-mindmap__root {
+  justify-content: center;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(45, 212, 191, 0.2), rgba(96, 165, 250, 0.2));
+}
+
+.tf-itm-mindmap__children--root {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  padding-left: 0;
+  list-style: none;
+}
+
+.tf-itm-mindmap__branch {
+  display: grid;
+  gap: 10px;
+}
+
+.tf-itm-table {
+  width: 100%;
+  border-collapse: collapse;
+  overflow: hidden;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.tf-itm-table th,
+.tf-itm-table td {
+  padding: 10px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  text-align: left;
+  vertical-align: top;
+}
+
+.tf-itm-table th {
+  color: #f8fafc;
+  background: rgba(30, 41, 59, 0.72);
+}
+
+.tf-itm-table--matrix td {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.tf-itm-report__section {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 16px;
+  background: rgba(15, 23, 42, 0.5);
+}
+
+.tf-itm-empty {
+  margin: 0;
+  color: #94a3b8;
+}
+
 .tf-lua-console {
   height: 100%;
   min-height: 320px;

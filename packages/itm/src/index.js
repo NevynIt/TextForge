@@ -2665,6 +2665,27 @@ function renderStylePropertyValue(value) {
   return String(value ?? '');
 }
 
+export const itmProjectionKinds = ['tree', 'graph', 'mindmap', 'catalogue', 'matrix', 'report'];
+
+function normalizeItmProjectionKind(kind) {
+  switch (String(kind ?? '').trim().toLowerCase()) {
+    case 'graph':
+      return 'graph';
+    case 'mindmap':
+      return 'mindmap';
+    case 'catalogue':
+    case 'catalog':
+      return 'catalogue';
+    case 'matrix':
+      return 'matrix';
+    case 'report':
+      return 'report';
+    case 'tree':
+    default:
+      return 'tree';
+  }
+}
+
 function createInlineStyle(style) {
   const properties = [];
   const propertyMap = {
@@ -2707,32 +2728,401 @@ function createInlineStyle(style) {
   return properties.join(' ');
 }
 
-function renderNodeTree(nodeId, childrenByParentId, nodeMap, entityMap, document) {
-  const graphNode = nodeMap.get(nodeId);
-  const entity = entityMap.get(nodeId);
-  if (!graphNode || !entity) {
+function createProjectionTitle(projected, options = {}) {
+  return options.title
+    ?? projected.view?.title
+    ?? projected.view?.name
+    ?? projected.viewpoint?.title
+    ?? projected.viewpoint?.name
+    ?? projected.document.metadata?.title
+    ?? 'ITM publication';
+}
+
+function createProjectionSubtitle(projected, projectionKind) {
+  const sourceLabel = projected.view
+    ? `View ${projected.view.name} via viewpoint ${projected.view.viewpointRef}`
+    : projected.viewpoint
+      ? `Viewpoint ${projected.viewpoint.name}`
+      : 'Parsed ITM model';
+
+  switch (projectionKind) {
+    case 'graph':
+      return `${sourceLabel} as graph projection`;
+    case 'mindmap':
+      return `${sourceLabel} as mindmap projection`;
+    case 'catalogue':
+      return `${sourceLabel} as catalogue projection`;
+    case 'matrix':
+      return `${sourceLabel} as relationship matrix`;
+    case 'report':
+      return `${sourceLabel} as report fragment`;
+    case 'tree':
+    default:
+      return sourceLabel;
+  }
+}
+
+function createRelationshipTypeCounts(edges = []) {
+  const counts = new Map();
+  for (const edge of edges) {
+    counts.set(edge.typeRef, (counts.get(edge.typeRef) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .map(([typeRef, count]) => ({ typeRef, count }))
+    .sort((left, right) => right.count - left.count || left.typeRef.localeCompare(right.typeRef));
+}
+
+function createTreeProjection(projected) {
+  const nodeMap = new Map(projected.nodes.map((node) => [node.id, node]));
+  const entityMap = new Map((projected.document.entities ?? []).map((entity) => [entity.uid, entity]));
+  const childrenByParentId = new Map();
+  for (const node of projected.nodes) {
+    if (!node.parentId || !nodeMap.has(node.parentId)) {
+      continue;
+    }
+    if (!childrenByParentId.has(node.parentId)) {
+      childrenByParentId.set(node.parentId, []);
+    }
+    childrenByParentId.get(node.parentId).push(node.id);
+  }
+
+  let maxDepth = 0;
+  function buildNode(nodeId, depth = 0, parentPath = []) {
+    const graphNode = nodeMap.get(nodeId);
+    const entity = entityMap.get(graphNode?.uid);
+    if (!graphNode || !entity) {
+      return undefined;
+    }
+
+    maxDepth = Math.max(maxDepth, depth);
+    const children = (childrenByParentId.get(nodeId) ?? [])
+      .map((childId) => buildNode(childId, depth + 1, [...parentPath, graphNode.label]))
+      .filter(Boolean);
+    return {
+      id: graphNode.id,
+      uid: graphNode.uid,
+      label: graphNode.label,
+      typeRef: graphNode.typeRef,
+      description: entity.description?.text,
+      tags: [...(entity.tags ?? [])],
+      parentId: graphNode.parentId,
+      depth,
+      path: [...parentPath, graphNode.label],
+      childCount: children.length,
+      style: computeNodeStyle(projected.document, entity),
+      children,
+    };
+  }
+
+  const roots = projected.nodes
+    .filter((node) => !node.parentId || !nodeMap.has(node.parentId))
+    .map((node) => buildNode(node.id))
+    .filter(Boolean);
+
+  return {
+    roots,
+    maxDepth,
+    nodeCount: projected.nodes.length,
+  };
+}
+
+function calculateNodeDepth(nodeId, nodeById) {
+  let depth = 0;
+  let current = nodeById.get(nodeId);
+  const seen = new Set();
+  while (current?.parentId && nodeById.has(current.parentId) && !seen.has(current.parentId)) {
+    seen.add(current.parentId);
+    depth += 1;
+    current = nodeById.get(current.parentId);
+  }
+  return depth;
+}
+
+function createGraphProjection(projected) {
+  const nodeById = new Map(projected.nodes.map((node) => [node.id, node]));
+  const entityByUid = new Map((projected.document.entities ?? []).map((entity) => [entity.uid, entity]));
+  const relationshipByUid = new Map((projected.document.relationships ?? []).map((relationship) => [relationship.uid, relationship]));
+  const childrenByParentId = new Map();
+  const inboundByNodeId = new Map();
+  const outboundByNodeId = new Map();
+
+  for (const node of projected.nodes) {
+    if (node.parentId && nodeById.has(node.parentId)) {
+      if (!childrenByParentId.has(node.parentId)) {
+        childrenByParentId.set(node.parentId, []);
+      }
+      childrenByParentId.get(node.parentId).push(node.id);
+    }
+  }
+
+  for (const edge of projected.edges) {
+    if (!outboundByNodeId.has(edge.sourceId)) {
+      outboundByNodeId.set(edge.sourceId, []);
+    }
+    outboundByNodeId.get(edge.sourceId).push(edge.uid);
+    if (edge.targetId) {
+      if (!inboundByNodeId.has(edge.targetId)) {
+        inboundByNodeId.set(edge.targetId, []);
+      }
+      inboundByNodeId.get(edge.targetId).push(edge.uid);
+    }
+  }
+
+  const nodes = projected.nodes.map((node) => {
+    const entity = entityByUid.get(node.uid);
+    return {
+      ...node,
+      description: entity?.description?.text,
+      tags: [...(entity?.tags ?? [])],
+      childCount: (childrenByParentId.get(node.id) ?? []).length,
+      depth: calculateNodeDepth(node.id, nodeById),
+      inDegree: (inboundByNodeId.get(node.id) ?? []).length,
+      outDegree: (outboundByNodeId.get(node.id) ?? []).length,
+      style: entity ? computeNodeStyle(projected.document, entity) : {},
+    };
+  });
+  const edges = projected.edges.map((edge) => {
+    const relationship = relationshipByUid.get(edge.uid);
+    return {
+      ...edge,
+      label: relationship?.label ?? edge.typeRef,
+      sourceLabel: nodeById.get(edge.sourceId)?.label ?? edge.sourceId,
+      targetLabel: edge.targetId
+        ? nodeById.get(edge.targetId)?.label ?? edge.targetId
+        : edge.targetRelationshipId ?? edge.targetRef ?? undefined,
+    };
+  });
+
+  return {
+    nodes,
+    edges,
+    rootNodeIds: nodes
+      .filter((node) => !node.parentId || !nodeById.has(node.parentId))
+      .map((node) => node.id),
+    relationshipTypeCounts: createRelationshipTypeCounts(edges),
+  };
+}
+
+function convertTreeNodeToMindmapNode(treeNode, side, depth) {
+  return {
+    id: treeNode.id,
+    uid: treeNode.uid,
+    label: treeNode.label,
+    typeRef: treeNode.typeRef,
+    description: treeNode.description,
+    side,
+    depth,
+    children: (treeNode.children ?? []).map((child) => convertTreeNodeToMindmapNode(child, side, depth + 1)),
+  };
+}
+
+function createMindmapProjection(projected, treeProjection, options = {}) {
+  const title = createProjectionTitle(projected, options);
+  if (treeProjection.roots.length === 0) {
+    return {
+      root: {
+        id: 'itm-mindmap-root',
+        label: title,
+        side: 'center',
+        depth: 0,
+        children: [],
+      },
+      nodeCount: 0,
+    };
+  }
+
+  if (treeProjection.roots.length === 1) {
+    return {
+      root: convertTreeNodeToMindmapNode(treeProjection.roots[0], 'center', 0),
+      nodeCount: projected.nodes.length,
+    };
+  }
+
+  return {
+    root: {
+      id: 'itm-mindmap-root',
+      label: title,
+      side: 'center',
+      depth: 0,
+      children: treeProjection.roots.map((root, index) =>
+        convertTreeNodeToMindmapNode(root, index % 2 === 0 ? 'left' : 'right', 1)),
+    },
+    nodeCount: projected.nodes.length,
+  };
+}
+
+function createCatalogueProjection(projected) {
+  const nodeById = new Map(projected.nodes.map((node) => [node.id, node]));
+  const entityByUid = new Map((projected.document.entities ?? []).map((entity) => [entity.uid, entity]));
+  const relationshipByUid = new Map((projected.document.relationships ?? []).map((relationship) => [relationship.uid, relationship]));
+
+  return {
+    entities: projected.nodes.map((node) => {
+      const entity = entityByUid.get(node.uid);
+      return {
+        id: node.id,
+        uid: node.uid,
+        label: node.label,
+        typeRef: node.typeRef,
+        parentLabel: node.parentId ? nodeById.get(node.parentId)?.label : undefined,
+        tags: [...(entity?.tags ?? [])],
+        description: entity?.description?.text,
+        attributes: { ...(entity?.attributes?.values ?? {}) },
+      };
+    }),
+    relationships: projected.edges.map((edge) => {
+      const relationship = relationshipByUid.get(edge.uid);
+      return {
+        id: edge.id,
+        uid: edge.uid,
+        label: relationship?.label ?? edge.typeRef,
+        typeRef: edge.typeRef,
+        relationshipKind: edge.relationshipKind,
+        sourceLabel: nodeById.get(edge.sourceId)?.label ?? edge.sourceId,
+        targetLabel: edge.targetId
+          ? nodeById.get(edge.targetId)?.label ?? edge.targetId
+          : edge.targetRelationshipId ?? edge.targetRef ?? undefined,
+        implicit: edge.implicit === true,
+        attributes: { ...(relationship?.attributes?.values ?? {}) },
+      };
+    }),
+    views: projected.views.map((view) => ({
+      id: view.id,
+      name: view.name,
+      title: view.title,
+      viewpointRef: view.viewpointRef,
+      parameters: { ...(view.parameters ?? {}) },
+      notes: [...(view.notes ?? [])],
+    })),
+    viewpoints: (projected.document.viewpoints ?? []).map((viewpoint) => ({
+      id: viewpoint.uid,
+      name: viewpoint.name,
+      title: viewpoint.title,
+      supportsVisualEditing: viewpoint.supportsVisualEditing === true,
+      stepCount: viewpoint.pipeline?.steps?.length ?? 0,
+    })),
+  };
+}
+
+function createMatrixProjection(graphProjection) {
+  const rows = graphProjection.nodes.map((node) => ({
+    id: node.id,
+    label: node.label,
+    typeRef: node.typeRef,
+  }));
+  const columns = rows.map((row) => ({ ...row }));
+  const edgeMap = new Map();
+
+  for (const edge of graphProjection.edges) {
+    if (!edge.targetId) {
+      continue;
+    }
+    const key = `${edge.sourceId}=>${edge.targetId}`;
+    if (!edgeMap.has(key)) {
+      edgeMap.set(key, []);
+    }
+    edgeMap.get(key).push(edge);
+  }
+
+  const cells = [];
+  for (const row of rows) {
+    for (const column of columns) {
+      const relationships = edgeMap.get(`${row.id}=>${column.id}`) ?? [];
+      cells.push({
+        rowId: row.id,
+        columnId: column.id,
+        count: relationships.length,
+        relationshipTypes: [...new Set(relationships.map((edge) => edge.typeRef))].sort(),
+        relationshipKinds: [...new Set(relationships.map((edge) => edge.relationshipKind))].sort(),
+        edgeIds: relationships.map((edge) => edge.id),
+      });
+    }
+  }
+
+  return {
+    rows,
+    columns,
+    cells,
+    nonEmptyCellCount: cells.filter((cell) => cell.count > 0).length,
+  };
+}
+
+function createReportProjection(projected, treeProjection, graphProjection, catalogueProjection, matrixProjection, options = {}) {
+  const title = createProjectionTitle(projected, options);
+  const summary = {
+    nodeCount: projected.nodes.length,
+    edgeCount: projected.edges.length,
+    rootCount: treeProjection.roots.length,
+    viewCount: projected.views.length,
+    viewpointCount: projected.document.viewpoints?.length ?? 0,
+    diagnosticCount: projected.diagnostics.length,
+    relationshipTypeCount: graphProjection.relationshipTypeCounts.length,
+    nonEmptyMatrixCellCount: matrixProjection.nonEmptyCellCount,
+  };
+
+  return {
+    title,
+    summary,
+    sections: [
+      {
+        id: 'selection',
+        title: 'Selection scope',
+        items: [
+          projected.view ? `View: ${projected.view.name}` : 'View: full model selection',
+          projected.viewpoint ? `Viewpoint: ${projected.viewpoint.name}` : 'Viewpoint: not constrained',
+          `Tree roots: ${treeProjection.roots.length}`,
+          `Relationship cells: ${matrixProjection.nonEmptyCellCount}`,
+        ],
+      },
+      {
+        id: 'relationship-types',
+        title: 'Relationship types',
+        items: graphProjection.relationshipTypeCounts.length > 0
+          ? graphProjection.relationshipTypeCounts.map((entry) => `${entry.typeRef}: ${entry.count}`)
+          : ['No relationships matched the current projection.'],
+      },
+      {
+        id: 'entities',
+        title: 'Highlighted entities',
+        items: catalogueProjection.entities.slice(0, 8).map((entry) =>
+          entry.typeRef
+            ? `${entry.label} [${entry.typeRef}]`
+            : entry.label),
+      },
+      {
+        id: 'diagnostics',
+        title: 'Diagnostics',
+        items: projected.diagnostics.length > 0
+          ? projected.diagnostics.map((diagnostic) => `${diagnostic.severity}: ${diagnostic.message}`)
+          : ['No diagnostics.'],
+      },
+    ],
+  };
+}
+
+function renderNodeTree(treeNode) {
+  if (!treeNode) {
     return '';
   }
 
-  const style = computeNodeStyle(document, entity);
-  const description = entity.description?.text
-    ? `<p class="tf-itm-node__description">${escapeHtml(entity.description.text)}</p>`
+  const description = treeNode.description
+    ? `<p class="tf-itm-node__description">${escapeHtml(treeNode.description)}</p>`
     : '';
-  const typeBadge = graphNode.typeRef
-    ? `<span class="tf-itm-node__type">${escapeHtml(graphNode.typeRef)}</span>`
+  const typeBadge = treeNode.typeRef
+    ? `<span class="tf-itm-node__type">${escapeHtml(treeNode.typeRef)}</span>`
     : '';
-  const tagBadges = (entity.tags ?? [])
+  const tagBadges = (treeNode.tags ?? [])
     .map((tag) => `<span class="tf-itm-node__tag">#${escapeHtml(tag)}</span>`)
     .join('');
-  const childMarkup = (childrenByParentId.get(nodeId) ?? [])
-    .map((childId) => renderNodeTree(childId, childrenByParentId, nodeMap, entityMap, document))
+  const childMarkup = (treeNode.children ?? [])
+    .map((child) => renderNodeTree(child))
     .join('');
 
   return `
 <li class="tf-itm-tree__item">
-  <article class="tf-itm-node" style="${escapeHtml(createInlineStyle(style))}">
+  <article class="tf-itm-node" style="${escapeHtml(createInlineStyle(treeNode.style))}">
     <header class="tf-itm-node__header">
-      <span class="tf-itm-node__label">${escapeHtml(graphNode.label)}</span>
+      <span class="tf-itm-node__label">${escapeHtml(treeNode.label)}</span>
       ${typeBadge}
       ${tagBadges}
     </header>
@@ -2749,6 +3139,56 @@ function createModelSummary(projected) {
   <div><dt>Views</dt><dd>${projected.views.length}</dd></div>
   <div><dt>Diagnostics</dt><dd>${projected.diagnostics.length}</dd></div>
 </dl>`;
+}
+
+function renderDiagnosticsList(diagnostics) {
+  return diagnostics.length > 0
+    ? `<ul class="tf-itm-diagnostics">${diagnostics.map((diagnostic) =>
+      `<li class="tf-itm-diagnostics__item tf-itm-diagnostics__item--${escapeHtml(diagnostic.severity)}">${escapeHtml(diagnostic.message)}</li>`).join('')}</ul>`
+    : '';
+}
+
+function renderPublicationSection(projected, options, bodyHtml) {
+  const projectionKind = normalizeItmProjectionKind(options.projection);
+  const title = createProjectionTitle(projected, options);
+  const subtitle = createProjectionSubtitle(projected, projectionKind);
+  return `
+<section class="tf-itm-publication tf-itm-publication--${escapeHtml(projectionKind)}" data-itm-title="${escapeHtml(title)}" data-itm-projection="${escapeHtml(projectionKind)}">
+  <header class="tf-itm-publication__header">
+    <h3>${escapeHtml(title)}</h3>
+    <p>${escapeHtml(subtitle)}</p>
+  </header>
+  ${createModelSummary(projected)}
+  ${renderDiagnosticsList(projected.diagnostics)}
+  ${bodyHtml}
+</section>`.trim();
+}
+
+function sanitizeMermaidMindmapLabel(value) {
+  const normalized = String(value ?? '').replace(/\r?\n+/g, ' ').replace(/[`"]/g, '').trim();
+  return normalized || 'Untitled';
+}
+
+function appendMindmapSourceLines(lines, node, depth) {
+  lines.push(`${'  '.repeat(depth)}${sanitizeMermaidMindmapLabel(node.label)}`);
+  for (const child of node.children ?? []) {
+    appendMindmapSourceLines(lines, child, depth + 1);
+  }
+}
+
+function escapeGraphvizString(value) {
+  return String(value ?? '')
+    .replaceAll('\\', '\\\\')
+    .replaceAll('"', '\\"')
+    .replaceAll('\n', '\\n');
+}
+
+function isProjectedItmModel(input) {
+  return Array.isArray(input?.nodes) && Array.isArray(input?.edges) && input.document;
+}
+
+function ensureProjectedItmModel(input, options = {}) {
+  return isProjectedItmModel(input) ? input : projectItmDocument(input, options);
 }
 
 export function projectItmDocument(input, options = {}) {
@@ -2774,20 +3214,20 @@ export function projectItmDocument(input, options = {}) {
   });
 
   if (options.includeAncestors !== false) {
-    const selectedNodeIds = new Set(selectedNodes.map((node) => node.uid));
+    const selectedNodeIds = new Set(selectedNodes.map((node) => node.id));
     for (const node of graph.nodes) {
       let currentParentId = node.parentId;
       while (currentParentId) {
-        if (selectedNodeIds.has(node.uid) && !selectedNodeIds.has(currentParentId)) {
+        if (selectedNodeIds.has(node.id) && !selectedNodeIds.has(currentParentId)) {
           selectedNodeIds.add(currentParentId);
         }
-        currentParentId = graph.nodes.find((candidate) => candidate.uid === currentParentId)?.parentId;
+        currentParentId = graph.nodes.find((candidate) => candidate.id === currentParentId)?.parentId;
       }
     }
-    selectedNodes = graph.nodes.filter((node) => selectedNodeIds.has(node.uid));
+    selectedNodes = graph.nodes.filter((node) => selectedNodeIds.has(node.id));
   }
 
-  const selectedNodeIds = new Set(selectedNodes.map((node) => node.uid));
+  const selectedNodeIds = new Set(selectedNodes.map((node) => node.id));
   const selectedEdges = graph.edges.filter((edge) => {
     if (!selectedNodeIds.has(edge.sourceId) || (edge.targetId && !selectedNodeIds.has(edge.targetId))) {
       return false;
@@ -2807,7 +3247,7 @@ export function projectItmDocument(input, options = {}) {
     style: computeRelationshipStyle(document, relationshipMap.get(edge.uid)),
   }));
 
-  return {
+  const projected = {
     document: evaluated.effectiveDocument,
     resolvedDocument,
     sourceDocument: evaluated.document,
@@ -2823,55 +3263,273 @@ export function projectItmDocument(input, options = {}) {
     view: selectors.view,
     viewpoint: selectors.viewpoint,
   };
+  const tree = createTreeProjection(projected);
+  const graphProjection = createGraphProjection(projected);
+  const catalogues = createCatalogueProjection(projected);
+  const matrix = createMatrixProjection(graphProjection);
+  const mindmap = createMindmapProjection(projected, tree, options);
+  const report = createReportProjection(projected, tree, graphProjection, catalogues, matrix, options);
+
+  return {
+    ...projected,
+    tree,
+    graph: graphProjection,
+    mindmap,
+    catalogues,
+    matrix,
+    report,
+    graphvizSource: createItmGraphvizDiagramSource({
+      ...projected,
+      tree,
+      graph: graphProjection,
+      mindmap,
+      catalogues,
+      matrix,
+      report,
+    }, options),
+    mermaidMindmapSource: createItmMermaidMindmapSource({
+      ...projected,
+      tree,
+      graph: graphProjection,
+      mindmap,
+      catalogues,
+      matrix,
+      report,
+    }, options),
+  };
+}
+
+export function createItmGraphvizDiagramSource(input, options = {}) {
+  const projected = ensureProjectedItmModel(input, options);
+  const graphProjection = projected.graph ?? createGraphProjection(projected);
+  const lines = [
+    'digraph ItmProjection {',
+    '  graph [rankdir=LR, pad="0.35", nodesep="0.45", ranksep="0.7", bgcolor="transparent"];',
+    '  node [shape=box, style="rounded,filled", fontname="Inter", color="#334155", fillcolor="#f8fafc", margin="0.16,0.08"];',
+    '  edge [fontname="Inter", color="#64748b"];',
+  ];
+
+  for (const node of graphProjection.nodes) {
+    const label = node.typeRef ? `${node.label}\\n[${node.typeRef}]` : node.label;
+    lines.push(`  "${escapeGraphvizString(node.id)}" [label="${escapeGraphvizString(label)}"];`);
+  }
+
+  for (const edge of graphProjection.edges) {
+    if (!edge.targetId) {
+      continue;
+    }
+    const attributes = [];
+    const label = edge.typeRef
+      ? `${edge.typeRef}${edge.implicit ? ' (implicit)' : ''}`
+      : edge.implicit
+        ? 'implicit'
+        : '';
+    if (label) {
+      attributes.push(`label="${escapeGraphvizString(label)}"`);
+    }
+    const attributeText = attributes.length > 0 ? ` [${attributes.join(', ')}]` : '';
+    lines.push(`  "${escapeGraphvizString(edge.sourceId)}" -> "${escapeGraphvizString(edge.targetId)}"${attributeText};`);
+  }
+
+  lines.push('}');
+  return lines.join('\n');
+}
+
+export function createItmMermaidMindmapSource(input, options = {}) {
+  const projected = ensureProjectedItmModel(input, options);
+  const mindmap = projected.mindmap ?? createMindmapProjection(projected, projected.tree ?? createTreeProjection(projected), options);
+  const lines = ['mindmap'];
+  appendMindmapSourceLines(lines, mindmap.root, 1);
+  return lines.join('\n');
+}
+
+function renderTreeProjection(projected, options = {}) {
+  const roots = projected.tree?.roots ?? [];
+  const treeMarkup = roots.length > 0
+    ? `<ul class="tf-itm-tree">${roots.map((node) => renderNodeTree(node)).join('')}</ul>`
+    : '<p class="tf-itm-empty">No nodes matched the selected ITM publication source.</p>';
+  return renderPublicationSection(projected, { ...options, projection: 'tree' }, treeMarkup);
+}
+
+function renderGraphProjection(projected, options = {}) {
+  const graphProjection = projected.graph;
+  const nodesMarkup = graphProjection.nodes.length > 0
+    ? graphProjection.nodes.map((node) => `
+<article class="tf-itm-graph-card">
+  <header>
+    <strong>${escapeHtml(node.label)}</strong>
+    ${node.typeRef ? `<span>${escapeHtml(node.typeRef)}</span>` : ''}
+  </header>
+  <p>${escapeHtml(node.description ?? 'No description.')}</p>
+  <dl>
+    <div><dt>Depth</dt><dd>${node.depth}</dd></div>
+    <div><dt>Children</dt><dd>${node.childCount}</dd></div>
+    <div><dt>In</dt><dd>${node.inDegree}</dd></div>
+    <div><dt>Out</dt><dd>${node.outDegree}</dd></div>
+  </dl>
+</article>`.trim()).join('')
+    : '<p class="tf-itm-empty">No graph nodes matched the selected ITM publication source.</p>';
+  const edgeMarkup = graphProjection.edges.length > 0
+    ? `<ul class="tf-itm-graph-links">${graphProjection.edges.map((edge) => `
+<li>
+  <strong>${escapeHtml(edge.sourceLabel)}</strong>
+  <span>${escapeHtml(edge.typeRef)}</span>
+  <strong>${escapeHtml(edge.targetLabel ?? edge.targetRef ?? 'unresolved target')}</strong>
+</li>`.trim()).join('')}</ul>`
+    : '<p class="tf-itm-empty">No relationships matched the selected graph projection.</p>';
+
+  return renderPublicationSection(projected, { ...options, projection: 'graph' }, `
+<div class="tf-itm-graph">
+  <div class="tf-itm-graph__nodes">${nodesMarkup}</div>
+  <section class="tf-itm-graph__relationships">
+    <h4>Connections</h4>
+    ${edgeMarkup}
+  </section>
+</div>`);
+}
+
+function renderMindmapBranch(node) {
+  return `
+<li class="tf-itm-mindmap__branch" data-side="${escapeHtml(node.side ?? 'center')}">
+  <article class="tf-itm-mindmap__node">
+    <strong>${escapeHtml(node.label)}</strong>
+    ${node.typeRef ? `<span>${escapeHtml(node.typeRef)}</span>` : ''}
+  </article>
+  ${(node.children?.length ?? 0) > 0 ? `<ul class="tf-itm-mindmap__children">${node.children.map((child) => renderMindmapBranch(child)).join('')}</ul>` : ''}
+</li>`.trim();
+}
+
+function renderMindmapProjection(projected, options = {}) {
+  const root = projected.mindmap?.root;
+  const childrenMarkup = (root?.children?.length ?? 0) > 0
+    ? `<ul class="tf-itm-mindmap__children tf-itm-mindmap__children--root">${root.children.map((child) => renderMindmapBranch(child)).join('')}</ul>`
+    : '<p class="tf-itm-empty">No branches matched the selected mindmap projection.</p>';
+  return renderPublicationSection(projected, { ...options, projection: 'mindmap' }, `
+<div class="tf-itm-mindmap">
+  <article class="tf-itm-mindmap__root">
+    <strong>${escapeHtml(root?.label ?? createProjectionTitle(projected, options))}</strong>
+    ${root?.typeRef ? `<span>${escapeHtml(root.typeRef)}</span>` : ''}
+  </article>
+  ${childrenMarkup}
+</div>`);
+}
+
+function renderCatalogueTable(headers, rows) {
+  if (rows.length === 0) {
+    return '<p class="tf-itm-empty">No catalogue rows matched the selected projection.</p>';
+  }
+
+  return `
+<table class="tf-itm-table">
+  <thead>
+    <tr>${headers.map((header) => `<th>${escapeHtml(header)}</th>`).join('')}</tr>
+  </thead>
+  <tbody>
+    ${rows.map((row) => `<tr>${row.map((cell) => `<td>${escapeHtml(cell)}</td>`).join('')}</tr>`).join('')}
+  </tbody>
+</table>`.trim();
+}
+
+function renderCatalogueProjection(projected, options = {}) {
+  const catalogue = projected.catalogues;
+  const entitiesTable = renderCatalogueTable(
+    ['Entity', 'Type', 'Parent', 'Tags'],
+    catalogue.entities.map((entity) => [
+      entity.label,
+      entity.typeRef ?? '',
+      entity.parentLabel ?? '',
+      entity.tags.join(', '),
+    ]),
+  );
+  const relationshipsTable = renderCatalogueTable(
+    ['Relationship', 'Type', 'Source', 'Target'],
+    catalogue.relationships.map((relationship) => [
+      relationship.label,
+      relationship.typeRef ?? '',
+      relationship.sourceLabel,
+      relationship.targetLabel ?? '',
+    ]),
+  );
+  return renderPublicationSection(projected, { ...options, projection: 'catalogue' }, `
+<div class="tf-itm-catalogue">
+  <section>
+    <h4>Entities</h4>
+    ${entitiesTable}
+  </section>
+  <section>
+    <h4>Relationships</h4>
+    ${relationshipsTable}
+  </section>
+</div>`);
+}
+
+function renderMatrixProjection(projected, options = {}) {
+  const matrix = projected.matrix;
+  if (matrix.rows.length === 0 || matrix.columns.length === 0) {
+    return renderPublicationSection(projected, { ...options, projection: 'matrix' }, '<p class="tf-itm-empty">No matrix rows matched the selected projection.</p>');
+  }
+
+  const cellByKey = new Map(matrix.cells.map((cell) => [`${cell.rowId}=>${cell.columnId}`, cell]));
+  return renderPublicationSection(projected, { ...options, projection: 'matrix' }, `
+<div class="tf-itm-matrix">
+  <table class="tf-itm-table tf-itm-table--matrix">
+    <thead>
+      <tr>
+        <th>Source \\ Target</th>
+        ${matrix.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join('')}
+      </tr>
+    </thead>
+    <tbody>
+      ${matrix.rows.map((row) => `
+<tr>
+  <th>${escapeHtml(row.label)}</th>
+  ${matrix.columns.map((column) => {
+    const cell = cellByKey.get(`${row.id}=>${column.id}`);
+    const title = cell?.relationshipTypes?.length
+      ? cell.relationshipTypes.join(', ')
+      : 'No relationships';
+    return `<td title="${escapeHtml(title)}">${cell?.count ?? 0}</td>`;
+  }).join('')}
+</tr>`).join('')}
+    </tbody>
+  </table>
+</div>`);
+}
+
+function renderReportProjection(projected, options = {}) {
+  const report = projected.report;
+  const sectionMarkup = report.sections.map((section) => `
+<section class="tf-itm-report__section">
+  <h4>${escapeHtml(section.title)}</h4>
+  <ul>${section.items.map((item) => `<li>${escapeHtml(item)}</li>`).join('')}</ul>
+</section>`.trim()).join('');
+  return renderPublicationSection(projected, { ...options, projection: 'report' }, `
+<div class="tf-itm-report">
+  <dl class="tf-itm-summary tf-itm-summary--report">
+    <div><dt>Roots</dt><dd>${report.summary.rootCount}</dd></div>
+    <div><dt>Relation types</dt><dd>${report.summary.relationshipTypeCount}</dd></div>
+    <div><dt>Matrix cells</dt><dd>${report.summary.nonEmptyMatrixCellCount}</dd></div>
+  </dl>
+  ${sectionMarkup}
+</div>`);
 }
 
 function renderProjectedModel(projected, options = {}) {
-  const nodeMap = new Map(projected.nodes.map((node) => [node.uid, node]));
-  const entityMap = new Map((projected.document.entities ?? []).map((entity) => [entity.uid, entity]));
-  const childrenByParentId = new Map();
-  for (const node of projected.nodes) {
-    const parentId = node.parentId;
-    if (!parentId || !nodeMap.has(parentId)) {
-      continue;
-    }
-    if (!childrenByParentId.has(parentId)) {
-      childrenByParentId.set(parentId, []);
-    }
-    childrenByParentId.get(parentId).push(node.uid);
+  switch (normalizeItmProjectionKind(options.projection)) {
+    case 'graph':
+      return renderGraphProjection(projected, options);
+    case 'mindmap':
+      return renderMindmapProjection(projected, options);
+    case 'catalogue':
+      return renderCatalogueProjection(projected, options);
+    case 'matrix':
+      return renderMatrixProjection(projected, options);
+    case 'report':
+      return renderReportProjection(projected, options);
+    case 'tree':
+    default:
+      return renderTreeProjection(projected, options);
   }
-
-  const rootNodes = projected.nodes.filter((node) => !node.parentId || !nodeMap.has(node.parentId));
-  const title = options.title
-    ?? projected.view?.title
-    ?? projected.view?.name
-    ?? projected.viewpoint?.title
-    ?? projected.viewpoint?.name
-    ?? projected.document.metadata?.title
-    ?? 'ITM publication';
-  const subtitle = projected.view
-    ? `View ${projected.view.name} via viewpoint ${projected.view.viewpointRef}`
-    : projected.viewpoint
-      ? `Viewpoint ${projected.viewpoint.name}`
-      : 'Parsed ITM model';
-  const diagnosticsMarkup = projected.diagnostics.length > 0
-    ? `<ul class="tf-itm-diagnostics">${projected.diagnostics.map((diagnostic) =>
-      `<li class="tf-itm-diagnostics__item tf-itm-diagnostics__item--${escapeHtml(diagnostic.severity)}">${escapeHtml(diagnostic.message)}</li>`).join('')}</ul>`
-    : '';
-  const treeMarkup = rootNodes.length > 0
-    ? `<ul class="tf-itm-tree">${rootNodes.map((node) =>
-      renderNodeTree(node.uid, childrenByParentId, nodeMap, entityMap, projected.document)).join('')}</ul>`
-    : '<p class="tf-itm-empty">No nodes matched the selected ITM publication source.</p>';
-
-  return `
-<section class="tf-itm-publication" data-itm-title="${escapeHtml(title)}">
-  <header class="tf-itm-publication__header">
-    <h3>${escapeHtml(title)}</h3>
-    <p>${escapeHtml(subtitle)}</p>
-  </header>
-  ${createModelSummary(projected)}
-  ${diagnosticsMarkup}
-  ${treeMarkup}
-</section>`.trim();
 }
 
 function renderModelCollection(models, options = {}) {
@@ -2900,6 +3558,188 @@ export function renderItmPublicationHtml(input, options = {}) {
   }
 
   return renderProjectedModel(projectItmDocument(input, options), options);
+}
+
+function createItmPublicationNotFoundResult(sourceResource) {
+  return {
+    html: '<section class="tf-itm-publication tf-itm-publication--error"><p>No ITM source is available for this publication block.</p></section>',
+    diagnostics: [
+      createDiagnostic('No ITM source is available for the itm-pub block.', 'error', {
+        resource: sourceResource,
+        code: 'itm.pub.source-missing',
+        origin: {
+          packageId: '@textforge/itm',
+          subsystem: 'itm-publication',
+          fenceName: 'itm-pub',
+        },
+      }),
+    ],
+    generatedResources: [],
+  };
+}
+
+function readPipelineStringValue(value) {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (typeof value?.value === 'string') {
+    return value.value;
+  }
+  return undefined;
+}
+
+function readPipelineBytesValue(value) {
+  if (value instanceof Uint8Array) {
+    return value;
+  }
+  if (value?.value instanceof Uint8Array) {
+    return value.value;
+  }
+  return undefined;
+}
+
+function createItmGeneratedDiagramPath(basePath, blockId, extension) {
+  const normalizedBase = String(basePath ?? '/generated/itm-projection').replaceAll('\\', '/').replace(/\/+$/, '');
+  return `${normalizedBase}-itm-pub-${blockId}.${extension}`;
+}
+
+function createItmGeneratedDiagramResources(input) {
+  if (!input.basePath || typeof input.svg !== 'string') {
+    return [];
+  }
+
+  const generatedAt = new Date().toISOString();
+  const resources = [
+    {
+      kind: 'generated-resource',
+      path: createItmGeneratedDiagramPath(input.basePath, input.blockId, 'svg'),
+      title: createItmGeneratedDiagramPath(input.basePath, input.blockId, 'svg').split('/').pop(),
+      representation: 'text',
+      mimeType: 'image/svg+xml',
+      languageId: 'svg',
+      text: input.svg,
+      format: 'svg',
+      pipelineId: '@textforge/itm/graphviz-projection',
+      sourceResourceId: input.sourceResource?.resourceId,
+      sourcePath: input.sourceResource?.path,
+      sourceUpdatedAt: input.sourceUpdatedAt,
+      blockId: input.blockId,
+      blockKind: 'itm-pub',
+      generatedAt,
+      metadata: {
+        projection: 'graph',
+      },
+    },
+  ];
+
+  if (input.pngBytes instanceof Uint8Array) {
+    resources.push({
+      kind: 'generated-resource',
+      path: createItmGeneratedDiagramPath(input.basePath, input.blockId, 'png'),
+      title: createItmGeneratedDiagramPath(input.basePath, input.blockId, 'png').split('/').pop(),
+      representation: 'bytes',
+      mimeType: 'image/png',
+      bytes: input.pngBytes,
+      format: 'png',
+      pipelineId: '@textforge/itm/graphviz-projection',
+      sourceResourceId: input.sourceResource?.resourceId,
+      sourcePath: input.sourceResource?.path,
+      sourceUpdatedAt: input.sourceUpdatedAt,
+      blockId: input.blockId,
+      blockKind: 'itm-pub',
+      generatedAt,
+      metadata: {
+        projection: 'graph',
+      },
+    });
+  }
+
+  return resources;
+}
+
+async function renderItmGraphPublication(selectedModel, renderOptions, execution, blockIdSuffix = '') {
+  const projected = projectItmDocument(
+    selectedModel.effectiveResolvedDocument
+      ?? selectedModel.effectiveDocument
+      ?? selectedModel.resolvedDocument
+      ?? selectedModel.document,
+    renderOptions,
+  );
+  const fallbackHtml = renderProjectedModel(projected, {
+    ...renderOptions,
+    projection: 'graph',
+  });
+
+  if (!execution.pipelineRunner) {
+    return {
+      html: fallbackHtml,
+      diagnostics: [],
+      generatedResources: [],
+    };
+  }
+
+  try {
+    const pipelineResult = await execution.pipelineRunner.run(
+      createItmGraphvizDiagramSource(projected, renderOptions),
+      {
+        context: {
+          blockId: `${execution.blockId}${blockIdSuffix}`,
+          blockKind: 'itm-pub',
+          document: execution.document,
+          sourceResource: execution.sourceResource,
+        },
+        steps: execution.includePng
+          ? ['graphviz-svg', 'svg-png']
+          : ['graphviz-svg'],
+      },
+    );
+    const svg = readPipelineStringValue(
+      pipelineResult.intermediateValues.find((value) => value.contributionId === '@textforge/diagrams/graphviz-svg')?.value
+      ?? pipelineResult.value,
+    );
+    const pngBytes = readPipelineBytesValue(
+      pipelineResult.intermediateValues.find((value) => value.contributionId === '@textforge/diagrams/svg-png')?.value,
+    );
+    if (!svg) {
+      return {
+        html: fallbackHtml,
+        diagnostics: pipelineResult.diagnostics ?? [],
+        generatedResources: pipelineResult.generatedResources ?? [],
+      };
+    }
+
+    return {
+      html: renderPublicationSection(projected, { ...renderOptions, projection: 'graph' }, `<div class="tf-itm-graph__stage">${svg}</div>`),
+      diagnostics: pipelineResult.diagnostics ?? [],
+      generatedResources: [
+        ...(pipelineResult.generatedResources ?? []),
+        ...createItmGeneratedDiagramResources({
+          basePath: execution.generatedAssetBasePath,
+          blockId: `${execution.blockId}${blockIdSuffix}`,
+          pngBytes,
+          sourceResource: execution.sourceResource,
+          sourceUpdatedAt: execution.sourceUpdatedAt,
+          svg,
+        }),
+      ],
+    };
+  } catch (error) {
+    return {
+      html: fallbackHtml,
+      diagnostics: [
+        createDiagnostic(error?.message ?? 'Graph projection rendering failed.', 'warning', {
+          resource: execution.sourceResource,
+          code: 'itm.pub.graph-render-failed',
+          origin: {
+            packageId: '@textforge/itm',
+            subsystem: 'itm-publication',
+            fenceName: 'itm-pub',
+          },
+        }),
+      ],
+      generatedResources: [],
+    };
+  }
 }
 
 function ensureItmDocumentState(sharedState) {
@@ -2970,7 +3810,7 @@ async function parseEmbeddedItmBlock(execution) {
 export const itmMarkdownFenceHandlerContributions = [
   createMarkdownFenceHandlerContribution('@textforge/itm/fence-handler/itm', {
     label: 'ITM model block renderer',
-    description: 'Parse embedded ITM blocks and render a publication-oriented outline preview.',
+    description: 'Parse embedded ITM blocks and render the default tree-oriented ITM publication preview.',
     localName: 'itm',
     capabilities: ['@textforge/itm/capability/itm'],
     defaultActive: true,
@@ -3007,7 +3847,7 @@ export const itmMarkdownFenceHandlerContributions = [
   }),
   createMarkdownFenceHandlerContribution('@textforge/itm/fence-handler/itm-pub', {
     label: 'ITM publication block renderer',
-    description: 'Render publication views over embedded ITM model blocks within the current Markdown document.',
+    description: 'Render projection-aware publication views over embedded ITM model blocks within the current Markdown document.',
     localName: 'itm-pub',
     capabilities: ['@textforge/itm/capability/itm-pub'],
     defaultActive: true,
@@ -3018,21 +3858,7 @@ export const itmMarkdownFenceHandlerContributions = [
       const request = readItmPublicationRequest(execution.content);
       const selected = findRequestedModel(state, request);
       if (!selected || (Array.isArray(selected) && selected.length === 0)) {
-        return {
-          html: '<section class="tf-itm-publication tf-itm-publication--error"><p>No ITM source is available for this publication block.</p></section>',
-          diagnostics: [
-            createDiagnostic('No ITM source is available for the itm-pub block.', 'error', {
-              resource: execution.sourceResource,
-              code: 'itm.pub.source-missing',
-              origin: {
-                packageId: '@textforge/itm',
-                subsystem: 'itm-publication',
-                fenceName: 'itm-pub',
-              },
-            }),
-          ],
-          generatedResources: [],
-        };
+        return createItmPublicationNotFoundResult(execution.sourceResource);
       }
 
       const renderOptions = {
@@ -3040,7 +3866,28 @@ export const itmMarkdownFenceHandlerContributions = [
         view: request.view,
         viewpoint: request.viewpoint,
         select: request.select,
+        projection: request.projection ?? request.kind ?? request.layout ?? request.mode,
       };
+      const projectionKind = normalizeItmProjectionKind(renderOptions.projection);
+      if (projectionKind === 'graph') {
+        if (Array.isArray(selected)) {
+          const rendered = await Promise.all(selected.map((model, index) =>
+            renderItmGraphPublication(model, {
+              ...renderOptions,
+              title: selected.length > 1
+                ? `${renderOptions.title ?? 'ITM publication'} ${index + 1}`
+                : renderOptions.title,
+            }, execution, `-${index + 1}`)));
+          return {
+            html: rendered.map((entry) => entry.html).join('\n'),
+            diagnostics: rendered.flatMap((entry) => entry.diagnostics ?? []),
+            generatedResources: rendered.flatMap((entry) => entry.generatedResources ?? []),
+          };
+        }
+
+        return renderItmGraphPublication(selected, renderOptions, execution);
+      }
+
       return {
         html: renderItmPublicationHtml(selected, renderOptions),
         diagnostics: [],

@@ -54,8 +54,177 @@ export interface ProjectItmDocumentOptions extends ItmDocumentEvaluationOptions 
   readonly viewpoint?: string;
   readonly select?: string;
   readonly title?: string;
+  readonly projection?: ItmProjectionKind;
   readonly includeImplicitRelationships?: boolean;
   readonly includeAncestors?: boolean;
+}
+
+export type ItmProjectionKind = 'tree' | 'graph' | 'mindmap' | 'catalogue' | 'matrix' | 'report';
+
+export interface ItmProjectedTreeNode {
+  readonly id: string;
+  readonly uid: string;
+  readonly label: string;
+  readonly typeRef?: string;
+  readonly description?: string;
+  readonly tags: ReadonlyArray<string>;
+  readonly parentId?: string;
+  readonly depth: number;
+  readonly path: ReadonlyArray<string>;
+  readonly childCount: number;
+  readonly style: Readonly<Record<string, ItmValue>>;
+  readonly children: ReadonlyArray<ItmProjectedTreeNode>;
+}
+
+export interface ItmTreeProjection {
+  readonly roots: ReadonlyArray<ItmProjectedTreeNode>;
+  readonly maxDepth: number;
+  readonly nodeCount: number;
+}
+
+export interface ItmProjectedGraphNode extends CanonicalGraphNode {
+  readonly description?: string;
+  readonly tags: ReadonlyArray<string>;
+  readonly childCount: number;
+  readonly depth: number;
+  readonly inDegree: number;
+  readonly outDegree: number;
+  readonly style: Readonly<Record<string, ItmValue>>;
+}
+
+export interface ItmProjectedGraphEdge extends CanonicalGraphEdge {
+  readonly style?: Readonly<Record<string, ItmValue>>;
+  readonly label: string;
+  readonly sourceLabel: string;
+  readonly targetLabel?: string;
+}
+
+export interface ItmGraphProjection {
+  readonly nodes: ReadonlyArray<ItmProjectedGraphNode>;
+  readonly edges: ReadonlyArray<ItmProjectedGraphEdge>;
+  readonly rootNodeIds: ReadonlyArray<string>;
+  readonly relationshipTypeCounts: ReadonlyArray<{
+    readonly typeRef: string;
+    readonly count: number;
+  }>;
+}
+
+export interface ItmMindmapNode {
+  readonly id: string;
+  readonly uid?: string;
+  readonly label: string;
+  readonly typeRef?: string;
+  readonly description?: string;
+  readonly side: 'left' | 'right' | 'center';
+  readonly depth: number;
+  readonly children: ReadonlyArray<ItmMindmapNode>;
+}
+
+export interface ItmMindmapProjection {
+  readonly root: ItmMindmapNode;
+  readonly nodeCount: number;
+}
+
+export interface ItmCatalogueProjection {
+  readonly entities: ReadonlyArray<{
+    readonly id: string;
+    readonly uid: string;
+    readonly label: string;
+    readonly typeRef?: string;
+    readonly parentLabel?: string;
+    readonly tags: ReadonlyArray<string>;
+    readonly description?: string;
+    readonly attributes: Readonly<Record<string, ItmValue>>;
+  }>;
+  readonly relationships: ReadonlyArray<{
+    readonly id: string;
+    readonly uid: string;
+    readonly label: string;
+    readonly typeRef?: string;
+    readonly relationshipKind: ItmRelationship['relationshipKind'];
+    readonly sourceLabel: string;
+    readonly targetLabel?: string;
+    readonly implicit: boolean;
+    readonly attributes: Readonly<Record<string, ItmValue>>;
+  }>;
+  readonly views: ReadonlyArray<{
+    readonly id: string;
+    readonly name: string;
+    readonly title?: string;
+    readonly viewpointRef: string;
+    readonly parameters: Readonly<Record<string, ItmValue>>;
+    readonly notes: ReadonlyArray<string>;
+  }>;
+  readonly viewpoints: ReadonlyArray<{
+    readonly id: string;
+    readonly name: string;
+    readonly title?: string;
+    readonly supportsVisualEditing: boolean;
+    readonly stepCount: number;
+  }>;
+}
+
+export interface ItmMatrixProjection {
+  readonly rows: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly typeRef?: string;
+  }>;
+  readonly columns: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly typeRef?: string;
+  }>;
+  readonly cells: ReadonlyArray<{
+    readonly rowId: string;
+    readonly columnId: string;
+    readonly count: number;
+    readonly relationshipTypes: ReadonlyArray<string>;
+    readonly relationshipKinds: ReadonlyArray<ItmRelationship['relationshipKind']>;
+    readonly edgeIds: ReadonlyArray<string>;
+  }>;
+  readonly nonEmptyCellCount: number;
+}
+
+export interface ItmReportProjection {
+  readonly title: string;
+  readonly summary: {
+    readonly nodeCount: number;
+    readonly edgeCount: number;
+    readonly rootCount: number;
+    readonly viewCount: number;
+    readonly viewpointCount: number;
+    readonly diagnosticCount: number;
+    readonly relationshipTypeCount: number;
+    readonly nonEmptyMatrixCellCount: number;
+  };
+  readonly sections: ReadonlyArray<{
+    readonly id: string;
+    readonly title: string;
+    readonly items: ReadonlyArray<string>;
+  }>;
+}
+
+export interface ItmProjectedDocument {
+  readonly document: ItmDocument;
+  readonly resolvedDocument: ResolvedItmDocument;
+  readonly sourceDocument?: ItmDocument;
+  readonly diagnostics: ReadonlyArray<ItmDiagnostic>;
+  readonly nodes: ReadonlyArray<CanonicalGraphNode>;
+  readonly edges: ReadonlyArray<CanonicalGraphEdge & {
+    readonly style?: Readonly<Record<string, ItmValue>>;
+  }>;
+  readonly views: ReadonlyArray<CanonicalGraphView>;
+  readonly view?: ItmView;
+  readonly viewpoint?: ItmViewpoint;
+  readonly tree: ItmTreeProjection;
+  readonly graph: ItmGraphProjection;
+  readonly mindmap: ItmMindmapProjection;
+  readonly catalogues: ItmCatalogueProjection;
+  readonly matrix: ItmMatrixProjection;
+  readonly report: ItmReportProjection;
+  readonly graphvizSource: string;
+  readonly mermaidMindmapSource: string;
 }
 
 export type ItmResolverDiagnosticCategory =
@@ -85,6 +254,7 @@ export interface CreateItmResolverDiagnosticOptions {
 }
 
 export declare const itmCapabilities: ReadonlyArray<Capability>;
+export declare const itmProjectionKinds: ReadonlyArray<ItmProjectionKind>;
 export declare const itmResolverDiagnosticCodes: Readonly<{
   readonly unresolved: 'itm.resolve.unresolved';
   readonly unsupported: 'itm.resolve.unsupported';
@@ -114,19 +284,15 @@ export declare function validateItmDocument(
 export declare function projectItmDocument(
   input: ItmDocument | ResolvedItmDocument,
   options?: ProjectItmDocumentOptions,
-): {
-  readonly document: ItmDocument;
-  readonly resolvedDocument: ResolvedItmDocument;
-  readonly sourceDocument?: ItmDocument;
-  readonly diagnostics: ReadonlyArray<ItmDiagnostic>;
-  readonly nodes: ReadonlyArray<CanonicalGraphNode>;
-  readonly edges: ReadonlyArray<CanonicalGraphEdge & {
-    readonly style?: Readonly<Record<string, ItmValue>>;
-  }>;
-  readonly views: ReadonlyArray<CanonicalGraphView>;
-  readonly view?: ItmView;
-  readonly viewpoint?: ItmViewpoint;
-};
+): ItmProjectedDocument;
+export declare function createItmGraphvizDiagramSource(
+  input: ItmDocument | ResolvedItmDocument | ItmProjectedDocument,
+  options?: ProjectItmDocumentOptions,
+): string;
+export declare function createItmMermaidMindmapSource(
+  input: ItmDocument | ResolvedItmDocument | ItmProjectedDocument,
+  options?: ProjectItmDocumentOptions,
+): string;
 export declare function renderItmPublicationHtml(
   input: ItmDocument | ResolvedItmDocument | ReadonlyArray<ItmLoadDocumentResult>,
   options?: ProjectItmDocumentOptions,

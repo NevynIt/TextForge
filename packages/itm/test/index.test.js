@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url';
 
 import {
   contributions,
+  createItmGraphvizDiagramSource,
+  createItmMermaidMindmapSource,
   createItmResolverDiagnostic,
   createWorkspaceItmIncludeProvider,
   itmResolverDiagnosticCodes,
@@ -142,6 +144,58 @@ test('renderItmPublicationHtml renders projected view content', () => {
   assert.equal(projection.nodes.length >= 1, true);
   assert.match(html, /Capability roadmap summary/);
   assert.match(html, /Capability roadmap/);
+});
+
+test('projectItmDocument exposes tree, graph, mindmap, catalogue, matrix, and report projections', () => {
+  const document = parseDocument(`%viewpoint capability_view
+{
+  pipeline:
+    - select: "[Capability]"
+}
+%view roadmap_view
+{
+  viewpoint: capability_view
+}
+&roadmap [Capability] Capability roadmap
+  &phase1 [Capability] Foundation
+  &phase2 [Capability] Delivery
+`);
+
+  const projection = projectItmDocument(document, {
+    view: 'roadmap_view',
+    title: 'Capability roadmap',
+  });
+
+  assert.equal(projection.tree.roots.length, 1);
+  assert.equal(projection.graph.nodes.length, projection.nodes.length);
+  assert.equal(projection.catalogues.entities.length, projection.nodes.length);
+  assert.equal(projection.matrix.rows.length, projection.graph.nodes.length);
+  assert.equal(projection.report.sections.length >= 3, true);
+  assert.match(projection.graphvizSource, /digraph ItmProjection/);
+  assert.match(projection.mermaidMindmapSource, /mindmap/);
+  assert.match(createItmGraphvizDiagramSource(projection), /Capability roadmap/);
+  assert.match(createItmMermaidMindmapSource(projection), /Capability roadmap/);
+});
+
+test('renderItmPublicationHtml supports catalogue and matrix projection output', () => {
+  const document = parseDocument(`&roadmap [Capability] Capability roadmap
+  &phase1 [Capability] Foundation
+  &phase2 [Capability] Delivery
+`);
+
+  const catalogueHtml = renderItmPublicationHtml(document, {
+    projection: 'catalogue',
+    title: 'Capability catalogue',
+  });
+  const matrixHtml = renderItmPublicationHtml(document, {
+    projection: 'matrix',
+    title: 'Capability matrix',
+  });
+
+  assert.match(catalogueHtml, /data-itm-projection="catalogue"/);
+  assert.match(catalogueHtml, /Capability catalogue/);
+  assert.match(matrixHtml, /data-itm-projection="matrix"/);
+  assert.match(matrixHtml, /Source \\ Target/);
 });
 
 test('ITM contribution manifest exposes markdown fence handlers', () => {

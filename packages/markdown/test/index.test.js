@@ -222,6 +222,72 @@ title: "Roadmap summary"
   assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
 });
 
+test('renderMarkdownDocument can render itm-pub graph projections through the diagram pipeline and emit generated assets', async () => {
+  const contributionRegistry = createContributionRegistry([
+    contributions,
+    itmContributions,
+    createContributionManifest('@textforge/test-diagrams', {
+      capabilities: [
+        createCapability('@textforge/test-diagrams/capability/graphviz', {
+          aliases: ['graphviz'],
+          defaultActive: true,
+          documentPredicate: createResourcePredicate({ languageIds: ['markdown'] }),
+        }),
+      ],
+      pipelines: [
+        {
+          id: '@textforge/test-diagrams/graphviz-svg',
+          localName: 'graphviz-svg',
+          capabilities: ['@textforge/test-diagrams/capability/graphviz'],
+          defaultActive: true,
+          inputKind: 'text',
+          outputKind: 'svg',
+          async run({ input }) {
+            const text = typeof input === 'string' ? input : String(input?.value ?? '');
+            return {
+              output: {
+                kind: 'svg',
+                value: `<svg data-dot="${text.length}"></svg>`,
+              },
+            };
+          },
+        },
+      ],
+    }),
+  ]);
+
+  const result = await renderMarkdownDocument(`\`\`\`itm name=roadmap-model
+&roadmap [Capability] Capability roadmap
+  &phase1 [Capability] Foundation
+  &phase2 [Capability] Delivery
+\`\`\`
+
+\`\`\`itm-pub
+projection: graph
+source: roadmap-model
+title: "Roadmap graph"
+\`\`\`
+`, {
+    resource: {
+      resourceId: 'markdown-4-graph',
+      path: '/docs/roadmap-graph.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+    contributionRegistry,
+    fenceExecutionOptions: {
+      generatedAssetBasePath: '/generated/roadmap-graph',
+      includePng: false,
+    },
+  });
+
+  assert.match(result.html, /data-itm-projection="graph"/);
+  assert.match(result.html, /<svg/i);
+  assert.equal(result.generatedResources.some((resource) => resource.path.endsWith('.svg')), true);
+});
+
 test('renderMarkdownDocument forwards itm package-rule diagnostics through the fence execution path', async () => {
   const contributionRegistry = createContributionRegistry([
     contributions,
