@@ -298,6 +298,12 @@ export const markdownFenceHandlerContributions = [
   }),
 ];
 
+function emitMarkdownTrace(options, label, details = {}) {
+  if (typeof options?.trace === 'function') {
+    options.trace(label, details);
+  }
+}
+
 export function createMarkdownContributionManifest() {
   return createContributionManifest('@textforge/markdown', {
     capabilities: markdownCapabilities,
@@ -738,6 +744,9 @@ function parseFenceInfo(rawInfo) {
 }
 
 async function resolveKnownFencedBlocks(source, options, environment) {
+  emitMarkdownTrace(options, 'resolveKnownFencedBlocks:start', {
+    sourceLength: source.length,
+  });
   const fenceHandlerRegistry = resolveMarkdownFenceHandlerRegistry(options);
   if (fenceHandlerRegistry.diagnostics?.length) {
     environment.diagnostics.push(...fenceHandlerRegistry.diagnostics);
@@ -781,6 +790,11 @@ async function resolveKnownFencedBlocks(source, options, environment) {
 
     const blockId = `tfmd-block-${++blockCounter}`;
     try {
+      emitMarkdownTrace(options, 'resolveKnownFencedBlocks:fence-start', {
+        blockId,
+        kind,
+        contentLength: blockContent.length,
+      });
       const result = await handlerContribution.render({
         content: blockContent,
         blockId,
@@ -803,8 +817,19 @@ async function resolveKnownFencedBlocks(source, options, environment) {
       if (result.generatedResources?.length) {
         environment.generatedResources.push(...result.generatedResources);
       }
+      emitMarkdownTrace(options, 'resolveKnownFencedBlocks:fence-done', {
+        blockId,
+        kind,
+        generatedResources: result.generatedResources?.length ?? 0,
+        diagnostics: result.diagnostics?.length ?? 0,
+      });
       output += renderDiagramBlock(kind, result.html, blockId);
     } catch (error) {
+      emitMarkdownTrace(options, 'resolveKnownFencedBlocks:fence-error', {
+        blockId,
+        kind,
+        message: error?.message ?? String(error),
+      });
       environment.diagnostics.push(createMarkdownDiagnostic(
         'tfmd.fence.render-failed',
         error?.message ?? `Failed to render ${kind} block.`,
@@ -821,6 +846,10 @@ async function resolveKnownFencedBlocks(source, options, environment) {
   }
 
   output += source.slice(lastIndex);
+  emitMarkdownTrace(options, 'resolveKnownFencedBlocks:done', {
+    outputLength: output.length,
+    fenceCount: blockCounter,
+  });
   return output;
 }
 
@@ -925,7 +954,17 @@ export function createPrintOptimizedHtmlDocument(result, options = {}) {
 }
 
 export async function renderMarkdownDocument(source, options = {}) {
+  emitMarkdownTrace(options, 'renderMarkdownDocument:start', {
+    sourceLength: source.length,
+    resourcePath: options.resource?.path,
+  });
   const scanned = scanTfmdBlocks(source);
+  emitMarkdownTrace(options, 'renderMarkdownDocument:scanned', {
+    strippedLength: scanned.source.length,
+    diagnostics: scanned.diagnostics.length,
+    requirements: scanned.requirements.length,
+    styles: Object.keys(scanned.styles).length,
+  });
   const contributionContext = options.contributionContext
     ?? (options.contributionRegistry?.resolveDocumentContext
       ? options.contributionRegistry.resolveDocumentContext({
@@ -933,6 +972,11 @@ export async function renderMarkdownDocument(source, options = {}) {
         explicitRequirements: scanned.requirements,
       })
       : undefined);
+  emitMarkdownTrace(options, 'renderMarkdownDocument:context', {
+    activeCapabilities: contributionContext?.activeCapabilityIds?.length ?? 0,
+    activeFenceHandlers: contributionContext?.activeMarkdownFenceHandlers?.length ?? 0,
+    diagnostics: contributionContext?.diagnostics?.length ?? 0,
+  });
   const pipelineRunner = options.pipelineRunner
     ?? (contributionContext
       ? createDocumentPipelineRunner({
@@ -954,8 +998,21 @@ export async function renderMarkdownDocument(source, options = {}) {
     contributionContext,
     pipelineRunner,
   }, environment);
+  emitMarkdownTrace(options, 'renderMarkdownDocument:fences-resolved', {
+    resolvedSourceLength: resolvedSource.length,
+    diagnostics: environment.diagnostics.length,
+    generatedResources: environment.generatedResources.length,
+  });
   const markdown = createMarkdownProcessor(environment);
+  emitMarkdownTrace(options, 'renderMarkdownDocument:markdown-render:start', {
+    resolvedSourceLength: resolvedSource.length,
+  });
   const bodyHtml = markdown.render(resolvedSource, environment);
+  emitMarkdownTrace(options, 'renderMarkdownDocument:markdown-render:done', {
+    bodyHtmlLength: bodyHtml.length,
+    diagnostics: environment.diagnostics.length,
+    referencedAssets: environment.referencedAssets.length,
+  });
   const styleSheet = createTfmdStyleSheet(scanned.styles);
   const html = `
 <article class="tfmd-preview">

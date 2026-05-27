@@ -105,7 +105,7 @@ import {
   createWorkbenchChromeModel,
   createWorkspaceTreeFrameModel,
 } from '@textforge/ui';
-import { bundledDocFolders, bundledDocs } from './generated/bundledDocs.js';
+import { bundledDocFolders, bundledDocs, bundledDocsGeneratedAt } from './generated/bundledDocs.js';
 import { createMarkdownPreviewRequestManager } from './markdownPreviewState.js';
 
 const element = React.createElement;
@@ -180,6 +180,11 @@ const phase35ScreenshotPresets = {
 };
 
 const workbenchTestProfiles = {
+  'markdown-minimal': {
+    openResourcePath: '/.textforge/resources/docs/examples/markdown-minimal.md',
+    preferredSurfaceId: '@textforge/markdown/preview',
+    openPlacement: 'main',
+  },
   'markdown-phase4': {
     openResourcePath: '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md',
     preferredSurfaceId: '@textforge/markdown/preview',
@@ -292,6 +297,14 @@ function readWorkbenchTestProfile() {
   return workbenchTestProfiles[profileId] ?? undefined;
 }
 
+function readPreviewTraceEnabled() {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  return new URL(window.location.href).searchParams.get('tracePreview') === '1';
+}
+
 function readLuaBootstrapRecoveryState() {
   if (typeof window === 'undefined') {
     return {
@@ -341,6 +354,50 @@ function readWorkbenchBootstrapOptions() {
 
 function createTimestampFactory() {
   return () => new Date().toISOString();
+}
+
+function createTraceLogger(enabled) {
+  const startedAt = typeof performance !== 'undefined' && typeof performance.now === 'function'
+    ? performance.now()
+    : Date.now();
+  let counter = 0;
+
+  return (label, details = {}) => {
+    if (!enabled) {
+      return;
+    }
+
+    counter += 1;
+    const current = typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+    const elapsedMs = Math.round((current - startedAt) * 100) / 100;
+    const entry = {
+      index: counter,
+      elapsedMs,
+      label,
+      details,
+    };
+    if (typeof globalThis === 'object' && globalThis) {
+      const traceEntries = Array.isArray(globalThis.__textforgePreviewTrace)
+        ? globalThis.__textforgePreviewTrace
+        : [];
+      traceEntries.push(entry);
+      globalThis.__textforgePreviewTrace = traceEntries;
+    }
+    if (typeof document !== 'undefined' && document?.body?.dataset) {
+      const tail = String(document.body.dataset.textforgePreviewTraceTail ?? '')
+        .split('|')
+        .filter(Boolean)
+        .slice(-11);
+      tail.push(label);
+      document.body.dataset.textforgePreviewTraceLast = label;
+      document.body.dataset.textforgePreviewTraceCount = String(counter);
+      document.body.dataset.textforgePreviewTraceElapsed = String(elapsedMs);
+      document.body.dataset.textforgePreviewTraceTail = tail.join('|');
+    }
+    console.log(`[preview-trace #${counter} +${elapsedMs}ms] ${label}`, details);
+  };
 }
 
 function createBundledWorkspacePath(path) {
@@ -411,7 +468,7 @@ function sanitizePersistentWorkspaceState(input) {
 function createBundledWorkspaceOverlayState(baseInput) {
   const baseState = typeof baseInput?.snapshot === 'function' ? baseInput.snapshot() : baseInput;
   const textforgeFolder = baseState.folders.find((folder) => folder.path === '/.textforge');
-  const bundledAt = createTimestampFactory()();
+  const bundledAt = bundledDocsGeneratedAt;
   const bundledRootPath = '/.textforge/resources';
   const folders = [
     {
@@ -713,6 +770,7 @@ function createTextForgeWorkbenchController() {
   const workbenchTestProfile = readWorkbenchTestProfile();
   const luaBootstrapRecovery = readLuaBootstrapRecoveryState();
   const bootstrapOptions = readWorkbenchBootstrapOptions();
+  const tracePreview = createTraceLogger(readPreviewTraceEnabled());
   let workspace = createWorkspaceService({
     workspaceId: 'textforge-shell',
     name: 'TextForge Workspace',
@@ -784,6 +842,11 @@ function createTextForgeWorkbenchController() {
     registry: commandRegistry,
     getContext: buildCommandContext,
   });
+  tracePreview('controller:init', {
+    testProfile: typeof window === 'undefined'
+      ? null
+      : new URL(window.location.href).searchParams.get('testProfile'),
+  });
 
   function emit() {
     cachedSnapshot = undefined;
@@ -794,6 +857,7 @@ function createTextForgeWorkbenchController() {
 
   const markdownPreviewRequests = createMarkdownPreviewRequestManager({
     emit,
+    trace: tracePreview,
     renderPreview(resource) {
       return renderMarkdownResource(resource);
     },
@@ -2156,13 +2220,29 @@ function createTextForgeWorkbenchController() {
 
     const cachedContext = documentContributionContextByResourceId.get(entry.id);
     if (cachedContext?.updatedAt === entry.metadata.updatedAt) {
+      if (isMarkdownResource(entry)) {
+        tracePreview('document-context:cache-hit', {
+          resourceId: entry.id,
+          path: entry.path,
+        });
+      }
       return cachedContext.context;
     }
 
+    const startedAt = performance.now();
     const context = contributionRegistry.resolveDocumentContext({
       document: workspaceEntryToResourceRef(entry),
       explicitRequirements: getDocumentCapabilityRequirements(entry),
     });
+    if (isMarkdownResource(entry)) {
+      tracePreview('document-context:resolved', {
+        resourceId: entry.id,
+        path: entry.path,
+        durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+        activeCapabilities: context.activeCapabilityIds.length,
+        activeFenceHandlers: context.activeMarkdownFenceHandlers.length,
+      });
+    }
     documentContributionContextByResourceId.set(entry.id, {
       updatedAt: entry.metadata.updatedAt,
       context,
@@ -2199,13 +2279,20 @@ function createTextForgeWorkbenchController() {
   }
 
   async function renderMarkdownResource(resource, options = {}) {
+    const startedAt = performance.now();
+    tracePreview('renderMarkdownResource:start', {
+      resourceId: resource.id,
+      path: resource.path,
+      updatedAt: resource.metadata.updatedAt,
+    });
     const contributionContext = resolveDocumentContributionContextForEntry(resource);
-    return renderMarkdownDocument(resource.text, {
+    const result = await renderMarkdownDocument(resource.text, {
       resource: workspaceEntryToResourceRef(resource),
       sourceUpdatedAt: resource.metadata.updatedAt,
       resolveAssetReference: resolveMarkdownAssetReference,
       contributionRegistry,
       contributionContext,
+      trace: tracePreview,
       fenceExecutionOptions: {
         document: globalThis.document,
         hostServices: {
@@ -2214,10 +2301,30 @@ function createTextForgeWorkbenchController() {
         ...options.fenceExecutionOptions,
       },
     });
+    tracePreview('renderMarkdownResource:done', {
+      resourceId: resource.id,
+      path: resource.path,
+      durationMs: Math.round((performance.now() - startedAt) * 100) / 100,
+      diagnostics: result.diagnostics.length,
+      generatedResources: result.generatedResources.length,
+    });
+    return result;
   }
 
   function requestMarkdownPreview(resource) {
-    return markdownPreviewRequests.request(resource);
+    tracePreview('requestMarkdownPreview', {
+      resourceId: resource.id,
+      path: resource.path,
+      updatedAt: resource.metadata.updatedAt,
+    });
+    const previewState = markdownPreviewRequests.request(resource);
+    tracePreview('requestMarkdownPreview:returned', {
+      resourceId: resource.id,
+      path: resource.path,
+      status: previewState?.status ?? 'unknown',
+      hasResult: Boolean(previewState?.result),
+    });
+    return previewState;
   }
 
   function createOpenWithControl(session, resource) {
@@ -2450,6 +2557,11 @@ function createTextForgeWorkbenchController() {
       ? getLuaConsoleSessionState(resource.id)
       : undefined;
     const resourceRef = workspaceEntryToResourceRef(resource);
+    tracePreview('createSurfaceView:start', {
+      sessionId: session.id,
+      contributionId: session.contributionId,
+      path: resource.path,
+    });
     const runtimeView = contribution?.open?.({
       session,
       contribution,
@@ -2505,6 +2617,12 @@ function createTextForgeWorkbenchController() {
       runConsoleCommand(command) {
         return executeLuaConsoleCommand(resource, command);
       },
+    });
+    tracePreview('createSurfaceView:open-returned', {
+      sessionId: session.id,
+      contributionId: session.contributionId,
+      path: resource.path,
+      mountId: runtimeView?.mountId ?? null,
     });
 
     const surface = runtimeView?.surface ?? {
@@ -2604,6 +2722,11 @@ function createTextForgeWorkbenchController() {
       return createWelcomeView();
     }
 
+    tracePreview('getActiveMainView', {
+      sessionId: session.id,
+      contributionId: session.contributionId,
+      path: session.resource.path,
+    });
     return createSurfaceView(session);
   }
 
@@ -3475,6 +3598,9 @@ function createTextForgeWorkbenchController() {
   }
 
   async function hydrateWorkspace(options = {}) {
+    tracePreview('hydrateWorkspace:start', {
+      resetStorage: options.resetStorage === true,
+    });
     runtime.status = 'loading';
     storageFailure = undefined;
     state.storageResetPending = false;
@@ -3516,6 +3642,9 @@ function createTextForgeWorkbenchController() {
         reloadLuaAutomation();
       }
       runtime.status = 'ready';
+      tracePreview('hydrateWorkspace:ready', {
+        hydrationSource,
+      });
 
       const selectedEntry = getEntry(workspace.getManifest().selectedResourceId) ?? getDefaultSelection();
       rememberSelection(selectedEntry?.id);
@@ -3528,11 +3657,16 @@ function createTextForgeWorkbenchController() {
       const initialEntry = presetEntry ?? selectedEntry;
 
       if (initialEntry && initialEntry.kind !== 'folder' && listMainSessions().length === 0 && listPopupSessions().length === 0) {
+        tracePreview('hydrateWorkspace:initial-open', {
+          path: initialEntry.path,
+          preferredSurfaceId: initialOpenProfile?.preferredSurfaceId ?? null,
+        });
         openResourceEntry(initialEntry, {
           placement: initialOpenProfile?.openPlacement,
           preferredSurfaceId: initialOpenProfile?.preferredSurfaceId,
         });
       } else {
+        tracePreview('hydrateWorkspace:initial-open-skipped', {});
         emit();
       }
       await applyWorkbenchBootstrapOptions();

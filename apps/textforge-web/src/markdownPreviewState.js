@@ -27,6 +27,7 @@ export function createMarkdownPreviewRequestManager(options = {}) {
   const renderPreview = options.renderPreview ?? (async () => undefined);
   const emit = options.emit ?? (() => {});
   const scheduleTask = options.scheduleTask ?? scheduleDeferredTask;
+  const trace = options.trace ?? (() => {});
 
   function cancelPending(resourceId) {
     const cancel = cancelPendingByResourceId.get(resourceId);
@@ -39,11 +40,24 @@ export function createMarkdownPreviewRequestManager(options = {}) {
   function request(resource) {
     const currentState = stateByResourceId.get(resource.id);
     const updatedAt = resource.metadata.updatedAt;
+    trace('preview-request:request', {
+      resourceId: resource.id,
+      updatedAt,
+      status: currentState?.status ?? 'none',
+    });
     if (currentState?.status === 'ready' && currentState.updatedAt === updatedAt) {
+      trace('preview-request:cache-hit', {
+        resourceId: resource.id,
+        status: 'ready',
+      });
       return currentState;
     }
 
     if (currentState?.status === 'rendering' && currentState.updatedAt === updatedAt) {
+      trace('preview-request:cache-hit', {
+        resourceId: resource.id,
+        status: 'rendering',
+      });
       return currentState;
     }
 
@@ -60,11 +74,19 @@ export function createMarkdownPreviewRequestManager(options = {}) {
     stateByResourceId.set(resource.id, nextState);
 
     cancelPendingByResourceId.set(resource.id, scheduleTask(async () => {
+      trace('preview-request:scheduled-run', {
+        resourceId: resource.id,
+        updatedAt,
+      });
       cancelPendingByResourceId.delete(resource.id);
 
       try {
         const result = await renderPreview(resource);
         if (requestVersionByResourceId.get(resource.id) !== requestVersion) {
+          trace('preview-request:stale-result', {
+            resourceId: resource.id,
+            updatedAt,
+          });
           return;
         }
 
@@ -74,8 +96,17 @@ export function createMarkdownPreviewRequestManager(options = {}) {
           result,
           error: undefined,
         });
+        trace('preview-request:ready', {
+          resourceId: resource.id,
+          updatedAt,
+        });
       } catch (error) {
         if (requestVersionByResourceId.get(resource.id) !== requestVersion) {
+          trace('preview-request:stale-error', {
+            resourceId: resource.id,
+            updatedAt,
+            message: error?.message ?? String(error),
+          });
           return;
         }
 
@@ -84,6 +115,11 @@ export function createMarkdownPreviewRequestManager(options = {}) {
           updatedAt,
           result: undefined,
           error,
+        });
+        trace('preview-request:error', {
+          resourceId: resource.id,
+          updatedAt,
+          message: error?.message ?? String(error),
         });
       }
 
