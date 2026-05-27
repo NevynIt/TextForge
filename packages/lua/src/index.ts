@@ -18,7 +18,7 @@ export interface LuaConsoleLine {
   readonly text: string;
 }
 
-export interface LuaAutomationDefinition {
+export interface LuaPipelineDefinition {
   readonly id: string;
   readonly name: string;
   readonly input: ReadonlyArray<string>;
@@ -29,6 +29,10 @@ export interface LuaAutomationDefinition {
   readonly contributionId: string;
   readonly sourcePath: string;
   readonly sourceResourceId?: string;
+  readonly source?: string;
+}
+
+export interface LuaAutomationDefinition extends LuaPipelineDefinition {
   readonly source: string;
 }
 
@@ -133,7 +137,7 @@ export declare function runLuaScript(options?: {
   readonly limits?: Partial<LuaExecutionLimits>;
   readonly automationRoot?: string;
   readonly automationDefinitions?: ReadonlyArray<LuaAutomationDefinition>;
-  readonly pipelineDefinitions?: ReadonlyArray<LuaAutomationDefinition>;
+  readonly pipelineDefinitions?: ReadonlyArray<LuaPipelineDefinition>;
   readonly recursionDepth?: number;
   readonly expectedOutput?: string;
   readonly invokePipelineStep?: (input: { readonly id: string; readonly value: unknown }) => unknown;
@@ -157,7 +161,7 @@ export declare function discoverLuaAutomations(options?: {
 export interface LuaExecutionService {
   getAutomationDefinitions(): ReadonlyArray<LuaAutomationDefinition>;
   setAutomationDefinitions(definitions?: ReadonlyArray<LuaAutomationDefinition>): ReadonlyArray<LuaAutomationDefinition>;
-  setPipelineDefinitions(definitions?: ReadonlyArray<LuaAutomationDefinition>): ReadonlyArray<LuaAutomationDefinition>;
+  setPipelineDefinitions(definitions?: ReadonlyArray<LuaPipelineDefinition>): ReadonlyArray<LuaPipelineDefinition>;
   getConsoleSessionState(sessionKey: string): LuaPowerSessionState | undefined;
   runSnippet(runOptions?: Parameters<typeof runLuaScript>[0]): LuaRunResult;
   runConsoleCommand(

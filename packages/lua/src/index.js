@@ -262,7 +262,7 @@ function createLuaConsoleHelpLines() {
     '  require("tf.power").status()  Inspect power-session state.',
     '  require("tf.power").elevate() Enable the elevated power session.',
     '  require("tf.power").workspace() / automation() / surfaces() / registry()',
-    'See /docs/legacy/guides/lua-guide.md for the current console guide.',
+    'See /docs/guides/lua-guide.md for the current console guide.',
   ];
 }
 
@@ -1135,12 +1135,12 @@ function installBundledModules(L, runtime) {
     lua.lua_pushjsfunction(L, () => {
       const requestedId = lua.lua_tojsstring(L, 1);
       const inputValue = luaValueToJs(L, 2);
-      const actionDefinition = actionCatalog.byId.get(requestedId)
-        ?? actionCatalog.byName.get(requestedId)
-        ?? pipelineCatalog.byId.get(requestedId)
-        ?? pipelineCatalog.byName.get(requestedId);
-      if (actionDefinition?.source) {
-        const nestedResult = runLuaAutomationDefinition(actionDefinition, {
+      const pipelineDefinition = pipelineCatalog.byId.get(requestedId)
+        ?? pipelineCatalog.byName.get(requestedId)
+        ?? actionCatalog.byId.get(requestedId)
+        ?? actionCatalog.byName.get(requestedId);
+      if (pipelineDefinition?.source) {
+        const nestedResult = runLuaAutomationDefinition(pipelineDefinition, {
           input: inputValue,
           workspace: {
             resources: runtime.workspaceIndex.resources,
@@ -1174,10 +1174,9 @@ function installBundledModules(L, runtime) {
     });
     lua.lua_setfield(L, -2, runKey);
     lua.lua_pushjsfunction(L, () => {
-      const visible = [...new Set([
-        ...runtime.automationDefinitions.map((definition) => definition.name),
-        ...runtime.pipelineDefinitions.map((definition) => definition.name ?? definition.id),
-      ])];
+      const visible = [...new Set(
+        runtime.pipelineDefinitions.map((definition) => definition.localName ?? definition.id),
+      )];
       pushLuaValue(L, visible);
       return 1;
     });

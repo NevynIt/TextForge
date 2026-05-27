@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { createPipelineValue } from '@textforge/core';
@@ -223,6 +224,146 @@ test('power sessions self-elevate and expose approved host objects per console s
   assert.equal(service.getConsoleSessionState('sandbox-console'), undefined);
 });
 
+test('tf.pipeline.list only reflects supplied active pipeline definitions', () => {
+  const result = runLuaScript({
+    scriptPath: '/lua/list-pipelines.lua',
+    source: [
+      'local tf = require("tf")',
+      'local pipeline = require("tf.pipeline")',
+      'return function()',
+      '  return tf.emit_json(pipeline.list())',
+      'end',
+    ].join('\n'),
+    pipelineDefinitions: [{
+      id: '@textforge/example/render-html',
+      contributionId: '@textforge/example/render-html',
+      localName: 'render-html',
+      name: 'Render HTML',
+      category: '@textforge/example',
+      input: ['text'],
+      output: 'html',
+      description: 'Render the current document as HTML.',
+      sourcePath: 'bundled:@textforge/example/render-html',
+    }, {
+      id: '@textforge/example/export-pdf',
+      contributionId: '@textforge/example/export-pdf',
+      localName: 'export-pdf',
+      name: 'Export PDF',
+      category: '@textforge/example',
+      input: ['html'],
+      output: 'pdf',
+      description: 'Export the current document as PDF.',
+      sourcePath: 'bundled:@textforge/example/export-pdf',
+    }],
+    automationDefinitions: [{
+      id: 'append-bang',
+      contributionId: '@textforge/lua/automation-append-bang',
+      localName: 'append-bang',
+      name: 'Append bang',
+      category: 'Lua Automation',
+      input: ['text'],
+      output: 'text',
+      description: 'Append punctuation to the incoming text.',
+      sourcePath: '/.textforge/automation/lua/append-bang.lua',
+      source: 'return function(input) return input:emit_text("plaintext", input.text .. "!") end',
+    }],
+  });
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(result.value?.value, ['render-html', 'export-pdf']);
+});
+
+test('console sessions refresh tf.pipeline.list when pipelineDefinitions change', () => {
+  const service = createLuaExecutionService();
+  const first = service.runConsoleCommand('console', 'return require("tf.pipeline").list()', {
+    scriptPath: '/.textforge/runtime/lua-console.session',
+    pipelineDefinitions: [{
+      id: '@textforge/example/render-html',
+      contributionId: '@textforge/example/render-html',
+      localName: 'render-html',
+      name: 'Render HTML',
+      category: '@textforge/example',
+      input: ['text'],
+      output: 'html',
+      sourcePath: 'bundled:@textforge/example/render-html',
+    }],
+  });
+  const second = service.runConsoleCommand('console', 'return require("tf.pipeline").list()', {
+    scriptPath: '/.textforge/runtime/lua-console.session',
+    pipelineDefinitions: [{
+      id: '@textforge/example/export-pdf',
+      contributionId: '@textforge/example/export-pdf',
+      localName: 'export-pdf',
+      name: 'Export PDF',
+      category: '@textforge/example',
+      input: ['html'],
+      output: 'pdf',
+      sourcePath: 'bundled:@textforge/example/export-pdf',
+    }],
+  });
+
+  assert.equal(first.ok, true);
+  assert.deepEqual(first.value?.value, ['render-html']);
+  assert.equal(second.ok, true);
+  assert.deepEqual(second.value?.value, ['export-pdf']);
+});
+
+test('bundled pipeline definitions list in Lua but do not run unless a synchronous bridge is wired', () => {
+  const unavailable = runLuaScript({
+    scriptPath: '/lua/run-pipeline.lua',
+    source: [
+      'local pipeline = require("tf.pipeline")',
+      'return function(input)',
+      '  return pipeline.run("render-html", input)',
+      'end',
+    ].join('\n'),
+    input: createPipelineValue('text', 'Hello'),
+    pipelineDefinitions: [{
+      id: '@textforge/example/render-html',
+      contributionId: '@textforge/example/render-html',
+      localName: 'render-html',
+      name: 'Render HTML',
+      category: '@textforge/example',
+      input: ['text'],
+      output: 'html',
+      sourcePath: 'bundled:@textforge/example/render-html',
+    }],
+  });
+
+  assert.equal(unavailable.ok, false);
+  assert.match(unavailable.diagnostics[0]?.message ?? '', /not available in the current Lua runtime/i);
+
+  const wired = runLuaScript({
+    scriptPath: '/lua/run-pipeline.lua',
+    source: [
+      'local pipeline = require("tf.pipeline")',
+      'return function(input)',
+      '  return pipeline.run("render-html", input)',
+      'end',
+    ].join('\n'),
+    input: createPipelineValue('text', 'Hello'),
+    pipelineDefinitions: [{
+      id: '@textforge/example/render-html',
+      contributionId: '@textforge/example/render-html',
+      localName: 'render-html',
+      name: 'Render HTML',
+      category: '@textforge/example',
+      input: ['text'],
+      output: 'html',
+      sourcePath: 'bundled:@textforge/example/render-html',
+    }],
+    invokePipelineStep({ id, value }) {
+      assert.equal(id, 'render-html');
+      assert.equal(value?.text, 'Hello');
+      return createPipelineValue('html', '<article>Hello</article>');
+    },
+  });
+
+  assert.equal(wired.ok, true);
+  assert.equal(wired.value?.kind, 'html');
+  assert.equal(wired.value?.value, '<article>Hello</article>');
+});
+
 test('execution service materializes discovered automations into contribution manifests', () => {
   const workspace = createWorkspace();
   workspace.createFolder({ path: '/.textforge', title: '.textforge' });
@@ -314,6 +455,117 @@ test('bundled tf modules run nested pipelines and actions and surface console in
   assert.equal(result.value?.value?.pipelineKind, 'text');
   assert.equal(result.value?.value?.actionKind, 'text');
   assert.equal(result.consoleLines[0]?.kind, 'inspect');
-  assert.match(result.consoleLines[0]?.text ?? '', /Double text/);
+  assert.match(result.consoleLines[0]?.text ?? '', /double-text/);
   assert.match(result.consoleLines[0]?.text ?? '', /append-bang/);
+});
+
+test('power-session registry host objects return cloned read-only snapshots and listings', () => {
+  const sharedRegistrySnapshot = {
+    summary: {
+      packageCount: 1,
+      pipelineCount: 1,
+    },
+    document: {
+      resourceId: 'doc-1',
+    },
+  };
+  const sharedCommands = [{
+    id: 'lua.open-console',
+    kind: 'commands',
+    label: 'Open Lua console',
+  }];
+  const sharedPipelines = [{
+    id: '@textforge/example/render-html',
+    kind: 'pipelines',
+    label: 'Render HTML',
+  }];
+  const service = createLuaExecutionService();
+
+  const result = service.runConsoleCommand('registry-console', [
+    'local power = require("tf.power")',
+    'power.elevate()',
+    'local registry = power.registry()',
+    'local snapshot = registry.snapshot()',
+    'snapshot.summary.packageCount = 999',
+    'local commands = registry.listCommands()',
+    'commands[1].label = "mutated"',
+    'local pipelines = registry.listPipelines()',
+    'pipelines[1].label = "mutated pipeline"',
+    'return {',
+    '  snapshot = registry.snapshot(),',
+    '  commands = registry.listCommands(),',
+    '  pipelines = registry.listPipelines(),',
+    '}',
+  ].join('\n'), {
+    scriptPath: '/.textforge/runtime/lua-console.session',
+    powerSession: {
+      hostObjects: {
+        registry: {
+          label: 'Registry',
+          description: 'Read-only registry snapshot',
+          api: {
+            snapshot() {
+              return sharedRegistrySnapshot;
+            },
+            listCommands() {
+              return sharedCommands;
+            },
+            listPipelines() {
+              return sharedPipelines;
+            },
+          },
+        },
+      },
+    },
+  });
+
+  assert.equal(result.ok, true);
+  assert.equal(result.value?.value?.snapshot?.summary?.packageCount, 1);
+  assert.equal(result.value?.value?.commands?.[0]?.label, 'Open Lua console');
+  assert.equal(result.value?.value?.pipelines?.[0]?.label, 'Render HTML');
+  assert.equal(sharedRegistrySnapshot.summary.packageCount, 1);
+  assert.equal(sharedCommands[0]?.label, 'Open Lua console');
+  assert.equal(sharedPipelines[0]?.label, 'Render HTML');
+});
+
+test('Lua guide only documents the shipped Lua surface', () => {
+  const guide = readFileSync(new URL('../../../docs/guides/lua-guide.md', import.meta.url), 'utf8');
+
+  for (const requiredSnippet of [
+    'require("tf")',
+    'tf.pipeline.list()',
+    'tf.actions.list()',
+    'tf.console.inspect(value)',
+    'tf.power.registry()',
+    'input:emit_text(languageId, text)',
+    'input:emit_json(value)',
+    'input:diagnostic(severity, message)',
+    '1,000,000 instructions',
+    '500 ms wall time',
+    '2 MiB of console output',
+    '8 nested Lua calls',
+  ]) {
+    assert.match(guide, new RegExp(requiredSnippet.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+  }
+
+  for (const unsupportedSnippet of [
+    'tf.tree',
+    'tf.graph',
+    'tf.table',
+    'tf.stringx',
+    'tf.itm',
+    'tf.markdown',
+    'input:parse_itm',
+    'input:parse_markdown',
+    'input:parse_csv',
+    'input:emit_itm',
+    'input:emit_csv',
+    'run_action(',
+    'action("action-id")',
+    'parse_itm()',
+    'parse_markdown()',
+    'parse_csv(delimiter?)',
+  ]) {
+    assert.equal(guide.includes(unsupportedSnippet), false);
+  }
 });
