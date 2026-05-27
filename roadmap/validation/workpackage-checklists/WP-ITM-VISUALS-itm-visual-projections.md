@@ -13,15 +13,17 @@ The delivered slice must expose stable projection data for tree, graph, mindmap,
 - `projectItmDocument(...)` returns explicit tree, graph, mindmap, catalogue, matrix, and report projections in addition to the baseline canonical graph selection output.
 - Graph and mindmap adapters are available from the public package surface as Graphviz DOT and Mermaid mindmap source strings without introducing shell-private formatting rules.
 - Tree, catalogue, matrix, and report projections stay renderable through package-owned HTML helpers so downstream packages can consume them without copying projection logic into the app shell.
+- `.itm` resources can open through package-owned tree, graph, mindmap, catalogue, matrix, and report surfaces so each projection mode remains testable without routing through Markdown.
 - Markdown `itm-pub` blocks can request projection modes deterministically and continue to resolve the selected source model through the existing shared-state publication flow.
 - Graph projections can reuse the active diagram pipeline when available and emit generated SVG/PNG workspace descriptors through the existing Markdown generated-resource flow.
-- Bundled example content exists for manual or future shell validation of the projection modes.
+- Bundled example content and focused test-profile fixtures exist for manual or future shell validation of the projection modes.
 
 ## Validation evidence
 
 - `corepack pnpm --filter @textforge/itm test`
 - `corepack pnpm --filter @textforge/itm build`
 - `corepack pnpm --filter @textforge/markdown test`
+- `corepack pnpm --filter @textforge/textforge-web test`
 - `corepack pnpm --filter @textforge/textforge-web build`
 - `corepack pnpm roadmap:dependency-map`
 - `corepack pnpm verify`
@@ -30,4 +32,5 @@ The delivered slice must expose stable projection data for tree, graph, mindmap,
 
 - The initial graph projection uses package-generated Graphviz source plus the existing diagram pipeline rather than introducing a new interactive graph runtime inside `@textforge/itm`.
 - The initial mindmap projection exposes public Mermaid-mindmap source and package-owned HTML rendering so the phase delivers reusable projection contracts now without blocking on a dedicated viewer library decision.
+- Focused shell URLs for manual inspection now live in `roadmap/validation/ui/itm-visual-test-profiles.md` and are backed by the bundled fixtures in `docs/examples/itm/test-profiles/`.
 - `WP-TABLES` still owns richer table UX. `WP-ITM-VISUALS` only needs to provide the model-side catalogue and matrix projection data plus basic publication rendering.
