@@ -1,4 +1,5 @@
 import { parse as parseYaml } from 'yaml';
+import { StreamLanguage, foldService } from '@codemirror/language';
 
 import {
   createCapability,
@@ -679,6 +680,652 @@ function splitSelectorRelationship(value) {
     typeRef: source.slice(0, separatorIndex),
     targetRef: source.slice(separatorIndex + 1),
   };
+}
+
+const itmCodeMirrorParser = {
+  startState() {
+    return {
+      inAttributes: false,
+      expectingValue: false,
+      directiveDepth: 0,
+      directivePendingBlock: false,
+      directiveKind: undefined,
+      styleSelectorEnd: undefined,
+    };
+  },
+  token(stream, state) {
+    if (stream.sol()) {
+      const trimmedLine = stream.string.trim();
+      if (trimmedLine.startsWith('%style')) {
+        const layout = scanStyleDirective(trimmedLine === stream.string ? stream.string : stream.string);
+        state.directiveKind = 'style';
+        state.styleSelectorEnd = layout?.selectorEnd;
+        state.directiveDepth = 0;
+        state.directivePendingBlock = false;
+      } else {
+        state.directiveKind = undefined;
+        state.styleSelectorEnd = undefined;
+      }
+      if (state.directiveDepth > 0) {
+        state.directiveDepth = Math.max(0, state.directiveDepth + braceBalance(trimmedLine));
+        stream.skipToEnd();
+        return 'comment';
+      }
+      if (state.directivePendingBlock) {
+        if (!trimmedLine) {
+          stream.skipToEnd();
+          return null;
+        }
+        if (trimmedLine.startsWith('{')) {
+          state.directivePendingBlock = false;
+          state.directiveDepth = Math.max(0, braceBalance(trimmedLine));
+          stream.skipToEnd();
+          return 'comment';
+        }
+        state.directivePendingBlock = false;
+      }
+      const remaining = stream.string.slice(stream.pos);
+      const trimmed = remaining.trim();
+      if (state.directiveKind === 'style') {
+        if (stream.eatSpace()) {
+          return null;
+        }
+        const stylePrefix = stream.string.indexOf('%style');
+        if (stylePrefix >= 0 && stream.pos <= stylePrefix) {
+          stream.pos = stylePrefix + '%style'.length;
+          return 'keyword';
+        }
+        if (state.styleSelectorEnd !== undefined && stream.pos < state.styleSelectorEnd) {
+          stream.pos = state.styleSelectorEnd;
+          return 'typeName';
+        }
+      }
+      if (stream.eatSpace()) {
+        return null;
+      }
+      if (trimmed.startsWith('%')) {
+        state.directiveDepth = trimmed.includes('{') ? Math.max(0, braceBalance(trimmed)) : 0;
+        state.directivePendingBlock = !trimmed.includes('{');
+        stream.skipToEnd();
+        return 'comment';
+      }
+      if (trimmed.startsWith('|')) {
+        stream.skipToEnd();
+        return 'comment';
+      }
+    }
+    if (state.inAttributes) {
+      if (stream.eatSpace()) {
+        return null;
+      }
+      if (stream.match('}')) {
+        state.inAttributes = false;
+        state.expectingValue = false;
+        return 'bracket';
+      }
+      if (stream.match(',')) {
+        state.expectingValue = false;
+        return 'separator';
+      }
+      if (stream.match(':')) {
+        state.expectingValue = true;
+        return 'operator';
+      }
+      if (!state.expectingValue && stream.match(/[A-Za-z_][A-Za-z0-9_.-]*(?=\s*:)/)) {
+        return 'attributeName';
+      }
+      if (stream.match(/#[0-9A-Fa-f]{3,8}\b/)) {
+        state.expectingValue = false;
+        return 'string';
+      }
+      if (stream.match(/"(?:\\"|[^"])*"|'(?:\\'|[^'])*'/)) {
+        state.expectingValue = false;
+        return 'string';
+      }
+      if (stream.match(/[+-]?\d+(?:\.\d+)?(?:px|em|rem|%)?\b/)) {
+        state.expectingValue = false;
+        return 'number';
+      }
+      if (stream.match(/[^,}]+/)) {
+        state.expectingValue = false;
+        return 'string';
+      }
+    }
+    if (stream.match('{')) {
+      state.inAttributes = true;
+      state.expectingValue = false;
+      return 'bracket';
+    }
+    if (stream.match('%style')) {
+      return 'keyword';
+    }
+    if (stream.match(/&[A-Za-z][A-Za-z0-9_-]*/)) {
+      return 'atom';
+    }
+    if (stream.match(/\[[^\]]+\]/)) {
+      return 'keyword';
+    }
+    if (stream.match(/#[A-Za-z][A-Za-z0-9_-]*/)) {
+      return 'tag';
+    }
+    if (stream.match(/@[A-Za-z][A-Za-z0-9_-]*(?::[A-Za-z][A-Za-z0-9_-]*)?/)) {
+      return 'link';
+    }
+    stream.next();
+    return null;
+  },
+};
+
+export function createItmCodeMirrorLanguageExtension() {
+  return [
+    StreamLanguage.define(itmCodeMirrorParser),
+    foldService.of(itmCodeMirrorFoldService),
+  ];
+}
+
+function itmCodeMirrorFoldService(state, from) {
+  const line = state.doc.lineAt(from);
+  const directiveFold = directiveFoldRange(state, line.number)?.range;
+  if (directiveFold) {
+    return directiveFold;
+  }
+  const detailFold = detailFoldRange(state, line.number);
+  if (detailFold) {
+    return detailFold;
+  }
+  return branchFoldRange(state, line.number);
+}
+
+function directiveFoldRange(state, lineNumber) {
+  const line = state.doc.line(lineNumber);
+  const trimmed = line.text.trim();
+  if (!trimmed.startsWith('%')) {
+    return null;
+  }
+  if (trimmed.startsWith('%style')) {
+    const styleLayout = scanStyleDirective(line.text);
+    if (!styleLayout) {
+      return { range: null, endLineNumber: lineNumber };
+    }
+    if (styleLayout.inlineBodyStart !== undefined) {
+      return { range: null, endLineNumber: lineNumber };
+    }
+    const next = nextNonEmptyLine(state, lineNumber + 1);
+    if (!next || !next.text.trim().startsWith('{')) {
+      return { range: null, endLineNumber: lineNumber };
+    }
+    if (braceBalance(next.text.trim()) <= 0) {
+      return { range: { from: line.to, to: next.to }, endLineNumber: next.number };
+    }
+    const endLineNumber = findDirectiveBlockEnd(state, next.number, braceBalance(next.text.trim()));
+    return {
+      range: endLineNumber > lineNumber ? { from: line.to, to: state.doc.line(endLineNumber).to } : null,
+      endLineNumber,
+    };
+  }
+  if (!trimmed.includes('{')) {
+    const next = nextNonEmptyLine(state, lineNumber + 1);
+    if (!next || !next.text.trim().startsWith('{')) {
+      return { range: null, endLineNumber: lineNumber };
+    }
+    if (braceBalance(next.text.trim()) <= 0) {
+      return { range: { from: line.to, to: next.to }, endLineNumber: next.number };
+    }
+    const endLineNumber = findDirectiveBlockEnd(state, next.number, braceBalance(next.text.trim()));
+    return {
+      range: endLineNumber > lineNumber ? { from: line.to, to: state.doc.line(endLineNumber).to } : null,
+      endLineNumber,
+    };
+  }
+  const initialBalance = braceBalance(trimmed);
+  if (initialBalance <= 0) {
+    return { range: null, endLineNumber: lineNumber };
+  }
+  const endLineNumber = findDirectiveBlockEnd(state, lineNumber, initialBalance);
+  return {
+    range: endLineNumber > lineNumber ? { from: line.to, to: state.doc.line(endLineNumber).to } : null,
+    endLineNumber,
+  };
+}
+
+function findDirectiveBlockEnd(state, startLineNumber, initialBalance) {
+  let balance = initialBalance;
+  let lineNumber = startLineNumber;
+  while (balance > 0 && lineNumber < state.doc.lines) {
+    lineNumber += 1;
+    balance += braceBalance(state.doc.line(lineNumber).text.trim());
+  }
+  return lineNumber;
+}
+
+function detailFoldRange(state, lineNumber) {
+  const line = state.doc.line(lineNumber);
+  if (!line.text.trim().startsWith('|')) {
+    return null;
+  }
+  let endLineNumber = lineNumber;
+  while (endLineNumber + 1 <= state.doc.lines && state.doc.line(endLineNumber + 1).text.trim().startsWith('|')) {
+    endLineNumber += 1;
+  }
+  return endLineNumber > lineNumber ? { from: line.to, to: state.doc.line(endLineNumber).to } : null;
+}
+
+function branchFoldRange(state, lineNumber) {
+  const line = state.doc.line(lineNumber);
+  const trimmed = line.text.trim();
+  if (!trimmed || trimmed.startsWith('%') || trimmed.startsWith('|')) {
+    return null;
+  }
+  const baseIndent = lineIndent(line.text);
+  let endLineNumber = lineNumber;
+  for (let cursor = lineNumber + 1; cursor <= state.doc.lines; cursor += 1) {
+    const candidate = state.doc.line(cursor);
+    const candidateTrimmed = candidate.text.trim();
+    if (!candidateTrimmed) {
+      if (endLineNumber > lineNumber) {
+        endLineNumber = cursor;
+      }
+      continue;
+    }
+    if (candidateTrimmed.startsWith('|') && lineIndent(candidate.text) >= baseIndent) {
+      endLineNumber = cursor;
+      continue;
+    }
+    if (lineIndent(candidate.text) <= baseIndent) {
+      break;
+    }
+    endLineNumber = cursor;
+  }
+  return endLineNumber > lineNumber ? { from: line.to, to: state.doc.line(endLineNumber).to } : null;
+}
+
+function nextNonEmptyLine(state, lineNumber) {
+  for (let cursor = lineNumber; cursor <= state.doc.lines; cursor += 1) {
+    const line = state.doc.line(cursor);
+    if (line.text.trim()) {
+      return line;
+    }
+  }
+  return null;
+}
+
+function lineIndent(text) {
+  const match = /^\s*/.exec(text);
+  return match ? match[0].length : 0;
+}
+
+function braceBalance(text) {
+  let balance = 0;
+  for (const char of text) {
+    if (char === '{') {
+      balance += 1;
+    } else if (char === '}') {
+      balance -= 1;
+    }
+  }
+  return balance;
+}
+
+function scanStyleDirective(line) {
+  const trimmed = line.trimStart();
+  const prefixIndex = trimmed.indexOf('%style');
+  if (prefixIndex !== 0) {
+    return null;
+  }
+  const afterPrefix = trimmed.slice('%style'.length);
+  const selectorInput = afterPrefix.trimStart();
+  if (!selectorInput) {
+    return null;
+  }
+
+  const selectorEnd = scanSelectorExpression(selectorInput);
+  if (selectorEnd <= 0) {
+    return null;
+  }
+
+  const rest = selectorInput.slice(selectorEnd).trimStart();
+  if (!rest.startsWith('{')) {
+    return {
+      selectorStart: line.indexOf('%style') + '%style'.length,
+      selectorEnd: line.indexOf('%style') + '%style'.length + selectorEnd,
+    };
+  }
+
+  const body = scanBalancedBlock(rest);
+  if (!body) {
+    return {
+      selectorStart: line.indexOf('%style') + '%style'.length,
+      selectorEnd: line.indexOf('%style') + '%style'.length + selectorEnd,
+    };
+  }
+
+  const selectorBase = line.indexOf('%style') + '%style'.length + afterPrefix.length - selectorInput.length;
+  const bodyStart = selectorBase + selectorEnd + (selectorInput.slice(selectorEnd).length - rest.length);
+  return {
+    selectorStart: selectorBase,
+    selectorEnd: selectorBase + selectorEnd,
+    inlineBodyStart: bodyStart,
+    inlineBodyEnd: bodyStart + body.length,
+  };
+}
+
+function scanSelectorExpression(text) {
+  let index = 0;
+
+  const skipSpaces = () => {
+    while (index < text.length && /\s/u.test(text[index] ?? '')) {
+      index += 1;
+    }
+  };
+
+  const readAtomTail = () => {
+    const start = index;
+    while (index < text.length && !/\s/u.test(text[index] ?? '') && !['(', ')', '[', ']', '{', '}', ','].includes(text[index] ?? '')) {
+      index += 1;
+    }
+    return index > start;
+  };
+
+  const parseExpression = () => {
+    if (!parseUnary()) {
+      return false;
+    }
+    while (true) {
+      const save = index;
+      if (!matchWord('AND') && !matchWord('OR') && !matchWord('XOR')) {
+        index = save;
+        return true;
+      }
+      if (!parseUnary()) {
+        return false;
+      }
+    }
+  };
+
+  const parseUnary = () => {
+    skipSpaces();
+    if (matchWord('NOT')) {
+      return parseUnary();
+    }
+    return parsePrimary();
+  };
+
+  const parsePrimary = () => {
+    skipSpaces();
+    const current = text[index];
+    if (!current) {
+      return false;
+    }
+    if (current === '(') {
+      index += 1;
+      if (!parseExpression()) {
+        return false;
+      }
+      skipSpaces();
+      if (text[index] !== ')') {
+        return false;
+      }
+      index += 1;
+      return true;
+    }
+    if (current === '[') {
+      return scanBalancedBracket();
+    }
+    if (current === '{') {
+      return scanAttributeSelector();
+    }
+    if (current === '#' || current === '&' || current === '@') {
+      index += 1;
+      return readAtomTail();
+    }
+    if (current === '=' && text[index + 1] === '>') {
+      index += 2;
+      return true;
+    }
+    if (current === '~' && text[index + 1] === '>') {
+      index += 2;
+      return true;
+    }
+    if (current === '-' && text[index + 1] === '>') {
+      index += 2;
+      if (text[index] === '[') {
+        return scanBalancedBracket();
+      }
+      return true;
+    }
+    if (/[A-Za-z]/u.test(current)) {
+      const start = index;
+      while (index < text.length && /[A-Za-z0-9_-]/u.test(text[index] ?? '')) {
+        index += 1;
+      }
+      const name = text.slice(start, index);
+      skipSpaces();
+      if (text[index] === '(') {
+        if (!['ALL', 'ANY', 'NONE', 'ONE'].includes(name)) {
+          return false;
+        }
+        index += 1;
+        skipSpaces();
+        if (text[index] === ')') {
+          return false;
+        }
+        while (parseExpression()) {
+          skipSpaces();
+          if (text[index] === ',') {
+            index += 1;
+            skipSpaces();
+            continue;
+          }
+          if (text[index] === ')') {
+            index += 1;
+            return true;
+          }
+          return false;
+        }
+        return false;
+      }
+      index = start;
+    }
+    return false;
+  };
+
+  const matchWord = (word) => {
+    skipSpaces();
+    const end = index + word.length;
+    if (text.slice(index, end).toUpperCase() !== word) {
+      return false;
+    }
+    const previous = text[index - 1] ?? '';
+    const next = text[end] ?? '';
+    if (/[A-Za-z0-9_-]/u.test(previous) || /[A-Za-z0-9_-]/u.test(next)) {
+      return false;
+    }
+    index = end;
+    skipSpaces();
+    return true;
+  };
+
+  const scanBalancedBracket = () => {
+    let depth = 0;
+    let seenContent = false;
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let escaped = false;
+    while (index < text.length) {
+      const current = text[index];
+      if (escaped) {
+        escaped = false;
+        index += 1;
+        seenContent = true;
+        continue;
+      }
+      if (inDoubleQuote) {
+        if (current === '\\') {
+          escaped = true;
+        } else if (current === '"') {
+          inDoubleQuote = false;
+        }
+        index += 1;
+        seenContent = true;
+        continue;
+      }
+      if (inSingleQuote) {
+        if (current === "'") {
+          inSingleQuote = false;
+        }
+        index += 1;
+        seenContent = true;
+        continue;
+      }
+      if (current === '"') {
+        inDoubleQuote = true;
+        index += 1;
+        continue;
+      }
+      if (current === "'") {
+        inSingleQuote = true;
+        index += 1;
+        continue;
+      }
+      if (current === '[') {
+        depth += 1;
+        index += 1;
+        continue;
+      }
+      if (current === ']') {
+        depth -= 1;
+        index += 1;
+        if (depth === 0) {
+          return seenContent;
+        }
+        continue;
+      }
+      seenContent = true;
+      index += 1;
+    }
+    return false;
+  };
+
+  const scanAttributeSelector = () => {
+    const start = index;
+    index += 1;
+    let depth = 1;
+    let inSingleQuote = false;
+    let inDoubleQuote = false;
+    let escaped = false;
+    let content = '';
+    while (index < text.length) {
+      const current = text[index];
+      if (escaped) {
+        escaped = false;
+        content += current;
+        index += 1;
+        continue;
+      }
+      if (inDoubleQuote) {
+        if (current === '\\') {
+          escaped = true;
+        } else if (current === '"') {
+          inDoubleQuote = false;
+        }
+        content += current;
+        index += 1;
+        continue;
+      }
+      if (inSingleQuote) {
+        if (current === "'") {
+          inSingleQuote = false;
+        }
+        content += current;
+        index += 1;
+        continue;
+      }
+      if (current === '"') {
+        inDoubleQuote = true;
+        content += current;
+        index += 1;
+        continue;
+      }
+      if (current === "'") {
+        inSingleQuote = true;
+        content += current;
+        index += 1;
+        continue;
+      }
+      if (current === '{') {
+        depth += 1;
+        content += current;
+        index += 1;
+        continue;
+      }
+      if (current === '}') {
+        depth -= 1;
+        index += 1;
+        if (depth === 0) {
+          return content.includes('=');
+        }
+        content += current;
+        continue;
+      }
+      content += current;
+      index += 1;
+    }
+    index = start;
+    return false;
+  };
+
+  if (!parseExpression()) {
+    return 0;
+  }
+  skipSpaces();
+  return index;
+}
+
+function scanBalancedBlock(text) {
+  let depth = 0;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escaped = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const current = text[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (inDoubleQuote) {
+      if (current === '\\') {
+        escaped = true;
+      } else if (current === '"') {
+        inDoubleQuote = false;
+      }
+      continue;
+    }
+    if (inSingleQuote) {
+      if (current === "'") {
+        inSingleQuote = false;
+      }
+      continue;
+    }
+    if (current === '"') {
+      inDoubleQuote = true;
+      continue;
+    }
+    if (current === "'") {
+      inSingleQuote = true;
+      continue;
+    }
+    if (current === '{') {
+      depth += 1;
+      continue;
+    }
+    if (current === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(0, index + 1);
+      }
+    }
+  }
+  return null;
 }
 
 function selectorMatchesValue(actualValue, expectedValue) {

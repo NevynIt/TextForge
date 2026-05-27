@@ -138,6 +138,9 @@ importers:
       '@textforge/core':
         specifier: workspace:*
         version: link:../core
+      '@textforge/itm':
+        specifier: workspace:*
+        version: link:../itm
       '@textforge/surfaces':
         specifier: workspace:*
         version: link:../surfaces
@@ -149,6 +152,9 @@ importers:
 
   packages/itm:
     dependencies:
+      '@codemirror/language':
+        specifier: ^6.12.3
+        version: 6.12.3
       '@textforge/core':
         specifier: workspace:*
         version: link:../core

@@ -105,6 +105,7 @@ export declare function renderItmPublicationHtml(
   input: ItmDocument | ResolvedItmDocument | ReadonlyArray<ItmLoadDocumentResult>,
   options?: ProjectItmDocumentOptions,
 ): string;
+export declare function createItmCodeMirrorLanguageExtension(): unknown;
 export declare const itmMarkdownFenceHandlerContributions: ReadonlyArray<MarkdownFenceHandlerContribution>;
 export declare function createItmContributionManifest(): ContributionManifest;
 export declare const contributions: ContributionManifest;

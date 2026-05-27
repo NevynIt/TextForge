@@ -3,7 +3,7 @@ import { json as jsonLanguage } from '@codemirror/lang-json';
 import { markdown as markdownLanguage } from '@codemirror/lang-markdown';
 import { xml as xmlLanguage } from '@codemirror/lang-xml';
 import { yaml as yamlLanguage } from '@codemirror/lang-yaml';
-import { HighlightStyle, StreamLanguage, syntaxHighlighting } from '@codemirror/language';
+import { HighlightStyle, StreamLanguage, codeFolding, foldGutter, syntaxHighlighting } from '@codemirror/language';
 import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua';
 import { tags } from '@lezer/highlight';
 import { EditorView, lineNumbers } from '@codemirror/view';
@@ -16,6 +16,7 @@ import {
   inferLanguageId,
   languageDefinitions,
 } from '@textforge/core';
+import { createItmCodeMirrorLanguageExtension } from '@textforge/itm';
 
 const textDocumentPredicate = createResourcePredicate({
   representations: ['text'],
@@ -41,6 +42,7 @@ export const editorCapabilities = [
 
 const parserBackedLanguageFactories = {
   markdown: () => markdownLanguage(),
+  itm: () => createItmCodeMirrorLanguageExtension(),
   lua: () => StreamLanguage.define(luaMode),
   json: () => jsonLanguage(),
   xml: () => xmlLanguage(),
@@ -414,6 +416,8 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
   const languageExtension = createCodeMirrorLanguageExtension(model.languageMode.languageId);
   return [
     lineNumbers(),
+    foldGutter(),
+    codeFolding(),
     ...(languageExtension ? [languageExtension] : []),
     syntaxHighlighting(textForgeHighlightStyle),
     EditorState.readOnly.of(model.readOnly),

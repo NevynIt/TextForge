@@ -21,6 +21,7 @@
     "typecheck": "node --check src/index.js && node --check src/node.js"
   },
   "dependencies": {
+    "@codemirror/language": "^6.12.3",
     "@textforge/core": "workspace:*",
     "@textforge/workspace": "workspace:*",
     "fast-xml-parser": "^5.8.0",
