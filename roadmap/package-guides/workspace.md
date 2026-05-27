@@ -151,6 +151,8 @@ The package now consumes `@textforge/core` only through its public workspace ent
 
 `@textforge/workspace` now treats provider-aware resource descriptors as part of the canonical workspace entry metadata rather than as side data. Workspace entries normalize provider IDs, revision IDs, capability IDs, owner/provenance metadata, and diagnostics; bundled docs resolve through a read-only provider baseline; and workspace mutations now enforce resource capabilities such as write, rename, move, delete, and create-child before mutating state.
 
+The bundled docs subtree is now expected to project into the live workspace as a rebuild-time overlay rather than as duplicated persisted user data. IndexedDB should retain only the user-managed workspace state plus local `.textforge` working folders, while `/.textforge/resources` is rebuilt from the bundled app artifact on each load.
+
 
 ## V16 backend-optional responsibilities
 

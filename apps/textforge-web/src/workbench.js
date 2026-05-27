@@ -13,6 +13,7 @@ import {
 } from '@textforge/core';
 import {
   basenameWorkspacePath,
+  createWorkspaceOverlayService,
   createPersistedWorkspaceService,
   createSequentialIdFactory,
   contributions as workspaceContributionPack,
@@ -278,7 +279,11 @@ function createBundledWorkspacePath(path) {
   return normalizeWorkspacePath(`/.textforge/resources${normalizeWorkspacePath(path)}`);
 }
 
-function createSeedWorkspaceState() {
+function createBundledOverlayId(path) {
+  return `bundled:${normalizeWorkspacePath(path)}`;
+}
+
+function createUserSeedWorkspaceState() {
   const now = createTimestampFactory();
   const workspace = createWorkspaceService({
     workspaceId: 'textforge-shell',
@@ -291,50 +296,133 @@ function createSeedWorkspaceState() {
   workspace.createFolder({ path: '/examples', title: 'examples' });
   workspace.createFolder({ path: '/roadmap', title: 'roadmap' });
   workspace.createFolder({ path: '/.textforge', title: '.textforge' });
-  workspace.createFolder({ path: '/.textforge/resources', title: 'resources' });
-  for (const folderPath of bundledDocFolders) {
-    workspace.createFolder({
-      path: createBundledWorkspacePath(folderPath),
-      title: basenameWorkspacePath(folderPath),
-    });
-  }
-  for (const resource of bundledDocs) {
-    workspace.createTextResource({
-      ...resource,
-      path: createBundledWorkspacePath(resource.path),
-    });
+  return workspace.snapshot();
+}
+
+function sanitizePersistentWorkspaceState(input) {
+  const state = typeof input?.snapshot === 'function' ? input.snapshot() : input;
+  const bundledEntriesExist = [...state.folders, ...state.resources].some((entry) =>
+    entry.path === '/.textforge/resources' || entry.path.startsWith('/.textforge/resources/'));
+  const hasTextforgeRoot = state.folders.some((folder) => folder.path === '/.textforge');
+
+  if (!bundledEntriesExist && hasTextforgeRoot) {
+    return {
+      changed: false,
+      state,
+    };
   }
 
-  const state = workspace.snapshot();
+  const workspace = createWorkspaceService({
+    workspaceId: state.manifest.workspaceId,
+    name: state.manifest.name,
+    rootPath: state.manifest.rootPath,
+    now: createTimestampFactory(),
+    idFactory: createSequentialIdFactory('workspace'),
+    state: {
+      ...state,
+      folders: state.folders.filter((folder) =>
+        folder.id !== 'root'
+          && folder.path !== '/.textforge/resources'
+          && !folder.path.startsWith('/.textforge/resources/')),
+      resources: state.resources.filter((resource) =>
+        resource.path !== '/.textforge/resources'
+          && !resource.path.startsWith('/.textforge/resources/')),
+    },
+  });
+
+  if (!workspace.getEntryByPath('/.textforge')) {
+    workspace.createFolder({ path: '/.textforge', title: '.textforge' });
+  }
+
   return {
-    ...state,
-    folders: state.folders.map((folder) =>
-      folder.path.startsWith('/.textforge/resources')
-        ? {
-          ...folder,
-          metadata: {
-            ...folder.metadata,
-            providerId: workspaceProviderIds.bundled,
-          },
-        }
-        : folder),
-    resources: state.resources.map((resource) =>
-      resource.path.startsWith('/.textforge/resources')
-        ? {
-          ...resource,
-          metadata: {
-            ...resource.metadata,
-            providerId: workspaceProviderIds.bundled,
-            provenance: {
-              kind: 'bundled',
-              bundleId: 'textforge-docs',
-              sourcePath: resource.path.slice('/.textforge/resources'.length) || resource.path,
-              bundledAt: now(),
-            },
-          },
-        }
-        : resource),
+    changed: true,
+    state: workspace.snapshot(),
   };
+}
+
+function createBundledWorkspaceOverlayState(baseInput) {
+  const baseState = typeof baseInput?.snapshot === 'function' ? baseInput.snapshot() : baseInput;
+  const textforgeFolder = baseState.folders.find((folder) => folder.path === '/.textforge');
+  const bundledAt = createTimestampFactory()();
+  const bundledRootPath = '/.textforge/resources';
+  const folders = [
+    {
+      kind: 'folder',
+      id: createBundledOverlayId(bundledRootPath),
+      path: bundledRootPath,
+      parentId: textforgeFolder?.id ?? 'root',
+      metadata: {
+        title: 'resources',
+        providerId: workspaceProviderIds.bundled,
+        createdAt: bundledAt,
+        updatedAt: bundledAt,
+      },
+      childIds: [],
+    },
+    ...bundledDocFolders.map((folderPath) => {
+      const path = createBundledWorkspacePath(folderPath);
+      const parentPath = dirnameWorkspacePath(path);
+      return {
+        kind: 'folder',
+        id: createBundledOverlayId(path),
+        path,
+        parentId: parentPath === '/.textforge'
+          ? textforgeFolder?.id ?? 'root'
+          : createBundledOverlayId(parentPath),
+        metadata: {
+          title: basenameWorkspacePath(folderPath),
+          providerId: workspaceProviderIds.bundled,
+          createdAt: bundledAt,
+          updatedAt: bundledAt,
+        },
+        childIds: [],
+      };
+    }),
+  ];
+  const resources = bundledDocs.map((resource) => {
+    const path = createBundledWorkspacePath(resource.path);
+    return {
+      kind: 'resource',
+      id: createBundledOverlayId(path),
+      path,
+      parentId: createBundledOverlayId(dirnameWorkspacePath(path)),
+      representation: 'text',
+      text: resource.text,
+      languageId: resource.languageId,
+      mimeType: resource.mimeType,
+      metadata: {
+        title: basenameWorkspacePath(resource.path),
+        providerId: workspaceProviderIds.bundled,
+        provenance: {
+          kind: 'bundled',
+          bundleId: 'textforge-docs',
+          sourcePath: normalizeWorkspacePath(resource.path),
+          bundledAt,
+        },
+        createdAt: bundledAt,
+        updatedAt: bundledAt,
+      },
+    };
+  });
+
+  return createWorkspaceService({
+    workspaceId: 'textforge-bundled-overlay',
+    name: 'Bundled Resources',
+    now: createTimestampFactory(),
+    idFactory: createSequentialIdFactory('bundled-overlay'),
+    state: {
+      manifest: {
+        workspaceId: 'textforge-bundled-overlay',
+        name: 'Bundled Resources',
+        rootPath: '/',
+        createdAt: bundledAt,
+        updatedAt: bundledAt,
+        selectedResourceId: undefined,
+      },
+      folders,
+      resources,
+    },
+  }).snapshot();
 }
 
 function createBlobUrlDriver() {
@@ -3365,13 +3453,20 @@ function createTextForgeWorkbenchController() {
         name: 'TextForge Workspace',
         now: createTimestampFactory(),
         idFactory: createSequentialIdFactory('workspace'),
-        seed: createSeedWorkspaceState(),
+        seed: createUserSeedWorkspaceState(),
         storageOptions: {
           databaseName: workspaceDatabaseName,
         },
       });
       persistedWorkspace = hydrated.workspace;
-      workspace = hydrated.workspace;
+      const sanitizedWorkspace = sanitizePersistentWorkspaceState(hydrated.workspace.snapshot());
+      if (sanitizedWorkspace.changed) {
+        hydrated.workspace.replaceState(sanitizedWorkspace.state);
+        await hydrated.workspace.persistNow('workspace.strip-bundled-overlay');
+      }
+      workspace = createWorkspaceOverlayService(hydrated.workspace, {
+        overlay: () => createBundledWorkspaceOverlayState(hydrated.workspace.snapshot()),
+      });
       hydrationSource = hydrated.hydrationSource;
       unsubscribePersistence = hydrated.workspace.subscribePersistence(() => emit());
       if (!runtime.skipLuaPreloadOnce) {

@@ -6,6 +6,7 @@ import Dexie from 'dexie';
 
 import {
   createWorkspaceContributionManifest,
+  createWorkspaceOverlayService,
   createWorkspaceArchiveManifest,
   createPersistedWorkspaceService,
   createSequentialIdFactory,
@@ -63,6 +64,74 @@ function createSeedWorkspaceState() {
   });
 
   return workspace.snapshot();
+}
+
+function createBundledOverlayState(textforgeFolderId) {
+  const bundledAt = fixedNow();
+  return createWorkspaceService({
+    workspaceId: 'workspace-overlay-test',
+    now: fixedNow,
+    idFactory: createSequentialIdFactory('overlay'),
+    state: {
+      manifest: createWorkspaceManifest({
+        workspaceId: 'workspace-overlay-test',
+        name: 'Bundled overlay',
+        now: fixedNow,
+      }),
+      folders: [
+        {
+          kind: 'folder',
+          id: 'bundled:/.textforge/resources',
+          path: '/.textforge/resources',
+          parentId: textforgeFolderId,
+          metadata: {
+            title: 'resources',
+            providerId: workspaceProviderIds.bundled,
+            createdAt: bundledAt,
+            updatedAt: bundledAt,
+          },
+          childIds: [],
+        },
+        {
+          kind: 'folder',
+          id: 'bundled:/.textforge/resources/docs',
+          path: '/.textforge/resources/docs',
+          parentId: 'bundled:/.textforge/resources',
+          metadata: {
+            title: 'docs',
+            providerId: workspaceProviderIds.bundled,
+            createdAt: bundledAt,
+            updatedAt: bundledAt,
+          },
+          childIds: [],
+        },
+      ],
+      resources: [
+        {
+          kind: 'resource',
+          id: 'bundled:/.textforge/resources/docs/guide.md',
+          path: '/.textforge/resources/docs/guide.md',
+          parentId: 'bundled:/.textforge/resources/docs',
+          representation: 'text',
+          text: '# Guide\n',
+          languageId: 'markdown',
+          mimeType: 'text/markdown',
+          metadata: {
+            title: 'guide.md',
+            providerId: workspaceProviderIds.bundled,
+            provenance: {
+              kind: 'bundled',
+              bundleId: 'textforge-docs',
+              sourcePath: '/docs/guide.md',
+              bundledAt,
+            },
+            createdAt: bundledAt,
+            updatedAt: bundledAt,
+          },
+        },
+      ],
+    },
+  }).snapshot();
 }
 
 test('workspace service normalizes paths and mutates entries', () => {
@@ -391,6 +460,88 @@ test('workspace provider descriptors block writes into bundled read-only provide
   assert.throws(
     () => workspace.deleteEntry('resource-bundled'),
     /does not allow deleting/i,
+  );
+});
+
+test('workspace overlay service projects bundled resources without persisting them', async () => {
+  const databaseName = createDatabaseName('workspace-overlay-persist');
+  await resetWorkspaceDexieStorage({ databaseName });
+
+  const hydrated = await createPersistedWorkspaceService({
+    storageOptions: { databaseName },
+    now: fixedNow,
+    idFactory: createSequentialIdFactory('entry'),
+    seed: (() => {
+      const workspace = createWorkspaceService({
+        workspaceId: 'workspace-overlay-base',
+        idFactory: createSequentialIdFactory('entry'),
+        now: fixedNow,
+      });
+      workspace.createFolder({ path: '/.textforge' });
+      workspace.createFolder({ path: '/docs' });
+      workspace.createTextResource({
+        path: '/docs/notes.md',
+        text: '# Notes\n',
+        languageId: 'markdown',
+        mimeType: 'text/markdown',
+      });
+      return workspace.snapshot();
+    })(),
+  });
+
+  const overlayWorkspace = createWorkspaceOverlayService(hydrated.workspace, {
+    overlay: () => createBundledOverlayState(hydrated.workspace.getEntryByPath('/.textforge')?.id ?? 'root'),
+  });
+
+  assert.equal(
+    overlayWorkspace.getEntryByPath('/.textforge/resources/docs/guide.md')?.metadata.providerId,
+    workspaceProviderIds.bundled,
+  );
+  overlayWorkspace.setSelectedResourceId('bundled:/.textforge/resources/docs/guide.md');
+  assert.equal(
+    overlayWorkspace.getManifest().selectedResourceId,
+    'bundled:/.textforge/resources/docs/guide.md',
+  );
+  await overlayWorkspace.persistNow('overlay-check');
+  hydrated.workspace.disposePersistence();
+
+  const restored = await createPersistedWorkspaceService({
+    storageOptions: { databaseName },
+    now: fixedNow,
+    idFactory: createSequentialIdFactory('entry'),
+  });
+
+  assert.equal(restored.workspace.getEntryByPath('/.textforge/resources/docs/guide.md'), undefined);
+  assert.equal(restored.workspace.getEntryByPath('/docs/notes.md')?.text, '# Notes\n');
+  restored.workspace.disposePersistence();
+  await resetWorkspaceDexieStorage({ databaseName });
+});
+
+test('workspace overlay replaceState strips overlaid paths before delegating to the base workspace', () => {
+  const baseWorkspace = createWorkspaceService({
+    workspaceId: 'workspace-overlay-replace',
+    idFactory: createSequentialIdFactory('entry'),
+    now: fixedNow,
+  });
+  const textforgeFolder = baseWorkspace.createFolder({ path: '/.textforge' });
+  baseWorkspace.createFolder({ path: '/docs' });
+  const overlayWorkspace = createWorkspaceOverlayService(baseWorkspace, {
+    overlay: () => createBundledOverlayState(textforgeFolder.id),
+  });
+
+  const imported = createWorkspaceService({
+    workspaceId: 'workspace-overlay-import',
+    idFactory: createSequentialIdFactory('import'),
+    now: fixedNow,
+    state: overlayWorkspace.snapshot(),
+  }).snapshot();
+
+  overlayWorkspace.replaceState(imported);
+
+  assert.equal(baseWorkspace.getEntryByPath('/.textforge/resources/docs/guide.md'), undefined);
+  assert.equal(
+    overlayWorkspace.getEntryByPath('/.textforge/resources/docs/guide.md')?.metadata.providerId,
+    workspaceProviderIds.bundled,
   );
 });
 
