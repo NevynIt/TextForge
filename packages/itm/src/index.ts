@@ -1,7 +1,10 @@
 import type {
   Capability,
   ContributionManifest,
+  ContributionRegistry,
+  DocumentContributionContext,
   MarkdownFenceHandlerContribution,
+  ResourceRef,
 } from '@textforge/core';
 import type {
   WorkspaceRepositoryResolverOptions,
@@ -13,10 +16,19 @@ export * from './upstream/index.js';
 export interface ItmLoadDocumentResult {
   readonly document: ItmDocument;
   readonly resolvedDocument: ResolvedItmDocument;
+  readonly effectiveDocument: ItmDocument;
+  readonly effectiveResolvedDocument: ResolvedItmDocument;
+  readonly capabilityContext?: DocumentContributionContext;
   readonly diagnostics: ReadonlyArray<ItmDiagnostic>;
 }
 
-export interface LoadItmDocumentOptions {
+export interface ItmDocumentEvaluationOptions {
+  readonly contributionRegistry?: ContributionRegistry;
+  readonly capabilityContext?: DocumentContributionContext;
+  readonly documentResource?: Partial<ResourceRef> & { readonly id?: string };
+}
+
+export interface LoadItmDocumentOptions extends ItmDocumentEvaluationOptions {
   readonly strict?: boolean;
   readonly uri?: string;
   readonly includeProviders?: ReadonlyArray<ItmIncludeProvider>;
@@ -33,11 +45,11 @@ export interface CreateWorkspaceItmIncludeProviderOptions extends ItmRepositoryR
   readonly basePath?: string;
 }
 
-export interface ValidateItmDocumentOptions {
+export interface ValidateItmDocumentOptions extends ItmDocumentEvaluationOptions {
   readonly repositoryResolution?: ItmRepositoryResolutionOptions;
 }
 
-export interface ProjectItmDocumentOptions {
+export interface ProjectItmDocumentOptions extends ItmDocumentEvaluationOptions {
   readonly view?: string;
   readonly viewpoint?: string;
   readonly select?: string;
@@ -105,6 +117,7 @@ export declare function projectItmDocument(
 ): {
   readonly document: ItmDocument;
   readonly resolvedDocument: ResolvedItmDocument;
+  readonly sourceDocument?: ItmDocument;
   readonly diagnostics: ReadonlyArray<ItmDiagnostic>;
   readonly nodes: ReadonlyArray<CanonicalGraphNode>;
   readonly edges: ReadonlyArray<CanonicalGraphEdge & {

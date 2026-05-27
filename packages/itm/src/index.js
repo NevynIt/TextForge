@@ -5,8 +5,10 @@ import {
   createCapability,
   createContributionManifest,
   createDiagnostic,
+  deriveCapabilityLocalName,
   createMarkdownFenceHandlerContribution,
   createResourcePredicate,
+  matchesResourcePredicate,
 } from '@textforge/core';
 import {
   resolveWorkspaceRepositoryLocation,
@@ -18,11 +20,19 @@ import {
   createCanonicalGraph,
   createDocument,
   createStdIncludeProvider,
+  getStableRelationshipId,
+  isEntityOfType,
   isResolvedDocument,
   parseDocumentResult,
   resolveDocument,
 } from './upstream/index.js';
 
+const itmDocumentPredicate = createResourcePredicate({
+  representations: ['text'],
+  languageIds: ['itm'],
+  mimeTypes: ['text/itm', 'text/x-itm'],
+  fileExtensions: ['itm'],
+});
 const markdownDocumentPredicate = createResourcePredicate({
   representations: ['text'],
   languageIds: ['markdown'],
@@ -49,6 +59,48 @@ export const itmCapabilities = [
     scope: 'document',
     documentPredicate: markdownDocumentPredicate,
   }),
+  createCapability('@textforge/itm/capability/itm.core', {
+    description: 'Provide the core ITM directive, type, and document-model semantics.',
+    defaultActive: false,
+    scope: 'document',
+    documentPredicate: itmDocumentPredicate,
+  }),
+  createCapability('@textforge/itm/capability/itm.type-hierarchy', {
+    description: 'Provide ITM type-hierarchy checks and selector expansion over entity and relationship types.',
+    defaultActive: false,
+    scope: 'document',
+    documentPredicate: itmDocumentPredicate,
+  }),
+  createCapability('@textforge/itm/capability/itm.relationship-identity', {
+    description: 'Provide stable ITM relationship identity and source/target resolution checks.',
+    defaultActive: false,
+    scope: 'document',
+    documentPredicate: itmDocumentPredicate,
+  }),
+  createCapability('@textforge/itm/capability/itm.validation', {
+    description: 'Provide built-in ITM validation-rule execution primitives.',
+    defaultActive: false,
+    scope: 'document',
+    documentPredicate: itmDocumentPredicate,
+  }),
+  createCapability('@textforge/itm/capability/itm.graph-model', {
+    description: 'Provide canonical ITM graph projection providers for viewpoints and reports.',
+    defaultActive: false,
+    scope: 'document',
+    documentPredicate: itmDocumentPredicate,
+  }),
+  createCapability('@textforge/itm/capability/itm.viewpoint', {
+    description: 'Provide viewpoint-stage layout, rendering, and report projection providers.',
+    defaultActive: false,
+    scope: 'document',
+    documentPredicate: itmDocumentPredicate,
+  }),
+  createCapability('@textforge/itm/capability/itm.roundtrip.meta', {
+    description: 'Provide ITM round-trip metadata preservation helpers for imported or generated models.',
+    defaultActive: false,
+    scope: 'document',
+    documentPredicate: itmDocumentPredicate,
+  }),
 ];
 
 export const itmResolverDiagnosticCodes = Object.freeze({
@@ -61,6 +113,36 @@ export const itmResolverDiagnosticCodes = Object.freeze({
   capabilityMismatch: 'itm.resolve.capability-mismatch',
   blocked: 'itm.resolve.blocked',
   circular: 'itm.resolve.circular',
+});
+
+const itmPackageUsageScopes = new Set([
+  'all',
+  'types',
+  'relationships',
+  'styles',
+  'rules',
+  'viewpoints',
+  'pipelines',
+]);
+const itmValidationDiagnosticCodes = Object.freeze({
+  ruleFailed: 'itm.validation.rule-failed',
+  providerUnavailable: 'itm.validation.provider-unavailable',
+});
+const itmBuiltinValidationCapabilityByProvider = Object.freeze({
+  requireId: 'itm.validation',
+  requireIdPattern: 'itm.validation',
+  requireLabel: 'itm.validation',
+  requireNonEmptyLabel: 'itm.validation',
+  requireAttribute: 'itm.validation',
+  requireOneOfAttributes: 'itm.validation',
+  requireSourceType: 'itm.type-hierarchy',
+  requireTargetType: 'itm.type-hierarchy',
+  requireUniqueIdWithinNamespace: 'itm.type-hierarchy',
+  requireKnownSource: 'itm.relationship-identity',
+  requireSourceId: 'itm.relationship-identity',
+  requireResolvedTarget: 'itm.relationship-identity',
+  requireTargetResolved: 'itm.relationship-identity',
+  requireRelationshipIdOrDeriveStableId: 'itm.relationship-identity',
 });
 
 function escapeHtml(value) {
@@ -266,17 +348,19 @@ export async function loadItmDocument(source, options = {}) {
     diagnostics = mergeDiagnostics(diagnostics, composed.diagnostics, document.diagnostics);
   }
 
-  const resolvedDocument = resolveDocument(document);
+  const evaluated = evaluateItmDocumentContext(document, options);
   diagnostics = mergeDiagnostics(
     diagnostics,
-    resolvedDocument.diagnostics,
     document.diagnostics,
-    createIncludeResolutionDiagnostics(resolvedDocument, options.repositoryResolution),
+    evaluated.diagnostics,
   );
 
   return {
     document,
-    resolvedDocument,
+    resolvedDocument: evaluated.resolvedDocument,
+    effectiveDocument: evaluated.effectiveDocument,
+    effectiveResolvedDocument: evaluated.effectiveResolvedDocument,
+    capabilityContext: evaluated.capabilityContext,
     diagnostics,
   };
 }
@@ -467,12 +551,1030 @@ function createIncludeResolutionDiagnostics(document, options = {}) {
   return diagnostics;
 }
 
-export function validateItmDocument(document, options = {}) {
-  const resolvedDocument = isResolvedDocument(document) ? document : resolveDocument(document);
-  return mergeDiagnostics(
-    resolvedDocument.diagnostics,
-    createIncludeResolutionDiagnostics(resolvedDocument, options.repositoryResolution),
+function getEntrySourceRange(entry) {
+  return entry?.sourceRange ?? entry?.source;
+}
+
+function getEntrySourceFile(entry, fallbackFile) {
+  return getEntrySourceRange(entry)?.file ?? fallbackFile;
+}
+
+function compareSourcePositions(left, right) {
+  const leftRange = left?.startLine !== undefined ? left : getEntrySourceRange(left);
+  const rightRange = right?.startLine !== undefined ? right : getEntrySourceRange(right);
+  const leftLine = leftRange?.startLine ?? 0;
+  const rightLine = rightRange?.startLine ?? 0;
+  if (leftLine !== rightLine) {
+    return leftLine - rightLine;
+  }
+  const leftColumn = leftRange?.startColumn ?? 0;
+  const rightColumn = rightRange?.startColumn ?? 0;
+  if (leftColumn !== rightColumn) {
+    return leftColumn - rightColumn;
+  }
+  return (leftRange?.startOffset ?? 0) - (rightRange?.startOffset ?? 0);
+}
+
+function normalizePackageScope(scope) {
+  switch (String(scope ?? '').trim().toLowerCase()) {
+    case '':
+    case 'all':
+      return 'all';
+    case 'type':
+    case 'types':
+    case 'namespace':
+    case 'namespaces':
+      return 'types';
+    case 'relationship':
+    case 'relationships':
+      return 'relationships';
+    case 'style':
+    case 'styles':
+      return 'styles';
+    case 'rule':
+    case 'rules':
+      return 'rules';
+    case 'viewpoint':
+    case 'viewpoints':
+      return 'viewpoints';
+    case 'pipeline':
+    case 'pipelines':
+      return 'pipelines';
+    default:
+      return undefined;
+  }
+}
+
+function listPackageContentScopes(packageContent = {}) {
+  const scopes = new Set();
+  if ((packageContent.namespaces?.length ?? 0) > 0 || (packageContent.entityTypes?.length ?? 0) > 0) {
+    scopes.add('types');
+  }
+  if ((packageContent.relationshipTypes?.length ?? 0) > 0) {
+    scopes.add('types');
+    scopes.add('relationships');
+  }
+  if ((packageContent.validationRules?.length ?? 0) > 0) {
+    scopes.add('rules');
+  }
+  if ((packageContent.styles?.length ?? 0) > 0) {
+    scopes.add('styles');
+  }
+  if ((packageContent.viewpoints?.length ?? 0) > 0) {
+    scopes.add('viewpoints');
+  }
+  if ((packageContent.pipelines?.length ?? 0) > 0) {
+    scopes.add('pipelines');
+  }
+  if (
+    scopes.size > 0
+    || (packageContent.referenceEntities?.length ?? 0) > 0
+    || (packageContent.referenceRelationships?.length ?? 0) > 0
+  ) {
+    scopes.add('all');
+  }
+  return scopes;
+}
+
+function scopeActivatesPackageCategory(activeScopes, category) {
+  if (!activeScopes || activeScopes.size === 0) {
+    return false;
+  }
+  if (activeScopes.has('all')) {
+    return true;
+  }
+  switch (category) {
+    case 'namespaces':
+    case 'entityTypes':
+      return activeScopes.has('types');
+    case 'relationshipTypes':
+      return activeScopes.has('types') || activeScopes.has('relationships');
+    case 'validationRules':
+      return activeScopes.has('rules');
+    case 'styles':
+      return activeScopes.has('styles');
+    case 'viewpoints':
+      return activeScopes.has('viewpoints');
+    case 'pipelines':
+      return activeScopes.has('pipelines');
+    default:
+      return false;
+  }
+}
+
+function parseVersionParts(version) {
+  const normalizedVersion = String(version ?? '').trim();
+  if (!normalizedVersion) {
+    return undefined;
+  }
+  const parts = normalizedVersion.split('.');
+  if (parts.some((part) => !/^\d+$/u.test(part))) {
+    return undefined;
+  }
+  return parts.map((part) => Number(part));
+}
+
+function compareVersionParts(left, right) {
+  for (let index = 0; index < Math.max(left.length, right.length); index += 1) {
+    const delta = (left[index] ?? 0) - (right[index] ?? 0);
+    if (delta !== 0) {
+      return delta;
+    }
+  }
+  return 0;
+}
+
+function isVersionRangeSatisfied(version, versionRange) {
+  const normalizedRange = String(versionRange ?? '').trim();
+  if (!normalizedRange || normalizedRange === '*') {
+    return true;
+  }
+
+  const normalizedVersion = String(version ?? '').trim();
+  if (!normalizedVersion) {
+    return true;
+  }
+
+  const comparisonOperators = ['>=', '<=', '>', '<'];
+  for (const operator of comparisonOperators) {
+    if (!normalizedRange.startsWith(operator)) {
+      continue;
+    }
+
+    const parsedVersion = parseVersionParts(normalizedVersion);
+    const parsedExpected = parseVersionParts(normalizedRange.slice(operator.length));
+    if (!parsedVersion || !parsedExpected) {
+      return normalizedVersion === normalizedRange.slice(operator.length).trim();
+    }
+
+    const comparison = compareVersionParts(parsedVersion, parsedExpected);
+    if (operator === '>=') {
+      return comparison >= 0;
+    }
+    if (operator === '<=') {
+      return comparison <= 0;
+    }
+    if (operator === '>') {
+      return comparison > 0;
+    }
+    return comparison < 0;
+  }
+
+  const rangePrefix = normalizedRange[0];
+  const parsedVersion = parseVersionParts(normalizedVersion);
+  const parsedExpected = parseVersionParts(rangePrefix === '^' || rangePrefix === '~'
+    ? normalizedRange.slice(1)
+    : normalizedRange);
+  if (!parsedVersion || !parsedExpected) {
+    return normalizedVersion === normalizedRange;
+  }
+
+  if (rangePrefix === '^') {
+    return parsedVersion[0] === parsedExpected[0]
+      && compareVersionParts(parsedVersion, parsedExpected) >= 0;
+  }
+
+  if (rangePrefix === '~') {
+    return parsedVersion[0] === parsedExpected[0]
+      && parsedVersion[1] === parsedExpected[1]
+      && compareVersionParts(parsedVersion, parsedExpected) >= 0;
+  }
+
+  return compareVersionParts(parsedVersion, parsedExpected) === 0;
+}
+
+function listCapabilityLookupNames(capability) {
+  return [
+    capability?.id,
+    capability?.localName,
+    deriveCapabilityLocalName(capability?.id),
+    ...(capability?.aliases ?? []),
+  ]
+    .map((value) => String(value ?? '').trim().toLowerCase())
+    .filter(Boolean);
+}
+
+function findCapabilityMatches(capabilities, identifier) {
+  const normalizedIdentifier = String(identifier ?? '').trim().toLowerCase();
+  if (!normalizedIdentifier) {
+    return [];
+  }
+  return capabilities.filter((capability) =>
+    listCapabilityLookupNames(capability).includes(normalizedIdentifier));
+}
+
+function createFallbackCapabilityContext(document, options = {}) {
+  const documentResource = {
+    kind: 'resource',
+    representation: 'text',
+    path: options.documentResource?.path ?? document.uri,
+    languageId: options.documentResource?.languageId ?? 'itm',
+    mimeType: options.documentResource?.mimeType ?? 'text/x-itm',
+    ...(options.documentResource ?? {}),
+  };
+  const capabilities = itmCapabilities.map((capability) => ({
+    ...capability,
+    packageId: '@textforge/itm',
+    status: 'available',
+  }));
+  const activeById = new Map();
+  const diagnostics = [];
+  const requirements = [];
+  const packageVersionById = new Map([['@textforge/itm', contributions.version]]);
+
+  for (const requirement of document.pluginRequirements ?? []) {
+    const identifier = requirement.name;
+    const matches = findCapabilityMatches(capabilities, identifier);
+    if (matches.length === 0) {
+      diagnostics.push(createItmResolverDiagnostic(
+        'capabilityMismatch',
+        `Required capability '${identifier}' is not available in the active ITM host context.`,
+        {
+          requirementRef: identifier,
+          file: requirement.source?.file ?? document.uri,
+          uri: document.uri,
+          range: requirement.source,
+          severity: 'warning',
+          origin: {
+            directive: 'require',
+          },
+        },
+      ));
+      requirements.push({
+        name: requirement.name,
+        versionRange: requirement.versionRange,
+        source: 'document',
+        matchedCapabilityId: undefined,
+        status: 'missing',
+      });
+      continue;
+    }
+
+    if (matches.length > 1) {
+      diagnostics.push(createItmResolverDiagnostic(
+        'conflictingAlias',
+        `Required capability '${identifier}' matches multiple active ITM capabilities.`,
+        {
+          requirementRef: identifier,
+          file: requirement.source?.file ?? document.uri,
+          uri: document.uri,
+          range: requirement.source,
+          origin: {
+            directive: 'require',
+          },
+        },
+      ));
+      requirements.push({
+        name: requirement.name,
+        versionRange: requirement.versionRange,
+        source: 'document',
+        matchedCapabilityId: undefined,
+        status: 'ambiguous',
+      });
+      continue;
+    }
+
+    const match = matches[0];
+    const packageVersion = packageVersionById.get(match.packageId);
+    if (requirement.versionRange && !isVersionRangeSatisfied(packageVersion, requirement.versionRange)) {
+      diagnostics.push(createItmResolverDiagnostic(
+        'versionMismatch',
+        `Required capability '${identifier}' does not satisfy version range '${requirement.versionRange}'.`,
+        {
+          requirementRef: identifier,
+          file: requirement.source?.file ?? document.uri,
+          uri: document.uri,
+          range: requirement.source,
+          origin: {
+            directive: 'require',
+          },
+        },
+      ));
+      requirements.push({
+        name: requirement.name,
+        versionRange: requirement.versionRange,
+        source: 'document',
+        matchedCapabilityId: match.id,
+        status: 'available',
+      });
+      continue;
+    }
+
+    activeById.set(match.id, {
+      ...match,
+      status: 'active',
+    });
+    requirements.push({
+      name: requirement.name,
+      versionRange: requirement.versionRange,
+      source: 'document',
+      matchedCapabilityId: match.id,
+      status: 'active',
+    });
+  }
+
+  for (const capability of capabilities) {
+    if (
+      capability.defaultActive === true
+      && matchesResourcePredicate(capability.documentPredicate ?? {}, documentResource)
+      && !activeById.has(capability.id)
+    ) {
+      activeById.set(capability.id, {
+        ...capability,
+        status: 'active',
+      });
+    }
+  }
+
+  return {
+    document: documentResource,
+    packages: [{
+      packageId: '@textforge/itm',
+      version: contributions.version,
+      status: 'available',
+    }],
+    capabilities,
+    activeCapabilities: [...activeById.values()],
+    diagnostics,
+    requirements,
+    activeCapabilityIds: [...activeById.keys()],
+  };
+}
+
+function resolveItmCapabilityContext(document, options = {}) {
+  if (options.capabilityContext) {
+    return options.capabilityContext;
+  }
+
+  if (options.contributionRegistry?.resolveDocumentContext) {
+    return options.contributionRegistry.resolveDocumentContext({
+      document: {
+        kind: 'resource',
+        representation: 'text',
+        path: options.documentResource?.path ?? document.uri,
+        languageId: options.documentResource?.languageId ?? 'itm',
+        mimeType: options.documentResource?.mimeType ?? 'text/x-itm',
+        ...(options.documentResource ?? {}),
+      },
+      explicitRequirements: (document.pluginRequirements ?? []).map((requirement) => ({
+        name: requirement.name,
+        versionRange: requirement.versionRange,
+        source: 'document',
+      })),
+    });
+  }
+
+  return createFallbackCapabilityContext(document, options);
+}
+
+function createPackageOwnershipIndex(document) {
+  const packages = [...(document.packages ?? [])].sort(compareSourcePositions);
+  const packagesByFile = new Map();
+  const packagesByName = new Map();
+  for (const pkg of packages) {
+    const file = getEntrySourceFile(pkg, document.uri) ?? '__root__';
+    const byFile = packagesByFile.get(file) ?? [];
+    byFile.push(pkg);
+    packagesByFile.set(file, byFile);
+
+    const byName = packagesByName.get(pkg.name) ?? [];
+    byName.push(pkg);
+    packagesByName.set(pkg.name, byName);
+  }
+  return {
+    packages,
+    packagesByFile,
+    packagesByName,
+  };
+}
+
+function findOwningPackage(entry, ownershipIndex, document) {
+  const range = getEntrySourceRange(entry);
+  if (!range) {
+    return undefined;
+  }
+  const file = getEntrySourceFile(entry, document.uri) ?? '__root__';
+  const packages = ownershipIndex.packagesByFile.get(file) ?? [];
+  let owner;
+  for (const candidate of packages) {
+    if (compareSourcePositions(candidate, range) <= 0) {
+      owner = candidate;
+      continue;
+    }
+    break;
+  }
+  return owner;
+}
+
+function materializePackageContent(document, ownershipIndex) {
+  const contentByUid = new Map((document.packages ?? []).map((pkg) => [pkg.uid, {
+    namespaces: [],
+    entityTypes: [],
+    relationshipTypes: [],
+    validationRules: [],
+    styles: [],
+    viewpoints: [],
+    referenceEntities: [],
+    referenceRelationships: [],
+    pluginRequirements: [],
+    pipelines: [],
+  }]));
+
+  function assign(entries, key) {
+    for (const entry of entries ?? []) {
+      const owner = findOwningPackage(entry, ownershipIndex, document);
+      if (!owner) {
+        continue;
+      }
+      contentByUid.get(owner.uid)?.[key]?.push(entry);
+    }
+  }
+
+  assign(document.namespaces, 'namespaces');
+  assign(document.entityTypes, 'entityTypes');
+  assign(document.relationshipTypes, 'relationshipTypes');
+  assign(document.validationRules, 'validationRules');
+  assign(document.styles, 'styles');
+  assign(document.viewpoints, 'viewpoints');
+  assign(document.entities, 'referenceEntities');
+  assign(document.relationships, 'referenceRelationships');
+  assign(document.pluginRequirements, 'pluginRequirements');
+
+  return contentByUid;
+}
+
+function readPackageActivationScopes(pkg, packageContent = {}) {
+  const configured = Array.isArray(pkg?.attributes?.values?.activation)
+    ? pkg.attributes.values.activation
+    : typeof pkg?.attributes?.values?.activation === 'string'
+      ? [pkg.attributes.values.activation]
+      : [];
+  const scopes = [];
+  for (const entry of configured) {
+    const normalized = String(entry ?? '').trim();
+    if (!normalized) {
+      continue;
+    }
+    if (normalized === pkg.name || normalized === `${pkg.name}.all`) {
+      scopes.push('all');
+      continue;
+    }
+    if (normalized.startsWith(`${pkg.name}.`)) {
+      const normalizedScope = normalizePackageScope(normalized.slice(pkg.name.length + 1));
+      if (normalizedScope) {
+        scopes.push(normalizedScope);
+      }
+      continue;
+    }
+    const normalizedScope = normalizePackageScope(normalized);
+    if (normalizedScope) {
+      scopes.push(normalizedScope);
+    }
+  }
+  if (scopes.length > 0) {
+    return [...new Set(scopes)];
+  }
+  return [...listPackageContentScopes(packageContent)].filter((scope) => scope !== 'all');
+}
+
+function normalizePackageUsageEntry(usage, ownershipIndex) {
+  const rawReference = String(usage?.packageRef ?? '').trim();
+  if (!rawReference) {
+    return {
+      ...usage,
+      packageRef: '',
+      scope: 'all',
+      packageUid: undefined,
+    };
+  }
+
+  const exactMatches = ownershipIndex.packagesByName.get(rawReference);
+  if (exactMatches?.length) {
+    return {
+      ...usage,
+      packageRef: rawReference,
+      scope: 'all',
+      packageUid: exactMatches[0]?.uid,
+    };
+  }
+
+  const separatorIndex = rawReference.lastIndexOf('.');
+  if (separatorIndex <= 0) {
+    return {
+      ...usage,
+      packageRef: rawReference,
+      scope: 'all',
+      packageUid: ownershipIndex.packagesByName.get(rawReference)?.[0]?.uid,
+    };
+  }
+
+  const packageRef = rawReference.slice(0, separatorIndex);
+  const normalizedScope = normalizePackageScope(rawReference.slice(separatorIndex + 1));
+  return {
+    ...usage,
+    packageRef,
+    scope: normalizedScope ?? rawReference.slice(separatorIndex + 1),
+    packageUid: ownershipIndex.packagesByName.get(packageRef)?.[0]?.uid,
+  };
+}
+
+function buildEffectiveItmDocument(document) {
+  const ownershipIndex = createPackageOwnershipIndex(document);
+  const packageContentByUid = materializePackageContent(document, ownershipIndex);
+  const packageDiagnostics = [];
+  const activePackageScopes = new Map();
+
+  for (const [packageName, packages] of ownershipIndex.packagesByName.entries()) {
+    if (packages.length <= 1) {
+      continue;
+    }
+    const primary = packages[0];
+    packageDiagnostics.push(createItmResolverDiagnostic(
+      'conflictingAlias',
+      `Package '${packageName}' is declared multiple times across the effective ITM document.`,
+      {
+        packageRef: packageName,
+        uri: document.uri,
+        file: getEntrySourceFile(primary, document.uri),
+        range: getEntrySourceRange(primary),
+      },
+    ));
+  }
+
+  const normalizedPackageUsages = (document.packageUsages ?? []).map((usage) =>
+    normalizePackageUsageEntry(usage, ownershipIndex));
+
+  for (const usage of normalizedPackageUsages) {
+    const packageMatches = ownershipIndex.packagesByName.get(usage.packageRef) ?? [];
+    if (packageMatches.length === 0) {
+      packageDiagnostics.push(createItmResolverDiagnostic(
+        'unresolved',
+        `Package '${usage.packageRef}' is not available for %using.`,
+        {
+          packageRef: usage.packageRef,
+          usingScope: usage.scope,
+          uri: document.uri,
+          file: usage.source?.file ?? document.uri,
+          range: usage.source,
+        },
+      ));
+      continue;
+    }
+
+    if (packageMatches.length > 1) {
+      packageDiagnostics.push(createItmResolverDiagnostic(
+        'conflictingAlias',
+        `Package '${usage.packageRef}' is ambiguous across multiple package declarations.`,
+        {
+          packageRef: usage.packageRef,
+          usingScope: usage.scope,
+          uri: document.uri,
+          file: usage.source?.file ?? document.uri,
+          range: usage.source,
+        },
+      ));
+      continue;
+    }
+
+    const pkg = packageMatches[0];
+    const packageContent = packageContentByUid.get(pkg.uid) ?? {};
+    const availableScopes = listPackageContentScopes(packageContent);
+    const requestedScope = normalizePackageScope(usage.scope) ?? usage.scope;
+    const scopesToActivate = requestedScope === 'all'
+      ? readPackageActivationScopes(pkg, packageContent)
+      : [requestedScope];
+    const activeScopes = activePackageScopes.get(pkg.uid) ?? new Set();
+
+    for (const scope of scopesToActivate) {
+      if (!itmPackageUsageScopes.has(scope) || (scope !== 'all' && !availableScopes.has(scope))) {
+        packageDiagnostics.push(createItmResolverDiagnostic(
+          'unsupported',
+          `Package '${pkg.name}' does not expose a '${scope}' scope for %using.`,
+          {
+            packageRef: pkg.name,
+            usingScope: scope,
+            uri: document.uri,
+            file: usage.source?.file ?? document.uri,
+            range: usage.source,
+          },
+        ));
+        continue;
+      }
+      activeScopes.add(scope);
+    }
+
+    if (activeScopes.size > 0) {
+      activePackageScopes.set(pkg.uid, activeScopes);
+    }
+  }
+
+  const materializedPackages = (document.packages ?? []).map((pkg) => ({
+    ...pkg,
+    ...packageContentByUid.get(pkg.uid),
+  }));
+
+  function filterEntries(entries, category) {
+    return (entries ?? []).filter((entry) => {
+      const owner = findOwningPackage(entry, ownershipIndex, document);
+      if (!owner) {
+        return true;
+      }
+      return scopeActivatesPackageCategory(activePackageScopes.get(owner.uid), category);
+    });
+  }
+
+  const effectiveDocument = createDocument({
+    ...document,
+    namespaces: filterEntries(document.namespaces, 'namespaces'),
+    entityTypes: filterEntries(document.entityTypes, 'entityTypes'),
+    relationshipTypes: filterEntries(document.relationshipTypes, 'relationshipTypes'),
+    validationRules: filterEntries(document.validationRules, 'validationRules'),
+    styles: filterEntries(document.styles, 'styles'),
+    viewpoints: filterEntries(document.viewpoints, 'viewpoints'),
+    entities: filterEntries(document.entities, 'referenceEntities'),
+    relationships: filterEntries(document.relationships, 'referenceRelationships'),
+    packages: materializedPackages,
+    packageUsages: normalizedPackageUsages,
+    diagnostics: mergeDiagnostics(document.diagnostics, packageDiagnostics),
+  });
+
+  return {
+    effectiveDocument,
+    packageDiagnostics,
+    activePackageScopes,
+  };
+}
+
+function normalizePipelineProviderStep(step) {
+  if (step?.operation === 'plugin') {
+    const rawProvider = String(step.provider ?? '').trim();
+    const separatorIndex = rawProvider.indexOf(':');
+    if (separatorIndex > 0) {
+      const provider = rawProvider.slice(0, separatorIndex).trim();
+      const rawValue = rawProvider.slice(separatorIndex + 1).trim();
+      return {
+        provider,
+        arguments: {
+          value: rawValue,
+        },
+      };
+    }
+    return {
+      provider: rawProvider,
+      arguments: step.arguments ?? {},
+    };
+  }
+
+  return {
+    provider: step?.operation,
+    arguments: step?.arguments ?? {},
+  };
+}
+
+function describeValidationCandidate(candidate) {
+  if (candidate.kind === 'relationship') {
+    return candidate.value.id
+      ?? getStableRelationshipId(candidate.value)
+      ?? candidate.value.uid;
+  }
+  return candidate.value.qualifiedId
+    ?? candidate.value.id
+    ?? candidate.value.label
+    ?? candidate.value.uid;
+}
+
+function createRuleFailureDiagnostic(rule, candidate, message, detail, options = {}) {
+  const subject = describeValidationCandidate(candidate);
+  const suffix = subject ? ` Affected item: ${subject}.` : '';
+  return createDiagnostic(
+    `${message ?? detail}${suffix}`,
+    rule.severity ?? 'warning',
+    {
+      code: options.code ?? itmValidationDiagnosticCodes.ruleFailed,
+      uri: options.uri,
+      file: getEntrySourceFile(candidate.value, options.uri),
+      range: getEntrySourceRange(candidate.value) ?? rule.sourceRange,
+      entityUid: candidate.kind === 'node' ? candidate.value.uid : undefined,
+      relationshipUid: candidate.kind === 'relationship' ? candidate.value.uid : undefined,
+      ruleUid: rule.uid,
+      origin: {
+        packageId: '@textforge/itm',
+        subsystem: 'itm-validation',
+        provider: options.provider,
+      },
+    },
   );
+}
+
+function listActiveCapabilityNames(capabilityContext) {
+  const names = new Set();
+  for (const capability of capabilityContext?.activeCapabilities ?? []) {
+    for (const name of listCapabilityLookupNames(capability)) {
+      names.add(name);
+    }
+  }
+  return names;
+}
+
+function findCapabilityRequirementMatch(capabilityContext, identifier, options = {}) {
+  const normalizedIdentifier = String(identifier ?? '').trim().toLowerCase();
+  if (!normalizedIdentifier) {
+    return undefined;
+  }
+  const capabilities = capabilityContext?.activeCapabilities ?? [];
+  return capabilities.find((capability) =>
+    listCapabilityLookupNames(capability).some((name) =>
+      name === normalizedIdentifier
+      || (options.allowPrefixMatch === true && normalizedIdentifier.startsWith(`${name}.`))));
+}
+
+function resolvePipelineProviderReference(step, document, activeRuleNames = new Set()) {
+  if (!step) {
+    return undefined;
+  }
+  if (step.operation === 'select' || step.operation === 'includeEdges' || step.operation === 'exclude') {
+    return undefined;
+  }
+
+  if (step.operation === 'validate') {
+    const validationRef = typeof step.arguments?.value === 'string'
+      ? step.arguments.value
+      : undefined;
+    if (!validationRef || activeRuleNames.has(validationRef)) {
+      return undefined;
+    }
+    return validationRef;
+  }
+
+  if (step.operation === 'plugin') {
+    return normalizePipelineProviderStep(step).provider;
+  }
+
+  return typeof step.arguments?.value === 'string'
+    ? step.arguments.value
+    : undefined;
+}
+
+function buildUniqueEntityIdCounts(document) {
+  const counts = new Map();
+  for (const entity of document.entities ?? []) {
+    const identifier = entity.qualifiedId ?? entity.id;
+    if (!identifier) {
+      continue;
+    }
+    counts.set(identifier, (counts.get(identifier) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function hasAttributeValue(candidate, attributeName) {
+  const value = candidate?.attributes?.values?.[attributeName];
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+  if (value && typeof value === 'object') {
+    return Object.keys(value).length > 0;
+  }
+  return value !== undefined && value !== null && String(value).trim() !== '';
+}
+
+function executeBuiltinValidationStep(step, rule, candidate, document, context) {
+  const normalizedStep = normalizePipelineProviderStep(step);
+  const provider = normalizedStep.provider;
+  const value = normalizedStep.arguments?.value;
+  const candidateValue = candidate.value;
+
+  switch (provider) {
+    case 'requireId':
+      return candidateValue.id
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, 'An id is required for this rule.', {
+          uri: document.uri,
+          provider,
+        });
+    case 'requireIdPattern': {
+      if (!candidateValue.id) {
+        return createRuleFailureDiagnostic(rule, candidate, rule.message, 'An id is required before pattern validation can pass.', {
+          uri: document.uri,
+          provider,
+        });
+      }
+      try {
+        const pattern = new RegExp(String(value ?? ''));
+        return pattern.test(candidateValue.id)
+          ? undefined
+          : createRuleFailureDiagnostic(rule, candidate, rule.message, `Id '${candidateValue.id}' does not satisfy the configured pattern.`, {
+            uri: document.uri,
+            provider,
+          });
+      } catch {
+        return createRuleFailureDiagnostic(rule, candidate, 'The validation rule uses an invalid id pattern.', 'The validation rule uses an invalid id pattern.', {
+          uri: document.uri,
+          provider,
+        });
+      }
+    }
+    case 'requireLabel':
+    case 'requireNonEmptyLabel':
+      return String(candidateValue.label ?? '').trim()
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, 'A non-empty label is required for this rule.', {
+          uri: document.uri,
+          provider,
+        });
+    case 'requireKnownSource':
+    case 'requireSourceId':
+      if (candidate.kind !== 'relationship') {
+        return undefined;
+      }
+      return candidateValue.source
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, 'The relationship source must resolve for this rule.', {
+          uri: document.uri,
+          provider,
+        });
+    case 'requireResolvedTarget':
+    case 'requireTargetResolved':
+      if (candidate.kind !== 'relationship') {
+        return undefined;
+      }
+      return candidateValue.target
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, 'The relationship target must resolve for this rule.', {
+          uri: document.uri,
+          provider,
+        });
+    case 'requireRelationshipIdOrDeriveStableId':
+      if (candidate.kind !== 'relationship') {
+        return undefined;
+      }
+      return candidateValue.id || getStableRelationshipId(candidateValue)
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, 'The relationship must expose or derive a stable id.', {
+          uri: document.uri,
+          provider,
+        });
+    case 'requireSourceType':
+      if (candidate.kind !== 'relationship' || !candidateValue.source || typeof value !== 'string') {
+        return undefined;
+      }
+      return isEntityOfType(document, candidateValue.source, value, true)
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, `The relationship source must be of type '${value}'.`, {
+          uri: document.uri,
+          provider,
+        });
+    case 'requireTargetType':
+      if (candidate.kind !== 'relationship' || !candidateValue.target || typeof value !== 'string') {
+        return undefined;
+      }
+      return isEntityOfType(document, candidateValue.target, value, true)
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, `The relationship target must be of type '${value}'.`, {
+          uri: document.uri,
+          provider,
+        });
+    case 'requireAttribute':
+      return typeof value === 'string' && hasAttributeValue(candidateValue, value)
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, `Attribute '${value}' is required for this rule.`, {
+          uri: document.uri,
+          provider,
+        });
+    case 'requireOneOfAttributes': {
+      const requiredAttributes = Array.isArray(value)
+        ? value
+        : typeof value === 'string'
+          ? [value]
+          : [];
+      return requiredAttributes.some((attributeName) => hasAttributeValue(candidateValue, attributeName))
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, 'At least one of the configured attributes is required for this rule.', {
+          uri: document.uri,
+          provider,
+        });
+    }
+    case 'requireUniqueIdWithinNamespace': {
+      if (candidate.kind !== 'node' || !candidateValue.id) {
+        return undefined;
+      }
+      const identifier = candidateValue.qualifiedId ?? candidateValue.id;
+      return (context.uniqueEntityIds.get(identifier) ?? 0) <= 1
+        ? undefined
+        : createRuleFailureDiagnostic(rule, candidate, rule.message, `Id '${identifier}' must be unique within the effective document namespace set.`, {
+          uri: document.uri,
+          provider,
+        });
+    }
+    default:
+      return undefined;
+  }
+}
+
+function collectValidationCandidates(document, selector) {
+  const candidates = [];
+  for (const entity of document.entities ?? []) {
+    if (matchesSelector(selector, { kind: 'node', value: entity })) {
+      candidates.push({ kind: 'node', value: entity });
+    }
+  }
+  for (const relationship of document.relationships ?? []) {
+    if (matchesSelector(selector, { kind: 'relationship', value: relationship })) {
+      candidates.push({ kind: 'relationship', value: relationship });
+    }
+  }
+  return candidates;
+}
+
+function createValidationProviderDiagnostic(owner, step, providerName, capabilityName, document) {
+  return createItmResolverDiagnostic(
+    'capabilityMismatch',
+    `Validation/provider step '${providerName}' requires capability '${capabilityName}', but that capability is not active for this ITM document.`,
+    {
+      requirementRef: capabilityName,
+      uri: document.uri,
+      file: step?.source?.file ?? getEntrySourceFile(owner, document.uri),
+      range: step?.source ?? getEntrySourceRange(owner),
+      code: itmValidationDiagnosticCodes.providerUnavailable,
+      origin: {
+        subsystem: 'itm-validation',
+        provider: providerName,
+      },
+    },
+  );
+}
+
+function evaluateItmDocumentContext(input, options = {}) {
+  const document = isResolvedDocument(input) ? createDocument(input) : input;
+  const resolvedDocument = isResolvedDocument(input) ? input : resolveDocument(document);
+  const effective = buildEffectiveItmDocument(document);
+  const capabilityContext = resolveItmCapabilityContext(effective.effectiveDocument, options);
+  const effectiveResolvedDocument = resolveDocument(effective.effectiveDocument);
+  const diagnostics = [
+    ...(resolvedDocument.diagnostics ?? []),
+    ...effective.packageDiagnostics,
+    ...(capabilityContext.diagnostics ?? []),
+  ];
+  const activeRuleNames = new Set((effectiveResolvedDocument.validationRules ?? []).map((rule) => rule.name));
+  const uniqueEntityIds = buildUniqueEntityIdCounts(effectiveResolvedDocument);
+  const validationContext = {
+    uniqueEntityIds,
+  };
+
+  for (const rule of effectiveResolvedDocument.validationRules ?? []) {
+    if (rule.enabled === false) {
+      continue;
+    }
+    const candidates = collectValidationCandidates(effectiveResolvedDocument, rule.selector?.raw);
+    for (const step of rule.pipeline?.steps ?? []) {
+      const { provider } = normalizePipelineProviderStep(step);
+      const requiredCapabilityName = itmBuiltinValidationCapabilityByProvider[provider] ?? provider;
+      if (!findCapabilityRequirementMatch(capabilityContext, requiredCapabilityName, {
+        allowPrefixMatch: !itmBuiltinValidationCapabilityByProvider[provider],
+      })) {
+        diagnostics.push(createValidationProviderDiagnostic(rule, step, provider, requiredCapabilityName, effectiveResolvedDocument));
+        continue;
+      }
+      for (const candidate of candidates) {
+        const failure = executeBuiltinValidationStep(step, rule, candidate, effectiveResolvedDocument, validationContext);
+        if (failure) {
+          diagnostics.push(failure);
+        }
+      }
+    }
+  }
+
+  for (const viewpoint of effectiveResolvedDocument.viewpoints ?? []) {
+    for (const step of viewpoint.pipeline?.steps ?? []) {
+      const providerName = resolvePipelineProviderReference(step, effectiveResolvedDocument, activeRuleNames);
+      if (!providerName) {
+        continue;
+      }
+      const requiredCapabilityName = itmBuiltinValidationCapabilityByProvider[providerName] ?? providerName;
+      if (findCapabilityRequirementMatch(capabilityContext, requiredCapabilityName, {
+        allowPrefixMatch: !itmBuiltinValidationCapabilityByProvider[providerName],
+      })) {
+        continue;
+      }
+      diagnostics.push(createValidationProviderDiagnostic(viewpoint, step, providerName, requiredCapabilityName, effectiveResolvedDocument));
+    }
+  }
+
+  return {
+    document,
+    resolvedDocument,
+    effectiveDocument: effective.effectiveDocument,
+    effectiveResolvedDocument,
+    capabilityContext,
+    diagnostics: mergeDiagnostics(
+      diagnostics,
+      createIncludeResolutionDiagnostics(effectiveResolvedDocument, options.repositoryResolution),
+    ),
+  };
+}
+
+export function validateItmDocument(document, options = {}) {
+  return evaluateItmDocumentContext(document, options).diagnostics;
 }
 
 function parseSelectorExpression(selector) {
@@ -1650,7 +2752,8 @@ function createModelSummary(projected) {
 }
 
 export function projectItmDocument(input, options = {}) {
-  const resolvedDocument = isResolvedDocument(input) ? input : resolveDocument(input);
+  const evaluated = evaluateItmDocumentContext(input, options);
+  const resolvedDocument = evaluated.effectiveResolvedDocument;
   const document = resolvedDocument;
   const graph = createCanonicalGraph(resolvedDocument, {
     includeImplicitRelationships: options.includeImplicitRelationships ?? true,
@@ -1705,9 +2808,15 @@ export function projectItmDocument(input, options = {}) {
   }));
 
   return {
-    document,
+    document: evaluated.effectiveDocument,
     resolvedDocument,
-    diagnostics: mergeDiagnostics(document.diagnostics, resolvedDocument.diagnostics, graph.diagnostics),
+    sourceDocument: evaluated.document,
+    diagnostics: mergeDiagnostics(
+      evaluated.diagnostics,
+      document.diagnostics,
+      resolvedDocument.diagnostics,
+      graph.diagnostics,
+    ),
     nodes: selectedNodes,
     edges: selectedEdges,
     views: graph.views,
@@ -1768,7 +2877,13 @@ function renderProjectedModel(projected, options = {}) {
 function renderModelCollection(models, options = {}) {
   return models
     .map((model, index) => renderProjectedModel(
-      projectItmDocument(model.resolvedDocument ?? model.document, options),
+      projectItmDocument(
+        model.effectiveResolvedDocument
+          ?? model.effectiveDocument
+          ?? model.resolvedDocument
+          ?? model.document,
+        options,
+      ),
       {
         ...options,
         title: models.length > 1
@@ -1840,6 +2955,14 @@ async function parseEmbeddedItmBlock(execution) {
     uri: execution.sourceResource?.path,
     includeProviders,
     repositoryResolution,
+    contributionRegistry: execution.contributionRegistry ?? execution.hostServices?.contributionRegistry,
+    documentResource: {
+      path: execution.sourceResource?.path,
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'itm',
+      mimeType: 'text/x-itm',
+    },
   });
   return result;
 }
@@ -1864,10 +2987,12 @@ export const itmMarkdownFenceHandlerContributions = [
         name: modelName,
         document: parsed.document,
         resolvedDocument: parsed.resolvedDocument,
+        effectiveDocument: parsed.effectiveDocument,
+        effectiveResolvedDocument: parsed.effectiveResolvedDocument,
       });
 
       return {
-        html: renderItmPublicationHtml(parsed.resolvedDocument, {
+        html: renderItmPublicationHtml(parsed.effectiveResolvedDocument ?? parsed.resolvedDocument, {
           title: modelName,
         }),
         diagnostics: parsed.diagnostics.map((diagnostic) =>

@@ -787,6 +787,7 @@ async function resolveKnownFencedBlocks(source, options, environment) {
         blockKind: kind,
         fence,
         contributionContext: options.contributionContext,
+        contributionRegistry: options.contributionRegistry,
         sourceResource: options.resource,
         sourceUpdatedAt: options.sourceUpdatedAt,
         generatedAssetBasePath: options.fenceExecutionOptions?.generatedAssetBasePath,

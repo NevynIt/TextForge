@@ -255,6 +255,137 @@ test('loadItmDocument reports unauthorized and unavailable repository aliases di
   );
 });
 
+test('loadItmDocument activates only the requested package scopes from included profile content', async () => {
+  const workspace = {
+    getEntryByPath(path) {
+      if (path === '/profiles/scoped.itm') {
+        return {
+          kind: 'resource',
+          representation: 'text',
+          path,
+          text: `%package scoped_profile
+{
+  activation:
+    - scoped_profile.types
+}
+%namespace scoped https://example.org/scoped
+%entitytype scoped::Capability
+{
+  description: Scoped capability type.
+}
+%style [scoped::Capability]
+{
+  color: "#ff0000"
+}`,
+        };
+      }
+      return undefined;
+    },
+  };
+
+  const loaded = await loadItmDocument(`%include ../profiles/scoped.itm
+%using scoped_profile.types
+&cap [scoped::Capability] Capability
+`, {
+    uri: '/docs/root.itm',
+    includeProviders: [createWorkspaceItmIncludeProvider(workspace)],
+  });
+
+  assert.equal(loaded.effectiveDocument.entityTypes.some((entityType) => entityType.name === 'scoped::Capability'), true);
+  assert.equal((loaded.effectiveDocument.styles?.length ?? 0), 0);
+  assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.code === 'itm.validation.provider-unavailable'), false);
+});
+
+test('validateItmDocument surfaces missing provider capabilities for active package rules', () => {
+  const document = parseDocument(`%package validation_profile
+{
+  activation:
+    - validation_profile.rules
+}
+%rule require_name
+{
+  select: "*"
+  pipeline:
+    - requireAttribute: name
+  severity: error
+  message: "Every matching item must expose a name attribute."
+}
+%using validation_profile.rules
+&cap Capability
+`, {
+    uri: '/docs/validation.itm',
+  });
+
+  const diagnostics = validateItmDocument(document);
+
+  assert.equal(
+    diagnostics.some((diagnostic) => diagnostic.code === 'itm.validation.provider-unavailable'),
+    true,
+  );
+});
+
+test('validateItmDocument executes built-in package rules when the required capability is active', () => {
+  const document = parseDocument(`&cap Capability
+%package validation_profile
+{
+  activation:
+    - validation_profile.rules
+}
+%require itm.validation
+%rule require_name
+{
+  select: "*"
+  pipeline:
+    - requireAttribute: name
+  severity: error
+  message: "Every matching item must expose a name attribute."
+}
+%using validation_profile.rules
+`, {
+    uri: '/docs/validation-active.itm',
+  });
+
+  const diagnostics = validateItmDocument(document);
+
+  assert.equal(
+    diagnostics.some((diagnostic) => diagnostic.code === 'itm.validation.rule-failed'),
+    true,
+  );
+});
+
+test('validateItmDocument does not activate built-in package rules from provider-name capability requirements', () => {
+  const document = parseDocument(`&cap Capability
+%package validation_profile
+{
+  activation:
+    - validation_profile.rules
+}
+%require requireAttribute
+%rule require_name
+{
+  select: "*"
+  pipeline:
+    - requireAttribute: name
+  severity: error
+  message: "Every matching item must expose a name attribute."
+}
+%using validation_profile.rules
+`, {
+    uri: '/docs/validation-provider-alias.itm',
+  });
+
+  const diagnostics = validateItmDocument(document);
+
+  assert.equal(
+    diagnostics.some((diagnostic) => diagnostic.code === 'itm.validation.provider-unavailable'),
+    true,
+  );
+  assert.equal(
+    diagnostics.some((diagnostic) => diagnostic.code === 'itm.validation.rule-failed'),
+    false,
+  );
+});
+
 test('createItmResolverDiagnostic exposes stable mismatch categories for downstream resolvers', () => {
   const versionMismatch = createItmResolverDiagnostic(
     'versionMismatch',

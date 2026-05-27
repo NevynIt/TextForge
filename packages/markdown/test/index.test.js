@@ -222,6 +222,47 @@ title: "Roadmap summary"
   assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
 });
 
+test('renderMarkdownDocument forwards itm package-rule diagnostics through the fence execution path', async () => {
+  const contributionRegistry = createContributionRegistry([
+    contributions,
+    itmContributions,
+  ]);
+
+  const result = await renderMarkdownDocument(`\`\`\`itm
+&cap Capability
+%package validation_profile
+{
+  activation:
+    - validation_profile.rules
+}
+%rule require_name
+{
+  select: "*"
+  pipeline:
+    - requireAttribute: name
+  severity: error
+  message: "Every matching item must expose a name attribute."
+}
+%using validation_profile.rules
+\`\`\`
+`, {
+    resource: {
+      resourceId: 'markdown-4b',
+      path: '/docs/itm-validation.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+    contributionRegistry,
+  });
+
+  assert.equal(
+    result.diagnostics.some((diagnostic) => diagnostic.code === 'itm.validation.provider-unavailable'),
+    true,
+  );
+});
+
 test('renderMarkdownDocument surfaces provider-backed repository resolver diagnostics from itm fences', async () => {
   const contributionRegistry = createContributionRegistry([
     contributions,

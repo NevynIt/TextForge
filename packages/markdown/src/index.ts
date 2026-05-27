@@ -39,6 +39,7 @@ export interface MarkdownFenceExecution {
     readonly parameters: Readonly<Record<string, string | boolean>>;
   };
   readonly contributionContext?: DocumentContributionContext;
+  readonly contributionRegistry?: ContributionRegistry;
   readonly sourceResource?: ResourceRef;
   readonly sourceUpdatedAt?: string;
   readonly generatedAssetBasePath?: string;
