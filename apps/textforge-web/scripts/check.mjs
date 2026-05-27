@@ -148,9 +148,9 @@ for (const requiredPhase4Signal of ['Markdown preview', 'generated diagram', 'TF
   }
 }
 
-for (const requiredLuaSignal of ['Lua Console', 'Reload Lua automation pipelines', 'xterm', 'lua.open-console']) {
+for (const requiredLuaSignal of ['Lua Console', 'Reload Lua automation pipelines', 'xterm', 'lua.open-console', 'tf.power', 'Power session active', 'luaSkipPreload']) {
   if (!workbenchJs.includes(requiredLuaSignal)) {
-    throw new Error(`workbench.js must surface ${requiredLuaSignal} for WP-LUA`);
+    throw new Error(`workbench.js must surface ${requiredLuaSignal} for WP-LUA and WP-LUA-POWER-SESSION`);
   }
 }
 

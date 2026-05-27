@@ -81,17 +81,37 @@ The current console is a persistent Lua session. Variables defined in one comman
 - `require("tf.pipeline").list()` and `require("tf.pipeline").run("id", input)`.
 - `require("tf.actions").list()` and `require("tf.actions").run("id", input)`.
 - `require("tf.console").inspect(value)` for structured inspection.
+- `require("tf.power").status()` for current power-session state.
+- `require("tf.power").elevate()` for immediate session-scoped elevation with no second confirmation.
+- `require("tf.power").workspace()` for approved workspace inspection and text-resource mutation helpers.
+- `require("tf.power").automation()` for discovered Lua automation inspection and reload/run helpers.
+- `require("tf.power").surfaces()` for approved surface/session listing, open, focus, and close helpers.
+
+## Power Session
+
+The shipped Lua Console now has two explicit modes:
+
+- sandbox session: the default, constrained `tf.*` bridge only;
+- power session: an elevated console session that exposes an approved host-object surface after `require("tf.power").elevate()`.
+
+Power-session elevation is deliberately scoped:
+
+- it applies only to the current Lua console session;
+- it does not auto-expire;
+- it does not become a workspace-wide default;
+- it clears on restart.
+
+When the session is elevated, the console shows a visible `Power session active...` marker and exposes a `Restart In Safe Mode` recovery action. Recovery restarts the app, skips Lua preload exactly once on the next boot, preserves normally saved workspace content, and does not restore the previous console transcript.
 
 ## What Is Not Available Yet
 
-The console does not yet expose stable workbench-aware helpers for:
+The console still does not expose stable helpers for:
 
-- listing open editors or popup surfaces;
-- inspecting the active surface/session model;
-- browsing the contribution/package registry directly from Lua;
-- issuing shell-level UI commands from Lua.
+- direct contribution-registry mutation or shell-command dispatcher access;
+- arbitrary workbench/internal shell object access outside the approved power-session host-object list;
+- unrestricted browser, DOM, network, filesystem, or JavaScript interop.
 
-Those capabilities need a deliberate contract between the shell and the Lua sandbox rather than ad hoc direct access.
+Those capabilities still need a deliberate contract between the shell and the Lua sandbox rather than ad hoc direct access.
 
 ## Bundled Modules
 
@@ -105,6 +125,7 @@ Those capabilities need a deliberate contract between the shell and the Lua sand
 - `tf.pipeline`
 - `tf.actions`
 - `tf.console`
+- `tf.power`
 
 ## Runtime Limits
 

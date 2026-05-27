@@ -210,6 +210,8 @@ const popupSessionContextCommandIds = [
   'workspace.download-selected-file',
 ];
 
+const luaRecoveryQueryParam = 'luaSkipPreload';
+
 function readPhase35ScreenshotPreset() {
   if (typeof window === 'undefined') {
     return phase35ScreenshotPresets.main;
@@ -217,6 +219,28 @@ function readPhase35ScreenshotPreset() {
 
   const presetId = new URL(window.location.href).searchParams.get('phase35');
   return phase35ScreenshotPresets[presetId] ?? phase35ScreenshotPresets.main;
+}
+
+function readLuaBootstrapRecoveryState() {
+  if (typeof window === 'undefined') {
+    return {
+      skipLuaPreloadOnce: false,
+    };
+  }
+
+  const url = new URL(window.location.href);
+  const skipLuaPreloadOnce = url.searchParams.get(luaRecoveryQueryParam) === '1';
+  if (skipLuaPreloadOnce) {
+    url.searchParams.delete(luaRecoveryQueryParam);
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  }
+  return {
+    skipLuaPreloadOnce,
+  };
+}
+
+function isLuaBootstrapCommandId(commandId) {
+  return String(commandId ?? '').startsWith('lua.');
 }
 
 function readWorkbenchBootstrapOptions() {
@@ -489,6 +513,7 @@ function createStorageFailure(error) {
 
 function createTextForgeWorkbenchController() {
   const screenshotPreset = readPhase35ScreenshotPreset();
+  const luaBootstrapRecovery = readLuaBootstrapRecoveryState();
   const bootstrapOptions = readWorkbenchBootstrapOptions();
   let workspace = createWorkspaceService({
     workspaceId: 'textforge-shell',
@@ -539,6 +564,7 @@ function createTextForgeWorkbenchController() {
   const documentContributionContextByResourceId = new Map();
   const markdownPreviewStateByResourceId = new Map();
   const luaConsoleStateByResourceId = new Map();
+  const luaConsoleSessionStateByResourceId = new Map();
   const listeners = new Set();
   let cachedSnapshot;
   let bootstrapApplied = false;
@@ -556,6 +582,7 @@ function createTextForgeWorkbenchController() {
   };
   const runtime = {
     status: 'loading',
+    skipLuaPreloadOnce: luaBootstrapRecovery.skipLuaPreloadOnce,
   };
   const commandDispatcher = createCommandDispatcher({
     registry: commandRegistry,
@@ -712,6 +739,7 @@ function createTextForgeWorkbenchController() {
     activeTextDocuments.clear();
     markdownPreviewStateByResourceId.clear();
     luaConsoleStateByResourceId.clear();
+    luaConsoleSessionStateByResourceId.clear();
     state.activeMainSessionId = undefined;
     state.activePopupSessionId = undefined;
     state.surfaceFocusPlacement = 'main';
@@ -1460,6 +1488,241 @@ function createTextForgeWorkbenchController() {
     };
   }
 
+  function createDefaultLuaConsoleSessionState() {
+    return {
+      elevated: false,
+      availableHostObjects: [],
+      recoveryAvailable: false,
+    };
+  }
+
+  function updateLuaConsoleSessionState(resourceId, sessionState) {
+    if (!resourceId) {
+      return createDefaultLuaConsoleSessionState();
+    }
+
+    const nextState = {
+      ...createDefaultLuaConsoleSessionState(),
+      ...(luaExecutionService.getConsoleSessionState(resourceId) ?? {}),
+      ...(sessionState ?? {}),
+    };
+    luaConsoleSessionStateByResourceId.set(resourceId, nextState);
+    return nextState;
+  }
+
+  function getLuaConsoleSessionState(resourceId) {
+    return luaConsoleSessionStateByResourceId.get(resourceId)
+      ?? luaExecutionService.getConsoleSessionState(resourceId)
+      ?? createDefaultLuaConsoleSessionState();
+  }
+
+  function serializeWorkspaceEntryForLua(entry) {
+    if (!entry) {
+      return undefined;
+    }
+
+    if (entry.kind === 'folder') {
+      return {
+        id: entry.id,
+        kind: entry.kind,
+        path: entry.path,
+        parentId: entry.parentId,
+        title: entry.metadata.title ?? basenameWorkspacePath(entry.path),
+        metadata: entry.metadata,
+      };
+    }
+
+    return {
+      id: entry.id,
+      kind: entry.kind,
+      representation: entry.representation,
+      path: entry.path,
+      parentId: entry.parentId,
+      title: entry.metadata.title ?? basenameWorkspacePath(entry.path),
+      languageId: entry.representation === 'text' ? entry.languageId : undefined,
+      mimeType: entry.mimeType,
+      text: entry.representation === 'text' ? entry.text : undefined,
+      bytes: entry.representation === 'bytes' ? [...(entry.bytes ?? [])] : undefined,
+      metadata: entry.metadata,
+    };
+  }
+
+  function serializeSurfaceSessionForLua(session) {
+    if (!session) {
+      return undefined;
+    }
+
+    const entry = getEntry(session.resource.resourceId);
+    return {
+      id: session.id,
+      contributionId: session.contributionId,
+      placement: session.placement,
+      state: session.state,
+      resourceId: session.resource.resourceId,
+      path: entry?.path,
+      title: entry?.metadata.title ?? entry?.path ?? session.title,
+      freshness: session.freshness,
+    };
+  }
+
+  async function requestLuaPowerSessionRecovery() {
+    await persistWorkspace('lua.power-session-recovery');
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.set(luaRecoveryQueryParam, '1');
+    window.location.assign(url.toString());
+  }
+
+  function createLuaPowerSessionHostObjects(resourceId) {
+    return {
+      workspace: {
+        label: 'Workspace',
+        description: 'Inspect and mutate the browser-managed workspace through the public workspace service.',
+        api: {
+          getManifest() {
+            return workspace.getManifest();
+          },
+          listResources() {
+            return workspace.snapshot().resources.map((entry) => serializeWorkspaceEntryForLua(entry));
+          },
+          listFolders() {
+            return workspace.snapshot().folders.map((entry) => serializeWorkspaceEntryForLua(entry));
+          },
+          getEntryByPath(path) {
+            return serializeWorkspaceEntryForLua(workspace.getEntryByPath(path));
+          },
+          createFolder(input = {}) {
+            const nextPath = normalizeWorkspacePath(input.path ?? '/');
+            ensureWorkspaceFolder(dirnameWorkspacePath(nextPath));
+            return serializeWorkspaceEntryForLua(workspace.createFolder({
+              path: nextPath,
+              title: input.title ?? basenameWorkspacePath(nextPath),
+            }));
+          },
+          createTextResource(input = {}) {
+            const nextPath = normalizeWorkspacePath(input.path ?? '/untitled.txt');
+            ensureWorkspaceFolder(dirnameWorkspacePath(nextPath));
+            return serializeWorkspaceEntryForLua(workspace.createTextResource({
+              path: nextPath,
+              title: input.title ?? basenameWorkspacePath(nextPath),
+              text: String(input.text ?? ''),
+              languageId: input.languageId ?? 'plaintext',
+              mimeType: input.mimeType ?? 'text/plain',
+              metadata: input.metadata,
+            }));
+          },
+          saveTextResource(input = {}) {
+            const resource = input.resourceId
+              ? workspace.getEntry(input.resourceId)
+              : workspace.getEntryByPath(input.path ?? '');
+            if (!isWorkspaceResource(resource) || resource.representation !== 'text') {
+              throw new Error('Power-session saveTextResource requires an existing text resource.');
+            }
+
+            return serializeWorkspaceEntryForLua(workspace.saveTextResource({
+              resourceId: resource.id,
+              text: String(input.text ?? resource.text ?? ''),
+              languageId: input.languageId ?? resource.languageId,
+              mimeType: input.mimeType ?? resource.mimeType,
+            }));
+          },
+          resolveReference(sourcePath, reference) {
+            const sourceEntry = workspace.getEntryByPath(sourcePath ?? '');
+            if (!isWorkspaceResource(sourceEntry)) {
+              throw new Error(`Unknown workspace resource for resolveReference: ${sourcePath}`);
+            }
+
+            return workspace.resolveReference(workspaceEntryToResourceRef(sourceEntry), String(reference ?? ''));
+          },
+        },
+      },
+      automation: {
+        label: 'Automation',
+        description: 'Inspect discovered Lua automations and rerun discovery.',
+        api: {
+          list() {
+            return luaExecutionService.getAutomationDefinitions();
+          },
+          discover() {
+            const discovered = reloadLuaAutomation({ throwOnDiagnostics: false });
+            return {
+              definitions: discovered.definitions,
+              diagnostics: discovered.diagnostics,
+            };
+          },
+          run(automationId, input) {
+            return luaExecutionService.runAutomation(automationId, {
+              input,
+              workspace,
+            });
+          },
+        },
+      },
+      surfaces: {
+        label: 'Surfaces',
+        description: 'Inspect and control surface sessions through the public workbench helpers.',
+        api: {
+          listOpenSurfaceSessions() {
+            return getOpenSessions().map((session) => serializeSurfaceSessionForLua(session));
+          },
+          openResourcePath(path, placement = 'main') {
+            const entry = workspace.getEntryByPath(path ?? '');
+            if (!isWorkspaceResource(entry)) {
+              throw new Error(`Unknown workspace resource: ${path}`);
+            }
+
+            const session = openResourceEntry(entry, {
+              placement: placement === 'popup' ? 'popup' : 'main',
+            });
+            return serializeSurfaceSessionForLua(session ?? findSessionForResource(entry.id));
+          },
+          focusSession(sessionId) {
+            const session = findSessionById(sessionId);
+            if (!session) {
+              throw new Error(`Unknown surface session: ${sessionId}`);
+            }
+
+            if (session.placement === 'popup') {
+              focusPopupSession(session.id);
+            } else {
+              focusMainSession(session.id);
+            }
+            return serializeSurfaceSessionForLua(findSessionById(session.id));
+          },
+          closeSession(sessionId) {
+            closeSession(sessionId);
+            return {
+              closed: true,
+              sessionId,
+            };
+          },
+        },
+      },
+    };
+  }
+
+  function executeLuaConsoleCommand(resource, command) {
+    const result = luaExecutionService.runConsoleCommand(resource.id, command, {
+      scriptPath: resource.path,
+      workspace,
+      input: createLuaInputValue(resource.id),
+      powerSession: {
+        hostObjects: createLuaPowerSessionHostObjects(resource.id),
+        requestRecovery: requestLuaPowerSessionRecovery,
+        onStateChange(sessionState) {
+          updateLuaConsoleSessionState(resource.id, sessionState);
+        },
+      },
+    });
+    updateLuaConsoleSessionState(resource.id, result.session);
+    documentContributionContextByResourceId.clear();
+    emit();
+    return result;
+  }
+
   function reloadLuaAutomation(options = {}) {
     const discovered = luaExecutionService.discover(workspace, {
       limits: {
@@ -1499,20 +1762,20 @@ function createTextForgeWorkbenchController() {
     }
     bootstrapApplied = true;
 
-    for (const commandId of bootstrapOptions.commandIds) {
+    const bootstrapCommandIds = runtime.skipLuaPreloadOnce
+      ? bootstrapOptions.commandIds.filter((commandId) => !isLuaBootstrapCommandId(commandId))
+      : bootstrapOptions.commandIds;
+
+    for (const commandId of bootstrapCommandIds) {
       await executeCommand(commandId);
     }
 
-    if (!bootstrapOptions.luaConsoleCommand) {
+    if (runtime.skipLuaPreloadOnce || !bootstrapOptions.luaConsoleCommand) {
       return;
     }
 
     const resource = await ensureLuaConsoleResource();
-    const result = luaExecutionService.runConsoleCommand(resource.id, bootstrapOptions.luaConsoleCommand, {
-      scriptPath: resource.path,
-      workspace,
-      input: createLuaInputValue(resource.id),
-    });
+    const result = executeLuaConsoleCommand(resource, bootstrapOptions.luaConsoleCommand);
     luaConsoleStateByResourceId.set(
       resource.id,
       createLuaConsoleTranscriptState(resource.id, bootstrapOptions.luaConsoleCommand, result),
@@ -1836,6 +2099,9 @@ function createTextForgeWorkbenchController() {
     const badge = resource.metadata.badge;
     const icon = resolveEntryIcon(resource);
     const resourceTitle = resource.metadata.title ?? basenameWorkspacePath(resource.path) ?? resource.path;
+    const luaConsoleSessionState = isLuaConsoleResource(resource)
+      ? getLuaConsoleSessionState(resource.id)
+      : undefined;
     const resourceRef = workspaceEntryToResourceRef(resource);
     const runtimeView = contribution?.open?.({
       session,
@@ -1880,16 +2146,17 @@ function createTextForgeWorkbenchController() {
       getConsoleState() {
         return luaConsoleStateByResourceId.get(resource.id);
       },
+      getConsoleSessionState() {
+        return getLuaConsoleSessionState(resource.id);
+      },
       setConsoleState(nextState) {
         luaConsoleStateByResourceId.set(resource.id, nextState);
       },
+      requestPowerSessionRecovery() {
+        return requestLuaPowerSessionRecovery();
+      },
       runConsoleCommand(command) {
-        return luaExecutionService.runConsoleCommand(resource.id, command, {
-          source: command,
-          scriptPath: resource.path,
-          workspace,
-          input: createLuaInputValue(resource.id),
-        });
+        return executeLuaConsoleCommand(resource, command);
       },
     });
 
@@ -1910,7 +2177,9 @@ function createTextForgeWorkbenchController() {
       mountId: runtimeView?.mountId ?? `${session.id}:${session.contributionId}:${resource.metadata.updatedAt}`,
       title: resourceTitle,
       path: resource.path,
-      summary: runtimeView?.summary ?? 'Surface runtime unavailable.',
+      summary: luaConsoleSessionState?.elevated
+        ? 'Elevated Lua power session with approved host-object access and one-click recovery. Trigger it from Lua with require("tf.power").elevate().'
+        : runtimeView?.summary ?? 'Surface runtime unavailable.',
       badge,
       icon,
       openWith,
@@ -2020,9 +2289,10 @@ function createTextForgeWorkbenchController() {
           : entry.mimeType?.startsWith('image/')
             ? 'IMAGE'
             : 'FILE';
+    const powerSessionActive = isLuaConsoleResource(entry) && getLuaConsoleSessionState(entry.id).elevated;
     return {
       title: entry.metadata.title ?? basenameWorkspacePath(entry.path) ?? entry.path,
-      detail: `${kindDetail} / ${activeSession?.placement === 'popup' ? 'Popup surface' : 'Main surface'}`,
+      detail: `${kindDetail} / ${activeSession?.placement === 'popup' ? 'Popup surface' : 'Main surface'}${powerSessionActive ? ' / Power session' : ''}`,
       placement: activeSession?.placement ?? 'main',
       badge: entry.metadata.badge,
       icon: resolveEntryIcon(entry),
@@ -2181,6 +2451,7 @@ function createTextForgeWorkbenchController() {
 
   async function openLuaConsoleCommand() {
     const resource = await ensureLuaConsoleResource();
+    updateLuaConsoleSessionState(resource.id, luaExecutionService.getConsoleSessionState(resource.id));
     openResourceEntry(resource, {
       placement: 'popup',
       preferredSurfaceId: luaConsoleSurfaceContribution.id,
@@ -2198,6 +2469,9 @@ function createTextForgeWorkbenchController() {
       scriptPath: entry.path,
       workspace,
       input: createLuaInputValue(entry.id),
+      powerSession: {
+        hostObjects: createLuaPowerSessionHostObjects(entry.id),
+      },
     });
     if (!result.ok) {
       throw new Error(formatLuaDiagnostics(result.diagnostics));
@@ -2832,7 +3106,9 @@ function createTextForgeWorkbenchController() {
       workspace = hydrated.workspace;
       hydrationSource = hydrated.hydrationSource;
       unsubscribePersistence = hydrated.workspace.subscribePersistence(() => emit());
-      reloadLuaAutomation();
+      if (!runtime.skipLuaPreloadOnce) {
+        reloadLuaAutomation();
+      }
       runtime.status = 'ready';
 
       const selectedEntry = getEntry(workspace.getManifest().selectedResourceId) ?? getDefaultSelection();
@@ -2962,6 +3238,9 @@ function createTextForgeWorkbenchController() {
     const badgeDiagnostics = runtime.status === 'ready'
       ? listWorkspaceBadgeDiagnostics(workspace.snapshot())
       : [];
+    const elevatedLuaConsoleCount = runtime.status === 'ready'
+      ? [...luaConsoleSessionStateByResourceId.values()].filter((sessionState) => sessionState?.elevated === true).length
+      : 0;
     const activeResource = describeActiveResource();
     const activeCommandSession = runtime.status === 'ready' ? getActiveCommandSession() : undefined;
     const inspectedDocumentEntry = runtime.status === 'ready'
@@ -3018,6 +3297,28 @@ function createTextForgeWorkbenchController() {
             }),
           ]
           : []),
+        ...(elevatedLuaConsoleCount > 0
+          ? [
+            createStatusBadge({
+              id: 'lua-power-status',
+              label: `${elevatedLuaConsoleCount} Lua power session${elevatedLuaConsoleCount === 1 ? '' : 's'}`,
+              tone: 'warning',
+              icon: 'warning',
+              detail: 'Power session active: elevated Lua sessions keep approved host-object access until the console session ends or the app restarts.',
+            }),
+          ]
+          : []),
+        ...(runtime.skipLuaPreloadOnce
+          ? [
+            createStatusBadge({
+              id: 'lua-skip-preload-status',
+              label: 'Lua preload skipped once',
+              tone: 'info',
+              icon: 'status',
+              detail: 'Recovery boot skipped Lua automation discovery and Lua bootstrap commands for this startup only.',
+            }),
+          ]
+          : []),
         ...(persistenceStatus.state === 'persisting' || persistenceStatus.state === 'error'
           ? [
             createStatusBadge({
@@ -3036,6 +3337,7 @@ function createTextForgeWorkbenchController() {
       runtime: {
         status: runtime.status,
         hydrationSource,
+        skipLuaPreloadOnce: runtime.skipLuaPreloadOnce,
         storageFailure,
       },
       persistenceStatus,

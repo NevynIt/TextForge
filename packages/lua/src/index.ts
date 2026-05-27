@@ -32,12 +32,36 @@ export interface LuaAutomationDefinition {
   readonly source: string;
 }
 
+export interface LuaPowerSessionHostObject {
+  readonly label?: string;
+  readonly description?: string;
+  readonly api?: Record<string, any>;
+}
+
+export interface LuaPowerSessionState {
+  readonly elevated: boolean;
+  readonly availableHostObjects: ReadonlyArray<{
+    readonly id: string;
+    readonly label: string;
+    readonly description?: string;
+  }>;
+  readonly recoveryAvailable: boolean;
+}
+
+export interface LuaPowerSessionOptions {
+  readonly elevated?: boolean;
+  readonly hostObjects?: Readonly<Record<string, Record<string, any> | LuaPowerSessionHostObject>>;
+  readonly requestRecovery?: () => unknown;
+  readonly onStateChange?: (state: LuaPowerSessionState) => void;
+}
+
 export interface LuaRunResult {
   readonly ok: boolean;
   readonly value?: PipelineValue;
   readonly diagnostics: ReadonlyArray<Diagnostic>;
   readonly consoleLines: ReadonlyArray<LuaConsoleLine>;
   readonly definitions?: ReadonlyArray<LuaAutomationDefinition>;
+  readonly session?: LuaPowerSessionState;
 }
 
 export interface LuaAutomationFileRecord {
@@ -63,6 +87,8 @@ export declare const luaCommandContributions: ReadonlyArray<import('@textforge/c
 export declare const luaCapabilities: ReadonlyArray<import('@textforge/core').Capability>;
 export declare function createLuaConsoleSurface(options?: {
   readonly getState?: () => unknown;
+  readonly getSessionState?: () => LuaPowerSessionState | undefined;
+  readonly requestRecovery?: () => unknown | Promise<unknown>;
   readonly setState?: (nextState: unknown) => void;
   readonly runCommand?: (command: string) => unknown | Promise<unknown>;
 }): {
@@ -112,6 +138,7 @@ export declare function runLuaScript(options?: {
   readonly expectedOutput?: string;
   readonly invokePipelineStep?: (input: { readonly id: string; readonly value: unknown }) => unknown;
   readonly invokeActionStep?: (input: { readonly id: string; readonly value: unknown }) => unknown;
+  readonly powerSession?: LuaPowerSessionOptions;
 }): LuaRunResult;
 export declare function runLuaAutomationDefinition(
   definition: LuaAutomationDefinition,
@@ -131,6 +158,7 @@ export interface LuaExecutionService {
   getAutomationDefinitions(): ReadonlyArray<LuaAutomationDefinition>;
   setAutomationDefinitions(definitions?: ReadonlyArray<LuaAutomationDefinition>): ReadonlyArray<LuaAutomationDefinition>;
   setPipelineDefinitions(definitions?: ReadonlyArray<LuaAutomationDefinition>): ReadonlyArray<LuaAutomationDefinition>;
+  getConsoleSessionState(sessionKey: string): LuaPowerSessionState | undefined;
   runSnippet(runOptions?: Parameters<typeof runLuaScript>[0]): LuaRunResult;
   runConsoleCommand(
     sessionKey: string,

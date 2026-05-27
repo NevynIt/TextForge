@@ -54,7 +54,7 @@ Create. Fengari worker, sandbox, tf.* capability bridge, Lua editor/console surf
 
 Security-profile integration for this phase is package-owned: keep Lua sandbox/security checks inside `WP-LUA` acceptance evidence rather than modeling a separate Lua-only security workpackage gate.
 
-### Phase 8 follow-on candidate — WP-LUA-POWER-SESSION
+### Phase 8 follow-on — WP-LUA-POWER-SESSION
 
 Implementation anchors:
 
@@ -62,9 +62,9 @@ Implementation anchors:
 - app shell/runtime integration: `apps/textforge-web/src/workbench.js`
 - Lua runtime/service integration: `packages/lua/src/index.js`
 
-Candidate follow-on after validated `WP-LUA`. Keep the base `tf.*` bridge as the default mode, then add an explicit session-scoped elevated mode where Lua can self-escalate into an approved host-object surface, the console shows a clear elevated badge, and recovery is one click with a restart plus a one-shot skip-Lua-preload marker on the next boot.
+Implemented follow-on after validated `WP-LUA`. Keep the base `tf.*` bridge as the default mode, then add an explicit session-scoped elevated mode where Lua can self-escalate into an approved host-object surface, the console shows a clear elevated badge, and recovery is one click with a restart plus a one-shot skip-Lua-preload marker on the next boot.
 
-This follow-on should stay deliberately scoped: no second confirmation, no auto-expire timer, no permanent workspace-wide power default, and no arbitrary exposure of shell internals beyond the approved host-object list for the selected rollout level.
+The shipped rollout stays deliberately scoped: no second confirmation, no auto-expire timer, no permanent workspace-wide power default, and no arbitrary exposure of shell internals beyond the approved host-object list for the selected rollout level. The current approved host-object surface is `workspace`, `automation`, and `surfaces`.
 
 ## Tests and definition of done
 

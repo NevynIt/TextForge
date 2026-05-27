@@ -155,6 +155,75 @@ export const luaCapabilities = [
   }),
 ];
 
+function normalizePowerHostObjectRecord(hostObjectId, definition) {
+  if (!definition || typeof definition !== 'object') {
+    return undefined;
+  }
+
+  const usesDescriptorShape = Object.prototype.hasOwnProperty.call(definition, 'api')
+    || Object.prototype.hasOwnProperty.call(definition, 'label')
+    || Object.prototype.hasOwnProperty.call(definition, 'description');
+  const api = usesDescriptorShape ? definition.api : definition;
+  if (!api || typeof api !== 'object') {
+    return undefined;
+  }
+
+  return {
+    id: String(hostObjectId ?? '').trim(),
+    label: String(definition.label ?? hostObjectId ?? '').trim() || String(hostObjectId ?? '').trim(),
+    description: String(definition.description ?? '').trim(),
+    api,
+  };
+}
+
+function createPowerRuntime(options = {}) {
+  const hostObjects = Object.fromEntries(
+    Object.entries(options.hostObjects ?? {})
+      .map(([hostObjectId, definition]) => normalizePowerHostObjectRecord(hostObjectId, definition))
+      .filter(Boolean)
+      .sort((left, right) => left.id.localeCompare(right.id))
+      .map((record) => [record.id, record]),
+  );
+
+  return {
+    elevated: options.elevated === true,
+    hostObjects,
+    requestRecovery: typeof options.requestRecovery === 'function' ? options.requestRecovery : undefined,
+    onStateChange: typeof options.onStateChange === 'function' ? options.onStateChange : undefined,
+  };
+}
+
+function syncPowerRuntime(powerRuntime, options = {}) {
+  const nextPowerRuntime = createPowerRuntime({
+    ...options,
+    elevated: options.elevated ?? powerRuntime.elevated,
+  });
+  powerRuntime.elevated = nextPowerRuntime.elevated;
+  powerRuntime.hostObjects = nextPowerRuntime.hostObjects;
+  powerRuntime.requestRecovery = nextPowerRuntime.requestRecovery;
+  powerRuntime.onStateChange = nextPowerRuntime.onStateChange;
+  return powerRuntime;
+}
+
+function createPowerSessionState(powerRuntime) {
+  return {
+    elevated: powerRuntime?.elevated === true,
+    availableHostObjects: Object.values(powerRuntime?.hostObjects ?? {}).map((hostObject) => ({
+      id: hostObject.id,
+      label: hostObject.label,
+      description: hostObject.description,
+    })),
+    recoveryAvailable: typeof powerRuntime?.requestRecovery === 'function',
+  };
+}
+
+function notifyPowerRuntimeStateChange(powerRuntime) {
+  if (typeof powerRuntime?.onStateChange !== 'function') {
+    return;
+  }
+  powerRuntime.onStateChange(createPowerSessionState(powerRuntime));
+}
+
 function createDefaultConsoleState() {
   return {
     history: [],
@@ -190,8 +259,9 @@ function createLuaConsoleHelpLines() {
     '  require("tf.actions").list()  List discovered Lua actions.',
     '  require("tf.actions").run("id", input)',
     '  require("tf.console").inspect(value)',
-    'Not available yet:',
-    '  Direct workbench/editor/surface/session inspection helpers.',
+    '  require("tf.power").status()  Inspect power-session state.',
+    '  require("tf.power").elevate() Enable the elevated power session.',
+    '  require("tf.power").workspace() / automation() / surfaces()',
     'See /docs/legacy/guides/lua-guide.md for the current console guide.',
   ];
 }
@@ -228,9 +298,19 @@ export function createLuaConsoleSurface(options = {}) {
     id: 'lua-console-surface',
     mount(container) {
       const disposeCallbacks = [];
-      container.innerHTML = '<section class="tf-lua-console"><div class="tf-lua-console__terminal" data-lua-terminal></div></section>';
+      container.innerHTML = [
+        '<section class="tf-lua-console">',
+        '<header class="tf-lua-console__header">',
+        '<div class="tf-lua-console__session" data-lua-session-state>Sandbox session</div>',
+        '<button class="tf-lua-console__recovery" data-lua-recovery type="button" hidden>Restart In Safe Mode</button>',
+        '</header>',
+        '<div class="tf-lua-console__terminal" data-lua-terminal></div>',
+        '</section>',
+      ].join('');
+      const sessionStateHost = container.querySelector('[data-lua-session-state]');
+      const recoveryButton = container.querySelector('[data-lua-recovery]');
       const host = container.querySelector('[data-lua-terminal]');
-      if (!host) {
+      if (!host || !sessionStateHost || !recoveryButton) {
         return () => {
           container.replaceChildren();
         };
@@ -240,6 +320,7 @@ export function createLuaConsoleSurface(options = {}) {
       let terminal;
       let fitAddon;
       let busy = false;
+      let recoveryPending = false;
       let state = {
         ...createDefaultConsoleState(),
         ...(typeof options.getState === 'function' ? options.getState() : {}),
@@ -250,6 +331,21 @@ export function createLuaConsoleSurface(options = {}) {
         options.setState?.(state);
       };
 
+      const renderSessionState = () => {
+        const sessionState = typeof options.getSessionState === 'function'
+          ? options.getSessionState()
+          : undefined;
+        const elevated = sessionState?.elevated === true;
+        const availableHostObjects = sessionState?.availableHostObjects ?? [];
+        sessionStateHost.textContent = elevated
+          ? `Power session active: ${availableHostObjects.map((entry) => entry.label ?? entry.id).join(', ') || 'approved host objects'}`
+          : 'Sandbox session';
+        sessionStateHost.setAttribute('data-power-mode', elevated ? 'elevated' : 'sandbox');
+        recoveryButton.hidden = !(elevated && sessionState?.recoveryAvailable);
+        recoveryButton.disabled = recoveryPending;
+        recoveryButton.textContent = recoveryPending ? 'Restarting...' : 'Restart In Safe Mode';
+      };
+
       const rerenderTranscript = () => {
         if (!terminal || disposed) {
           return;
@@ -257,6 +353,7 @@ export function createLuaConsoleSurface(options = {}) {
 
         terminal.write('\x1b[2J\x1b[H');
         writeConsoleTranscript(terminal, state);
+        renderSessionState();
       };
 
       const redrawCurrentPrompt = () => {
@@ -319,6 +416,7 @@ export function createLuaConsoleSurface(options = {}) {
             historyIndex: nextHistory.length,
             currentInput: '',
           });
+          renderSessionState();
         } catch (error) {
           const nextLine = `error: ${error?.message ?? 'Lua console command failed.'}`;
           terminal?.writeln(nextLine);
@@ -329,6 +427,7 @@ export function createLuaConsoleSurface(options = {}) {
             historyIndex: nextHistory.length,
             currentInput: '',
           });
+          renderSessionState();
         } finally {
           busy = false;
           terminal?.write(formatLuaConsolePrompt());
@@ -376,6 +475,7 @@ export function createLuaConsoleSurface(options = {}) {
         terminal.open(host);
         requestAnimationFrame(() => fitAddon.fit());
         rerenderTranscript();
+        renderSessionState();
         terminal.focus();
         disposeCallbacks.push(terminal.onData((data) => {
           if (busy) {
@@ -452,6 +552,21 @@ export function createLuaConsoleSurface(options = {}) {
         disposeCallbacks.push(() => resizeObserver.disconnect());
       };
 
+      recoveryButton.addEventListener('click', async () => {
+        if (recoveryPending || typeof options.requestRecovery !== 'function') {
+          return;
+        }
+
+        recoveryPending = true;
+        renderSessionState();
+        try {
+          await options.requestRecovery();
+        } finally {
+          recoveryPending = false;
+          renderSessionState();
+        }
+      });
+
       void boot();
       return () => {
         disposed = true;
@@ -486,6 +601,8 @@ export const luaConsoleSurfaceContribution = {
       readOnly: false,
       surface: createLuaConsoleSurface({
         getState: execution.getConsoleState,
+        getSessionState: execution.getConsoleSessionState,
+        requestRecovery: execution.requestPowerSessionRecovery,
         setState: execution.setConsoleState,
         runCommand: execution.runConsoleCommand,
       }),
@@ -784,6 +901,36 @@ function pushLuaValue(L, value) {
   pushLuaString(L, String(value));
 }
 
+function pushPowerHostObjectApi(L, api, hostObjectId) {
+  lua.lua_newtable(L);
+  for (const [key, value] of Object.entries(api ?? {})) {
+    if (typeof value === 'function') {
+      lua.lua_pushjsfunction(L, () => {
+        const top = lua.lua_gettop(L);
+        const args = [];
+        for (let index = 1; index <= top; index += 1) {
+          args.push(luaValueToJs(L, index));
+        }
+
+        try {
+          pushLuaValue(L, cloneJsonSafe(value(...args)));
+          return 1;
+        } catch (error) {
+          return lauxlib.luaL_error(
+            L,
+            to_luastring(error?.message ?? `Power-session host object ${hostObjectId}.${key} failed.`),
+          );
+        }
+      });
+      lua.lua_setfield(L, -2, to_luastring(key));
+      continue;
+    }
+
+    pushLuaValue(L, cloneJsonSafe(value));
+    lua.lua_setfield(L, -2, to_luastring(key));
+  }
+}
+
 function luaValueToJs(L, index, depth = 0) {
   const absoluteIndex = lua.lua_absindex(L, index);
   const valueType = lua.lua_type(L, absoluteIndex);
@@ -903,6 +1050,7 @@ function createRuntimeContext(options = {}) {
     recursionDepth: options.recursionDepth ?? 0,
     currentScriptPaths: [],
     consoleLines: [],
+    power: createPowerRuntime(options.powerSession),
   };
 }
 
@@ -1099,6 +1247,52 @@ function installBundledModules(L, runtime) {
     lua.lua_setfield(L, -2, to_luastring('inspect'));
   }
 
+  function assertPowerSessionEnabled() {
+    if (runtime.power.elevated === true) {
+      return undefined;
+    }
+
+    return lauxlib.luaL_error(
+      L,
+      to_luastring('Lua power-session host objects are unavailable until require("tf.power").elevate() is called.'),
+    );
+  }
+
+  function pushTfPowerModule() {
+    lua.lua_newtable(L);
+    lua.lua_pushjsfunction(L, () => {
+      if (runtime.power.elevated !== true) {
+        runtime.power.elevated = true;
+        notifyPowerRuntimeStateChange(runtime.power);
+      }
+      pushLuaValue(L, createPowerSessionState(runtime.power));
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('elevate'));
+    lua.lua_pushjsfunction(L, () => {
+      pushLuaValue(L, createPowerSessionState(runtime.power));
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('status'));
+    lua.lua_pushjsfunction(L, () => {
+      pushLuaValue(L, runtime.power.elevated === true);
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('is_elevated'));
+
+    for (const hostObject of Object.values(runtime.power.hostObjects)) {
+      lua.lua_pushjsfunction(L, () => {
+        const assertion = assertPowerSessionEnabled();
+        if (assertion !== undefined) {
+          return assertion;
+        }
+        pushPowerHostObjectApi(L, hostObject.api, hostObject.id);
+        return 1;
+      });
+      lua.lua_setfield(L, -2, to_luastring(hostObject.id));
+    }
+  }
+
   function pushTfModule() {
     lua.lua_newtable(L);
     pushTfPipelineModule();
@@ -1107,6 +1301,8 @@ function installBundledModules(L, runtime) {
     lua.lua_setfield(L, -2, to_luastring('actions'));
     pushTfConsoleModule();
     lua.lua_setfield(L, -2, to_luastring('console'));
+    pushTfPowerModule();
+    lua.lua_setfield(L, -2, to_luastring('power'));
     lua.lua_pushjsfunction(L, () => {
       const jsonValue = luaValueToJs(L, 1);
       pushLuaValue(L, createPipelineValue('json', jsonValue));
@@ -1119,6 +1315,7 @@ function installBundledModules(L, runtime) {
     ['tf.pipeline', pushTfPipelineModule],
     ['tf.actions', pushTfActionsModule],
     ['tf.console', pushTfConsoleModule],
+    ['tf.power', pushTfPowerModule],
     ['tf', pushTfModule],
   ]);
 
@@ -1429,6 +1626,7 @@ export function runLuaScript(options = {}) {
       diagnostics: [createLuaDiagnostic('lua.recursion-limit', `Lua recursion exceeded ${runtime.limits.maxRecursionDepth} nested calls.`)],
       consoleLines: [],
       definitions: [],
+      session: createPowerSessionState(runtime.power),
     };
   }
 
@@ -1445,6 +1643,7 @@ export function runLuaScript(options = {}) {
         diagnostics: [],
         definitions,
         consoleLines: runtime.consoleLines,
+        session: createPowerSessionState(runtime.power),
       };
     }
 
@@ -1455,6 +1654,7 @@ export function runLuaScript(options = {}) {
       diagnostics: [],
       value: normalizePipelineValueOutput(rawValue, options.expectedOutput ?? outputKind ?? 'text'),
       consoleLines: runtime.consoleLines,
+      session: createPowerSessionState(runtime.power),
     };
   } catch (error) {
     return {
@@ -1467,6 +1667,7 @@ export function runLuaScript(options = {}) {
       ],
       consoleLines: runtime.consoleLines,
       definitions: [],
+      session: createPowerSessionState(runtime.power),
     };
   } finally {
     runtime.currentScriptPaths.pop();
@@ -1483,6 +1684,7 @@ function syncConsoleRuntimeState(runtime, runOptions = {}, automationDefinitions
   runtime.invokeActionStep = runOptions.invokeActionStep;
   runtime.consoleLines.length = 0;
   runtime.currentScriptPaths.length = 0;
+  syncPowerRuntime(runtime.power, runOptions.powerSession);
 }
 
 function runLuaConsoleCommand(session, command, runOptions = {}, automationDefinitions = [], pipelineDefinitions = []) {
@@ -1519,6 +1721,7 @@ function runLuaConsoleCommand(session, command, runOptions = {}, automationDefin
         ? createPipelineValue('json', cloneJsonSafe(rawValue))
         : undefined,
       consoleLines: [...session.runtime.consoleLines],
+      session: createPowerSessionState(session.runtime.power),
     };
   } catch (error) {
     return {
@@ -1529,6 +1732,7 @@ function runLuaConsoleCommand(session, command, runOptions = {}, automationDefin
       ],
       consoleLines: [...session.runtime.consoleLines],
       definitions: [],
+      session: createPowerSessionState(session.runtime.power),
     };
   } finally {
     session.runtime.currentScriptPaths.pop();
@@ -1632,6 +1836,11 @@ export function createLuaExecutionService(options = {}) {
     setPipelineDefinitions(definitions = []) {
       pipelineDefinitions = [...definitions];
       return [...pipelineDefinitions];
+    },
+    getConsoleSessionState(sessionKey) {
+      const normalizedKey = String(sessionKey ?? 'default');
+      const session = consoleSessions.get(normalizedKey);
+      return session ? createPowerSessionState(session.runtime.power) : undefined;
     },
     runSnippet(runOptions = {}) {
       return runLuaScript({

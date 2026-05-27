@@ -164,6 +164,65 @@ test('console sessions keep globals across commands and treat bare expressions a
   assert.equal(evaluated.value?.value, 5);
 });
 
+test('power sessions self-elevate and expose approved host objects per console session', () => {
+  const workspace = createWorkspace();
+  workspace.createFolder({ path: '/docs', title: 'docs' });
+  const service = createLuaExecutionService();
+  const powerStates = [];
+  const powerSession = {
+    hostObjects: {
+      workspace: {
+        label: 'Workspace',
+        description: 'Workspace mutation helpers',
+        api: {
+          createTextResource(input) {
+            return workspace.createTextResource({
+              ...input,
+              languageId: input.languageId ?? 'plaintext',
+              mimeType: input.mimeType ?? 'text/plain',
+            });
+          },
+          getEntryByPath(path) {
+            return workspace.getEntryByPath(path);
+          },
+        },
+      },
+    },
+    onStateChange(state) {
+      powerStates.push(state);
+    },
+  };
+
+  const beforeElevation = service.runConsoleCommand('power-console', 'return require("tf.power").status()', {
+    workspace,
+    scriptPath: '/.textforge/runtime/lua-console.session',
+    powerSession,
+  });
+  assert.equal(beforeElevation.ok, true);
+  assert.equal(beforeElevation.session?.elevated, false);
+  assert.equal(beforeElevation.session?.availableHostObjects[0]?.id, 'workspace');
+
+  const elevated = service.runConsoleCommand('power-console', [
+    'local power = require("tf.power")',
+    'power.elevate()',
+    'local ws = power.workspace()',
+    'ws.createTextResource({ path = "/docs/power-note.md", title = "power-note.md", text = "hello power", languageId = "markdown", mimeType = "text/markdown" })',
+    'local resource = ws.getEntryByPath("/docs/power-note.md")',
+    'return resource.path',
+  ].join('\n'), {
+    workspace,
+    scriptPath: '/.textforge/runtime/lua-console.session',
+    powerSession,
+  });
+  assert.equal(elevated.ok, true);
+  assert.equal(elevated.value?.value, '/docs/power-note.md');
+  assert.equal(elevated.session?.elevated, true);
+  assert.equal(workspace.getEntryByPath('/docs/power-note.md')?.text, 'hello power');
+  assert.equal(powerStates.at(-1)?.elevated, true);
+  assert.equal(service.getConsoleSessionState('power-console')?.elevated, true);
+  assert.equal(service.getConsoleSessionState('sandbox-console'), undefined);
+});
+
 test('execution service materializes discovered automations into contribution manifests', () => {
   const workspace = createWorkspace();
   workspace.createFolder({ path: '/.textforge', title: '.textforge' });
