@@ -166,6 +166,41 @@ export interface WorkspaceReferenceResolver {
   resolveReference(source: ResourceRef, reference: string): ResourceRef | undefined;
 }
 
+export interface WorkspaceRepositoryRoot {
+  readonly id: string;
+  readonly providerId: WorkspaceProviderId;
+  readonly scheme: string;
+  readonly rootPath: string;
+  readonly label?: string;
+  readonly allowed?: boolean;
+  readonly available?: boolean;
+}
+
+export interface WorkspaceRepositoryAlias {
+  readonly location: string;
+  readonly label?: string;
+  readonly allowed?: boolean;
+  readonly available?: boolean;
+}
+
+export interface WorkspaceRepositoryResolverOptions {
+  readonly basePath?: string;
+  readonly repositoryAliases?: Readonly<Record<string, string | WorkspaceRepositoryAlias>>;
+  readonly repositoryRoots?: ReadonlyArray<WorkspaceRepositoryRoot>;
+}
+
+export interface WorkspaceResolvedRepositoryLocation {
+  readonly requestedLocation: string;
+  readonly source: 'alias' | 'workspace-path' | 'relative-path' | 'scheme-root' | 'url' | 'logical';
+  readonly status: 'resolved' | 'unsupported' | 'unauthorized' | 'unavailable';
+  readonly providerId?: WorkspaceProviderId;
+  readonly rootId?: string;
+  readonly resolvedPath?: string;
+  readonly resolvedLocation?: string;
+  readonly allowed: boolean;
+  readonly available: boolean;
+}
+
 export interface WorkspaceDexieSchema {
   readonly system: string;
   readonly folders: string;
@@ -339,6 +374,10 @@ export interface HydratedWorkspaceServiceResult {
   readonly workspace: PersistentWorkspaceService;
 }
 
+export interface CreateWorkspaceOverlayServiceOptions {
+  readonly overlay: WorkspaceState | WorkspaceService | (() => WorkspaceState | WorkspaceService);
+}
+
 export interface WorkspaceTreeItem {
   readonly id: string;
   readonly label: string;
@@ -368,6 +407,7 @@ export declare const workspaceProviderIds: {
   readonly bundled: 'bundled-docs';
   readonly generated: 'generated-artifact';
 };
+export declare function createDefaultWorkspaceRepositoryRoots(): ReadonlyArray<WorkspaceRepositoryRoot>;
 export declare const workspaceStorageErrorCodes: {
   readonly initializationFailed: 'workspace-storage-initialization-failed';
   readonly loadFailed: 'workspace-storage-load-failed';
@@ -398,6 +438,10 @@ export declare function normalizeWorkspacePath(path: string): string;
 export declare function joinWorkspacePath(...parts: ReadonlyArray<string>): string;
 export declare function dirnameWorkspacePath(path: string): string;
 export declare function basenameWorkspacePath(path: string): string;
+export declare function resolveWorkspaceRepositoryLocation(
+  location: string,
+  options?: WorkspaceRepositoryResolverOptions,
+): WorkspaceResolvedRepositoryLocation;
 export declare function createWorkspaceManifest(options?: WorkspaceServiceOptions): WorkspaceManifest;
 export declare function workspaceEntryToResourceRef(entry: WorkspaceEntry): ResourceRef;
 export declare function listWorkspaceBadgeDiagnostics(
@@ -436,5 +480,9 @@ export declare function createPersistentWorkspaceService(
 export declare function createPersistedWorkspaceService(
   options?: CreatePersistedWorkspaceServiceOptions,
 ): Promise<HydratedWorkspaceServiceResult>;
+export declare function createWorkspaceOverlayService<TWorkspace extends WorkspaceService>(
+  baseWorkspace: TWorkspace,
+  options: CreateWorkspaceOverlayServiceOptions,
+): TWorkspace;
 export declare function createWorkspaceTreeItems(state: WorkspaceState): ReadonlyArray<WorkspaceTreeItem>;
 export declare function createWorkspaceService(options?: WorkspaceServiceOptions): WorkspaceService;

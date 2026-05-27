@@ -9,7 +9,9 @@ import {
   createWorkspaceArchiveManifest,
   createPersistedWorkspaceService,
   createSequentialIdFactory,
+  createDefaultWorkspaceRepositoryRoots,
   createWorkspaceManifest,
+  resolveWorkspaceRepositoryLocation,
   listWorkspaceBadgeDiagnostics,
   createWorkspaceService,
   createWorkspaceTreeItems,
@@ -85,6 +87,50 @@ test('workspace service normalizes paths and mutates entries', () => {
   assert.equal(updated.languageId, 'yaml');
   assert.equal(updated.mimeType, 'text/yaml');
   assert.equal(createWorkspaceTreeItems(workspace.snapshot()).length >= 2, true);
+});
+
+test('workspace repository locations resolve through provider-backed roots and logical aliases', () => {
+  const bundled = resolveWorkspaceRepositoryLocation('bundled://docs/examples/itm', {
+    repositoryRoots: createDefaultWorkspaceRepositoryRoots(),
+  });
+  const logical = resolveWorkspaceRepositoryLocation('org-reference-models/profiles/core.itm', {
+    repositoryAliases: {
+      'org-reference-models': 'bundled://docs/examples/itm/repositories/org-reference-models',
+    },
+  });
+  const relative = resolveWorkspaceRepositoryLocation('./shared', {
+    basePath: '/docs/roadmap/root.itm',
+  });
+  const blocked = resolveWorkspaceRepositoryLocation('locked-library/models.itm', {
+    repositoryAliases: {
+      'locked-library': {
+        location: 'bundled://docs/examples/itm/repositories/locked-library',
+        allowed: false,
+      },
+    },
+  });
+  const unavailable = resolveWorkspaceRepositoryLocation('offline-library/models.itm', {
+    repositoryAliases: {
+      'offline-library': {
+        location: 'bundled://docs/examples/itm/repositories/offline-library',
+        available: false,
+      },
+    },
+  });
+  const unsupported = resolveWorkspaceRepositoryLocation('https://example.org/itm');
+
+  assert.equal(bundled.status, 'resolved');
+  assert.equal(bundled.providerId, workspaceProviderIds.bundled);
+  assert.equal(bundled.resolvedPath, '/.textforge/resources/docs/examples/itm');
+  assert.equal(logical.status, 'resolved');
+  assert.equal(logical.providerId, workspaceProviderIds.bundled);
+  assert.equal(logical.resolvedPath, '/.textforge/resources/docs/examples/itm/repositories/org-reference-models/profiles/core.itm');
+  assert.equal(relative.status, 'resolved');
+  assert.equal(relative.providerId, workspaceProviderIds.local);
+  assert.equal(relative.resolvedPath, '/docs/roadmap/shared');
+  assert.equal(blocked.status, 'unauthorized');
+  assert.equal(unavailable.status, 'unavailable');
+  assert.equal(unsupported.status, 'unsupported');
 });
 
 test('workspace badges stay deterministic and duplicate stored badges are repaired', () => {

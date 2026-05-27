@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import {
   basenameWorkspacePath,
   createPersistedWorkspaceService,
+  createDefaultWorkspaceRepositoryRoots,
   createWorkspaceArchiveManifest,
   createSequentialIdFactory,
   createWorkspaceService,
@@ -18,6 +19,7 @@ import {
   listWorkspaceBadgeDiagnostics,
   mergeImportedWorkspaceState,
   normalizeWorkspacePath,
+  resolveWorkspaceRepositoryLocation,
   resetWorkspaceDexieStorage,
   workspaceContribution,
   workspaceDexieSchema,
@@ -29,6 +31,12 @@ assert.equal(joinWorkspacePath('/docs', 'notes.md'), '/docs/notes.md');
 assert.equal(dirnameWorkspacePath('/docs/notes.md'), '/docs');
 assert.equal(basenameWorkspacePath('/docs/notes.md'), 'notes.md');
 assert.equal(workspaceContribution.id, '@textforge/workspace');
+assert.equal(
+  resolveWorkspaceRepositoryLocation('bundled://docs/examples', {
+    repositoryRoots: createDefaultWorkspaceRepositoryRoots(),
+  }).resolvedPath,
+  '/.textforge/resources/docs/examples',
+);
 
 const workspace = createWorkspaceService({
   workspaceId: 'workspace-check',
