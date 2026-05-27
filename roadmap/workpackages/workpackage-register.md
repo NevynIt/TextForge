@@ -37,7 +37,7 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 | WP-SSO-OIDC | Future optional | Generic OIDC / Keycloak adapter | Optional production adapter | Candidate | WP-ID-01, WP-POLICY-01 | Alternative enterprise identity deployments | Yes | Only when chosen | Same contract as Entra; provider-specific mapping stays behind adapter. |
 | WP-SET-01 | Phase 5.3 | User settings core and local persistence | Core UX foundation | Not started | WP-05A command metadata recommended | WP-SET-UI, WP-SET-SYNC, WP-AI-PREF | No | Yes | Settings personalize defaults/UI only; no permissions. |
 | WP-ITM-01 | Phase 6 | ITM parser/model foundation | Domain foundation | Validated | WP-05A recommended | WP-ITM-02, WP-REPO-01, WP-ITM-VISUALS, WP-BPMN-SEM | No | Yes | Public `@textforge/itm` wrapper now vendors the upstream ITM runtime, exposes parse/serialize/resolve/validate/project contracts plus selector/style/view/profile interfaces, standardizes resolver diagnostic categories, ships workspace include resolution, and integrates Markdown `itm`/`itm-pub` publication rendering with vendored BPMN/ArchiMate profile fixtures. |
-| WP-ITM-02 | Phase 6 | ITM directives, packages, validation, diagnostics | Domain foundation | Not started | WP-ITM-01, WP-05B | WP-REPO-01, WP-BPMN-SEM, WP-ARCHIMATE-SEM | No | Yes | Owns `%require` and package/capability evaluation semantics on top of WP-ITM-01 contracts; depends on WP-05B for active resolver context and capability activation behavior. |
+| WP-ITM-02 | Phase 6 | ITM directives, packages, validation, diagnostics | Domain foundation | Validated | WP-ITM-01, WP-05B | WP-REPO-01, WP-BPMN-SEM, WP-ARCHIMATE-SEM | No | Yes | The public ITM wrapper now evaluates `%require`, `%package`, and `%using`, materializes package-scoped effective documents, executes built-in rule providers behind bundled `itm.*` capabilities, and surfaces matching diagnostics through Markdown `itm` fences without remote loading or provider-name capability aliases. |
 | WP-REPO-01 | Phase 6.1 | Repository reference and include resolver | Core/domain bridge | Validated | WP-RES-01, WP-ITM-01 | WP-MD-REPORT, WP-GITLAB, package reuse | No | Yes | Workspace-owned repository roots now resolve bundled/local paths, provider-URI hints, and explicit logical alias fixtures through the public ITM wrapper; URL-like values remain diagnostics-producing declarations in local mode and no arbitrary frontend fetch is performed. |
 | WP-ITM-VISUALS | Phase 7 | ITM visual projections | Feature | Not started | WP-ITM-01, WP-05C | WP-BPMN-VISUAL, WP-GRAPH-EDIT | Yes | No | Can split into mindmap, graph, viewpoint projection if useful. |
 | WP-SERVICES-LOCAL | Phase 7.1 | Local service-folder convention | Core/service seam | Not started | WP-RES-01, WP-05C recommended | WP-SERVICES-BE | Yes | No | Data-plane convention before server-backed jobs. |
@@ -80,21 +80,20 @@ V18 keeps legacy phase references for traceability, but dependencies and selecte
 
 - The former Phase 5 contribution/capability spine plus the minimal inspector, provider-aware resource foundation, and repository/include resolver are now validated: `WP-05A -> WP-05B -> WP-05C`, `WP-05D`, `WP-RES-01`, and `WP-REPO-01`.
 - Planned first-shippable implementation order:
-	1. `WP-ITM-02`
-	2. `WP-ITM-VISUALS`
-	3. `WP-MD-REPORT`
-	4. `WP-BPMN-SEM`
-	5. `WP-BPMN-VISUAL`
-	6. `WP-TABLES`
-	7. `WP-SKETCH`
-	8. `WP-ARCHIMATE-SEM`
-	9. `WP-ARCHIMATE-VISUAL`
-	10. `WP-SET-01`
+	1. `WP-ITM-VISUALS`
+	2. `WP-MD-REPORT`
+	3. `WP-BPMN-SEM`
+	4. `WP-BPMN-VISUAL`
+	5. `WP-TABLES`
+	6. `WP-SKETCH`
+	7. `WP-ARCHIMATE-SEM`
+	8. `WP-ARCHIMATE-VISUAL`
+	9. `WP-SET-01`
 - Completing that sequence defines the first version to polish and ship.
 - `WP-ID-01` remains a startable foundation slice under the current dependency posture, but it is outside this first-shippable sequence.
 - `WP-LUA-POWER-SESSION` is now validated on top of `WP-LUA`; the Lua follow-on backlog can move to broader, separately reviewed introspection or higher-level automation slices rather than reopening this delivered session/recovery behavior.
-- `WP-ITM-01` and `WP-LUA` are validated; the local ITM follow-on now moves to `WP-ITM-02`.
+- `WP-ITM-01`, `WP-ITM-02`, and `WP-LUA` are validated; the next first-shippable ITM slice now moves to `WP-ITM-VISUALS`.
 - `WP-LUA` is validated on top of `WP-05C`; sandbox and security-profile checks remain part of `WP-LUA` evidence rather than a separate gating workpackage.
-- `WP-REPO-01` is now validated; the main next recommended slice is `WP-ITM-02`, while `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-ITM-VISUALS`, and `WP-TABLES` also remain startable under the current dependency posture.
+- `WP-REPO-01` and `WP-ITM-02` are now validated; the main next recommended slice is `WP-ITM-VISUALS`, while `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, and `WP-TABLES` also remain startable under the current dependency posture.
 - Entra SSO is now explicitly deferred as `WP-SSO-ENTRA`, a standalone production adapter that does not block local backend development.
 - Backend private/group spaces, roaming settings, GitLab, service jobs, leases, and AI should depend on provider-neutral identity/policy plus a dev fixture first, not on Entra itself.

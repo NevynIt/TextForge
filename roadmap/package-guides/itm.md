@@ -16,6 +16,8 @@ Current validated implementation note:
 
 - TextForge vendors the current upstream `nevynit/ITM` runtime under `packages/itm/src/upstream/` and layers TextForge-owned workspace include resolution, resolver diagnostic taxonomy helpers, Markdown `itm`/`itm-pub` contribution integration, and vendored profile fixtures on top of that runtime.
 - `WP-REPO-01` now extends that wrapper with provider-backed `%repository`/`%include` handling for local workspace paths, bundled roots, provider-URI hints, and explicit logical alias fixtures, while URL-like repository values remain diagnostics-producing declarations in local/offline mode rather than direct frontend fetch instructions.
+- `WP-ITM-02` now extends the public wrapper with deterministic `%require`, `%package`, and `%using` evaluation, package-scoped effective documents, built-in validation-rule provider execution behind bundled `itm.*` capabilities, and Markdown fence propagation of those diagnostics.
+- Bundled semantic capabilities intentionally keep only document-facing aliases (`itm`, `itm-pub`). Semantic activation must resolve through capability IDs or derived local names such as `itm.validation`, and provider-to-capability gating must flow through `itmBuiltinValidationCapabilityByProvider` rather than provider-name aliases.
 
 ## Allowed dependencies
 
@@ -50,7 +52,7 @@ Implementation anchors:
 - pnpm packages: Phase 6: `corepack pnpm --filter @textforge/itm add @textforge/core@workspace:* @textforge/workspace@workspace:* yaml fast-xml-parser`
 
 
-Create. Parser/serializer/resolver interfaces, selectors, styles, views/viewpoints, validation diagnostics, profile package loading, workspace include resolver contract, stable resolver diagnostic categories, and public APIs needed by `@textforge/markdown` to parse `itm` blocks, validate them, and render `itm-pub` publication views.
+Create. Parser/serializer/resolver interfaces, selectors, styles, views/viewpoints, validation diagnostics, profile package loading, workspace include resolver contract, stable resolver diagnostic categories, `%require`/`%package`/`%using` evaluation, package-scoped effective-document materialization, built-in rule-provider capability gating, and public APIs needed by `@textforge/markdown` to parse `itm` blocks, validate them, and render `itm-pub` publication views.
 
 ### Phase 7 — ITM visual projections
 
