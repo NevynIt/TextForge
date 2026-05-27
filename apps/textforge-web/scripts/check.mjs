@@ -142,7 +142,7 @@ for (const requiredPhase35Signal of ['Popup Summary', 'Browser Storage', 'closeA
   }
 }
 
-for (const requiredPhase4Signal of ['Markdown preview', 'generated diagram', 'TF-MD', 'local image resolution']) {
+for (const requiredPhase4Signal of ['Markdown preview', 'generated diagram', 'TF-MD', 'local image resolution', 'Surface diagnostics']) {
   if (!workbenchJs.includes(requiredPhase4Signal)) {
     throw new Error(`workbench.js must surface ${requiredPhase4Signal} for the Phase 4 Markdown/diagram slice`);
   }

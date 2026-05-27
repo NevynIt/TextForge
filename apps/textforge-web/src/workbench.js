@@ -2493,6 +2493,9 @@ function createTextForgeWorkbenchController() {
       state: session.state,
       placement: session.placement,
       detail: runtimeView?.detail ?? 'Runtime unavailable',
+      diagnostics: Array.isArray(surface.model?.diagnostics)
+        ? surface.model.diagnostics
+        : [],
       readOnly: runtimeView?.readOnly ?? true,
       inspectorSections: [
         ...((runtimeView?.inspectorSections) ?? []),
@@ -3967,6 +3970,26 @@ function SurfaceDetails({ view }) {
         title: 'No extra controls',
         children: element('p', { className: 'tf-empty' }, 'This surface is readable without additional switches.'),
       }),
+    view.diagnostics?.length
+      ? element(
+        TextForgeInspectorCard,
+        {
+          eyebrow: 'Diagnostics',
+          icon: 'warning',
+          title: `Surface diagnostics (${view.diagnostics.length})`,
+        },
+        element(
+          'ul',
+          { className: 'tf-registry__list' },
+          ...view.diagnostics.map((diagnostic, index) =>
+            element(
+              'li',
+              { key: `${diagnostic.code ?? diagnostic.message ?? 'diagnostic'}:${index}` },
+              formatSurfaceDiagnosticSummary(diagnostic),
+            )),
+        ),
+      )
+      : null,
     ...(view.inspectorSections ?? []).map((section) =>
       element(
         TextForgeInspectorCard,
@@ -4093,6 +4116,13 @@ function formatContributionKindLabel(kind) {
     default:
       return 'Commands';
   }
+}
+
+function formatSurfaceDiagnosticSummary(diagnostic) {
+  const severity = String(diagnostic?.severity ?? 'information').toUpperCase();
+  const code = String(diagnostic?.code ?? '').trim();
+  const message = String(diagnostic?.message ?? 'Diagnostic').trim();
+  return code ? `[${severity}] ${code}: ${message}` : `[${severity}] ${message}`;
 }
 
 function renderRegistryItems(items, formatter) {
