@@ -75,13 +75,16 @@ flowchart TD
   classDef startable fill:#1565c0,stroke:#0d47a1,color:#ffffff,stroke-width:2px;
 
   class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D,WP_ITM_01,WP_LUA done;
-  class WP_SET_01,WP_RES_01,WP_ITM_02,WP_ID_01 startable;
+  class WP_SET_01,WP_RES_01,WP_ITM_02,WP_ID_01,WP_TABLES,WP_ITM_VISUALS startable;
 
   linkStyle 6 stroke:#1565c0,stroke-width:2px;
   linkStyle 8 stroke:#1565c0,stroke-width:2px;
   linkStyle 13 stroke:#1565c0,stroke-width:2px;
   linkStyle 14 stroke:#1565c0,stroke-width:2px;
   linkStyle 17 stroke:#1565c0,stroke-width:2px;
+  linkStyle 57 stroke:#1565c0,stroke-width:2px;
+  linkStyle 58 stroke:#1565c0,stroke-width:2px;
+  linkStyle 59 stroke:#1565c0,stroke-width:2px;
 ```
 
 ## Reading rule

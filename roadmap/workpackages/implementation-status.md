@@ -9,7 +9,7 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 | Area | Current state |
 |---|---|
 | Foundation phases | Phase -1 through Phase 4.1 are treated as closed foundation history unless explicitly reopened. |
-| Next implementation options | `WP-RES-01`; `WP-ID-01`, `WP-SET-01`, and `WP-ITM-02` are also startable. |
+| Next implementation options | `WP-RES-01`; `WP-ID-01`, `WP-SET-01`, `WP-ITM-02`, `WP-ITM-VISUALS`, and `WP-TABLES` are startable. |
 | Backend identity | Develop against `WP-ID-DEV` fixture identity; Entra is optional later adapter. |
 | Backend profile | Not started. May be developed locally with Node/container and one approved local backend origin. |
 | Roadmap structure | V18 workpackage-first structure active. V16/V17 source preserved in archive. |
@@ -25,6 +25,8 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 | WP-ITM-01 | Validated | `roadmap/validation/workpackage-checklists/WP-ITM-01-itm-parser-model-foundation.md`; `corepack pnpm --filter @textforge/itm lint`; `corepack pnpm --filter @textforge/itm test`; `corepack pnpm --filter @textforge/itm build`; `corepack pnpm --filter @textforge/markdown test`; `corepack pnpm --filter ./apps/textforge-web test`; `corepack pnpm roadmap:dependency-map`; `corepack pnpm roadmap:dependency-map:check`; `corepack pnpm verify` | 2026-05-26 | Vendored upstream ITM runtime, TextForge workspace include resolver, stable resolver diagnostic taxonomy, Markdown `itm`/`itm-pub` publication integration, and vendored ArchiMate/BPMN profile fixtures shipped through the public `@textforge/itm` package surface. |
 | WP-LUA | Validated | `roadmap/validation/workpackage-checklists/WP-LUA-lua-automation.md`; focused Lua/core/app checks; built `file://` artifact checks; headless Lua console bootstrap validation; `corepack pnpm verify` | 2026-05-26 | Sandboxed local Lua runtime, reserved automation discovery, tf.* bridge, and xterm.js console validated without introducing a separate Lua-only security workpackage gate. |
 | WP-ID-01 | Not started | Can proceed after foundation | 2026-05-26 | Identity contract only; no Entra. |
+| WP-ITM-VISUALS | Not started | Dependency-ready via WP-ITM-01 and WP-05C baseline completion | 2026-05-27 | Candidate startable slice; can split into mindmap, graph, and viewpoint projections if needed. |
+| WP-TABLES | Not started | Dependency-ready via WP-ITM-01 baseline completion | 2026-05-27 | Candidate startable slice; can proceed independently of optional BPMN semantics dependency. |
 | WP-ID-DEV | Not started | Depends on WP-ID-01 | 2026-05-26 | Required to keep local backend development unblocked. |
 | WP-SSO-ENTRA | Deferred / standalone | Depends on identity/policy/backend manifest | 2026-05-26 | Does not block generic roadmap progress. |
 | WP-RELEASE-GATE | Recurring | Applies to selected release scopes | 2026-05-26 | Run at meaningful delivery milestones. |
