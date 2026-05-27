@@ -17,6 +17,7 @@ Current validated implementation note:
 - TextForge vendors the current upstream `nevynit/ITM` runtime under `packages/itm/src/upstream/` and layers TextForge-owned workspace include resolution, resolver diagnostic taxonomy helpers, Markdown `itm`/`itm-pub` contribution integration, and vendored profile fixtures on top of that runtime.
 - `WP-REPO-01` now extends that wrapper with provider-backed `%repository`/`%include` handling for local workspace paths, bundled roots, provider-URI hints, and explicit logical alias fixtures, while URL-like repository values remain diagnostics-producing declarations in local/offline mode rather than direct frontend fetch instructions.
 - `WP-ITM-02` now extends the public wrapper with deterministic `%require`, `%package`, and `%using` evaluation, package-scoped effective documents, built-in validation-rule provider execution behind bundled `itm.*` capabilities, and Markdown fence propagation of those diagnostics.
+- `WP-ITM-VISUALS` now extends the same public wrapper with explicit tree, graph, mindmap, catalogue, matrix, and report projection data, plus Graphviz and Mermaid-mindmap source adapters and `itm-pub` projection-mode rendering that stays package-owned rather than app-shell-owned.
 - Bundled semantic capabilities intentionally keep only document-facing aliases (`itm`, `itm-pub`). Semantic activation must resolve through capability IDs or derived local names such as `itm.validation`, and provider-to-capability gating must flow through `itmBuiltinValidationCapabilityByProvider` rather than provider-name aliases.
 
 ## Allowed dependencies
@@ -30,7 +31,7 @@ Third-party candidates: YAML parser and XML support where needed. All third-part
 
 ## Public surface
 
-parse/serialize/resolve/validate/project APIs, selector/style/viewpoint/profile interfaces, ITM diagnostics.
+parse/serialize/resolve/validate/project APIs, selector/style/viewpoint/profile interfaces, projection data for tree/graph/mindmap/catalogue/matrix/report views, Graphviz/Mermaid-mindmap source adapters, and ITM diagnostics.
 
 ## Milestone plan
 
@@ -63,6 +64,8 @@ Implementation anchors:
 
 
 Update. Add projection APIs for tree, graph, mindmap, catalogue, matrix, and report fragments.
+
+Closure note: the package now exposes stable projection data for tree, graph, mindmap, catalogue, matrix, and report fragments through `projectItmDocument(...)`, and `itm-pub` can render those projections through package-owned HTML or Graphviz-backed SVG output without introducing app-shell-specific projection logic.
 
 ### Phase 9 — Markdown + ITM report generation
 

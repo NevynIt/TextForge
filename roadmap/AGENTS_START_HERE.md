@@ -29,10 +29,10 @@ The workpackage register is the canonical current planning source.
 Unless a newer RAPID entry supersedes this, the default recommendation remains:
 
 ```text
-WP-ITM-VISUALS
+WP-MD-REPORT
 ```
 
-`WP-05A`, `WP-05B`, `WP-05C`, `WP-05D`, `WP-RES-01`, `WP-ITM-01`, `WP-ITM-02`, `WP-REPO-01`, `WP-LUA`, and `WP-LUA-POWER-SESSION` are now validated. The remaining first-shippable implementation order is `WP-ITM-VISUALS -> WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`; completing that sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, `WP-ITM-VISUALS`, and `WP-TABLES` remain separately startable under the current dependency posture.
+`WP-05A`, `WP-05B`, `WP-05C`, `WP-05D`, `WP-RES-01`, `WP-ITM-01`, `WP-ITM-02`, `WP-REPO-01`, `WP-ITM-VISUALS`, `WP-LUA`, and `WP-LUA-POWER-SESSION` are now validated. The remaining first-shippable implementation order is `WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`; completing that sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-MD-REPORT`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, and `WP-TABLES` remain separately startable under the current dependency posture.
 
 These workpackages preserve the accepted Phase 5 grilling decisions around contribution manifests, capability activation, resolver context, contribution execution, `%require` diagnostics, package composition, active capability context, and surface reopening for intermediate values.
 

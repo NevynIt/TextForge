@@ -159,7 +159,7 @@ WP-RES-01
 The nearest ready follow-on slice is now:
 
 ```text
-WP-ITM-VISUALS
+WP-MD-REPORT
 ```
 
-`WP-LUA-POWER-SESSION`, `WP-REPO-01`, and `WP-ITM-02` are now validated on top of their respective foundations. The remaining first-shippable implementation order is `WP-ITM-VISUALS -> WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`; completing that sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, `WP-ITM-VISUALS`, and `WP-TABLES` remain separately startable when those foundations or optional follow-ons need to move earlier.
+`WP-LUA-POWER-SESSION`, `WP-REPO-01`, `WP-ITM-02`, and `WP-ITM-VISUALS` are now validated on top of their respective foundations. The remaining first-shippable implementation order is `WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`; completing that sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-MD-REPORT`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, and `WP-TABLES` remain separately startable when those foundations or optional follow-ons need to move earlier.

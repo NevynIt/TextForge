@@ -46,7 +46,7 @@ WP-ITM-01 ITM parser/model foundation
 WP-ITM-02 ITM directives/packages/validation/diagnostics
 ```
 
-The canonical WP5+ planning sequence now lives in `workpackages/workpackage-register.md`: `WP-ITM-VISUALS -> WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`, with `WP-ITM-02` now validated ahead of that run. Completing the remaining sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, `WP-ITM-VISUALS`, and `WP-TABLES` remain startable outside that sequence.
+The canonical WP5+ planning sequence now lives in `workpackages/workpackage-register.md`: `WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`, with `WP-ITM-VISUALS` now validated ahead of that run. Completing the remaining sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-MD-REPORT`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, and `WP-TABLES` remain startable outside that sequence.
 
 The backend path is enabled by contracts and fixtures, not by Entra SSO:
 
