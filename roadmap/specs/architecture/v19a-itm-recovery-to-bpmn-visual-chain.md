@@ -79,8 +79,8 @@ Out of scope for the MVP:
 
 | WP | Gate | Required before implementation |
 |---|---|---|
-| WP-VITM-01 | Further definition | Concrete Visual ITM v1 profile/spec, examples, and acceptance criteria. |
-| WP-ITM-VRESOLVE-01 | Grilling | Resolver contract for `%view`, `%viewpoint`, raw model fallback, `render:` precedence, diagnostics, runtime/publication consistency, and no silent fallback. |
+| WP-VITM-01 | Definition drafted | Use `specs/architecture/visual-itm-v1-profile.md` as the concrete Visual ITM v1 profile/spec, examples, and acceptance baseline. |
+| WP-ITM-VRESOLVE-01 | Grilled | Use `grilling/v19a-visual-recovery-to-bpmn-chain-findings.md` as the resolver contract for `%view`, `%viewpoint`, raw model fallback, `render:` precedence, diagnostics, runtime/publication consistency, and no silent fallback. |
 | WP-BPMN-SEM | Grilling / further definition | Minimal BPMN MVP subset, validation rules, fixtures, and explicit exclusions. |
 | WP-BPMN-VISUAL-A/B/C | Split already decided | Keep viewer, ITM integration, and modeler/write-back separate. |
 
@@ -99,3 +99,12 @@ The following remain useful but must not block BPMN visual consumption:
 ## Implementation caution
 
 Do not make BPMN semantics leak into Visual ITM. Visual ITM remains a generic runtime visual interchange/profile. BPMN is a domain profile and renderer/integration consumer on top of that foundation.
+
+## Accepted clarification points
+
+- Visual ITM v1 lives in a dedicated `@textforge/visual-itm` package.
+- `@textforge/itm` remains authoritative for source ITM semantics and extraction.
+- Derived Visual ITM uses the same renderer syntax as the source target's existing `render:` step and treats it as the source of truth.
+- Standalone or manually authored Visual ITM uses the same renderer syntax, but its own renderer metadata becomes the local truth because there is no upstream source target.
+- Renderers share one registry/contribution model and are differentiated by declared capabilities rather than hard runtime/publication family splits.
+- Declared view-delta consumption and live bidirectional source-to-visual sync are deferred to later workpackages rather than pulled into the first read-only recovery slice.

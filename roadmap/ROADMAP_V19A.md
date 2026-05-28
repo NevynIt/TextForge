@@ -136,8 +136,8 @@ The following gates must be resolved before implementation:
 
 | WP | Gate | Reason |
 |---|---|---|
-| WP-VITM-01 | Further definition | Needs a concrete Visual ITM v1 profile document before coding. |
-| WP-ITM-VRESOLVE-01 | Grilling | Central resolver contract for views, viewpoints, raw model fallback, renderer selection, diagnostics, and `render:` precedence. |
+| WP-VITM-01 | Definition drafted | Concrete Visual ITM v1 profile now lives in `specs/architecture/visual-itm-v1-profile.md`; implement against that profile. |
+| WP-ITM-VRESOLVE-01 | Grilled | Resolver contract now lives in `grilling/v19a-visual-recovery-to-bpmn-chain-findings.md`; implement against that contract. |
 | WP-BPMN-SEM | Grilling / further definition | Needs a sharply bounded BPMN MVP subset before any visual work depends on it. |
 | WP-BPMN-VISUAL-A/B/C | Split confirmed | Viewer, ITM/BPMN visual target integration, and modeler/write-back must remain separate. |
 
