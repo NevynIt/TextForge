@@ -42,6 +42,11 @@ if (!fileIndexHtml.includes('./assets/textforge.css')) {
   throw new Error('public/index.html must load the built shell stylesheet');
 }
 
+// public/index.html must include a Content Security Policy meta tag for file:// distribution
+if (!/http-equiv\s*=\s*["']Content-Security-Policy["']/i.test(fileIndexHtml) && !/Content-Security-Policy/i.test(fileIndexHtml)) {
+  throw new Error('public/index.html must include a Content-Security-Policy meta tag for file:// launch');
+}
+
 if (!scriptLoaderJs.includes('./styles.css') || !scriptLoaderJs.includes('./main.js') || !scriptLoaderJs.includes('DOMContentLoaded')) {
   throw new Error('scriptLoader.js must own shell styles and defer the main bootstrap until the DOM is ready');
 }

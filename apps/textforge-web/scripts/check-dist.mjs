@@ -56,6 +56,25 @@ for (const [label, source, pattern] of [
   }
 }
 
+// Ensure the built HTML includes a CSP meta tag that declares default-src and forbids unsafe-inline.
+function extractMetaContent(html, httpEquiv) {
+  const re1 = new RegExp(`<meta[^>]*http-equiv\\s*=\\s*["']${httpEquiv}["'][^>]*content\\s*=\\s*["']([^"']+)["'][^>]*>`, 'i');
+  const re2 = new RegExp(`<meta[^>]*content\\s*=\\s*["']([^"']+)["'][^>]*http-equiv\\s*=\\s*["']${httpEquiv}["'][^>]*>`, 'i');
+  let m = html.match(re1) || html.match(re2);
+  return m ? m[1] : null;
+}
+
+const cspContent = extractMetaContent(distIndexHtml, 'Content-Security-Policy');
+if (!cspContent) {
+  throw new Error('dist/index.html must include a Content-Security-Policy meta tag for file:// launch');
+}
+if (!/default-src/i.test(cspContent)) {
+  throw new Error('dist/index.html Content-Security-Policy must declare a default-src directive');
+}
+if (/unsafe-inline/i.test(cspContent)) {
+  throw new Error('dist/index.html Content-Security-Policy must not allow unsafe-inline');
+}
+
 console.info('TextForge dist file:// checks passed.');
 
 function hasEsModuleSyntax(source) {
