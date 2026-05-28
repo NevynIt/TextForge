@@ -180,3 +180,18 @@ The package now passes parsed fence metadata, shared per-document fence state, a
 ## V16 backend-optional responsibilities
 
 `@textforge/markdown` must preserve TF-MD document semantics independently from optional backend capabilities. `%include` and `%repository` resolution must use provider/repository contracts and diagnostics. Missing backend/GitLab/AI/service capabilities may disable actions or emit diagnostics, but must not change how Markdown is parsed.
+
+
+## V19 itm-pub visual pipeline
+
+`itm-pub` should use the same visual target resolver and Visual ITM generation pipeline as interactive surfaces.
+
+Markdown users should be able to reference ordinary ITM sources, views, or viewpoints. They should not be forced to author Visual ITM directly.
+
+Each visual publication block should internally resolve:
+
+```text
+ITM model -> selected/filtered model -> Visual ITM -> publication renderer
+```
+
+Static publication renderers remain valid for dashboards, but they must not be counted as Cytoscape/jsMind/Sigma runtime parity.

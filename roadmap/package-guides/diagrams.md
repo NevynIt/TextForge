@@ -123,3 +123,18 @@ The package now registers Mermaid and Graphviz fenced-block renderers as default
 ## WP-05C progress note
 
 The diagram package now routes Mermaid and Graphviz fenced-block execution through canonical active pipeline contributions. The registered diagram pipelines own Mermaid-to-SVG, Graphviz-to-SVG, and SVG-to-PNG execution, while the registered fence handlers delegate to those pipeline contributions through the current document context instead of bypassing the pipeline layer.
+
+
+## V19 renderer package split
+
+V19 separates static diagram generation from runtime visual renderers.
+
+`@textforge/diagrams` continues to own Mermaid, Graphviz/Viz.js, SVG generation, SVG-to-PNG rasterization, and generated diagram resources.
+
+Cytoscape, jsMind, and Sigma/Graphology should live in separate renderer packages rather than being folded into `@textforge/diagrams`:
+
+- `@textforge/renderer-cytoscape`
+- `@textforge/renderer-jsmind`
+- `@textforge/renderer-sigma`
+
+These renderer packages consume validated Visual ITM objects and provide interactive runtime surfaces. Static SVG/HTML output is not renderer parity.

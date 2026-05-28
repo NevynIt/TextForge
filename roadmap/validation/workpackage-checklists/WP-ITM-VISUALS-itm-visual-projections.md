@@ -6,7 +6,7 @@
 
 The delivered slice must expose stable projection data for tree, graph, mindmap, catalogue, matrix, and report fragments through the public `@textforge/itm` package API, keep those projections package-owned rather than app-shell-owned, and let Markdown `itm-pub` blocks render projection-aware publication output without bypassing the existing contribution or pipeline seams.
 
-`WP-ITM-VISUALS` does not close BPMN-specific visual editing, ArchiMate-specific visual editing, or the later report-generation pipeline. Those remain `WP-BPMN-VISUAL`, `WP-ARCHIMATE-VISUAL`, and `WP-MD-REPORT`.
+`WP-ITM-VISUALS` does not close BPMN-specific visual editing, ArchiMate-specific visual editing, or the later report-generation pipeline. Those remain `WP-BPMN-VISUAL-C`, `WP-ARCHIMATE-VISUAL`, and `WP-MD-REPORT`; read-only BPMN visual consumption is now split into `WP-BPMN-VISUAL-A` and `WP-BPMN-VISUAL-B`.
 
 ## Required checks
 

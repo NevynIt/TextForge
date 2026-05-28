@@ -123,3 +123,17 @@ This package lives inside the main TextForge Git repository as an npm workspace 
 ## V16 backend-optional responsibilities
 
 `@textforge/itm` must treat `%repository` as a provider-resolved declaration. Repository values may look like aliases, URLs, URIs, or hints, but the frontend must not fetch them directly. Resolver diagnostics must distinguish unresolved, unsupported, unauthorized, unavailable, conflicting alias, and version/capability mismatch cases.
+
+
+## V19 Visual ITM and runtime recovery responsibilities
+
+`@textforge/itm` remains responsible for ITM parsing, resolving, validation, packages, selectors, styles, views, viewpoints, and model extraction. It should not become a renderer runtime package.
+
+V19 splits follow-on visual responsibilities as follows:
+
+- `WP-VITM-01`: define the minimal Visual ITM profile and in-memory contract.
+- `WP-ITM-VRESOLVE-01`: resolve ITM visual targets and produce Visual ITM with provenance and diagnostics.
+- Runtime renderer packages consume validated Visual ITM; they do not parse arbitrary ITM text.
+- `itm-pub` should use the same resolver internally, while allowing users to author against ordinary ITM sources/views/viewpoints.
+
+`WP-ITM-VISUALS` remains the frozen static projection/publication baseline. New runtime parity must be implemented in the V19 follow-on workpackages.

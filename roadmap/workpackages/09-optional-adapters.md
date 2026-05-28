@@ -44,3 +44,19 @@ Every adapter must prove:
 - frontend contracts remain provider-neutral;
 - optional unavailability disables actions or emits diagnostics without changing document semantics;
 - selected release/security claims remain true.
+
+
+## Visual ITM translator adapters
+
+`WP-VITM-TRANSLATORS` is a standalone format-adapter/domain track.
+
+It depends only on `WP-VITM-01` and can be implemented independently from runtime renderer recovery or visual editing.
+
+Candidate translators:
+
+- DOT -> Visual ITM;
+- Visual ITM -> DOT;
+- Visual ITM -> Mermaid;
+- later BPMN-related translators.
+
+Translator loss profiles should be user-facing documentation rather than a heavy automated compatibility engine at first.

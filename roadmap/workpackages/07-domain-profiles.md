@@ -6,8 +6,10 @@ This cluster covers domain-specific profiles and domain-driven views.
 
 | WP | Title | Split rationale |
 |---|---|---|
-| WP-BPMN-SEM | BPMN semantic profile and validation | Useful validation/model value before mature visual editing. |
-| WP-BPMN-VISUAL | BPMN viewer/editor surface | Visual value after semantics/projections exist. |
+| WP-BPMN-SEM | BPMN semantic profile and validation | Needs grilling/further definition before implementation; keep to an MVP subset before visual consumption depends on it. |
+| WP-BPMN-VISUAL-A | BPMN.io viewer surface | Read-only BPMN XML visual consumption using `bpmn-js`. |
+| WP-BPMN-VISUAL-B | ITM/BPMN visual target integration | Connect ITM `%view`/`%viewpoint` resolution to BPMN visual output. |
+| WP-BPMN-VISUAL-C | BPMN modeler/edit/write-back | Later controlled editing/write-back; not on the minimal consumption path. |
 | WP-ARCHIMATE-SEM | ArchiMate semantic profile | Semantic profile before visual editing investigation. |
 | WP-ARCHIMATE-VISUAL | ArchiMate visual editing investigation | Optional investigation, not guaranteed product feature. |
 | WP-TABLES | Tables, catalogues, and matrices | Catalogue/matrix UX over model content. |
@@ -24,3 +26,34 @@ semantic model/profile -> validation/catalogue/report value -> visual editing/wr
 ```
 
 Do not make mature visual editing a prerequisite for useful semantic validation or reporting.
+
+
+## V19 runtime renderer and BPMN update
+
+V19 adds runtime renderer packages as domain workpackages:
+
+| WP | Title | Notes |
+|---|---|---|
+| WP-RENDER-CYTOSCAPE | Cytoscape runtime renderer package | First old-runtime graph parity slice; consumes validated Visual ITM graph data. |
+| WP-RENDER-JSMIND | jsMind runtime renderer package | Runtime mindmap parity slice; consumes Visual ITM tree/mindmap data. |
+| WP-RENDER-SIGMA | Sigma/Graphology runtime renderer package | Dense graph runtime parity slice; consumes Visual ITM graph data. |
+
+`WP-BPMN-VISUAL-A` should use BPMN.io / `bpmn-js` as the BPMN viewer/runtime basis. `WP-BPMN-VISUAL-B` integrates BPMN visual output with ITM visual target resolution. `WP-BPMN-VISUAL-C` is deferred modeler/edit/write-back work.
+
+Domain visual work should not treat static `WP-ITM-VISUALS` output as runtime renderer parity. BPMN and ArchiMate visual work should depend on Visual ITM/visual-target/runtime-renderer foundations where applicable.
+
+## V19a selected domain sequence
+
+```text
+WP-VITM-01
+  -> WP-ITM-VTARGET-01
+  -> WP-ITM-VRESOLVE-01
+  -> WP-RENDER-CYTOSCAPE
+  -> WP-RENDER-JSMIND
+  -> WP-RENDER-SIGMA
+  -> WP-BPMN-SEM
+  -> WP-BPMN-VISUAL-A
+  -> WP-BPMN-VISUAL-B
+```
+
+Grill or further define `WP-VITM-01`, `WP-ITM-VRESOLVE-01`, and `WP-BPMN-SEM` before implementation.

@@ -1,4 +1,4 @@
-# Implementation Status — Roadmap V18
+# Implementation Status — Roadmap V19a
 
 **Purpose:** Mutable current-state tracker for workpackage implementation.
 
@@ -8,11 +8,22 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 
 | Area | Current state |
 |---|---|
-| Foundation phases | Phase -1 through Phase 4.1 are treated as closed foundation history unless explicitly reopened. |
-| Next implementation options | Continue the first-shippable sequence with `WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01` now that `WP-ITM-VISUALS` is validated. Completing that sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-MD-REPORT`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, and `WP-TABLES` also remain startable outside that sequence. |
+| Frozen baseline | `WP-05A`, `WP-05B`, `WP-05C`, `WP-05D`, `WP-RES-01`, `WP-REPO-01`, `WP-ITM-01`, `WP-ITM-02`, `WP-ITM-VISUALS`, `WP-LUA`, and `WP-LUA-POWER-SESSION` are validated and should not be reopened for new scope. |
+| Selected main chain | `WP-VITM-01 -> WP-ITM-VTARGET-01 -> WP-ITM-VRESOLVE-01 -> WP-RENDER-CYTOSCAPE -> WP-RENDER-JSMIND -> WP-RENDER-SIGMA -> WP-BPMN-SEM -> WP-BPMN-VISUAL-A -> WP-BPMN-VISUAL-B`. |
+| Separately startable options | `WP-MD-REPORT`, `WP-ARCHIMATE-SEM`, `WP-TABLES`, `WP-RES-02`, `WP-ID-01`, and `WP-SET-01` remain separately startable but are not on the selected minimal BPMN visual chain. `WP-VITM-TRANSLATORS` becomes startable once `WP-VITM-01` exists. |
+| BPMN visual split | Former `WP-BPMN-VISUAL` is replaced by `WP-BPMN-VISUAL-A` read-only BPMN.io viewer, `WP-BPMN-VISUAL-B` ITM/BPMN target integration, and deferred `WP-BPMN-VISUAL-C` modeler/write-back. |
 | Backend identity | Develop against `WP-ID-DEV` fixture identity; Entra is optional later adapter. |
 | Backend profile | Not started. May be developed locally with Node/container and one approved local backend origin. |
-| Roadmap structure | V18 workpackage-first structure active. V16/V17 source preserved in archive. |
+| Roadmap structure | V19a active roadmap structure is current. Archive/source-roadmap files are not part of the active package. |
+
+## Definition/grilling gates
+
+| WP | Gate | Required before implementation |
+|---|---|---|
+| WP-VITM-01 | Further definition | Concrete Visual ITM v1 profile/spec, examples, and acceptance criteria. |
+| WP-ITM-VRESOLVE-01 | Grilling | Resolver contract for `%view`, `%viewpoint`, raw model fallback, `render:` precedence, diagnostics, and no-silent-fallback behavior. |
+| WP-BPMN-SEM | Grilling / further definition | Minimal BPMN subset, validation rules, fixtures, and out-of-scope exclusions. |
+| WP-BPMN-VISUAL-A/B/C | Split already decided | Keep read-only viewer, ITM target integration, and modeler/write-back separate. |
 
 ## Status update table
 
@@ -29,8 +40,20 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 | WP-LUA | Validated | `roadmap/validation/workpackage-checklists/WP-LUA-lua-automation.md`; focused Lua/core/app checks; built `file://` artifact checks; headless Lua console bootstrap validation; `corepack pnpm verify` | 2026-05-26 | Sandboxed local Lua runtime, reserved automation discovery, tf.* bridge, and xterm.js console validated without introducing a separate Lua-only security workpackage gate. |
 | WP-LUA-POWER-SESSION | Validated | `roadmap/validation/workpackage-checklists/WP-LUA-POWER-SESSION-self-escalation-session-recovery.md`; focused Lua/web-shell checks; manual in-app browser UI validation; `corepack pnpm verify` | 2026-05-27 | Session-scoped Lua self-escalation, approved power-session host objects, visible elevated badge, no auto-expire, and one-click recovery with a one-shot Lua-preload skip are shipped and validated on top of `WP-LUA`. |
 | WP-ID-01 | Not started | Can proceed after foundation | 2026-05-26 | Identity contract only; no Entra. |
-| WP-ITM-VISUALS | Validated | `roadmap/validation/workpackage-checklists/WP-ITM-VISUALS-itm-visual-projections.md`; `roadmap/validation/ui/itm-visual-test-profiles.md`; `corepack pnpm --filter @textforge/itm test`; `corepack pnpm --filter @textforge/itm build`; `corepack pnpm --filter @textforge/markdown test`; `corepack pnpm --filter @textforge/textforge-web test`; `corepack pnpm --filter @textforge/textforge-web build`; `corepack pnpm roadmap:dependency-map`; `corepack pnpm verify` | 2026-05-27 | `@textforge/itm` now exposes explicit tree/graph/mindmap/catalogue/matrix/report projection data, package-owned `.itm` projection surfaces, Graphviz and Mermaid-mindmap source adapters, projection-aware `itm-pub` rendering, and bundled focused test profiles for incremental shell validation. |
-| WP-BPMN-SEM | Not started | Dependency-ready via WP-ITM-02 validation | 2026-05-27 | Candidate semantic startable slice for BPMN profile-owned rules and provider mappings. |
+| WP-ITM-VISUALS | Validated | `roadmap/validation/workpackage-checklists/WP-ITM-VISUALS-itm-visual-projections.md`; `roadmap/validation/ui/itm-visual-test-profiles.md`; `corepack pnpm --filter @textforge/itm test`; `corepack pnpm --filter @textforge/itm build`; `corepack pnpm --filter @textforge/markdown test`; `corepack pnpm --filter @textforge/textforge-web test`; `corepack pnpm --filter @textforge/textforge-web build`; `corepack pnpm roadmap:dependency-map`; `corepack pnpm verify` | 2026-05-27 | `@textforge/itm` exposes static projection/publication baseline: tree/graph/mindmap/catalogue/matrix/report projection data, package-owned `.itm` projection surfaces, Graphviz and Mermaid-mindmap source adapters, projection-aware `itm-pub` rendering, and bundled focused test profiles. V19 runtime parity is handled by the new Visual ITM/renderer workpackages. |
+| WP-VITM-01 | Not started | V19a roadmap update; `grilling/itm-visuals-grilling.md`; `workpackages/11-itm-visual-runtime-recovery.md`; `specs/architecture/v19a-itm-recovery-to-bpmn-visual-chain.md` | 2026-05-28 | Minimal Visual ITM profile draft is the first recovery slice. Needs a concrete Visual ITM v1 profile/spec before coding. |
+| WP-ITM-VTARGET-01 | Not started | V19a roadmap update; `grilling/itm-visuals-grilling.md`; `workpackages/11-itm-visual-runtime-recovery.md` | 2026-05-28 | Visual target picker should make views/viewpoints/raw model options visible without context-menu pollution. |
+| WP-ITM-VRESOLVE-01 | Not started | V19a roadmap update; `grilling/itm-visuals-grilling.md`; `workpackages/11-itm-visual-runtime-recovery.md`; `specs/architecture/v19a-itm-recovery-to-bpmn-visual-chain.md` | 2026-05-28 | Shared resolver for runtime surfaces and `itm-pub`; respects existing viewpoint pipeline `render:` step. Needs grilling before implementation. |
+| WP-RENDER-CYTOSCAPE | Not started | V19a roadmap update; `grilling/itm-visuals-grilling.md`; `workpackages/11-itm-visual-runtime-recovery.md` | 2026-05-28 | First runtime renderer parity slice in the selected main chain. |
+| WP-ITM-PUB-VISUAL-01 | Not started | V19a roadmap update; `grilling/itm-visuals-grilling.md`; `workpackages/11-itm-visual-runtime-recovery.md` | 2026-05-28 | Deferred from the minimal BPMN visual chain; aligns Markdown dashboards with the same resolver/Visual ITM pipeline as interactive surfaces. |
+| WP-RENDER-JSMIND | Not started | V19a roadmap update; `grilling/itm-visuals-grilling.md`; `workpackages/11-itm-visual-runtime-recovery.md` | 2026-05-28 | Runtime mindmap parity slice in the selected main chain. |
+| WP-RENDER-SIGMA | Not started | V19a roadmap update; `grilling/itm-visuals-grilling.md`; `workpackages/11-itm-visual-runtime-recovery.md` | 2026-05-28 | Dense graph runtime parity slice in the selected main chain. |
+| WP-VITM-TRANSLATORS | Candidate / standalone | V19a roadmap update; `grilling/itm-visuals-grilling.md`; `workpackages/11-itm-visual-runtime-recovery.md` | 2026-05-28 | Translator track depends only on Visual ITM profile v1 and is independent from visual editing. Not on the minimal BPMN visual consumption chain. |
+| WP-GRAPH-EDIT-VITM | Not started | V19a roadmap update; `grilling/itm-visuals-grilling.md`; `workpackages/11-itm-visual-runtime-recovery.md` | 2026-05-28 | Later Visual ITM edit/write-back foundation; should not block read-only visual consumption parity or BPMN visual consumption. |
+| WP-BPMN-SEM | Not started | V19a roadmap update; `package-guides/bpmn.md`; `specs/architecture/v19a-itm-recovery-to-bpmn-visual-chain.md` | 2026-05-28 | Needs grilling/further definition before implementation. Bound to a minimal BPMN MVP before visual surfaces depend on it. |
+| WP-BPMN-VISUAL-A | Not started | V19a split from `WP-BPMN-VISUAL`; `package-guides/bpmn.md`; `validation/workpackage-checklists/WP-BPMN-VISUAL-A-bpmn-io-viewer-surface.md` | 2026-05-28 | Read-only BPMN.io / `bpmn-js` viewer surface. No ITM target integration or editing. |
+| WP-BPMN-VISUAL-B | Not started | V19a split from `WP-BPMN-VISUAL`; `package-guides/bpmn.md`; `validation/workpackage-checklists/WP-BPMN-VISUAL-B-itm-bpmn-visual-target-integration.md` | 2026-05-28 | ITM `%view`/`%viewpoint` target integration with BPMN visual output. Read-only consumption only. |
+| WP-BPMN-VISUAL-C | Candidate / later | V19a split from `WP-BPMN-VISUAL`; `package-guides/bpmn.md`; `validation/workpackage-checklists/WP-BPMN-VISUAL-C-bpmn-modeler-edit-writeback.md` | 2026-05-28 | Deferred BPMN modeler/edit/write-back. Must not block visual consumption. |
 | WP-ARCHIMATE-SEM | Not started | Dependency-ready via WP-ITM-02 validation | 2026-05-27 | Candidate semantic startable slice for ArchiMate profile-owned rules and provider mappings. |
 | WP-TABLES | Not started | Dependency-ready via WP-ITM-01 baseline completion | 2026-05-27 | Candidate startable slice; can proceed independently of optional BPMN semantics dependency. |
 | WP-ID-DEV | Not started | Depends on WP-ID-01 | 2026-05-26 | Required to keep local backend development unblocked. |

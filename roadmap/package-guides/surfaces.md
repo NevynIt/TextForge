@@ -212,3 +212,16 @@ The package now participates in canonical execution rather than stopping at meta
 ## V16 backend-optional responsibilities
 
 `@textforge/surfaces` must keep openability based on resource facts, active capabilities, and provider affordances. Optional backend capability absence should remove or disable actions, not change document semantics or bypass the Phase 5 contribution model.
+
+
+## V19 ITM visual target picker and runtime surfaces
+
+Surface/open-with behavior for `.itm` resources should follow the V19 rule:
+
+- plain open opens the CodeMirror source editor;
+- `Open visuals…` launches a visual target picker;
+- the picker can open one or more selected views/viewpoints/raw model options;
+- each selected target opens as an independent surface;
+- renderer unavailability is a diagnostic, not a silent fallback.
+
+Renderer surfaces must be package-owned contributions and should consume Visual ITM or renderer-specific contracts rather than shell-private ITM structures.

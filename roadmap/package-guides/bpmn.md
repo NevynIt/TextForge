@@ -72,3 +72,35 @@ Do not import app-shell internals. Do not bypass contribution registries. Do not
 ## Repository and workspace workflow
 
 This package lives inside the main TextForge Git repository as an npm workspace package. It should remain independently buildable and testable, but it should not be managed as a Git submodule. Cross-package changes may be made in one branch by one agent, with commits scoped by package where practical. Package dependencies should use `workspace:*` references, and public integration should happen through contribution manifests or stable exported contracts rather than direct app-shell coupling.
+
+
+## V19 BPMN.io decision
+
+When `WP-BPMN-VISUAL-A/B/C` is implemented, use BPMN.io / `bpmn-js` as the BPMN viewer/runtime basis.
+
+The initial BPMN visual work should distinguish:
+
+- BPMN semantic profile and validation (`WP-BPMN-SEM`);
+- BPMN visual consumption through BPMN.io / `bpmn-js` (`WP-BPMN-VISUAL-A/B/C`);
+- later controlled visual editing/write-back (`WP-GRAPH-EDIT-VITM`).
+
+Do not require mature visual editing before delivering BPMN visual consumption. Do not treat static `WP-ITM-VISUALS` projections as BPMN runtime parity.
+
+
+## V19a BPMN visual split
+
+The former monolithic BPMN visual work is split into three workpackages:
+
+| WP | Purpose | Minimal-chain status |
+|---|---|---|
+| WP-BPMN-VISUAL-A | Read-only BPMN.io / `bpmn-js` viewer surface for BPMN XML. | Required. |
+| WP-BPMN-VISUAL-B | ITM `%view` / `%viewpoint` visual-target integration for BPMN output. | Required. |
+| WP-BPMN-VISUAL-C | BPMN modeler/edit/write-back, including patch review and apply/discard. | Deferred. |
+
+`WP-BPMN-SEM` must be grilled/further defined before implementation. Its MVP should include only Events, Tasks, Gateways, Sequence Flows, basic attributes, basic validation, fixtures, and a BPMN-oriented ITM package/profile. Full BPMN completeness, advanced gateway semantics, mature import/export loss handling, and editing behavior are out of scope for the MVP.
+
+Selected minimal path after ITM visual recovery:
+
+```text
+WP-BPMN-SEM -> WP-BPMN-VISUAL-A -> WP-BPMN-VISUAL-B
+```

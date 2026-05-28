@@ -24,7 +24,7 @@ Internal dependencies:
 
 Third-party candidates: Fengari, optional xterm.js. All third-party dependencies must pass the open-source license gate.
 
-Historical note: the legacy pre-rebuild implementation used an xterm.js-backed Lua console. In the current V18 rebuild plan, xterm.js remains optional and is deferred to Phase 8 (`WP-LUA`) rather than being installed during the earlier recovery phases.
+Historical note: the legacy pre-rebuild implementation used an xterm.js-backed Lua console. In the current V19 roadmap, xterm.js remains optional and is deferred to Phase 8 (`WP-LUA`) rather than being installed during the earlier recovery phases.
 
 ## Public surface
 

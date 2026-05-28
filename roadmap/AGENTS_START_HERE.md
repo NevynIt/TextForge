@@ -1,44 +1,79 @@
-# AGENTS START HERE — Roadmap V18
+# AGENTS START HERE - Roadmap V19a
 
-This roadmap is now workpackage-first.
+This roadmap is workpackage-first and active-roadmap-only.
 
 ## Required reading order
 
 1. `README.md`
-2. `ROADMAP_V18.md`
+2. `ROADMAP_V19A.md`
 3. `decisions/RAPID.md`
 4. `workpackages/workpackage-register.md`
 5. The relevant workpackage cluster file under `workpackages/`
 6. Any package guide under `package-guides/` touched by the work
 7. Any grilling record under `grilling/` referenced by the workpackage
 
-## Planning rule
+## Active-roadmap rule
 
-Phases `-1` through `4.1` are historical foundation. Do not reopen them unless an explicit defect or decision requires it.
+Do not use `roadmap/archive/` or `ROADMAP_V18.md` as active implementation instructions. They are retained locally for traceability only.
 
-From WP5 onward, do not assume the next numeric item is automatically the next implementation step. Use:
+The active roadmap is the V19a file set. Implement against current workpackages, package guides, specs, validation files, and RAPID entries.
+
+## Frozen baseline rule
+
+Already validated work is frozen unless a later RAPID decision explicitly reopens a defect.
+
+Frozen baseline:
 
 ```text
-status + dependencies + selected release scope + validation readiness
+WP-05A
+WP-05B
+WP-05C
+WP-05D
+WP-RES-01
+WP-REPO-01
+WP-ITM-01
+WP-ITM-02
+WP-ITM-VISUALS
+WP-LUA
+WP-LUA-POWER-SESSION
 ```
 
-The workpackage register is the canonical current planning source.
+Do not absorb new scope into frozen workpackages. Add or implement follow-on workpackages instead.
 
 ## Current implementation posture
 
-Unless a newer RAPID entry supersedes this, the default recommendation remains:
+Unless a newer RAPID entry supersedes this, the recommended visual recovery path is:
 
 ```text
-WP-MD-REPORT
+WP-VITM-01
+-> WP-ITM-VTARGET-01
+-> WP-ITM-VRESOLVE-01
+-> WP-RENDER-CYTOSCAPE
 ```
 
-`WP-05A`, `WP-05B`, `WP-05C`, `WP-05D`, `WP-RES-01`, `WP-ITM-01`, `WP-ITM-02`, `WP-REPO-01`, `WP-ITM-VISUALS`, `WP-LUA`, and `WP-LUA-POWER-SESSION` are now validated. The remaining first-shippable implementation order is `WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`; completing that sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-MD-REPORT`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, and `WP-TABLES` remain separately startable under the current dependency posture.
+`WP-MD-REPORT`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, `WP-TABLES`, `WP-RES-02`, `WP-ID-01`, and `WP-SET-01` remain separately startable, but BPMN/ArchiMate visual work should not rely on `WP-ITM-VISUALS` alone for runtime renderer parity.
 
-These workpackages preserve the accepted Phase 5 grilling decisions around contribution manifests, capability activation, resolver context, contribution execution, `%require` diagnostics, package composition, active capability context, and surface reopening for intermediate values.
+## ITM visual recovery rule
+
+`WP-ITM-VISUALS` is the validated static projection/publication baseline. It is not full runtime renderer parity.
+
+Runtime visual recovery must use the V19a chain:
+
+```text
+WP-VITM-01
+WP-ITM-VTARGET-01
+WP-ITM-VRESOLVE-01
+WP-RENDER-CYTOSCAPE
+WP-ITM-PUB-VISUAL-01
+WP-RENDER-JSMIND
+WP-RENDER-SIGMA
+```
+
+A `.itm` file may contain a model, `%viewpoint` pipelines, and `%view` instances. Visual opening must resolve those targets instead of treating the file as one monolithic graph.
 
 ## Adapter rule
 
-Provider-specific integrations are not allowed to become hidden blockers.
+Provider-specific integrations are not hidden blockers.
 
 Standalone optional adapters include, at minimum:
 
@@ -53,23 +88,13 @@ Standalone optional adapters include, at minimum:
 
 A selected release may require one of these, but generic roadmap progress should depend on contracts, fixtures, and policy engines, not on enterprise infrastructure access.
 
-## Identity rule
+## BPMN visual rule
 
-Microsoft Entra SSO is a production adapter, not the generic identity foundation.
-
-The blocking generic identity path is:
-
-```text
-WP-ID-01 Identity contract
-WP-ID-DEV Development identity fixture provider
-WP-POLICY-01 Provider-neutral server policy engine
-```
-
-Entra, OIDC, SAML, Keycloak, or other providers may be added later behind the same identity contract.
+When BPMN visual work is implemented, use BPMN.io / `bpmn-js`. Use `WP-BPMN-VISUAL-A` for the read-only viewer, `WP-BPMN-VISUAL-B` for ITM/BPMN visual target integration, and defer `WP-BPMN-VISUAL-C` for modeler/edit/write-back.
 
 ## RAPID rule
 
-`decisions/RAPID.md` remains append-only. Do not edit previous rows. Add new rows for decisions, actions, progress, issues, and dependencies.
+`decisions/RAPID.md` remains append-only for historical rows. Keep new entries at the end of the table. Update the status block when the active recommendation changes.
 
 ## Completion rule
 

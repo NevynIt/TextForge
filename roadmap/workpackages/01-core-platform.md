@@ -24,7 +24,6 @@ WP-05A -> WP-05B -> WP-05C
 - `package-guides/core.md`
 - `package-guides/pipeline.md`
 - `package-guides/security-profile.md`
-- `archive/v16-linear-roadmap.md`
 
 ## Key constraints
 

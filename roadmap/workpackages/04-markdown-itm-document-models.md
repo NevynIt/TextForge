@@ -46,7 +46,7 @@ The workpackage must preserve downstream compatibility for these follow-on consu
 - Phase 9 (`WP-MD-REPORT`): report-oriented extraction and model fragment export for resolved Markdown publication.
 - Phase 11 (`WP-TABLES`): node/relationship catalogue and matrix projections.
 - Phase 12 (`WP-ARCHIMATE-SEM`): profile packaging and validation hooks for ArchiMate semantic profiles.
-- Phase 15 (`WP-GRAPH-EDIT`): small-subgraph patch contracts and view-layout delta support.
+- Later visual editing (`WP-GRAPH-EDIT-VITM`): small-subgraph patch contracts and view-layout delta support.
 
 ## WP-ITM-01 and WP-ITM-02 scope boundary
 
@@ -89,3 +89,17 @@ WP-ITM-01 should begin only after the recovery baseline from Phases 3.1-3.3 is u
 - Rich editors are optional and must be round-trip gated.
 - Includes and repositories are resolved by active providers; frontend does not fetch arbitrary URLs in local/offline mode.
 - Document semantics do not change when optional backend capabilities are unavailable.
+
+
+## V19 Visual ITM and itm-pub update
+
+V19 adds the following active workpackages to this cluster:
+
+| WP | Title | Depends on | Notes |
+|---|---|---|---|
+| WP-VITM-01 | Visual ITM profile v1 | WP-ITM-01, WP-ITM-02 | Minimal constrained Visual ITM profile used by renderer packages and translators. |
+| WP-ITM-VRESOLVE-01 | Shared ITM visual target resolver | WP-VITM-01, WP-ITM-02, WP-ITM-VISUALS, WP-REPO-01 | Resolves source model, view/viewpoint, filtered subset, existing `render:` step, Visual ITM, provenance, and diagnostics. |
+| WP-ITM-PUB-VISUAL-01 | Shared visual pipeline for `itm-pub` | WP-ITM-VRESOLVE-01, WP-MD-REPORT if needed | Keeps Markdown dashboards/publications aligned with interactive visual surfaces. |
+| WP-VITM-TRANSLATORS | Visual ITM translator utilities | WP-VITM-01 | DOT/Mermaid/BPMN translator track; independent from visual editing. |
+
+Rule: Markdown authors should not be forced to write Visual ITM directly. `itm-pub` blocks may reference ordinary ITM sources, views, or viewpoints; internally the pipeline resolves `ITM model -> filtered model -> Visual ITM -> publication renderer`.

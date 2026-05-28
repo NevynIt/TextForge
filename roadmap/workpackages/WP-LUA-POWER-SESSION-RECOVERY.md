@@ -14,7 +14,7 @@
 
 Deliver a focused follow-on workpackage that allows Lua to self-escalate into a higher-permission session mode with minimal friction, while preserving a strong recovery path.
 
-This page now records the shipped and validated V18 follow-on after `WP-LUA`. The implementation keeps the base `tf.*` bridge as the default mode, adds explicit session-scoped elevation through `require("tf.power").elevate()`, surfaces a visible power-session marker and recovery action in the console, and skips Lua preload exactly once after recovery restart.
+This page now records the shipped and validated Lua follow-on after `WP-LUA`. The implementation keeps the base `tf.*` bridge as the default mode, adds explicit session-scoped elevation through `require("tf.power").elevate()`, surfaces a visible power-session marker and recovery action in the console, and skips Lua preload exactly once after recovery restart.
 
 ## What power mode is
 

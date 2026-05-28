@@ -1,7 +1,7 @@
 # Package Guides
 
-This folder replaces the old `roadmap/packages/` folder name in V18.
+This folder contains active package-level implementation guidance for Roadmap V19a.
 
-The original files are also preserved under `archive/source-v17-roadmap/packages/`.
+Package guides remain binding when a workpackage touches the relevant package family. If a guide conflicts with `workpackages/workpackage-register.md`, `ROADMAP_V19A.md`, or a newer RAPID decision, update the guide in the same change rather than following stale guidance.
 
-Package guides remain binding implementation guidance when a workpackage touches the relevant package family.
+The old package-source material is still retained locally under `roadmap/archive/` for traceability, but it is not the active guidance set.

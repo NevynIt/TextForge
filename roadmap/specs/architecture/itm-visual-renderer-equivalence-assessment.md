@@ -1,3 +1,17 @@
+# V19 supersession note
+
+This assessment remains useful as background, but V19 supersedes any conclusion that treats static projection/publication outputs as sufficient renderer parity. The active V19 direction is recorded in `visual-itm-runtime-recovery.md`, `grilling/itm-visuals-grilling.md`, and `workpackages/11-itm-visual-runtime-recovery.md`.
+
+Key corrections:
+
+- an ITM file may contain raw model content, `%viewpoint` pipelines, and `%view` instances;
+- visual opening must resolve visual targets rather than treating `.itm` as one monolithic graph-like type;
+- Visual ITM is the constrained intermediate renderer-facing profile;
+- Cytoscape, jsMind, Sigma/Graphology, and BPMN.io are runtime renderers and require actual interactive surfaces;
+- static Graphviz/Mermaid/HTML output remains valid publication functionality but is not runtime renderer parity.
+
+---
+
 # ITM Visual Renderer Equivalence Assessment
 
 Date: 2026-05-27

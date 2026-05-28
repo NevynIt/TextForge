@@ -1,52 +1,74 @@
-# TextForge Roadmap V18
+# TextForge Roadmap V19a
 
-Roadmap V18 is the cleaned, workpackage-first roadmap for TextForge.
+Roadmap V19a is the active, cleaned, workpackage-first roadmap for TextForge.
 
-The structural change from V16/V17 is deliberate:
+The main change from V18 is operational, not archival:
 
-- Phases `-1` through `4.1` are preserved as foundation history.
-- From `WP5` onward, planning is dependency-based rather than strictly linear.
-- Legacy phase numbers are retained as traceability handles, not as the only scheduling mechanism.
-- Optional provider-specific integrations, such as Microsoft Entra SSO, GitLab, AI providers, OIDC/SAML/Keycloak, SharePoint-like repositories, browser-extension packaging, and future app wrappers, are standalone adapter/profile workpackages.
-- No V16/V17 content is deleted. It is either promoted into V18, moved into a clearer folder, or preserved under `archive/`.
+- The active roadmap is now the V19a workpackage/spec/grilling/checklist set.
+- Already validated work is treated as frozen baseline rather than being reopened for new scope.
+- `WP-ITM-VISUALS` remains the validated static projection/publication baseline.
+- V19a selects ITM visual runtime recovery first, then the minimal BPMN visual consumption chain.
+- The workspace still retains `roadmap/archive/` and `ROADMAP_V18.md` for traceability, but those historical files are not active implementation instructions.
 
 ## Start here
 
 1. Read `AGENTS_START_HERE.md`.
-2. Read `ROADMAP_V18.md`.
+2. Read `ROADMAP_V19A.md`.
 3. Read `decisions/RAPID.md`.
-4. Use `workpackages/workpackage-register.md` as the canonical current planning source from WP5 onward.
-5. Use `archive/source-v17-roadmap/` only for traceability back to the original V17 package.
+4. Use `workpackages/workpackage-register.md` as the canonical current planning source.
+5. Use the relevant workpackage cluster file under `workpackages/`.
+6. Use relevant package guides and grilling records referenced by the selected workpackage.
+7. Use `archive/` or `ROADMAP_V18.md` only for traceability, never as the active execution baseline.
 
 ## Folder map
 
 | Folder/file | Purpose |
 |---|---|
-| `ROADMAP_V18.md` | Executive roadmap structure and operating rules. |
-| `workpackages/` | Canonical WP5+ backlog, dependencies, status tracker, and cluster files. |
-| `specs/architecture/` | Architecture whitepapers, package strategy, markdown profile, and reference index. |
-| `package-guides/` | Package-level implementation guidance promoted from the old `packages/` folder. |
+| `ROADMAP_V19A.md` | Executive roadmap structure and operating rules for the active baseline. |
+| `workpackages/` | Canonical WP5+ backlog, dependencies, status tracker, cluster files, and generated dependency map. |
+| `specs/architecture/` | Architecture whitepapers, profile/spec proposals, and reference material. |
+| `package-guides/` | Package-level implementation guidance. |
 | `validation/` | Validation checklists and evidence assets. |
 | `grilling/` | Grilling records that remain binding when relevant. |
-| `decisions/RAPID.md` | Append-only decisions/actions/progress/issues log. |
-| `archive/` | Preserved V16/V17 files and source roadmap package. |
+| `decisions/RAPID.md` | Append-only decisions/actions/progress/issues log and current operational pointer. |
+| `archive/` | Preserved V16/V17/V18 traceability material retained locally but not used as the active roadmap. |
 
 ## Current implementation posture
 
-The former Phase 5 contribution/capability spine plus the minimal inspector and provider-aware resource foundation are now validated:
+Validated and frozen baseline:
 
 ```text
-WP-05A Contribution manifest and registry model
-  -> WP-05B Capability activation and resolver context
-  -> WP-05C Pipeline/contribution execution integration
-WP-05D Minimal package/capability inspector
-WP-RES-01 Provider-aware resource descriptors
-WP-REPO-01 Repository reference and include resolver
-WP-ITM-01 ITM parser/model foundation
-WP-ITM-02 ITM directives/packages/validation/diagnostics
+WP-05A -> WP-05B -> WP-05C
+WP-05D
+WP-RES-01
+WP-REPO-01
+WP-ITM-01
+WP-ITM-02
+WP-ITM-VISUALS
+WP-LUA
+WP-LUA-POWER-SESSION
 ```
 
-The canonical WP5+ planning sequence now lives in `workpackages/workpackage-register.md`: `WP-MD-REPORT -> WP-BPMN-SEM -> WP-BPMN-VISUAL -> WP-TABLES -> WP-SKETCH -> WP-ARCHIMATE-SEM -> WP-ARCHIMATE-VISUAL -> WP-SET-01`, with `WP-ITM-VISUALS` now validated ahead of that run. Completing the remaining sequence defines the first version to polish and ship. `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, `WP-MD-REPORT`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, and `WP-TABLES` remain startable outside that sequence.
+V19a visual recovery path:
+
+```text
+WP-VITM-01
+  -> WP-ITM-VTARGET-01
+  -> WP-ITM-VRESOLVE-01
+  -> WP-RENDER-CYTOSCAPE
+  -> WP-RENDER-JSMIND
+  -> WP-RENDER-SIGMA
+```
+
+Minimal BPMN visual consumption follow-on:
+
+```text
+WP-BPMN-SEM
+  -> WP-BPMN-VISUAL-A
+  -> WP-BPMN-VISUAL-B
+```
+
+`WP-VITM-TRANSLATORS`, `WP-MD-REPORT`, `WP-TABLES`, `WP-RES-02`, `WP-ID-01`, `WP-SET-01`, and `WP-ARCHIMATE-SEM` remain separately startable under the current dependency posture, but they are not on the selected main chain.
 
 The backend path is enabled by contracts and fixtures, not by Entra SSO:
 

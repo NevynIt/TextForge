@@ -17,3 +17,16 @@ This cluster contains valuable but deliberately delayed or investigatory work.
 ## Rule
 
 Do not pull these forward unless their dependencies are met and a RAPID decision records why they are now needed.
+
+
+## V19 visual editing reframing
+
+The old broad graph-editing concept is reframed as `WP-GRAPH-EDIT-VITM`.
+
+Do not pull visual semantic editing or write-back into the visual consumption recovery work. First restore read-only runtime consumption through Visual ITM and renderer packages.
+
+`WP-GRAPH-EDIT-VITM` can move forward later when:
+
+- `WP-VITM-01` exists;
+- at least one runtime renderer exists;
+- `WP-RES-03` or an equivalent changeset/revision foundation is available for safe write-back where needed.
