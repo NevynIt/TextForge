@@ -27,6 +27,8 @@ export interface SurfaceContribution extends CoreSurfaceContribution {
 export interface SurfaceOpenRequest {
   readonly resource: ResourceRef;
   readonly title?: string;
+  readonly sessionKey?: string;
+  readonly surfaceState?: Readonly<Record<string, unknown>>;
   readonly preferredSurfaceIds?: ReadonlyArray<string>;
   readonly activeContributionIds?: ReadonlyArray<string>;
   readonly activeCapabilityIds?: ReadonlyArray<string>;
@@ -41,6 +43,8 @@ export interface SurfaceSession {
   readonly contributionId: string;
   readonly resource: ResourceRef;
   readonly title: string;
+  readonly sessionKey?: string;
+  readonly surfaceState?: Readonly<Record<string, unknown>>;
   readonly placement: SurfacePlacement;
   readonly state: SurfaceHostState;
   readonly freshness: SurfaceFreshness;

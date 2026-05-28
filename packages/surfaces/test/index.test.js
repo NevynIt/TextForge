@@ -70,10 +70,14 @@ test('surface registry picks the highest-priority compatible contribution', () =
 
   const session = host.open({
     resource: { resourceId: 'resource-1', kind: 'resource', representation: 'bytes', path: '/docs/system.svg', badge },
+    sessionKey: 'resource-1:preview',
+    surfaceState: { mode: 'preview' },
   });
 
   assert.equal(session.contributionId, 'surface.preview');
   assert.equal(session.freshness, 'current');
+  assert.equal(session.sessionKey, 'resource-1:preview');
+  assert.equal(session.surfaceState?.mode, 'preview');
 
   const svgSession = host.open({
     resource: { resourceId: 'resource-2', kind: 'resource', representation: 'bytes', path: '/docs/system.svg', mimeType: 'image/svg+xml' },
@@ -159,6 +163,7 @@ test('surface command contributions include shell actions and open-with descript
   ]);
 
   assert.equal(commands.some((command) => command.id === 'surface.close-active'), true);
+  assert.equal(commands.some((command) => command.id === 'surface.open-visuals'), true);
   assert.equal(commands.some((command) => command.id === 'surface.move-active-to-popup'), true);
   assert.equal(commands.some((command) => command.id === 'surface.open-with:surface.editor'), true);
   assert.equal(commands.find((command) => command.id === 'surface.open-with:surface.svg')?.when?.availableSurfaceIds?.[0], 'surface.svg');

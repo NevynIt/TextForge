@@ -70,6 +70,9 @@ import {
 } from '@textforge/markdown';
 import {
   contributions as itmContributionPack,
+  createWorkspaceItmIncludeProvider,
+  listItmVisualTargets,
+  loadItmDocument,
 } from '@textforge/itm';
 import {
   contributions as securityProfileContributionPack,
@@ -253,6 +256,7 @@ const workspaceFolderContextCommandIds = [
 ];
 
 const workspaceResourceContextCommandIds = [
+  'surface.open-visuals',
   'workspace.copy-selected-resource',
   'lua.run-selected-resource',
   'lua.promote-selected-to-automation',
@@ -262,6 +266,7 @@ const workspaceResourceContextCommandIds = [
 ];
 
 const mainSessionContextCommandIds = [
+  'surface.open-visuals',
   'surface.focus-main-session',
   'surface.refresh-active',
   'surface.move-active-to-popup',
@@ -270,6 +275,7 @@ const mainSessionContextCommandIds = [
 ];
 
 const popupSessionContextCommandIds = [
+  'surface.open-visuals',
   'surface.focus-popup-session',
   'surface.refresh-active',
   'surface.move-active-to-main',
@@ -682,6 +688,10 @@ function resolveCommandIcon(commandId) {
     return 'fileText';
   }
 
+  if (commandId === 'surface.open-visuals') {
+    return 'utility';
+  }
+
   if (commandId === 'surface.focus-popup-session') {
     return 'utility';
   }
@@ -833,6 +843,7 @@ function createTextForgeWorkbenchController() {
     storageResetPending: false,
     surfaceFocusPlacement: 'main',
     contextMenu: undefined,
+    visualTargetPicker: undefined,
   };
   const runtime = {
     status: 'loading',
@@ -872,6 +883,15 @@ function createTextForgeWorkbenchController() {
     emit();
   }
 
+  function closeVisualTargetPicker() {
+    if (!state.visualTargetPicker) {
+      return;
+    }
+
+    state.visualTargetPicker = undefined;
+    emit();
+  }
+
   function subscribe(listener) {
     listeners.add(listener);
     return () => {
@@ -888,6 +908,20 @@ function createTextForgeWorkbenchController() {
 
   function getSampleEntry(path) {
     return workspace.getEntryByPath(path);
+  }
+
+  function isItmWorkspaceResource(entry) {
+    return Boolean(
+      entry
+      && entry.kind === 'resource'
+      && entry.representation === 'text'
+      && (
+        entry.languageId === 'itm'
+        || entry.mimeType === 'text/itm'
+        || entry.mimeType === 'text/x-itm'
+        || entry.path?.toLowerCase().endsWith('.itm')
+      ),
+    );
   }
 
   function getDefaultSelection() {
@@ -912,8 +946,11 @@ function createTextForgeWorkbenchController() {
     return getOpenSessions().find((session) => session.id === sessionId && session.state !== 'closed');
   }
 
-  function findSessionForResource(resourceId) {
-    return getOpenSessions().find((session) => session.resource.resourceId === resourceId && session.state !== 'closed');
+  function findSessionForResource(resourceId, options = {}) {
+    return getOpenSessions().find((session) =>
+      session.resource.resourceId === resourceId
+      && session.state !== 'closed'
+      && (options.sessionKey === undefined || session.sessionKey === options.sessionKey));
   }
 
   function getHostForPlacement(placement) {
@@ -935,7 +972,9 @@ function createTextForgeWorkbenchController() {
     return {
       resource,
       workspaceResource: entry,
-      title: entry.metadata.title ?? entry.path,
+      title: options.title ?? entry.metadata.title ?? entry.path,
+      sessionKey: options.sessionKey,
+      surfaceState: options.surfaceState,
       placement,
       allowPopup: true,
       activeCapabilityIds,
@@ -1010,6 +1049,7 @@ function createTextForgeWorkbenchController() {
     state.activeMainSessionId = undefined;
     state.activePopupSessionId = undefined;
     state.surfaceFocusPlacement = 'main';
+    state.visualTargetPicker = undefined;
   }
 
   function disposePersistedWorkspace() {
@@ -1028,15 +1068,20 @@ function createTextForgeWorkbenchController() {
       return undefined;
     }
 
-    const existingSession = findSessionForResource(entry.id);
     const requestedPlacement = options.placement
-      ?? existingSession?.placement
+      ?? findSessionForResource(entry.id, { sessionKey: options.sessionKey })?.placement
       ?? getDefaultSurfacePlacement(surfaceRegistry, {
         resource: workspaceEntryToResourceRef(entry),
         allowPopup: true,
         preferredSurfaceIds: options.preferredSurfaceId ? [options.preferredSurfaceId] : undefined,
       });
     const preferredSurfaceId = options.preferredSurfaceId;
+    const existingSession = getOpenSessions().find((session) =>
+      session.resource.resourceId === entry.id
+      && session.state !== 'closed'
+      && session.placement === requestedPlacement
+      && (options.sessionKey === undefined ? session.sessionKey === undefined : session.sessionKey === options.sessionKey)
+      && (!preferredSurfaceId || session.contributionId === preferredSurfaceId));
     const forceReopen = options.forceReopen === true;
     if (
       existingSession &&
@@ -1060,6 +1105,9 @@ function createTextForgeWorkbenchController() {
     const request = createSurfaceOpenRequest(entry, {
       placement: requestedPlacement,
       preferredSurfaceId,
+      sessionKey: options.sessionKey,
+      surfaceState: options.surfaceState,
+      title: options.title,
     });
     const host = getHostForPlacement(request.placement);
     const session = host.open(request);
@@ -2352,6 +2400,9 @@ function createTextForgeWorkbenchController() {
         openResourceEntry(resource, {
           preferredSurfaceId: surfaceId,
           placement: session.placement,
+          sessionKey: session.sessionKey,
+          surfaceState: session.surfaceState,
+          title: session.title,
           forceReopen: true,
         });
       },
@@ -2389,6 +2440,9 @@ function createTextForgeWorkbenchController() {
     openResourceEntry(resource, {
       placement: currentSession.placement,
       preferredSurfaceId: preferredSurfaceId ?? currentSession.contributionId,
+      sessionKey: currentSession.sessionKey,
+      surfaceState: currentSession.surfaceState,
+      title: currentSession.title,
       forceReopen: true,
     });
   }
@@ -2553,6 +2607,7 @@ function createTextForgeWorkbenchController() {
     const badge = resource.metadata.badge;
     const icon = resolveEntryIcon(resource);
     const resourceTitle = resource.metadata.title ?? basenameWorkspacePath(resource.path) ?? resource.path;
+    const surfaceTitle = session.title ?? resourceTitle;
     const luaConsoleSessionState = isLuaConsoleResource(resource)
       ? getLuaConsoleSessionState(resource.id)
       : undefined;
@@ -2567,10 +2622,11 @@ function createTextForgeWorkbenchController() {
       contribution,
       resource: resourceRef,
       workspaceResource: resource,
-      resourceTitle,
+      resourceTitle: surfaceTitle,
       sourceText: resource.representation === 'text' ? resource.text : undefined,
       updatedAt: resource.metadata.updatedAt,
       contributionRegistry,
+      workspaceService: workspace,
       documentContext: resolveDocumentContributionContextForEntry(resource),
       requestPreview: session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(resource)
         ? () => requestMarkdownPreview(resource)
@@ -2640,7 +2696,7 @@ function createTextForgeWorkbenchController() {
       id: session.id,
       kind: 'surface',
       mountId: runtimeView?.mountId ?? `${session.id}:${session.contributionId}:${resource.metadata.updatedAt}`,
-      title: resourceTitle,
+      title: surfaceTitle,
       path: resource.path,
       summary: luaConsoleSessionState?.elevated
         ? 'Elevated Lua power session with approved host-object access and one-click recovery. Trigger it from Lua with require("tf.power").elevate().'
@@ -2767,7 +2823,7 @@ function createTextForgeWorkbenchController() {
             : 'FILE';
     const powerSessionActive = isLuaConsoleResource(entry) && getLuaConsoleSessionState(entry.id).elevated;
     return {
-      title: entry.metadata.title ?? basenameWorkspacePath(entry.path) ?? entry.path,
+      title: activeSession?.title ?? entry.metadata.title ?? basenameWorkspacePath(entry.path) ?? entry.path,
       detail: `${kindDetail} / ${activeSession?.placement === 'popup' ? 'Popup surface' : 'Main surface'}${powerSessionActive ? ' / Power session' : ''}`,
       placement: activeSession?.placement ?? 'main',
       badge: entry.metadata.badge,
@@ -2883,6 +2939,123 @@ function createTextForgeWorkbenchController() {
     openContextMenu(createContextMenuModel('popup-session', sessionId, anchor.x, anchor.y));
   }
 
+  async function openVisualTargetPickerForResource(resource, placement = 'main') {
+    if (!isItmWorkspaceResource(resource)) {
+      throw new Error('Select an ITM resource to open visual targets.');
+    }
+
+    const pickerState = {
+      resourceId: resource.id,
+      placement,
+      status: 'loading',
+      error: undefined,
+      targets: [],
+      selectedSessionKeys: [],
+    };
+    state.visualTargetPicker = pickerState;
+    rememberSelection(resource.id);
+    emit();
+
+    try {
+      const loaded = await loadItmDocument(resource.text, {
+        strict: false,
+        uri: resource.path,
+        includeProviders: [
+          createWorkspaceItmIncludeProvider(workspace, {
+            basePath: resource.path,
+          }),
+        ],
+        contributionRegistry,
+        documentResource: {
+          path: resource.path,
+          kind: 'resource',
+          representation: 'text',
+          languageId: 'itm',
+          mimeType: resource.mimeType ?? 'text/x-itm',
+        },
+      });
+      const targets = listItmVisualTargets(loaded);
+      const defaultTarget = targets.find((target) => target.available && target.kind === 'view')
+        ?? targets.find((target) => target.available && target.kind === 'viewpoint')
+        ?? targets.find((target) => target.available && target.kind === 'raw-model' && target.projection === 'graph')
+        ?? targets.find((target) => target.available);
+      state.visualTargetPicker = {
+        resourceId: resource.id,
+        placement,
+        status: 'ready',
+        error: undefined,
+        targets,
+        selectedSessionKeys: defaultTarget ? [defaultTarget.sessionKey] : [],
+      };
+    } catch (error) {
+      state.visualTargetPicker = {
+        resourceId: resource.id,
+        placement,
+        status: 'error',
+        error: error?.message ?? 'Failed to resolve ITM visual targets.',
+        targets: [],
+        selectedSessionKeys: [],
+      };
+    }
+
+    emit();
+  }
+
+  function toggleVisualTargetPickerSelection(sessionKey) {
+    if (!state.visualTargetPicker || state.visualTargetPicker.status !== 'ready') {
+      return;
+    }
+
+    const selected = new Set(state.visualTargetPicker.selectedSessionKeys);
+    if (selected.has(sessionKey)) {
+      selected.delete(sessionKey);
+    } else {
+      selected.add(sessionKey);
+    }
+    state.visualTargetPicker = {
+      ...state.visualTargetPicker,
+      selectedSessionKeys: [...selected],
+    };
+    emit();
+  }
+
+  function openSelectedVisualTargets() {
+    if (!state.visualTargetPicker || state.visualTargetPicker.status !== 'ready') {
+      return;
+    }
+
+    const resource = getEntry(state.visualTargetPicker.resourceId);
+    if (!isItmWorkspaceResource(resource)) {
+      closeVisualTargetPicker();
+      return;
+    }
+
+    const selectedTargets = state.visualTargetPicker.targets.filter((target) =>
+      target.available && state.visualTargetPicker.selectedSessionKeys.includes(target.sessionKey));
+    const resourceTitle = resource.metadata.title ?? basenameWorkspacePath(resource.path) ?? resource.path;
+    for (const target of selectedTargets) {
+      openResourceEntry(resource, {
+        placement: state.visualTargetPicker.placement,
+        preferredSurfaceId: target.preferredSurfaceId,
+        sessionKey: target.sessionKey,
+        surfaceState: {
+          itmVisualTarget: {
+            kind: target.kind,
+            id: target.id,
+            label: target.label,
+            viewpointId: target.viewpointId,
+            projection: target.projection,
+            preferredSurfaceId: target.preferredSurfaceId,
+            rendererValue: target.rendererValue,
+            sessionKey: target.sessionKey,
+          },
+        },
+        title: `${resourceTitle} - ${target.label}`,
+      });
+    }
+    closeVisualTargetPicker();
+  }
+
   function isOpenWithCommand(commandId) {
     return commandId.startsWith('surface.open-with:');
   }
@@ -2908,8 +3081,13 @@ function createTextForgeWorkbenchController() {
       ? (target.selection?.kind === 'folder' ? workspaceFolderContextCommandIds : workspaceResourceContextCommandIds)
       : (model.kind === 'main-session' ? mainSessionContextCommandIds : popupSessionContextCommandIds);
     const targetEntry = resolveTargetEntryForCommands(commandContext);
+    const hideOpenWithCommands = model.kind === 'workspace-item' && isItmWorkspaceResource(targetEntry);
     const items = visibleCommands.filter((command) => {
       if (!(allowedIds.includes(command.id) || isOpenWithCommand(command.id))) {
+        return false;
+      }
+
+      if (hideOpenWithCommands && isOpenWithCommand(command.id)) {
         return false;
       }
 
@@ -3381,6 +3559,16 @@ function createTextForgeWorkbenchController() {
     }
   }
 
+  async function openVisualsCommand(commandContext) {
+    const resource = resolveTargetResourceForCommands(commandContext);
+    if (!isItmWorkspaceResource(resource)) {
+      throw new Error('Select an ITM resource to open visual targets.');
+    }
+
+    const activeSession = resolveTargetSessionForCommands(commandContext);
+    await openVisualTargetPickerForResource(resource, activeSession?.placement ?? 'main');
+  }
+
   async function openWithSurfaceCommand(commandId, commandContext) {
     const surfaceId = commandId.slice('surface.open-with:'.length);
     const resource = resolveTargetResourceForCommands(commandContext);
@@ -3562,6 +3750,7 @@ function createTextForgeWorkbenchController() {
       .register('lua.promote-selected-to-automation', ({ context }) => promoteSelectedLuaResourceCommand(context))
       .register('lua.reload-automation', reloadLuaAutomationCommand)
       .register('lua.open-automation-root', openLuaAutomationRootCommand)
+      .register('surface.open-visuals', ({ context }) => openVisualsCommand(context))
       .register('surface.close-active', ({ context }) => closeActiveSurfaceCommand(context))
       .register('surface.refresh-active', ({ context }) => refreshActiveSurfaceCommand(context))
       .register('surface.move-active-to-main', ({ context }) => moveActiveSurfaceCommand('main', context))
@@ -3756,7 +3945,7 @@ function createTextForgeWorkbenchController() {
     const contextMenu = buildContextMenuCommands(state.contextMenu);
     const mainFrame = createMainSessionTabStrip(mainSessions.map((session) => ({
       ...session,
-      title: getEntry(session.resource.resourceId)?.metadata.title ?? getEntry(session.resource.resourceId)?.path ?? session.title,
+      title: session.title ?? getEntry(session.resource.resourceId)?.metadata.title ?? getEntry(session.resource.resourceId)?.path,
     })), {
       activeTabId: state.activeMainSessionId,
     });
@@ -3769,7 +3958,7 @@ function createTextForgeWorkbenchController() {
         const resource = getEntry(session.resource.resourceId);
         return createSurfaceSessionTab({
           ...session,
-          title: resource?.metadata.title ?? resource?.path ?? session.title,
+          title: session.title ?? resource?.metadata.title ?? resource?.path,
         });
       }),
       activeTabId: state.activePopupSessionId,
@@ -3889,6 +4078,12 @@ function createTextForgeWorkbenchController() {
       inspectedDocumentEntry: isWorkspaceResource(inspectedDocumentEntry) ? inspectedDocumentEntry : undefined,
       badgeDiagnostics,
       popupFrame,
+      visualTargetPicker: state.visualTargetPicker
+        ? {
+          ...state.visualTargetPicker,
+          resource: getEntry(state.visualTargetPicker.resourceId),
+        }
+        : undefined,
       selectedEntry: describeSelectedEntry(),
       activeResource,
       activeMainView: getActiveMainView(),
@@ -3930,6 +4125,7 @@ function createTextForgeWorkbenchController() {
       cancelStorageReset,
       closeActivePopupSurface,
       closeContextMenu,
+      closeVisualTargetPicker,
       closeSession,
       confirmStorageReset,
       dropFilesOnTabStrip,
@@ -3939,6 +4135,7 @@ function createTextForgeWorkbenchController() {
       focusPopupSession,
       openMainTabContextMenu,
       openPopupSessionContextMenu,
+      openSelectedVisualTargets,
       openWorkspaceItemContextMenu,
       requestStorageReset,
       retryStorageInitialization,
@@ -3946,6 +4143,7 @@ function createTextForgeWorkbenchController() {
       setUtilityPaneCollapsed,
       setWorkspaceTreeCollapsed,
       setUtilitySection,
+      toggleVisualTargetPickerSelection,
       toggleWorkspaceFolder,
       toggleUtilityPane,
       toggleWorkspaceTree,
@@ -3981,6 +4179,157 @@ function SurfaceMount({ view }) {
     className: 'tf-surface-mount',
     'data-surface-id': view?.id,
   });
+}
+
+function groupItmVisualTargets(targets = []) {
+  return [
+    {
+      id: 'view',
+      title: 'Views',
+      items: targets.filter((target) => target.kind === 'view'),
+    },
+    {
+      id: 'viewpoint',
+      title: 'Viewpoints',
+      items: targets.filter((target) => target.kind === 'viewpoint'),
+    },
+    {
+      id: 'raw-model',
+      title: 'Raw model',
+      items: targets.filter((target) => target.kind === 'raw-model'),
+    },
+  ].filter((group) => group.items.length > 0);
+}
+
+function ItmVisualTargetPickerOverlay({ picker, controller }) {
+  const resourceTitle = picker.resource?.metadata?.title ?? picker.resource?.path ?? 'ITM resource';
+  const groups = groupItmVisualTargets(picker.targets);
+  const selectedCount = picker.selectedSessionKeys.length;
+
+  return element(
+    'div',
+    {
+      className: 'tf-visual-picker__backdrop',
+      onMouseDown: (event) => {
+        if (event.target === event.currentTarget) {
+          controller.actions.closeVisualTargetPicker();
+        }
+      },
+    },
+    element(
+      'section',
+      {
+        className: 'tf-visual-picker',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-label': 'Open visuals',
+      },
+      element(
+        'div',
+        { className: 'tf-visual-picker__header' },
+        element(
+          'div',
+          null,
+          element('strong', null, 'Open visuals'),
+          element('p', { className: 'tf-visual-picker__subtitle' }, resourceTitle),
+        ),
+        element(
+          'button',
+          {
+            type: 'button',
+            className: 'tf-visual-picker__close',
+            onClick: controller.actions.closeVisualTargetPicker,
+          },
+          'Close',
+        ),
+      ),
+      picker.status === 'loading'
+        ? element(TextForgeCallout, {
+          tone: 'info',
+          title: 'Resolving visual targets',
+        }, element('p', null, 'Reading views, viewpoints, raw-model targets, and renderer availability from the ITM document.'))
+        : null,
+      picker.status === 'error'
+        ? element(TextForgeCallout, {
+          tone: 'danger',
+          title: 'Visual targets unavailable',
+        }, element('p', null, picker.error ?? 'Visual target resolution failed.'))
+        : null,
+      picker.status === 'ready' && groups.length === 0
+        ? element(TextForgeCallout, {
+          tone: 'warning',
+          title: 'No visual targets found',
+        }, element('p', null, 'This ITM document does not expose views, viewpoints, or raw-model visual targets.'))
+        : null,
+      picker.status === 'ready'
+        ? element(
+          'div',
+          { className: 'tf-visual-picker__groups' },
+          ...groups.map((group) =>
+            element(
+              'section',
+              {
+                key: group.id,
+                className: 'tf-visual-picker__group',
+              },
+              element('h3', { className: 'tf-visual-picker__group-title' }, group.title),
+              ...group.items.map((target) => {
+                const disabled = target.available !== true;
+                const checked = picker.selectedSessionKeys.includes(target.sessionKey);
+                const diagnosticMessage = target.diagnostics?.[0]?.message;
+                return element(
+                  'label',
+                  {
+                    key: target.sessionKey,
+                    className: `tf-visual-picker__target${disabled ? ' is-disabled' : ''}${checked ? ' is-selected' : ''}`,
+                  },
+                  element('input', {
+                    type: 'checkbox',
+                    checked,
+                    disabled,
+                    onChange: () => controller.actions.toggleVisualTargetPickerSelection(target.sessionKey),
+                  }),
+                  element(
+                    'div',
+                    { className: 'tf-visual-picker__target-copy' },
+                    element('strong', { className: 'tf-visual-picker__target-label' }, target.label),
+                    target.description
+                      ? element('p', { className: 'tf-visual-picker__target-description' }, target.description)
+                      : null,
+                    diagnosticMessage
+                      ? element('p', { className: 'tf-visual-picker__target-diagnostic' }, diagnosticMessage)
+                      : null,
+                  ),
+                );
+              }),
+            )),
+        )
+        : null,
+      element(
+        'div',
+        { className: 'tf-visual-picker__footer' },
+        element(
+          'button',
+          {
+            type: 'button',
+            className: 'tf-button tf-button--secondary',
+            onClick: controller.actions.closeVisualTargetPicker,
+          },
+          'Cancel',
+        ),
+        element(
+          'button',
+          {
+            type: 'button',
+            className: 'tf-button tf-button--primary',
+            disabled: picker.status !== 'ready' || selectedCount === 0,
+            onClick: controller.actions.openSelectedVisualTargets,
+          },
+          selectedCount === 1 ? 'Open 1 target' : `Open ${selectedCount} targets`,
+        ),
+      ),
+    ),
+  );
 }
 
 function listDroppedFiles(dataTransfer) {
@@ -4734,6 +5083,12 @@ function TextForgeWorkbenchApp({ controller }) {
       element(SurfaceMount, { view: snapshot.activePopupView }),
     )
     : null;
+  const visualTargetPickerOverlay = snapshot.visualTargetPicker
+    ? element(ItmVisualTargetPickerOverlay, {
+      picker: snapshot.visualTargetPicker,
+      controller,
+    })
+    : null;
 
   React.useEffect(() => {
     function handleKeyDown(event) {
@@ -4933,6 +5288,7 @@ function TextForgeWorkbenchApp({ controller }) {
       position: snapshot.contextMenu ? { x: snapshot.contextMenu.x, y: snapshot.contextMenu.y } : undefined,
       title: 'Context menu',
     }),
+    visualTargetPickerOverlay,
   );
 }
 

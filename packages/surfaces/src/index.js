@@ -6,6 +6,19 @@ import {
 } from '@textforge/core';
 
 export const surfaceCommandContributions = [
+  createCommand('surface.open-visuals', 'Open visuals...', {
+    category: 'surface',
+    description: 'Open an ITM resource through the visual target picker instead of the plain source editor.',
+    keywords: ['surface', 'visual', 'itm', 'view', 'viewpoint', 'picker'],
+    menu: { id: 'surface', label: 'Surface', groupOrder: 20, order: 5 },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['resource'],
+      selectionRepresentations: ['text'],
+      selectionLanguageIds: ['itm'],
+    },
+  }),
   createCommand('surface.close-active', 'Close active surface', {
     category: 'surface',
     description: 'Close the focused main or popup surface.',
@@ -353,6 +366,8 @@ export function createSurfaceHost(props) {
       contributionId: contribution.id,
       resource: request.resource,
       title: request.title ?? request.resource.path ?? request.resource.resourceId,
+      sessionKey: request.sessionKey,
+      surfaceState: request.surfaceState ? { ...request.surfaceState } : undefined,
       placement: request.placement ?? props.placement,
       state: 'open',
       freshness: 'current',
