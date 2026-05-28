@@ -23,6 +23,7 @@
   "dependencies": {
     "@codemirror/language": "^6.12.3",
     "@textforge/core": "workspace:*",
+    "@textforge/visual-itm": "workspace:*",
     "@textforge/workspace": "workspace:*",
     "fast-xml-parser": "^5.8.0",
     "yaml": "^2.8.0"

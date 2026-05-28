@@ -11,9 +11,11 @@ import {
   createItmResolverDiagnostic,
   createWorkspaceItmIncludeProvider,
   itmResolverDiagnosticCodes,
+  listItmVisualTargets,
   loadItmDocument,
   parseDocument,
   projectItmDocument,
+  resolveItmVisualTarget,
   renderItmPublicationHtml,
   serializeDocument,
   validateItmDocument,
@@ -219,7 +221,7 @@ test('ITM contribution manifest exposes package-owned projection surfaces', () =
   );
 });
 
-test('ITM projection surfaces mount the focused smoke profile one projection at a time', () => {
+test('ITM projection surfaces mount the focused smoke profile one projection at a time', async () => {
   const sourceText = readFileSync(resolve(docsExamplesDirectory, 'itm-surface-smoke.itm'), 'utf8');
   for (const surfaceContribution of contributions.surfaces) {
     const runtime = surfaceContribution.open({
@@ -238,11 +240,75 @@ test('ITM projection surfaces mount the focused smoke profile one projection at 
     };
 
     const dispose = runtime.surface.mount(container);
+    await new Promise((resolve) => setTimeout(resolve, 0));
     assert.match(container.innerHTML, /data-itm-projection=/);
     assert.match(container.innerHTML, /Capability roadmap/);
     dispose();
     assert.equal(container.innerHTML, '');
   }
+});
+
+test('listItmVisualTargets exposes views, viewpoints, and explicit raw-model fallback targets', async () => {
+  const loaded = await loadItmDocument(readFileSync(resolve(docsExamplesDirectory, 'itm-surface-smoke.itm'), 'utf8'), {
+    uri: '/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
+  });
+
+  const targets = listItmVisualTargets(loaded);
+
+  assert.equal(targets.some((target) => target.kind === 'view' && target.id === 'capability_surface' && target.available), true);
+  assert.equal(targets.some((target) => target.kind === 'viewpoint' && target.id === 'capability_focus' && target.available), true);
+  assert.equal(targets.some((target) => target.kind === 'raw-model' && target.projection === 'graph'), true);
+  assert.equal(targets.some((target) => target.kind === 'raw-model' && target.projection === 'mindmap'), true);
+});
+
+test('resolveItmVisualTarget derives Visual ITM with renderer precedence, provenance, and itm-pub parity', async () => {
+  const loaded = await loadItmDocument(readFileSync(resolve(docsExamplesDirectory, 'itm-surface-smoke.itm'), 'utf8'), {
+    uri: '/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
+  });
+
+  const resolvedView = resolveItmVisualTarget(loaded, {
+    view: 'capability_surface',
+    title: 'Capability surface',
+  });
+  const resolvedRawMindmap = resolveItmVisualTarget(loaded, {
+    target: {
+      kind: 'raw-model',
+      id: 'raw-model/mindmap',
+    },
+  });
+
+  assert.equal(resolvedView.target.rendererValue, 'graph.viewer');
+  assert.equal(resolvedView.target.preferredSurfaceId, '@textforge/itm/graph');
+  assert.equal(resolvedView.visualDocument.origin.derivedTarget?.kind, 'view');
+  assert.equal(resolvedView.visualDocument.nodes.some((node) => (node.provenance?.length ?? 0) >= 2), true);
+  assert.equal(resolvedView.visualDiagnostics.length, 0);
+  assert.equal(renderItmPublicationHtml(loaded.effectiveResolvedDocument, { view: 'capability_surface', projection: 'graph' }).includes('data-itm-projection="graph"'), true);
+  assert.equal(resolvedRawMindmap.target.rendererSource, 'local');
+  assert.equal(resolvedRawMindmap.target.preferredSurfaceId, '@textforge/itm/mindmap');
+});
+
+test('resolveItmVisualTarget reports missing declared renderers without silently falling back', async () => {
+  const loaded = await loadItmDocument(`%viewpoint broken
+{
+  pipeline:
+    - select: "[Capability]"
+}
+%view broken_view
+{
+  viewpoint: broken
+}
+&roadmap [Capability] Capability roadmap
+`, {
+    uri: '/docs/broken.itm',
+  });
+
+  const resolved = resolveItmVisualTarget(loaded, {
+    view: 'broken_view',
+  });
+
+  assert.equal(resolved.target.available, false);
+  assert.equal(resolved.diagnostics.some((diagnostic) => diagnostic.code === 'itm.visual.resolve.renderer-missing'), true);
+  assert.equal(resolved.projectedDocument.nodes.length, 0);
 });
 
 test('validateItmDocument surfaces stable include and repository resolver diagnostics', () => {

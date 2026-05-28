@@ -11,6 +11,11 @@ import {
   matchesResourcePredicate,
 } from '@textforge/core';
 import {
+  createVisualItmDiagnostic,
+  createVisualItmDocument,
+  validateVisualItmDocument,
+} from '@textforge/visual-itm';
+import {
   resolveWorkspaceRepositoryLocation,
 } from '@textforge/workspace';
 
@@ -2675,6 +2680,96 @@ function renderStylePropertyValue(value) {
 
 export const itmProjectionKinds = ['tree', 'graph', 'mindmap', 'catalogue', 'matrix', 'report'];
 
+const itmVisualRawModelTargetTemplates = Object.freeze([
+  {
+    id: 'raw-model/tree',
+    label: 'Raw model · Tree',
+    description: 'Open the unconstrained ITM model through the tree surface.',
+    projection: 'tree',
+    rendererValue: 'tree',
+    rendererSource: 'local',
+    preferredSurfaceId: '@textforge/itm/tree',
+  },
+  {
+    id: 'raw-model/graph',
+    label: 'Raw model · Graph',
+    description: 'Open the unconstrained ITM model through the graph surface.',
+    projection: 'graph',
+    rendererValue: 'graph.viewer',
+    rendererSource: 'local',
+    preferredSurfaceId: '@textforge/itm/graph',
+  },
+  {
+    id: 'raw-model/mindmap',
+    label: 'Raw model · Mindmap',
+    description: 'Open the unconstrained ITM model through the mindmap surface.',
+    projection: 'mindmap',
+    rendererValue: 'jsmind',
+    rendererSource: 'local',
+    preferredSurfaceId: '@textforge/itm/mindmap',
+  },
+  {
+    id: 'raw-model/catalogue',
+    label: 'Raw model · Catalogue',
+    description: 'Open the unconstrained ITM model through the catalogue surface.',
+    projection: 'catalogue',
+    rendererValue: 'catalogue',
+    rendererSource: 'local',
+    preferredSurfaceId: '@textforge/itm/catalogue',
+  },
+  {
+    id: 'raw-model/matrix',
+    label: 'Raw model · Matrix',
+    description: 'Open the unconstrained ITM model through the matrix surface.',
+    projection: 'matrix',
+    rendererValue: 'matrix',
+    rendererSource: 'local',
+    preferredSurfaceId: '@textforge/itm/matrix',
+  },
+  {
+    id: 'raw-model/report',
+    label: 'Raw model · Report',
+    description: 'Open the unconstrained ITM model through the report surface.',
+    projection: 'report',
+    rendererValue: 'markdown',
+    rendererSource: 'local',
+    preferredSurfaceId: '@textforge/itm/report',
+  },
+]);
+
+const itmVisualRendererBindings = Object.freeze([
+  {
+    surfaceId: '@textforge/itm/graph',
+    projection: 'graph',
+    aliases: ['cytoscape', 'graph.viewer', 'graph', 'sigma'],
+  },
+  {
+    surfaceId: '@textforge/itm/mindmap',
+    projection: 'mindmap',
+    aliases: ['jsmind', 'mindmap', 'mindmap.viewer'],
+  },
+  {
+    surfaceId: '@textforge/itm/report',
+    projection: 'report',
+    aliases: ['markdown', 'report'],
+  },
+  {
+    surfaceId: '@textforge/itm/tree',
+    projection: 'tree',
+    aliases: ['tree'],
+  },
+  {
+    surfaceId: '@textforge/itm/catalogue',
+    projection: 'catalogue',
+    aliases: ['catalogue', 'catalog'],
+  },
+  {
+    surfaceId: '@textforge/itm/matrix',
+    projection: 'matrix',
+    aliases: ['matrix'],
+  },
+]);
+
 function normalizeItmProjectionKind(kind) {
   switch (String(kind ?? '').trim().toLowerCase()) {
     case 'graph':
@@ -2692,6 +2787,102 @@ function normalizeItmProjectionKind(kind) {
     default:
       return 'tree';
   }
+}
+
+function normalizeRenderValue(value) {
+  return String(value ?? '').trim();
+}
+
+function createItmVisualSessionKey(kind, id, surfaceId) {
+  return `itm-visual:${kind}:${id}:${surfaceId ?? 'unavailable'}`;
+}
+
+function findViewByReference(document, reference) {
+  const normalizedReference = String(reference ?? '').trim();
+  if (!normalizedReference) {
+    return undefined;
+  }
+  return (document.views ?? []).find((view) => view.name === normalizedReference || view.uid === normalizedReference);
+}
+
+function findViewpointByReference(document, reference) {
+  const normalizedReference = String(reference ?? '').trim();
+  if (!normalizedReference) {
+    return undefined;
+  }
+  return (document.viewpoints ?? []).find((viewpoint) =>
+    viewpoint.name === normalizedReference || viewpoint.uid === normalizedReference);
+}
+
+function readPipelineRenderStep(pipeline) {
+  for (const step of pipeline?.steps ?? []) {
+    if (step?.operation === 'render') {
+      return step;
+    }
+  }
+  return undefined;
+}
+
+function readPipelineStepScalar(step) {
+  if (typeof step?.arguments?.value === 'string') {
+    return step.arguments.value;
+  }
+  if (typeof step?.provider === 'string') {
+    return step.provider;
+  }
+  return undefined;
+}
+
+function resolveItmVisualRendererBinding(rendererValue, projectionOverride) {
+  const normalizedRenderer = normalizeRenderValue(rendererValue).toLowerCase();
+  if (!normalizedRenderer && projectionOverride) {
+    return itmVisualRendererBindings.find((binding) => binding.projection === normalizeItmProjectionKind(projectionOverride));
+  }
+
+  const binding = itmVisualRendererBindings.find((candidate) =>
+    candidate.aliases.some((alias) => alias.toLowerCase() === normalizedRenderer));
+  if (binding) {
+    return binding;
+  }
+
+  if (projectionOverride) {
+    return itmVisualRendererBindings.find((candidate) => candidate.projection === normalizeItmProjectionKind(projectionOverride));
+  }
+
+  return undefined;
+}
+
+function createVisualTargetDiagnostic(kind, message, entry, code, document) {
+  return createDiagnostic(message, 'error', {
+    code,
+    file: getEntrySourceFile(entry, document?.uri),
+    uri: document?.uri,
+    range: getEntrySourceRange(entry),
+    origin: {
+      packageId: '@textforge/itm',
+      subsystem: 'itm-visual-target',
+      targetKind: kind,
+    },
+  });
+}
+
+function createUnavailableRendererDiagnostic(targetLabel, rendererValue, entry, document) {
+  return createVisualTargetDiagnostic(
+    'renderer',
+    rendererValue
+      ? `${targetLabel} declares renderer '${rendererValue}', but no compatible visual surface is registered for the current Visual ITM recovery slice.`
+      : `${targetLabel} does not declare a render step. Visual opening requires an explicit renderer with no silent fallback.`,
+    entry,
+    rendererValue ? 'itm.visual.resolve.renderer-unavailable' : 'itm.visual.resolve.renderer-missing',
+    document,
+  );
+}
+
+function cloneDiagnosticArray(diagnostics) {
+  return (diagnostics ?? []).map((diagnostic) => ({
+    ...diagnostic,
+    origin: diagnostic.origin ? { ...diagnostic.origin } : diagnostic.origin,
+  }));
 }
 
 function createInlineStyle(style) {
@@ -3307,6 +3498,333 @@ export function projectItmDocument(input, options = {}) {
   };
 }
 
+function createVisualTargetContext(input) {
+  if (
+    input
+    && typeof input === 'object'
+    && input.document
+    && input.resolvedDocument
+    && input.effectiveDocument
+    && input.effectiveResolvedDocument
+  ) {
+    return input;
+  }
+
+  return evaluateItmDocumentContext(input);
+}
+
+function createVisualTargetDescriptor(input) {
+  return {
+    kind: input.kind,
+    id: input.id,
+    label: input.label,
+    description: input.description,
+    viewpointId: input.viewpointId,
+    projection: normalizeItmProjectionKind(input.projection),
+    rendererValue: normalizeRenderValue(input.rendererValue) || undefined,
+    rendererSource: input.rendererSource === 'local' ? 'local' : 'derived',
+    preferredSurfaceId: input.preferredSurfaceId,
+    sessionKey: input.sessionKey ?? createItmVisualSessionKey(input.kind, input.id, input.preferredSurfaceId),
+    available: input.available !== false,
+    diagnostics: cloneDiagnosticArray(input.diagnostics),
+  };
+}
+
+function createRawModelTargetDescriptors() {
+  return itmVisualRawModelTargetTemplates.map((template) =>
+    createVisualTargetDescriptor({
+      kind: 'raw-model',
+      ...template,
+      available: true,
+      diagnostics: [],
+      sessionKey: createItmVisualSessionKey('raw-model', template.id, template.preferredSurfaceId),
+    }));
+}
+
+function createViewTargetDescriptor(document, view) {
+  const viewpoint = findViewpointByReference(document, view.viewpointRef);
+  const renderStep = readPipelineRenderStep(viewpoint?.pipeline);
+  const rendererValue = readPipelineStepScalar(renderStep);
+  const binding = resolveItmVisualRendererBinding(rendererValue);
+  const diagnostics = [];
+  if (!viewpoint) {
+    diagnostics.push(createVisualTargetDiagnostic(
+      'view',
+      `View '${view.name}' references missing viewpoint '${view.viewpointRef}'.`,
+      view,
+      'itm.visual.resolve.viewpoint-missing',
+      document,
+    ));
+  }
+  if (viewpoint && !binding) {
+    diagnostics.push(createUnavailableRendererDiagnostic(`View '${view.name}'`, rendererValue, viewpoint, document));
+  }
+
+  return createVisualTargetDescriptor({
+    kind: 'view',
+    id: view.name,
+    label: `View · ${view.title ?? view.name}`,
+    description: viewpoint
+      ? `Viewpoint ${viewpoint.title ?? viewpoint.name}${rendererValue ? ` · render ${rendererValue}` : ' · render missing'}`
+      : `Missing viewpoint ${view.viewpointRef}`,
+    viewpointId: viewpoint?.name ?? view.viewpointRef,
+    projection: binding?.projection ?? 'graph',
+    rendererValue,
+    rendererSource: 'derived',
+    preferredSurfaceId: binding?.surfaceId,
+    available: Boolean(viewpoint && binding),
+    diagnostics,
+    sessionKey: createItmVisualSessionKey('view', view.name, binding?.surfaceId),
+  });
+}
+
+function createViewpointTargetDescriptor(document, viewpoint) {
+  const renderStep = readPipelineRenderStep(viewpoint.pipeline);
+  const rendererValue = readPipelineStepScalar(renderStep);
+  const binding = resolveItmVisualRendererBinding(rendererValue);
+  const diagnostics = binding
+    ? []
+    : [createUnavailableRendererDiagnostic(`Viewpoint '${viewpoint.name}'`, rendererValue, viewpoint, document)];
+  return createVisualTargetDescriptor({
+    kind: 'viewpoint',
+    id: viewpoint.name,
+    label: `Viewpoint · ${viewpoint.title ?? viewpoint.name}`,
+    description: rendererValue ? `Render ${rendererValue}` : 'Render step missing',
+    viewpointId: viewpoint.name,
+    projection: binding?.projection ?? 'graph',
+    rendererValue,
+    rendererSource: 'derived',
+    preferredSurfaceId: binding?.surfaceId,
+    available: Boolean(binding),
+    diagnostics,
+    sessionKey: createItmVisualSessionKey('viewpoint', viewpoint.name, binding?.surfaceId),
+  });
+}
+
+export function listItmVisualTargets(input) {
+  const context = createVisualTargetContext(input);
+  const document = context.effectiveResolvedDocument ?? context.resolvedDocument;
+  const views = [...(document.views ?? [])].sort(compareSourcePositions);
+  const viewpoints = [...(document.viewpoints ?? [])].sort(compareSourcePositions);
+
+  return [
+    ...views.map((view) => createViewTargetDescriptor(document, view)),
+    ...viewpoints.map((viewpoint) => createViewpointTargetDescriptor(document, viewpoint)),
+    ...createRawModelTargetDescriptors(),
+  ];
+}
+
+function resolveRequestedVisualTarget(targets, options = {}) {
+  const explicitTarget = options.target;
+  if (explicitTarget) {
+    const normalizedKind = String(explicitTarget.kind ?? '').trim();
+    const normalizedId = String(explicitTarget.id ?? '').trim();
+    const bySessionKey = String(explicitTarget.sessionKey ?? '').trim();
+    return targets.find((target) =>
+      (normalizedKind && normalizedId && target.kind === normalizedKind && target.id === normalizedId)
+      || (bySessionKey && target.sessionKey === bySessionKey));
+  }
+
+  if (typeof options.view === 'string' && options.view.trim()) {
+    return targets.find((target) => target.kind === 'view' && target.id === options.view.trim());
+  }
+
+  if (typeof options.viewpoint === 'string' && options.viewpoint.trim()) {
+    return targets.find((target) => target.kind === 'viewpoint' && target.id === options.viewpoint.trim());
+  }
+
+  if (typeof options.projection === 'string' && options.projection.trim()) {
+    const normalizedProjection = normalizeItmProjectionKind(options.projection);
+    return targets.find((target) =>
+      target.kind === 'raw-model'
+      && target.projection === normalizedProjection);
+  }
+
+  return targets.find((target) => target.kind === 'view')
+    ?? targets.find((target) => target.kind === 'viewpoint')
+    ?? targets.find((target) => target.kind === 'raw-model' && target.projection === 'graph')
+    ?? targets[0];
+}
+
+function cloneVisualSourceRange(range) {
+  if (!range) {
+    return undefined;
+  }
+
+  if (range.start || range.end) {
+    return {
+      start: range.start ? { ...range.start } : undefined,
+      end: range.end ? { ...range.end } : undefined,
+    };
+  }
+
+  return {
+    startLine: range.startLine,
+    startColumn: range.startColumn,
+    endLine: range.endLine,
+    endColumn: range.endColumn,
+  };
+}
+
+function createVisualItmItemProvenance(projectedDocument, sourceEntry) {
+  const provenance = [];
+  if (sourceEntry) {
+    provenance.push({
+      sourceKind: 'model-item',
+      sourceId: sourceEntry.qualifiedId ?? sourceEntry.id ?? sourceEntry.uid,
+      sourcePath: getEntrySourceFile(sourceEntry, projectedDocument.resolvedDocument?.uri),
+      sourceRange: cloneVisualSourceRange(getEntrySourceRange(sourceEntry)),
+    });
+  }
+  if (projectedDocument.viewpoint) {
+    provenance.push({
+      sourceKind: 'viewpoint',
+      sourceId: projectedDocument.viewpoint.name,
+      sourcePath: getEntrySourceFile(projectedDocument.viewpoint, projectedDocument.resolvedDocument?.uri),
+      sourceRange: cloneVisualSourceRange(getEntrySourceRange(projectedDocument.viewpoint)),
+    });
+  }
+  if (projectedDocument.view) {
+    provenance.push({
+      sourceKind: 'view',
+      sourceId: projectedDocument.view.name,
+      sourcePath: getEntrySourceFile(projectedDocument.view, projectedDocument.resolvedDocument?.uri),
+      sourceRange: cloneVisualSourceRange(getEntrySourceRange(projectedDocument.view)),
+    });
+  }
+  return provenance;
+}
+
+function createMindmapLayoutHints(projectedDocument) {
+  const sideById = new Map();
+
+  function visit(node) {
+    if (!node) {
+      return;
+    }
+    sideById.set(node.id, node.side);
+    for (const child of node.children ?? []) {
+      visit(child);
+    }
+  }
+
+  visit(projectedDocument.mindmap?.root);
+  return sideById;
+}
+
+function createVisualItmDocumentDiagnostics(projectedDocument, diagnostics) {
+  return diagnostics.map((diagnostic) => createVisualItmDiagnostic({
+    severity: diagnostic.severity === 'information' || diagnostic.severity === 'observation'
+      ? 'info'
+      : diagnostic.severity,
+    code: diagnostic.code ?? 'itm.visual.resolve',
+    message: diagnostic.message,
+    subjectId: diagnostic.entityUid ?? diagnostic.relationshipUid ?? diagnostic.viewUid ?? diagnostic.viewpointUid,
+    provenance: [
+      {
+        sourceKind: projectedDocument.view ? 'view' : projectedDocument.viewpoint ? 'viewpoint' : 'translated',
+        sourceId: projectedDocument.view?.name ?? projectedDocument.viewpoint?.name,
+        sourcePath: diagnostic.file ?? diagnostic.uri ?? projectedDocument.resolvedDocument?.uri,
+        sourceRange: cloneVisualSourceRange(diagnostic.range),
+      },
+    ].filter((entry) => entry.sourceId || entry.sourcePath),
+  }));
+}
+
+export function resolveItmVisualTarget(input, options = {}) {
+  const context = createVisualTargetContext(input);
+  const target = resolveRequestedVisualTarget(listItmVisualTargets(context), options);
+  const fallbackTarget = target ?? createRawModelTargetDescriptors().find((entry) => entry.projection === 'graph');
+  const resolvedTarget = createVisualTargetDescriptor(fallbackTarget);
+  const projectionInput = resolvedTarget.available === false
+    ? createDocument({
+      ...(context.effectiveDocument ?? context.document ?? context.effectiveResolvedDocument ?? context.resolvedDocument),
+      entities: [],
+      relationships: [],
+    })
+    : (context.effectiveResolvedDocument ?? context.resolvedDocument);
+  const projectedDocument = projectItmDocument(projectionInput, {
+    view: resolvedTarget.kind === 'view' ? resolvedTarget.id : undefined,
+    viewpoint: resolvedTarget.kind === 'viewpoint' ? resolvedTarget.id : undefined,
+    projection: options.projection ?? resolvedTarget.projection,
+    title: options.title ?? resolvedTarget.label,
+    includeImplicitRelationships: options.includeImplicitRelationships,
+    includeAncestors: options.includeAncestors,
+  });
+  const graphNodeById = new Map((projectedDocument.graph?.nodes ?? []).map((node) => [node.id, node]));
+  const relationshipByUid = new Map((projectedDocument.resolvedDocument.relationships ?? []).map((relationship) => [relationship.uid, relationship]));
+  const entityByUid = new Map((projectedDocument.resolvedDocument.entities ?? []).map((entity) => [entity.uid, entity]));
+  const mindmapLayoutHints = createMindmapLayoutHints(projectedDocument);
+  const diagnostics = mergeDiagnostics(
+    context.diagnostics,
+    resolvedTarget.diagnostics,
+    projectedDocument.diagnostics,
+  );
+  const visualDocument = createVisualItmDocument({
+    origin: {
+      mode: 'derived-itm',
+      sourceResource: projectedDocument.resolvedDocument.uri ?? projectedDocument.sourceDocument?.uri,
+      derivedTarget: {
+        kind: resolvedTarget.kind,
+        id: resolvedTarget.id,
+        viewpointId: resolvedTarget.viewpointId,
+      },
+    },
+    renderer: {
+      value: resolvedTarget.rendererValue,
+      source: resolvedTarget.rendererSource,
+      hints: resolvedTarget.rendererValue
+        ? {
+          renderer: resolvedTarget.rendererValue,
+        }
+        : undefined,
+    },
+    diagnostics: createVisualItmDocumentDiagnostics(projectedDocument, diagnostics),
+    nodes: projectedDocument.nodes.map((node) => {
+      const graphNode = graphNodeById.get(node.id);
+      const entity = entityByUid.get(node.uid);
+      const layout = {
+        ...(mindmapLayoutHints.has(node.id) ? { 'jsmind.side': mindmapLayoutHints.get(node.id) } : {}),
+        ...(typeof graphNode?.depth === 'number' ? { depth: graphNode.depth } : {}),
+      };
+      return {
+        id: node.id,
+        label: node.label,
+        kind: node.typeRef,
+        classes: node.typeRef ? [node.typeRef] : [],
+        tags: entity?.tags ?? [],
+        parentId: node.parentId,
+        style: graphNode?.style,
+        layout: Object.keys(layout).length > 0 ? layout : undefined,
+        provenance: createVisualItmItemProvenance(projectedDocument, entity),
+      };
+    }),
+    edges: projectedDocument.graph.edges.map((edge) => {
+      const relationship = relationshipByUid.get(edge.uid);
+      return {
+        id: edge.id,
+        sourceId: edge.sourceId,
+        targetId: edge.targetId,
+        label: edge.label,
+        kind: edge.typeRef,
+        classes: edge.typeRef ? [edge.typeRef] : [],
+        tags: relationship?.tags ?? [],
+        style: edge.style,
+        provenance: createVisualItmItemProvenance(projectedDocument, relationship),
+      };
+    }),
+  });
+  const visualDiagnostics = validateVisualItmDocument(visualDocument);
+
+  return {
+    target: resolvedTarget,
+    projectedDocument,
+    visualDocument,
+    diagnostics,
+    visualDiagnostics,
+  };
+}
+
 export function createItmGraphvizDiagramSource(input, options = {}) {
   const projected = ensureProjectedItmModel(input, options);
   const graphProjection = projected.graph ?? createGraphProjection(projected);
@@ -3573,6 +4091,21 @@ function createStaticHtmlSurface(model) {
   };
 }
 
+function createItmSurfaceMessageHtml(title, message, tone = 'info') {
+  return `<section class="tf-itm-publication tf-itm-publication--${tone}"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></section>`;
+}
+
+function createSurfaceIncludeProviders(execution) {
+  const includeProviders = [];
+  if (execution.workspaceService?.getEntryByPath) {
+    includeProviders.push(createWorkspaceItmIncludeProvider(execution.workspaceService, {
+      basePath: execution.resource?.path,
+      ...(execution.repositoryResolution ?? {}),
+    }));
+  }
+  return includeProviders;
+}
+
 function createItmProjectionSurfaceContribution(projectionKind, label, description) {
   return {
     id: `@textforge/itm/${projectionKind}`,
@@ -3584,16 +4117,18 @@ function createItmProjectionSurfaceContribution(projectionKind, label, descripti
     readOnly: true,
     documentPredicate: itmDocumentPredicate,
     open(execution = {}) {
-      const sourceText = execution.sourceText ?? '';
       const resourceTitle = execution.resourceTitle ?? execution.resource?.path ?? label;
-
-      if (!sourceText.trim()) {
-        const surface = createStaticHtmlSurface({
-          id: `${projectionKind}:${execution.resource?.resourceId ?? 'virtual'}`,
-          title: resourceTitle,
-          projection: projectionKind,
-          html: '<section class="tf-itm-publication tf-itm-publication--error"><p>No ITM source is available for this surface.</p></section>',
-          diagnostics: [createDiagnostic('No ITM source is available for the requested ITM projection surface.', 'error', {
+      const sourceText = execution.sourceText ?? '';
+      const surfaceModel = {
+        id: `${projectionKind}:${execution.resource?.resourceId ?? 'virtual'}`,
+        title: resourceTitle,
+        projection: projectionKind,
+        html: sourceText.trim()
+          ? createItmSurfaceMessageHtml(resourceTitle, `Resolving ${projectionKind} target...`)
+          : createItmSurfaceMessageHtml(resourceTitle, 'No ITM source is available for this surface.', 'error'),
+        diagnostics: sourceText.trim()
+          ? []
+          : [createDiagnostic('No ITM source is available for the requested ITM projection surface.', 'error', {
             resource: execution.resource,
             code: 'itm.surface.source-missing',
             origin: {
@@ -3602,34 +4137,73 @@ function createItmProjectionSurfaceContribution(projectionKind, label, descripti
               contributionId: `@textforge/itm/${projectionKind}`,
             },
           })],
-        });
-        return {
-          mountId: `${execution.session?.id ?? 'surface'}:${projectionKind}:${execution.updatedAt ?? 'current'}`,
-          summary: `ITM ${projectionKind} projection unavailable.`,
-          detail: 'Missing source',
-          readOnly: true,
-          surface,
-        };
-      }
+      };
+      const surface = {
+        id: surfaceModel.id,
+        model: surfaceModel,
+        mount(container) {
+          let disposed = false;
+          container.innerHTML = surfaceModel.html;
+          if (!sourceText.trim()) {
+            return () => {
+              disposed = true;
+              container.innerHTML = '';
+            };
+          }
 
-      const parsed = parseDocument(sourceText, {
-        uri: execution.resource?.path,
-      });
-      const projected = projectItmDocument(parsed, {
-        projection: projectionKind,
-        title: resourceTitle,
-      });
-      const html = renderProjectedModel(projected, {
-        projection: projectionKind,
-        title: resourceTitle,
-      });
-      const surface = createStaticHtmlSurface({
-        id: `${projectionKind}:${execution.resource?.resourceId ?? 'virtual'}`,
-        title: resourceTitle,
-        projection: projectionKind,
-        html,
-        diagnostics: [],
-      });
+          void (async () => {
+            try {
+              const loaded = await loadItmDocument(sourceText, {
+                strict: false,
+                uri: execution.resource?.path,
+                includeProviders: createSurfaceIncludeProviders(execution),
+                repositoryResolution: execution.repositoryResolution,
+                contributionRegistry: execution.contributionRegistry,
+                documentResource: {
+                  path: execution.resource?.path,
+                  kind: 'resource',
+                  representation: 'text',
+                  languageId: 'itm',
+                  mimeType: 'text/x-itm',
+                },
+              });
+              const requestedTarget = execution.session?.surfaceState?.itmVisualTarget;
+              const resolved = resolveItmVisualTarget(loaded, {
+                target: requestedTarget,
+                projection: requestedTarget?.projection ?? projectionKind,
+                title: requestedTarget?.label ?? resourceTitle,
+              });
+              surfaceModel.diagnostics = [...resolved.diagnostics, ...resolved.visualDiagnostics];
+              surfaceModel.html = renderProjectedModel(resolved.projectedDocument, {
+                projection: resolved.target.projection,
+                title: requestedTarget?.label ?? resourceTitle,
+              });
+            } catch (error) {
+              surfaceModel.diagnostics = [
+                createDiagnostic(error?.message ?? 'ITM visual surface resolution failed.', 'error', {
+                  resource: execution.resource,
+                  code: 'itm.surface.resolve-failed',
+                  origin: {
+                    packageId: '@textforge/itm',
+                    subsystem: 'itm-surface',
+                    contributionId: `@textforge/itm/${projectionKind}`,
+                  },
+                }),
+              ];
+              surfaceModel.html = createItmSurfaceMessageHtml(resourceTitle, error?.message ?? 'ITM visual surface resolution failed.', 'error');
+            }
+
+            if (!disposed) {
+              container.innerHTML = surfaceModel.html;
+            }
+          })();
+
+          return () => {
+            disposed = true;
+            container.innerHTML = '';
+          };
+        },
+      };
       return {
         mountId: `${execution.session?.id ?? 'surface'}:${projectionKind}:${execution.updatedAt ?? 'current'}`,
         summary: `Package-owned ITM ${projectionKind} projection surface.`,
@@ -3747,13 +4321,15 @@ function createItmGeneratedDiagramResources(input) {
 }
 
 async function renderItmGraphPublication(selectedModel, renderOptions, execution, blockIdSuffix = '') {
-  const projected = projectItmDocument(
-    selectedModel.effectiveResolvedDocument
-      ?? selectedModel.effectiveDocument
-      ?? selectedModel.resolvedDocument
-      ?? selectedModel.document,
-    renderOptions,
-  );
+  const resolved = resolveItmVisualTarget(selectedModel, {
+    view: renderOptions.view,
+    viewpoint: renderOptions.viewpoint,
+    projection: 'graph',
+    title: renderOptions.title,
+    includeImplicitRelationships: renderOptions.includeImplicitRelationships,
+    includeAncestors: renderOptions.includeAncestors,
+  });
+  const projected = resolved.projectedDocument;
   const fallbackHtml = renderProjectedModel(projected, {
     ...renderOptions,
     projection: 'graph',
@@ -3762,7 +4338,7 @@ async function renderItmGraphPublication(selectedModel, renderOptions, execution
   if (!execution.pipelineRunner) {
     return {
       html: fallbackHtml,
-      diagnostics: [],
+      diagnostics: resolved.diagnostics,
       generatedResources: [],
     };
   }
@@ -3792,14 +4368,14 @@ async function renderItmGraphPublication(selectedModel, renderOptions, execution
     if (!svg) {
       return {
         html: fallbackHtml,
-        diagnostics: pipelineResult.diagnostics ?? [],
+        diagnostics: mergeDiagnostics(resolved.diagnostics, pipelineResult.diagnostics ?? []),
         generatedResources: pipelineResult.generatedResources ?? [],
       };
     }
 
     return {
       html: renderPublicationSection(projected, { ...renderOptions, projection: 'graph' }, `<div class="tf-itm-graph__stage">${svg}</div>`),
-      diagnostics: pipelineResult.diagnostics ?? [],
+      diagnostics: mergeDiagnostics(resolved.diagnostics, pipelineResult.diagnostics ?? []),
       generatedResources: [
         ...(pipelineResult.generatedResources ?? []),
         ...createItmGeneratedDiagramResources({
@@ -3815,7 +4391,7 @@ async function renderItmGraphPublication(selectedModel, renderOptions, execution
   } catch (error) {
     return {
       html: fallbackHtml,
-      diagnostics: [
+      diagnostics: mergeDiagnostics(resolved.diagnostics, [
         createDiagnostic(error?.message ?? 'Graph projection rendering failed.', 'warning', {
           resource: execution.sourceResource,
           code: 'itm.pub.graph-render-failed',
@@ -3825,7 +4401,7 @@ async function renderItmGraphPublication(selectedModel, renderOptions, execution
             fenceName: 'itm-pub',
           },
         }),
-      ],
+      ]),
       generatedResources: [],
     };
   }

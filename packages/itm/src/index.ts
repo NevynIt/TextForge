@@ -10,6 +10,10 @@ import type {
   WorkspaceRepositoryResolverOptions,
   WorkspaceService,
 } from '@textforge/workspace';
+import type {
+  VisualItmDiagnostic,
+  VisualItmDocument,
+} from '@textforge/visual-itm';
 
 export * from './upstream/index.js';
 
@@ -227,6 +231,44 @@ export interface ItmProjectedDocument {
   readonly mermaidMindmapSource: string;
 }
 
+export type ItmVisualTargetKind = 'view' | 'viewpoint' | 'raw-model';
+
+export interface ItmVisualTargetDescriptor {
+  readonly kind: ItmVisualTargetKind;
+  readonly id: string;
+  readonly label: string;
+  readonly description?: string;
+  readonly viewpointId?: string;
+  readonly projection: ItmProjectionKind;
+  readonly rendererValue?: string;
+  readonly rendererSource: 'derived' | 'local';
+  readonly preferredSurfaceId?: string;
+  readonly sessionKey: string;
+  readonly available: boolean;
+  readonly diagnostics: ReadonlyArray<ItmDiagnostic>;
+}
+
+export interface ResolveItmVisualTargetOptions {
+  readonly target?: Partial<ItmVisualTargetDescriptor> & {
+    readonly kind?: ItmVisualTargetKind;
+    readonly id?: string;
+  };
+  readonly view?: string;
+  readonly viewpoint?: string;
+  readonly projection?: ItmProjectionKind;
+  readonly title?: string;
+  readonly includeImplicitRelationships?: boolean;
+  readonly includeAncestors?: boolean;
+}
+
+export interface ResolvedItmVisualTarget {
+  readonly target: ItmVisualTargetDescriptor;
+  readonly projectedDocument: ItmProjectedDocument;
+  readonly visualDocument: VisualItmDocument;
+  readonly diagnostics: ReadonlyArray<ItmDiagnostic>;
+  readonly visualDiagnostics: ReadonlyArray<VisualItmDiagnostic>;
+}
+
 export type ItmResolverDiagnosticCategory =
   | 'unresolved'
   | 'unsupported'
@@ -285,6 +327,13 @@ export declare function projectItmDocument(
   input: ItmDocument | ResolvedItmDocument,
   options?: ProjectItmDocumentOptions,
 ): ItmProjectedDocument;
+export declare function listItmVisualTargets(
+  input: ItmLoadDocumentResult | ItmDocument | ResolvedItmDocument,
+): ReadonlyArray<ItmVisualTargetDescriptor>;
+export declare function resolveItmVisualTarget(
+  input: ItmLoadDocumentResult | ItmDocument | ResolvedItmDocument,
+  options?: ResolveItmVisualTargetOptions,
+): ResolvedItmVisualTarget;
 export declare function createItmGraphvizDiagramSource(
   input: ItmDocument | ResolvedItmDocument | ItmProjectedDocument,
   options?: ProjectItmDocumentOptions,

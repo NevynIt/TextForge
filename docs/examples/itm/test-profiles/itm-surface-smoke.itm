@@ -7,6 +7,7 @@
 {
   pipeline:
     - select: "[Capability]"
+    - render: graph.viewer
 }
 
 %view capability_surface
