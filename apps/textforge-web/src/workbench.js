@@ -129,6 +129,9 @@ const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const workspaceDatabaseName = 'textforge-workspace';
 const workbenchUiStateStorageKey = 'textforge-workbench-ui-state:v1';
+const workbenchUiStateResourcePath = '/.textforge/state/workbench-ui.json';
+const workbenchUiStateFolderPath = dirnameWorkspacePath(workbenchUiStateResourcePath);
+const surfaceViewportScrollByViewId = new Map();
 const sampleResourcePaths = {
   notes: '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md',
 };
@@ -603,6 +606,14 @@ function readStoredWorkbenchUiState() {
       return undefined;
     }
 
+    return parseWorkbenchUiState(raw);
+  } catch {
+    return undefined;
+  }
+}
+
+function parseWorkbenchUiState(raw) {
+  try {
     const parsed = JSON.parse(raw);
     return typeof parsed === 'object' && parsed ? parsed : undefined;
   } catch {
@@ -888,6 +899,8 @@ function createTextForgeWorkbenchController() {
   const listeners = new Set();
   let cachedSnapshot;
   let bootstrapApplied = false;
+  let suspendWorkbenchUiStatePersistence = false;
+  let lastPersistedWorkbenchUiStateText;
   const state = {
     activeMainSessionId: undefined,
     activePopupSessionId: undefined,
@@ -918,7 +931,7 @@ function createTextForgeWorkbenchController() {
 
   function emit() {
     cachedSnapshot = undefined;
-    if (runtime.status === 'ready') {
+    if (runtime.status === 'ready' && !suspendWorkbenchUiStatePersistence) {
       persistWorkbenchUiState();
     }
     for (const listener of listeners) {
@@ -1038,8 +1051,93 @@ function createTextForgeWorkbenchController() {
     };
   }
 
+  function ensureWorkspaceFolderIn(service, path) {
+    const normalizedPath = normalizeWorkspacePath(path);
+    if (normalizedPath === '/') {
+      return service.getEntryByPath('/');
+    }
+
+    let currentPath = '/';
+    let currentFolder = service.getEntryByPath(currentPath);
+    for (const segment of normalizedPath.split('/').filter(Boolean)) {
+      currentPath = joinWorkspacePath(currentPath, segment);
+      const existingFolder = service.getEntryByPath(currentPath);
+      if (existingFolder?.kind === 'folder') {
+        currentFolder = existingFolder;
+        continue;
+      }
+
+      currentFolder = service.createFolder({
+        path: currentPath,
+        title: basenameWorkspacePath(currentPath),
+      });
+    }
+
+    return currentFolder;
+  }
+
+  function readStoredWorkbenchUiStateFromWorkspace() {
+    const entry = workspace.getEntryByPath(workbenchUiStateResourcePath);
+    if (!entry || entry.kind !== 'resource' || entry.representation !== 'text') {
+      return undefined;
+    }
+
+    const parsed = parseWorkbenchUiState(entry.text);
+    if (parsed) {
+      lastPersistedWorkbenchUiStateText = entry.text;
+    }
+    return parsed;
+  }
+
+  function writeWorkbenchUiStateToWorkspace(stateText) {
+    const writableWorkspace = persistedWorkspace ?? workspace;
+    if (!writableWorkspace || typeof writableWorkspace.getEntryByPath !== 'function') {
+      return;
+    }
+
+    const existing = writableWorkspace.getEntryByPath(workbenchUiStateResourcePath);
+    if (existing?.kind === 'resource' && existing.representation === 'text') {
+      if (existing.text === stateText) {
+        lastPersistedWorkbenchUiStateText = stateText;
+        return;
+      }
+
+      writableWorkspace.saveTextResource({
+        resourceId: existing.id,
+        text: stateText,
+        languageId: existing.languageId ?? 'json',
+        mimeType: existing.mimeType ?? 'application/json',
+      });
+      lastPersistedWorkbenchUiStateText = stateText;
+      return;
+    }
+
+    ensureWorkspaceFolderIn(writableWorkspace, workbenchUiStateFolderPath);
+    writableWorkspace.createTextResource({
+      path: workbenchUiStateResourcePath,
+      title: basenameWorkspacePath(workbenchUiStateResourcePath),
+      text: stateText,
+      languageId: 'json',
+      mimeType: 'application/json',
+    });
+    lastPersistedWorkbenchUiStateText = stateText;
+  }
+
+  function readPersistedWorkbenchUiState() {
+    return readStoredWorkbenchUiStateFromWorkspace() ?? readStoredWorkbenchUiState();
+  }
+
   function persistWorkbenchUiState() {
-    writeStoredWorkbenchUiState(buildStoredWorkbenchUiState());
+    const nextState = buildStoredWorkbenchUiState();
+    writeStoredWorkbenchUiState(nextState);
+    const stateText = JSON.stringify(nextState);
+    if (
+      stateText === lastPersistedWorkbenchUiStateText
+      && workspace.getEntryByPath(workbenchUiStateResourcePath)
+    ) {
+      return;
+    }
+    writeWorkbenchUiStateToWorkspace(stateText);
   }
 
   function focusRestoredSession(descriptor) {
@@ -1070,7 +1168,7 @@ function createTextForgeWorkbenchController() {
       return false;
     }
 
-    const storedState = readStoredWorkbenchUiState();
+    const storedState = readPersistedWorkbenchUiState();
     const storedMainSessions = storedState?.sessions?.main ?? [];
     const storedPopupSessions = storedState?.sessions?.popup ?? [];
     if (storedMainSessions.length === 0 && storedPopupSessions.length === 0) {
@@ -1207,6 +1305,7 @@ function createTextForgeWorkbenchController() {
     markdownPreviewRequests.clear();
     luaConsoleStateByResourceId.clear();
     luaConsoleSessionStateByResourceId.clear();
+    surfaceViewportScrollByViewId.clear();
     state.activeMainSessionId = undefined;
     state.activePopupSessionId = undefined;
     state.workspaceTreeEdit = undefined;
@@ -1483,6 +1582,12 @@ function createTextForgeWorkbenchController() {
     return allTreeItems
       .filter((item) => {
         if (item.path === luaConsoleResourcePath) {
+          return false;
+        }
+        if (item.path === workbenchUiStateFolderPath || item.path === workbenchUiStateResourcePath) {
+          return false;
+        }
+        if (item.path.startsWith(`${workbenchUiStateFolderPath}/`)) {
           return false;
         }
         let parentPath = dirnameWorkspacePath(item.path);
@@ -4170,6 +4275,7 @@ function createTextForgeWorkbenchController() {
     });
     runtime.status = 'loading';
     storageFailure = undefined;
+    suspendWorkbenchUiStatePersistence = true;
     state.storageResetPending = false;
     if (options.resetStorage) {
       state.utilityPaneOpen = true;
@@ -4239,6 +4345,8 @@ function createTextForgeWorkbenchController() {
         emit();
       }
       await applyWorkbenchBootstrapOptions();
+      suspendWorkbenchUiStatePersistence = false;
+      persistWorkbenchUiState();
     } catch (error) {
       workspace = createWorkspaceService({
         workspaceId: 'textforge-shell',
@@ -4252,6 +4360,7 @@ function createTextForgeWorkbenchController() {
       state.selectedWorkspaceItemId = undefined;
       state.utilityPaneOpen = true;
       state.utilitySectionId = 'storage';
+      suspendWorkbenchUiStatePersistence = false;
       emit();
     }
   }
@@ -4551,12 +4660,36 @@ function SurfaceMount({ view }) {
     }
 
     const scrollHost = mountRef.current.closest('.tf-surface-frame__viewport, .tf-popup-host__body');
-    if (scrollHost && typeof scrollHost.scrollTo === 'function') {
-      scrollHost.scrollTo({ top: 0, left: 0 });
+    const dispose = view.surface.mount(mountRef.current);
+    const restoreScroll = surfaceViewportScrollByViewId.get(view.id) ?? { top: 0, left: 0 };
+    let restoreFrameId;
+    if (scrollHost) {
+      const applyScroll = () => {
+        if (typeof scrollHost.scrollTo === 'function') {
+          scrollHost.scrollTo({ top: restoreScroll.top, left: restoreScroll.left });
+          return;
+        }
+        scrollHost.scrollTop = restoreScroll.top;
+        scrollHost.scrollLeft = restoreScroll.left;
+      };
+
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        restoreFrameId = window.requestAnimationFrame(applyScroll);
+      } else {
+        applyScroll();
+      }
     }
 
-    const dispose = view.surface.mount(mountRef.current);
     return () => {
+      if (restoreFrameId !== undefined && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+        window.cancelAnimationFrame(restoreFrameId);
+      }
+      if (scrollHost) {
+        surfaceViewportScrollByViewId.set(view.id, {
+          top: scrollHost.scrollTop,
+          left: scrollHost.scrollLeft,
+        });
+      }
       if (typeof dispose === 'function') {
         dispose();
       }
