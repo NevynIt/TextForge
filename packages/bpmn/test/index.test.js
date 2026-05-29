@@ -3,15 +3,21 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import { contributions as coreContributions, createContributionRegistry } from '@textforge/core';
+import {
+  contributions as coreContributions,
+  createContributionRegistry,
+  matchesResourcePredicate,
+} from '@textforge/core';
 import { contributions as itmContributions, loadItmDocument } from '@textforge/itm';
 
 import {
   applyBpmnDiagramInterchangeToXml,
   bpmnCapabilityIds,
+  bpmnViewerSurfaceDocumentPredicate,
   bundledBpmnReferenceAssets,
   collectBpmnMvpScopeDiagnostics,
   contributions,
+  createBpmnViewerModelFromItmSource,
   createBpmnViewerModelFromXml,
   extractBpmnDiagramInterchangeView,
   importBpmnSemanticXmlResult,
@@ -114,6 +120,15 @@ test('bpmn viewer model parses BPMN XML and surfaces parse diagnostics', async (
   assert.equal(contributions.surfaces.some((surface) => surface.id === '@textforge/bpmn/viewer'), true);
 });
 
+test('bpmn viewer surface matches uploaded bpm files without depending on browser mime sniffing', () => {
+  assert.equal(matchesResourcePredicate(bpmnViewerSurfaceDocumentPredicate, {
+    representation: 'text',
+    path: '/docs/test.bpmn',
+    languageId: 'bpmn-xml',
+    mimeType: 'application/octet-stream',
+  }), true);
+});
+
 test('bpmn DI extraction reads preserved bounds, routes, and label bounds from ITM views', () => {
   const itmSource = readFileSync(resolve(workspaceRoot, bundledBpmnReferenceAssets.convertedItmPath), 'utf8');
   const extracted = extractBpmnDiagramInterchangeView(itmSource, { viewName: 'bpmn_diagram' });
@@ -171,4 +186,51 @@ test('bpmn DI application can project ITM view geometry back onto BPMN XML read-
   assert.equal(applied.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
   assert.equal(updatedShape?.bounds?.x, updatedBounds.x);
   assert.equal(updatedShape?.bounds?.y, updatedBounds.y);
+});
+
+test('bpmn viewer model resolves ITM BPMN targets through the shared ITM resolver path', async () => {
+  const itmPath = '/docs/examples/bpmn/training-by-design.lua-pipeline-reference.itm';
+  const itmSource = readFileSync(resolve(workspaceRoot, bundledBpmnReferenceAssets.convertedItmPath), 'utf8');
+  const workspaceService = {
+    getEntryByPath(path) {
+      try {
+        const workspaceRelativePath = String(path ?? '').replace(/^\/+/u, '').replaceAll('/', '\\');
+        return {
+          kind: 'resource',
+          representation: 'text',
+          path,
+          text: readFileSync(resolve(workspaceRoot, workspaceRelativePath), 'utf8'),
+        };
+      } catch {
+        return undefined;
+      }
+    },
+  };
+
+  const model = await createBpmnViewerModelFromItmSource(itmSource, {
+    title: 'Training By Design BPMN target',
+    resource: {
+      path: itmPath,
+      mimeType: 'text/x-itm',
+      languageId: 'itm',
+    },
+    workspaceService,
+    contributionRegistry: createBpmnContributionRegistry(),
+    session: {
+      surfaceState: {
+        itmVisualTarget: {
+          kind: 'view',
+          id: 'bpmn_diagram',
+          viewpointId: 'bpmn_process_diagram',
+          projection: 'graph',
+          rendererValue: 'bpmn.viewer',
+        },
+      },
+    },
+  });
+
+  assert.equal(model.diagramCount > 0, true);
+  assert.match(model.detail, /View bpmn_diagram via viewpoint bpmn_process_diagram/u);
+  assert.equal(model.diagnostics.some((diagnostic) => diagnostic.code === 'itm.visual.resolve.viewpoint-missing'), false);
+  assert.equal(model.diagnostics.some((diagnostic) => diagnostic.code === 'bpmn.viewer.source-file-missing'), false);
 });

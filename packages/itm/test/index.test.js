@@ -78,6 +78,31 @@ test('loadItmDocument composes workspace includes through the TextForge include 
   assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
 });
 
+test('loadItmDocument resolves bare sibling include filenames through the workspace include provider', async () => {
+  const workspace = {
+    getEntryByPath(path) {
+      if (path === '/docs/bpmn-process-diagram-lite-profile.itm') {
+        return {
+          kind: 'resource',
+          representation: 'text',
+          path,
+          text: '&shared Shared capability',
+        };
+      }
+      return undefined;
+    },
+  };
+
+  const loaded = await loadItmDocument(`%include bpmn-process-diagram-lite-profile.itm
+&root Root capability`, {
+    uri: '/docs/training-by-design.itm',
+    includeProviders: [createWorkspaceItmIncludeProvider(workspace)],
+  });
+
+  assert.equal(loaded.document.entities.some((entity) => entity.label === 'Shared capability'), true);
+  assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+});
+
 test('loadItmDocument resolves repository-backed includes through logical aliases without frontend fetch', async () => {
   const workspace = {
     getEntryByPath(path) {
@@ -335,6 +360,33 @@ roadmap => delivery
 
   assert.equal(resolved.target.rendererValue, 'sigma');
   assert.equal(resolved.target.preferredSurfaceId, '@textforge/renderer-sigma/runtime');
+});
+
+test('resolveItmVisualTarget routes BPMN viewer render declarations to the BPMN surface', async () => {
+  const loaded = await loadItmDocument(`%viewpoint bpmn_focus
+{
+  pipeline:
+    - select: "[bpmn::Task]"
+    - render: bpmn.viewer
+}
+%view bpmn_surface
+{
+  viewpoint: bpmn_focus
+}
+&task [bpmn::Task] Review requirement
+{
+  id: "Task_1"
+}
+`, {
+    uri: '/docs/bpmn.itm',
+  });
+
+  const resolved = resolveItmVisualTarget(loaded, {
+    view: 'bpmn_surface',
+  });
+
+  assert.equal(resolved.target.rendererValue, 'bpmn.viewer');
+  assert.equal(resolved.target.preferredSurfaceId, '@textforge/bpmn/viewer');
 });
 
 test('validateItmDocument surfaces stable include and repository resolver diagnostics', () => {

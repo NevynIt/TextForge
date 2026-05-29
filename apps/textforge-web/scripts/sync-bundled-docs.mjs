@@ -9,6 +9,7 @@ const outputPath = resolve(rootDir, 'src', 'generated', 'bundledDocs.js');
 const bundledDocsGeneratedAt = new Date().toISOString();
 
 const mimeTypeByExtension = {
+  '.bpmn': 'application/bpmn+xml',
   '.md': 'text/markdown',
   '.txt': 'text/plain',
   '.itm': 'text/x-itm',
@@ -20,6 +21,7 @@ const mimeTypeByExtension = {
 };
 
 const languageIdByExtension = {
+  '.bpmn': 'bpmn-xml',
   '.md': 'markdown',
   '.itm': 'itm',
   '.yaml': 'yaml',

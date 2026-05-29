@@ -7,9 +7,11 @@ import {
 import BpmnModdle from 'bpmn-moddle';
 import { parse as parseYaml } from 'yaml';
 import {
+  createWorkspaceItmIncludeProvider,
   importBpmnXmlResult,
   isResolvedDocument,
   loadItmDocument,
+  resolveItmVisualTarget,
   resolveDocument,
   validateBpmnRules,
   validateItmDocument,
@@ -47,7 +49,6 @@ export const bpmnViewerSurfaceId = '@textforge/bpmn/viewer';
 export const bpmnViewerSurfaceDocumentPredicate = createResourcePredicate({
   representations: ['text'],
   languageIds: ['bpmn-xml', 'itm'],
-  mimeTypes: ['application/bpmn+xml', 'text/itm', 'text/x-itm'],
   fileExtensions: ['bpmn', 'itm'],
 });
 
@@ -505,7 +506,8 @@ const bpmnCapabilities = Object.freeze([
     localName: 'bpmn.viewer',
     aliases: ['bpmn.view'],
     description: 'Owns the read-only BPMN viewer surface and ITM render-target binding.',
-    documentPredicate: bpmnItmDocumentPredicate,
+    defaultActive: true,
+    documentPredicate: bpmnXmlDocumentPredicate,
   }),
   createCapability(bpmnDiCapabilityId, {
     localName: 'bpmn.di',
@@ -783,6 +785,103 @@ function findPlaneElement(planeElements, diElementId, bpmnElementId) {
     || (bpmnElementId && entry?.bpmnElement?.id === bpmnElementId));
 }
 
+function createBpmnSurfaceIncludeProviders(execution) {
+  const includeProviders = [];
+  if (execution.workspaceService?.getEntryByPath) {
+    includeProviders.push(createWorkspaceItmIncludeProvider(execution.workspaceService, {
+      basePath: execution.resource?.path,
+      ...(execution.repositoryResolution ?? {}),
+    }));
+  }
+  return includeProviders;
+}
+
+function isWindowsAbsolutePath(value) {
+  return /^[A-Za-z]:[\\/]/u.test(String(value ?? ''));
+}
+
+function normalizePathSegments(segments) {
+  const normalized = [];
+  for (const segment of segments) {
+    if (!segment || segment === '.') {
+      continue;
+    }
+    if (segment === '..') {
+      if (normalized.length > 0 && normalized[normalized.length - 1] !== '..') {
+        normalized.pop();
+      }
+      continue;
+    }
+    normalized.push(segment);
+  }
+  return normalized;
+}
+
+function dirnameLikePath(path) {
+  const normalized = String(path ?? '').trim();
+  if (!normalized) {
+    return '';
+  }
+  const separatorIndex = Math.max(normalized.lastIndexOf('/'), normalized.lastIndexOf('\\'));
+  if (separatorIndex < 0) {
+    return '';
+  }
+  if (separatorIndex === 0 && normalized.startsWith('/')) {
+    return '/';
+  }
+  if (separatorIndex === 2 && isWindowsAbsolutePath(normalized)) {
+    return normalized.slice(0, 3);
+  }
+  return normalized.slice(0, separatorIndex);
+}
+
+function joinLikePath(basePath, relativePath) {
+  const normalizedRelative = String(relativePath ?? '').replaceAll('\\', '/');
+  if (basePath.startsWith('/')) {
+    const joined = `${basePath.replace(/\/+$/u, '')}/${normalizedRelative}`;
+    return `/${normalizePathSegments(joined.split('/')).join('/')}`.replace(/^\/{2,}/u, '/');
+  }
+
+  if (isWindowsAbsolutePath(basePath) || basePath.includes('\\')) {
+    const normalizedBase = String(basePath ?? '').replaceAll('/', '\\');
+    const drivePrefix = normalizedBase.slice(0, 2);
+    const baseSegments = normalizedBase.slice(isWindowsAbsolutePath(normalizedBase) ? 2 : 0).split('\\');
+    const relativeSegments = normalizedRelative.split('/');
+    const combined = normalizePathSegments([...baseSegments, ...relativeSegments]);
+    const suffix = combined.join('\\');
+    return drivePrefix
+      ? `${drivePrefix}\\${suffix}`.replace(/\\{2,}/gu, '\\')
+      : suffix;
+  }
+
+  return normalizePathSegments(`${basePath}/${normalizedRelative}`.split('/')).join('/');
+}
+
+function resolveSiblingResourcePath(basePath, targetPath) {
+  const normalizedTarget = String(targetPath ?? '').trim();
+  if (!normalizedTarget) {
+    return undefined;
+  }
+  if (normalizedTarget.startsWith('/') || isWindowsAbsolutePath(normalizedTarget)) {
+    return normalizedTarget;
+  }
+
+  const normalizedBase = String(basePath ?? '').trim();
+  if (!normalizedBase) {
+    return normalizedTarget;
+  }
+
+  return joinLikePath(dirnameLikePath(normalizedBase), normalizedTarget);
+}
+
+function readWorkspaceTextResource(workspaceService, path) {
+  const entry = workspaceService?.getEntryByPath?.(path);
+  if (!entry || entry.kind !== 'resource' || entry.representation !== 'text') {
+    return undefined;
+  }
+  return entry.text;
+}
+
 function toResolvedDocument(document) {
   return isResolvedDocument(document) ? document : resolveDocument(document);
 }
@@ -953,6 +1052,140 @@ export async function createBpmnViewerModelFromXml(xml, options = {}) {
       diagramCount: 0,
     };
   }
+}
+
+function mergeBpmnViewerDiagnostics(model, diagnostics, detail) {
+  return {
+    ...model,
+    detail: detail ?? model.detail,
+    diagnostics: appendUniqueDiagnostics([...(model.diagnostics ?? [])], diagnostics),
+  };
+}
+
+function findCandidateBpmnDiView(loaded, resolved, requestedTarget) {
+  if (resolved?.projectedDocument?.view?.name) {
+    return resolved.projectedDocument.view;
+  }
+
+  const viewpointId = String(requestedTarget?.viewpointId ?? resolved?.target?.viewpointId ?? resolved?.target?.id ?? '').trim();
+  if (!viewpointId) {
+    return undefined;
+  }
+
+  const views = [
+    ...(loaded?.effectiveResolvedDocument?.views ?? []),
+    ...(loaded?.resolvedDocument?.views ?? []),
+  ];
+  return views.find((view) => view?.viewpointRef === viewpointId);
+}
+
+export async function createBpmnViewerModelFromItmSource(sourceText, options = {}) {
+  const title = options.title ?? 'BPMN viewer';
+  if (!String(sourceText ?? '').trim()) {
+    return createBpmnViewerModelFromXml('', {
+      title,
+      resource: options.resource,
+    });
+  }
+
+  const loaded = await loadItmDocument(sourceText, {
+    strict: false,
+    uri: options.resource?.path,
+    includeProviders: createBpmnSurfaceIncludeProviders(options),
+    repositoryResolution: options.repositoryResolution,
+    contributionRegistry: options.contributionRegistry,
+    documentResource: {
+      path: options.resource?.path,
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'itm',
+      mimeType: options.resource?.mimeType ?? 'text/x-itm',
+    },
+  });
+  const requestedTarget = options.session?.surfaceState?.itmVisualTarget ?? options.target;
+  const resolved = resolveItmVisualTarget(loaded, {
+    target: requestedTarget,
+    projection: requestedTarget?.projection ?? 'graph',
+    title,
+  });
+  const diagnostics = [...loaded.diagnostics, ...resolved.diagnostics, ...resolved.visualDiagnostics];
+
+  if (resolved.target.available === false) {
+    return mergeBpmnViewerDiagnostics(await createBpmnViewerModelFromXml('', {
+      title,
+      resource: options.resource,
+    }), diagnostics, 'BPMN ITM visual target is unavailable.');
+  }
+
+  const sourceFile = String(
+    loaded.effectiveResolvedDocument?.metadata?.values?.sourceFile
+      ?? loaded.effectiveResolvedDocument?.metadata?.sourceFile
+      ?? loaded.resolvedDocument?.metadata?.values?.sourceFile
+      ?? loaded.resolvedDocument?.metadata?.sourceFile
+      ?? loaded.document?.metadata?.values?.sourceFile
+      ?? loaded.document?.metadata?.sourceFile
+      ?? '',
+  ).trim();
+  const sourcePath = resolveSiblingResourcePath(options.resource?.path, sourceFile);
+  const sourceXml = sourcePath
+    ? readWorkspaceTextResource(options.workspaceService, sourcePath)
+    : undefined;
+  if (!sourceXml) {
+    diagnostics.push(createBpmnSurfaceDiagnostic(
+      options.resource,
+      sourceFile
+        ? `Referenced BPMN source '${sourceFile}' could not be loaded for this ITM target.`
+        : 'This ITM BPMN target does not declare a sourceFile BPMN XML reference.',
+      'bpmn.viewer.source-file-missing',
+    ));
+  }
+
+  const selectedView = findCandidateBpmnDiView(loaded, resolved, requestedTarget);
+  let appliedXml = sourceXml ?? '';
+  let provenanceDetail = sourcePath
+    ? `Read-only BPMN view sourced from ${sourcePath}.`
+    : 'Read-only BPMN view sourced from ITM target metadata.';
+
+  if (selectedView?.name) {
+    try {
+      const diView = extractBpmnDiagramInterchangeView(sourceText, {
+        viewName: selectedView.name,
+        startLine: selectedView.sourceRange?.startLine,
+      });
+      appendUniqueDiagnostics(diagnostics, validateBpmnDiagramInterchangeView(
+        diView,
+        loaded.effectiveResolvedDocument,
+        { resource: options.resource },
+      ));
+      provenanceDetail = sourcePath
+        ? `View ${diView.viewName} via viewpoint ${diView.viewpointRef ?? selectedView.viewpointRef} from ${sourcePath}.`
+        : `View ${diView.viewName} via viewpoint ${diView.viewpointRef ?? selectedView.viewpointRef}.`;
+
+      if (appliedXml) {
+        const applied = await applyBpmnDiagramInterchangeToXml(appliedXml, diView, {
+          resource: options.resource,
+        });
+        appliedXml = applied.xml;
+        appendUniqueDiagnostics(diagnostics, applied.diagnostics);
+      }
+    } catch (error) {
+      diagnostics.push(createBpmnSurfaceDiagnostic(
+        options.resource,
+        error?.message ?? 'BPMN Diagram Interchange could not be extracted from the ITM view.',
+        'bpmn.viewer.di-extraction-failed',
+      ));
+    }
+  } else if (requestedTarget?.kind === 'viewpoint') {
+    provenanceDetail = sourcePath
+      ? `Viewpoint ${requestedTarget.id} from ${sourcePath}.`
+      : `Viewpoint ${requestedTarget.id}.`;
+  }
+
+  const model = await createBpmnViewerModelFromXml(appliedXml, {
+    title,
+    resource: options.resource,
+  });
+  return mergeBpmnViewerDiagnostics(model, diagnostics, provenanceDetail);
 }
 
 export function extractBpmnDiagramInterchangeView(sourceText, options = {}) {
@@ -1260,11 +1493,24 @@ async function mountBpmnViewerRuntime(container, model) {
 }
 
 async function resolveBpmnViewerSurfaceModel(execution, title) {
-  const model = await createBpmnViewerModelFromXml(execution.sourceText ?? '', {
+  const isItmResource = execution.resource?.languageId === 'itm'
+    || execution.resource?.mimeType === 'text/itm'
+    || execution.resource?.mimeType === 'text/x-itm';
+  if (isItmResource) {
+    return createBpmnViewerModelFromItmSource(execution.sourceText ?? '', {
+      title,
+      resource: execution.resource,
+      workspaceService: execution.workspaceService,
+      repositoryResolution: execution.repositoryResolution,
+      contributionRegistry: execution.contributionRegistry,
+      session: execution.session,
+    });
+  }
+
+  return createBpmnViewerModelFromXml(execution.sourceText ?? '', {
     title,
     resource: execution.resource,
   });
-  return model;
 }
 
 export function collectBpmnMvpScopeDiagnostics(document) {

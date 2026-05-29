@@ -302,7 +302,8 @@ function resolveWorkspaceIncludeTarget(target, context = {}, options = {}) {
   if (rawTarget === '' || rawTarget.startsWith('std:') || rawTarget.startsWith('std://')) {
     return undefined;
   }
-  const resolvedTarget = resolveWorkspaceRepositoryLocation(rawTarget, {
+
+  const resolvedTarget = resolveWorkspaceIncludeLocation(rawTarget, {
     basePath: options.basePath ?? context.sourceDocument?.uri,
     repositoryAliases: options.repositoryAliases,
     repositoryRoots: options.repositoryRoots,
@@ -310,6 +311,27 @@ function resolveWorkspaceIncludeTarget(target, context = {}, options = {}) {
   return resolvedTarget.status === 'resolved'
     ? resolvedTarget.resolvedPath
     : undefined;
+}
+
+function resolveWorkspaceIncludeLocation(target, options = {}) {
+  const rawTarget = String(target ?? '').trim();
+  const resolution = resolveWorkspaceRepositoryLocation(rawTarget, options);
+  if (resolution.status === 'resolved') {
+    return resolution;
+  }
+  if (
+    !rawTarget
+    || rawTarget.startsWith('/')
+    || rawTarget.startsWith('./')
+    || rawTarget.startsWith('../')
+    || looksLikeUrl(rawTarget)
+    || windowsAbsolutePathPattern.test(rawTarget)
+    || splitRepositoryTarget(rawTarget)
+  ) {
+    return resolution;
+  }
+
+  return resolveWorkspaceRepositoryLocation(`./${rawTarget}`, options);
 }
 
 export function createWorkspaceItmIncludeProvider(workspace, options = {}) {
@@ -407,7 +429,7 @@ function resolveRepositoryStatus(repository, document, options = {}) {
 }
 
 function resolveIncludeTargetStatus(includeTarget, document, options = {}) {
-  return resolveWorkspaceRepositoryLocation(includeTarget, {
+  return resolveWorkspaceIncludeLocation(includeTarget, {
     basePath: document.uri,
     repositoryAliases: options.repositoryAliases,
     repositoryRoots: options.repositoryRoots,
@@ -2752,6 +2774,11 @@ const itmVisualRendererBindings = Object.freeze([
     surfaceId: '@textforge/renderer-jsmind/runtime',
     projection: 'mindmap',
     aliases: ['jsmind', 'mindmap', 'mindmap.viewer'],
+  },
+  {
+    surfaceId: '@textforge/bpmn/viewer',
+    projection: 'graph',
+    aliases: ['bpmn.viewer', 'bpmn'],
   },
   {
     surfaceId: '@textforge/itm/report',
