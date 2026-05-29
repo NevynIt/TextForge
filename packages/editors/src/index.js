@@ -447,6 +447,7 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
     EditorState.allowMultipleSelections.of(true),
     EditorState.readOnly.of(model.readOnly),
     EditorView.editable.of(!model.readOnly),
+    ...(model.readOnly ? [EditorView.contentAttributes.of({ tabindex: '0', 'aria-readonly': 'true' })] : []),
     EditorView.lineWrapping,
     keymap.of([...searchKeymap, indentWithTab]),
     EditorView.domEventHandlers({
