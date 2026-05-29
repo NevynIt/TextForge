@@ -95,8 +95,8 @@ export const workspaceCommandContributions = [
   }),
   createCommand('workspace.new-resource', 'New resource...', {
     category: 'workspace',
-    description: 'Create a text or binary resource in the selected workspace context.',
-    keywords: ['workspace', 'create', 'resource', 'file'],
+    description: 'Create a text resource in the selected workspace context.',
+    keywords: ['workspace', 'create', 'resource', 'file', 'text'],
     menu: { id: 'workspace', label: 'Workspace', groupOrder: 10, order: 20 },
     toolbar: { order: 30, kind: 'primary' },
     when: { workspaceReady: true },

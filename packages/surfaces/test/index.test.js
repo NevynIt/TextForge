@@ -212,6 +212,7 @@ test('surface command contributions include shell actions and open-with descript
   ]);
 
   assert.equal(commands.some((command) => command.id === 'surface.close-active'), true);
+  assert.equal(commands.some((command) => command.id === 'surface.close-all'), true);
   assert.equal(commands.some((command) => command.id === 'surface.open-visuals'), true);
   assert.equal(commands.some((command) => command.id === 'surface.move-active-to-popup'), true);
   assert.equal(commands.some((command) => command.id === 'surface.open-with:surface.editor'), true);

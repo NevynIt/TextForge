@@ -691,6 +691,7 @@ export function TextForgeTopBar({
 export function TextForgeWorkspaceSidebar({
   collapsed = false,
   footer,
+  onActivateItem,
   onClose,
   onDropFilesToFolder,
   onRequestItemContextMenu,
@@ -737,6 +738,7 @@ export function TextForgeWorkspaceSidebar({
             'data-item-id': item.id,
             'data-workspace-folder-drop': item.kind === 'folder' ? item.id : undefined,
             onClick: () => onSelectItem?.(item.id),
+            onDoubleClick: () => onActivateItem?.(item.id),
             onContextMenu: (event) => {
               event.preventDefault();
               onRequestItemContextMenu?.(item.id, {
@@ -745,6 +747,12 @@ export function TextForgeWorkspaceSidebar({
               });
             },
             onKeyDown: (event) => {
+              if (event.key === 'Enter') {
+                event.preventDefault();
+                onActivateItem?.(item.id);
+                return;
+              }
+
               if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
                 event.preventDefault();
                 const rect = event.currentTarget.getBoundingClientRect();
@@ -833,6 +841,7 @@ export function TextForgeWorkspaceSidebar({
 export function TextForgeSessionTabStrip({
   emptyLabel = 'No open documents',
   frameModel,
+  onCreateTab,
   onCloseTab,
   onDropFiles,
   onRequestTabContextMenu,
@@ -848,6 +857,12 @@ export function TextForgeSessionTabStrip({
       'aria-label': frameModel.title,
       'data-roving-root': 'session-tabs',
       'data-upload-drop-zone': 'session-tabs',
+      onDoubleClick: (event) => {
+        if (event.target instanceof Element && event.target.closest('.tf-tab')) {
+          return;
+        }
+        onCreateTab?.();
+      },
     },
     tabs.length === 0
       ? element('div', { className: 'tf-tabstrip__empty' }, emptyLabel)
@@ -937,6 +952,10 @@ export function TextForgeContextMenu({
   const previousFocusRef = React.useRef(null);
   const itemRefs = React.useRef([]);
   const [activeIndex, setActiveIndex] = React.useState(0);
+  const [resolvedPosition, setResolvedPosition] = React.useState(() => ({
+    x: position?.x ?? 24,
+    y: position?.y ?? 24,
+  }));
 
   React.useEffect(() => {
     if (!open) {
@@ -974,6 +993,31 @@ export function TextForgeContextMenu({
     };
   }, [open, onClose]);
 
+  React.useLayoutEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    const menu = rootRef.current;
+    if (!menu || typeof window === 'undefined') {
+      return;
+    }
+
+    const margin = 8;
+    const anchorX = position?.x ?? 24;
+    const anchorY = position?.y ?? 24;
+    const rect = menu.getBoundingClientRect();
+    const maxX = Math.max(margin, window.innerWidth - rect.width - margin);
+    const nextX = Math.min(Math.max(margin, anchorX), maxX);
+    const nextY = anchorY + rect.height + margin <= window.innerHeight
+      ? anchorY
+      : Math.max(margin, anchorY - rect.height);
+    setResolvedPosition((current) =>
+      current.x === nextX && current.y === nextY
+        ? current
+        : { x: nextX, y: nextY });
+  }, [open, position?.x, position?.y, items.length]);
+
   if (!open || items.length === 0) {
     return null;
   }
@@ -1001,8 +1045,8 @@ export function TextForgeContextMenu({
       role: 'menu',
       'aria-label': title,
       style: {
-        left: `${position?.x ?? 24}px`,
-        top: `${position?.y ?? 24}px`,
+        left: `${resolvedPosition.x}px`,
+        top: `${resolvedPosition.y}px`,
       },
     },
     ...items.map((item, index) =>

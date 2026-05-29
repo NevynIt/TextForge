@@ -27,6 +27,13 @@ export const surfaceCommandContributions = [
     toolbar: { order: 80, kind: 'secondary' },
     when: { workspaceReady: true, activeSurfaceRequired: true },
   }),
+  createCommand('surface.close-all', 'Close all open editors', {
+    category: 'surface',
+    description: 'Close every open surface in the current main or popup tab strip.',
+    keywords: ['surface', 'close', 'all', 'documents', 'tabs', 'editors'],
+    menu: { id: 'surface', label: 'Surface', groupOrder: 20, order: 15 },
+    when: { workspaceReady: true, activeSurfaceRequired: true },
+  }),
   createCommand('surface.refresh-active', 'Refresh active surface', {
     category: 'surface',
     description: 'Reopen the focused surface against the current workspace state.',
