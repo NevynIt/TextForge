@@ -123,6 +123,7 @@ import {
   createWorkspaceTreeFrameModel,
 } from '@textforge/ui';
 import { bundledDocFolders, bundledDocs, bundledDocsGeneratedAt } from './generated/bundledDocs.js';
+import { activateMarkdownPreviewLink } from './markdownPreviewLinks.js';
 import { createMarkdownPreviewRequestManager } from './markdownPreviewState.js';
 
 const element = React.createElement;
@@ -902,6 +903,7 @@ function createTextForgeWorkbenchController() {
   let bootstrapApplied = false;
   let suspendWorkbenchUiStatePersistence = false;
   let lastPersistedWorkbenchUiStateText;
+  let transientFlagTimeoutId;
   const state = {
     activeMainSessionId: undefined,
     activePopupSessionId: undefined,
@@ -914,6 +916,7 @@ function createTextForgeWorkbenchController() {
     storageResetPending: false,
     surfaceFocusPlacement: 'main',
     contextMenu: undefined,
+    transientFlag: undefined,
     visualTargetPicker: undefined,
   };
   const runtime = {
@@ -964,6 +967,34 @@ function createTextForgeWorkbenchController() {
 
     state.visualTargetPicker = undefined;
     emit();
+  }
+
+  function clearTransientFlagTimeout() {
+    if (typeof window === 'undefined' || transientFlagTimeoutId === undefined) {
+      return;
+    }
+
+    window.clearTimeout(transientFlagTimeoutId);
+    transientFlagTimeoutId = undefined;
+  }
+
+  function showTransientFlag(title, body, tone = 'warning') {
+    clearTransientFlagTimeout();
+    state.transientFlag = {
+      id: `${Date.now()}:${title}`,
+      tone,
+      title,
+      body,
+    };
+    emit();
+
+    if (typeof window !== 'undefined') {
+      transientFlagTimeoutId = window.setTimeout(() => {
+        transientFlagTimeoutId = undefined;
+        state.transientFlag = undefined;
+        emit();
+      }, 3200);
+    }
   }
 
   function subscribe(listener) {
@@ -2713,6 +2744,31 @@ function createTextForgeWorkbenchController() {
     };
   }
 
+  function openMarkdownPreviewLink(input) {
+    const sourceResourcePath = input?.resource?.path;
+    if (!sourceResourcePath) {
+      showTransientFlag('File not found', 'The Markdown link target could not be resolved.');
+      return true;
+    }
+
+    try {
+      const result = activateMarkdownPreviewLink({
+        href: input.href,
+        onMissingTarget() {
+          showTransientFlag('File not found', 'The Markdown link target is not available in this workspace.');
+        },
+        openResourceEntry,
+        placement: input.placement,
+        sourceResourcePath,
+        workspace,
+      });
+      return result.handled;
+    } catch (_error) {
+      showTransientFlag('File not found', 'The Markdown link target could not be opened.');
+      return true;
+    }
+  }
+
   async function renderMarkdownResource(resource, options = {}) {
     const startedAt = performance.now();
     tracePreview('renderMarkdownResource:start', {
@@ -3059,6 +3115,12 @@ function createTextForgeWorkbenchController() {
       documentContext: resolveDocumentContributionContextForEntry(resource),
       requestPreview: session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(resource)
         ? () => requestMarkdownPreview(resource)
+        : undefined,
+      onLinkActivate: session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(resource)
+        ? (activation) => openMarkdownPreviewLink({
+          ...activation,
+          placement: session.placement,
+        })
         : undefined,
       getAssetLease: () => getAssetLease(resourceRef),
       describeGeneratedResource: () => describeGeneratedResource(resource),
@@ -4597,6 +4659,7 @@ function createTextForgeWorkbenchController() {
   }
 
   function dispose() {
+    clearTransientFlagTimeout();
     for (const lease of assetLeaseByResourceId.values()) {
       blobLedger.release(lease.id);
     }
@@ -5610,6 +5673,44 @@ function PopupSessionsView({ controller, popupFrame }) {
   );
 }
 
+function TransientFlag({ flag }) {
+  if (!flag) {
+    return null;
+  }
+
+  const shellWidth = typeof window === 'undefined'
+    ? 320
+    : Math.min(320, Math.max(220, window.innerWidth - 28));
+  return element(
+    'div',
+    {
+      'aria-live': 'polite',
+      style: {
+        position: 'fixed',
+        right: '14px',
+        bottom: '72px',
+        width: `${shellWidth}px`,
+        zIndex: 45,
+        pointerEvents: 'none',
+      },
+    },
+    element(
+      'div',
+      {
+        style: {
+          boxShadow: '0 18px 36px rgba(2, 6, 23, 0.36)',
+          backdropFilter: 'blur(12px)',
+        },
+      },
+      element(TextForgeCallout, {
+        tone: flag.tone ?? 'warning',
+        title: flag.title,
+        children: flag.body ? element('p', null, flag.body) : null,
+      }),
+    ),
+  );
+}
+
 function TextForgeWorkbenchApp({ controller }) {
   const snapshot = useWorkbenchSnapshot(controller);
   const screenshotPreset = React.useMemo(() => readPhase35ScreenshotPreset(), []);
@@ -5865,6 +5966,9 @@ function TextForgeWorkbenchApp({ controller }) {
       open: Boolean(snapshot.contextMenu?.items?.length),
       position: snapshot.contextMenu ? { x: snapshot.contextMenu.x, y: snapshot.contextMenu.y } : undefined,
       title: 'Context menu',
+    }),
+    element(TransientFlag, {
+      flag: snapshot.state.transientFlag,
     }),
     visualTargetPickerOverlay,
   );

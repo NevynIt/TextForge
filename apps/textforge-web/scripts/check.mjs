@@ -21,10 +21,10 @@ const workbenchJs = await readFile(resolve(rootDir, 'src/workbench.js'), 'utf8')
 const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
 const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
 const uiPackageJson = await readFile(resolve(rootDir, '..', '..', 'packages', 'ui', 'package.json'), 'utf8');
-const storageBoundaryDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'browser-managed-workspace-storage.md'), 'utf8');
-const commandDispatchDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'local-command-dispatch.md'), 'utf8');
-const localUiStateDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'local-shell-ui-state.md'), 'utf8');
-const resourceIdentityDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'specs', 'resource-identity-badges.md'), 'utf8');
+const storageBoundaryDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'reference', 'specs', 'browser-managed-workspace-storage.md'), 'utf8');
+const commandDispatchDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'reference', 'specs', 'local-command-dispatch.md'), 'utf8');
+const localUiStateDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'reference', 'specs', 'local-shell-ui-state.md'), 'utf8');
+const resourceIdentityDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'reference', 'specs', 'resource-identity-badges.md'), 'utf8');
 
 if (!indexHtml.includes('./src/scriptLoader.js')) {
   throw new Error('index.html must load ./src/scriptLoader.js as the development entrypoint');

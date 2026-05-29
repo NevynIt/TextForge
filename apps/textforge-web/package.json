@@ -14,7 +14,7 @@
     "build": "vite build && node scripts/check-dist.mjs",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test test/markdownPreviewState.test.js && node scripts/check.mjs",
+    "test": "node --test test/markdownPreviewState.test.js test/markdownPreviewLinks.test.js && node scripts/check.mjs",
     "lint": "node scripts/check.mjs",
     "typecheck": "node scripts/check.mjs"
   },

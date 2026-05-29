@@ -98,6 +98,7 @@ export const markdownPreviewSurfaceContribution = {
     if (previewState?.status === 'ready' && previewState.result) {
       const surface = createMarkdownPreviewSurface(execution.sourceText ?? '', previewState.result, {
         resource,
+        onLinkActivate: execution.onLinkActivate,
       });
       return {
         mountId: `${execution.session?.id ?? 'surface'}:${this.id}:${execution.updatedAt ?? 'current'}`,
@@ -1066,6 +1067,40 @@ export function createMarkdownPreviewSurface(source, result, options = {}) {
         return () => {};
       }
 
+      const handleLinkClick = (event) => {
+        if (!options.onLinkActivate || event?.defaultPrevented || event?.button > 0) {
+          return;
+        }
+        if (event?.metaKey || event?.ctrlKey || event?.shiftKey || event?.altKey) {
+          return;
+        }
+
+        const target = event?.target;
+        const link = typeof target?.closest === 'function'
+          ? target.closest('a[href]')
+          : undefined;
+        if (!link || typeof link.getAttribute !== 'function') {
+          return;
+        }
+        if (typeof container.contains === 'function' && !container.contains(link)) {
+          return;
+        }
+
+        const href = String(link.getAttribute('href') ?? '').trim();
+        if (!href || href.startsWith('#')) {
+          return;
+        }
+
+        if (options.onLinkActivate({
+          href,
+          link,
+          event,
+          resource: options.resource,
+        })) {
+          event.preventDefault();
+        }
+      };
+
       if (typeof container.ownerDocument?.createElement === 'function') {
         const template = container.ownerDocument.createElement('template');
         template.innerHTML = model.html;
@@ -1079,7 +1114,13 @@ export function createMarkdownPreviewSurface(source, result, options = {}) {
       } else {
         container.innerHTML = model.html;
       }
+      if (typeof container.addEventListener === 'function') {
+        container.addEventListener('click', handleLinkClick);
+      }
       return () => {
+        if (typeof container.removeEventListener === 'function') {
+          container.removeEventListener('click', handleLinkClick);
+        }
         container.innerHTML = '';
       };
     },

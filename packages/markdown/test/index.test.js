@@ -190,6 +190,87 @@ test('createMarkdownPreviewSurface mounts preview html', async () => {
   assert.equal(container.innerHTML, '');
 });
 
+test('createMarkdownPreviewSurface delegates non-fragment link clicks to the host', async () => {
+  const rendered = await renderMarkdownDocument('[Open sibling](./sibling.md)\n\n[Jump](#preview)');
+  const activations = [];
+  const listeners = new Map();
+  const surface = createMarkdownPreviewSurface('', rendered, {
+    resource: {
+      resourceId: 'markdown-link-preview',
+      path: '/docs/preview.md',
+      kind: 'resource',
+      representation: 'text',
+    },
+    onLinkActivate(activation) {
+      activations.push({
+        href: activation.href,
+        resourcePath: activation.resource?.path,
+      });
+      return true;
+    },
+  });
+  const container = {
+    innerHTML: '',
+    addEventListener(type, listener) {
+      listeners.set(type, listener);
+    },
+    removeEventListener(type) {
+      listeners.delete(type);
+    },
+    contains(node) {
+      return node?.owner === this;
+    },
+  };
+
+  const dispose = surface.mount(container);
+  const clickListener = listeners.get('click');
+  assert.equal(typeof clickListener, 'function');
+
+  const prevented = [];
+  clickListener({
+    button: 0,
+    target: {
+      closest() {
+        return {
+          owner: container,
+          getAttribute(name) {
+            return name === 'href' ? './sibling.md' : undefined;
+          },
+        };
+      },
+    },
+    preventDefault() {
+      prevented.push(true);
+    },
+  });
+
+  clickListener({
+    button: 0,
+    target: {
+      closest() {
+        return {
+          owner: container,
+          getAttribute(name) {
+            return name === 'href' ? '#preview' : undefined;
+          },
+        };
+      },
+    },
+    preventDefault() {
+      throw new Error('Fragment links should not be intercepted.');
+    },
+  });
+
+  assert.deepEqual(activations, [{
+    href: './sibling.md',
+    resourcePath: '/docs/preview.md',
+  }]);
+  assert.equal(prevented.length, 1);
+
+  dispose();
+  assert.equal(listeners.size, 0);
+});
+
 test('renderMarkdownDocument renders itm and itm-pub fences through active contribution handlers', async () => {
   const contributionRegistry = createContributionRegistry([
     contributions,

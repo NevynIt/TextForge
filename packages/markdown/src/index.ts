@@ -99,6 +99,13 @@ export interface MarkdownPreviewModel {
   readonly generatedResources: ReadonlyArray<GeneratedResourceDescriptor>;
 }
 
+export interface MarkdownPreviewLinkActivation {
+  readonly href: string;
+  readonly link: HTMLAnchorElement;
+  readonly event: MouseEvent;
+  readonly resource?: ResourceRef;
+}
+
 export interface MarkdownPreviewSurface {
   readonly id: string;
   readonly contribution: SurfaceContribution;
@@ -126,4 +133,5 @@ export declare function createMarkdownPreviewModel(source: string, result: Markd
 }): MarkdownPreviewModel;
 export declare function createMarkdownPreviewSurface(source: string, result: MarkdownRenderResult, options?: {
   readonly resource?: ResourceRef;
+  readonly onLinkActivate?: (activation: MarkdownPreviewLinkActivation) => boolean | void;
 }): MarkdownPreviewSurface;

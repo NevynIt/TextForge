@@ -22,6 +22,12 @@ This bundled example exercises the Phase 4 TF-MD baseline. {.callout}
 
 ![Bundled phase 4 asset](assets/phase-4-diagram.svg)
 
+Open [Markdown minimal smoke](markdown-minimal.md) to verify in-app Markdown link routing.
+
+Open [bundled minimal via repository root](bundled://docs/examples/markdown-minimal.md) to verify repository-qualified routing.
+
+Open [missing document](missing-preview-target.md) to verify the bottom-right not-found flag.
+
 ## Mermaid example {.hero}
 
 ```mermaid
