@@ -9,9 +9,9 @@
 
 ## Preserved material
 
-- Legacy root README and planning notes were moved into `docs/legacy/`.
-- Selected whitepapers and implementation guides were moved into `docs/design/`.
-- Selected bundled specs were copied into `docs/specs/`.
+- Legacy root README and planning notes were moved into `docs/archive/legacy/`.
+- Selected whitepapers and implementation guides were moved into `docs/architecture/`.
+- Selected bundled specs were copied into `docs/reference/specs/`.
 - Selected bundled examples were copied into `fixtures/legacy/`.
 
 ## Removed implementation areas

@@ -6,11 +6,12 @@ This repository keeps the TextForge name and history while replacing the impleme
 
 ## Preserved legacy material
 
-- [Legacy README](docs/legacy/README_v1.md)
-- [Legacy notes](docs/legacy/Initial_plan.md)
-- [Legacy backlog](docs/legacy/Still_to_do.md)
-- [Design papers](docs/design)
-- [Specs](docs/specs)
+- [Bundled resources index](docs/README.md)
+- [Legacy README](docs/archive/legacy/README_v1.md)
+- [Legacy notes](docs/archive/legacy/Initial_plan.md)
+- [Legacy backlog](docs/archive/legacy/Still_to_do.md)
+- [Design papers](docs/architecture)
+- [Specs](docs/reference/specs)
 
 ## Rebuild status
 

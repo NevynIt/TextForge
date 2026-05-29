@@ -1,11 +1,14 @@
 # Read Me First
 
+This is preserved legacy orientation material.
+For the current bundled-resource map, start with [`docs/README.md`](../../../README.md).
+
 This resource set is grouped by purpose so you can find the right material quickly.
 
 - `docs/start-here/` gives you orientation and overview material.
 - `docs/papers/` holds conceptual and architectural papers.
 - `docs/guides/` holds practical usage and extension guides.
-- `docs/specs/` holds format and viewer specifications.
+- `docs/reference/specs/` holds format and viewer specifications.
 - `docs/plans/` holds roadmap and verification material.
 - `examples/` holds sample content grouped by medium.
 
@@ -44,10 +47,10 @@ Some papers in this resource set are retained as architecture history. When a pa
 
 | Title | File name | Abstract |
 |---|---|---|
-| Indented Text Model Format | `docs/specs/itm-format.md` | Core ITM syntax and semantics. |
-| ITM Graph Style Support | `docs/specs/graph-styles.md` | Graph viewer style rules. |
-| ITM Mindmap Style Support | `docs/specs/mindmap-styles.md` | Mindmap viewer style rules. |
-| ITM Tree Style Support | `docs/specs/tree-styles.md` | Tree viewer style rules. |
+| Indented Text Model Format | `docs/reference/specs/itm-format.md` | Core ITM syntax and semantics. |
+| ITM Graph Style Support | `docs/reference/specs/graph-styles.md` | Graph viewer style rules. |
+| ITM Mindmap Style Support | `docs/reference/specs/mindmap-styles.md` | Mindmap viewer style rules. |
+| ITM Tree Style Support | `docs/reference/specs/tree-styles.md` | Tree viewer style rules. |
 
 ## Plans
 
