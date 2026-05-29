@@ -29,6 +29,7 @@
     "@textforge/pipeline": "workspace:^",
     "@textforge/renderer-cytoscape": "workspace:*",
     "@textforge/renderer-jsmind": "workspace:*",
+    "@textforge/renderer-sigma": "workspace:*",
     "@textforge/security-profile": "workspace:*",
     "@textforge/surfaces": "workspace:*",
     "@textforge/ui": "workspace:*",

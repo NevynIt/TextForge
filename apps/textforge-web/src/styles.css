@@ -3016,6 +3016,20 @@ body {
   flex: 1 1 16rem;
 }
 
+.tf-visual-runtime__toggle-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem 0.9rem;
+  color: #cbd5e1;
+  font-size: 0.82rem;
+}
+
+.tf-visual-runtime__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .tf-visual-runtime__field input,
 .tf-visual-runtime__field select,
 .tf-visual-runtime__actions button,

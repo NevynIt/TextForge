@@ -82,6 +82,9 @@ import {
   contributions as jsmindRendererContributionPack,
 } from '@textforge/renderer-jsmind';
 import {
+  contributions as sigmaRendererContributionPack,
+} from '@textforge/renderer-sigma';
+import {
   contributions as securityProfileContributionPack,
 } from '@textforge/security-profile';
 import {
@@ -812,6 +815,7 @@ function createTextForgeWorkbenchController() {
     itmContributionPack,
     cytoscapeRendererContributionPack,
     jsmindRendererContributionPack,
+    sigmaRendererContributionPack,
     luaContributionPack,
     uiContributionPack,
     securityProfileContributionPack,

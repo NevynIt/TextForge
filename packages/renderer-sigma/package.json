@@ -1,0 +1,30 @@
+{
+  "name": "@textforge/renderer-sigma",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@textforge/core": "workspace:*",
+    "@textforge/itm": "workspace:*",
+    "@textforge/visual-itm": "workspace:*",
+    "graphology": "^0.26.0",
+    "graphology-layout": "^0.6.1",
+    "graphology-layout-forceatlas2": "^0.10.1",
+    "graphology-layout-noverlap": "^0.4.2",
+    "graphology-metrics": "^2.4.0",
+    "sigma": "^3.0.0"
+  },
+  "scripts": {
+    "build": "node --check src/index.js",
+    "test": "node --test test/index.test.js",
+    "lint": "node scripts/check.mjs",
+    "typecheck": "node --check src/index.js"
+  }
+}

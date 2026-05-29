@@ -97,12 +97,13 @@ flowchart TD
   classDef done fill:#2e7d32,stroke:#1b5e20,color:#ffffff,stroke-width:2px;
   classDef startable fill:#1565c0,stroke:#0d47a1,color:#ffffff,stroke-width:2px;
 
-  class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D,WP_ITM_01,WP_LUA,WP_LUA_POWER_SESSION,WP_RES_01,WP_REPO_01,WP_ITM_02,WP_ITM_VISUALS done;
-  class WP_RES_02,WP_VITM_01,WP_MD_REPORT,WP_BPMN_SEM,WP_ARCHIMATE_SEM,WP_TABLES,WP_SKETCH startable;
+  class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D,WP_ITM_01,WP_LUA,WP_LUA_POWER_SESSION,WP_RES_01,WP_REPO_01,WP_ITM_02,WP_ITM_VISUALS,WP_VITM_01,WP_ITM_VTARGET_01,WP_ITM_VRESOLVE_01,WP_RENDER_CYTOSCAPE,WP_RENDER_JSMIND,WP_RENDER_SIGMA done;
+  class WP_RES_02,WP_ITM_PUB_VISUAL_01,WP_VITM_TRANSLATORS,WP_GRAPH_EDIT_VITM,WP_MD_REPORT,WP_BPMN_SEM,WP_ARCHIMATE_SEM,WP_TABLES,WP_SKETCH startable;
 
   linkStyle 9 stroke:#1565c0,stroke-width:2px;
-  linkStyle 17 stroke:#1565c0,stroke-width:2px;
-  linkStyle 18 stroke:#1565c0,stroke-width:2px;
+  linkStyle 28 stroke:#1565c0,stroke-width:2px;
+  linkStyle 33 stroke:#1565c0,stroke-width:2px;
+  linkStyle 34 stroke:#1565c0,stroke-width:2px;
   linkStyle 35 stroke:#1565c0,stroke-width:2px;
   linkStyle 36 stroke:#1565c0,stroke-width:2px;
   linkStyle 71 stroke:#1565c0,stroke-width:2px;

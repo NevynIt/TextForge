@@ -2741,7 +2741,12 @@ const itmVisualRendererBindings = Object.freeze([
   {
     surfaceId: '@textforge/renderer-cytoscape/runtime',
     projection: 'graph',
-    aliases: ['cytoscape', 'graph.viewer', 'graph', 'sigma'],
+    aliases: ['cytoscape', 'graph.viewer', 'graph'],
+  },
+  {
+    surfaceId: '@textforge/renderer-sigma/runtime',
+    projection: 'graph',
+    aliases: ['sigma'],
   },
   {
     surfaceId: '@textforge/renderer-jsmind/runtime',

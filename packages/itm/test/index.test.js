@@ -311,6 +311,32 @@ test('resolveItmVisualTarget reports missing declared renderers without silently
   assert.equal(resolved.projectedDocument.nodes.length, 0);
 });
 
+test('resolveItmVisualTarget routes sigma render declarations to the Sigma runtime surface', async () => {
+  const loaded = await loadItmDocument(`%viewpoint dense_graph
+{
+  pipeline:
+    - select: "[Capability]"
+    - render: sigma
+}
+%view dense_surface
+{
+  viewpoint: dense_graph
+}
+&roadmap [Capability] Capability roadmap
+&delivery [Capability] Delivery
+roadmap => delivery
+`, {
+    uri: '/docs/sigma.itm',
+  });
+
+  const resolved = resolveItmVisualTarget(loaded, {
+    view: 'dense_surface',
+  });
+
+  assert.equal(resolved.target.rendererValue, 'sigma');
+  assert.equal(resolved.target.preferredSurfaceId, '@textforge/renderer-sigma/runtime');
+});
+
 test('validateItmDocument surfaces stable include and repository resolver diagnostics', () => {
   const document = parseDocument(`%repository shared ./shared
 %repository shared ./duplicate
