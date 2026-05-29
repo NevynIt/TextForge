@@ -15,13 +15,19 @@ test('text editor selection and edit helpers preserve document metadata', () => 
   const document = createTextEditorDocument(
     { resourceId: 'resource-1', path: '/docs/notes.md', kind: 'resource', representation: 'text' },
     'Hello world',
-    { selection: createTextEditorSelection(0, 5) },
+    {
+      selection: createTextEditorSelection(0, 5),
+      viewState: { scrollTop: 128, scrollLeft: 24, focused: true },
+    },
   );
 
   const nextDocument = applyTextEdit(document, { kind: 'replace', start: 6, end: 11, text: 'TextForge' });
   const surface = createCodeMirrorTextEditorSurface({ document });
 
   assert.equal(nextDocument.text, 'Hello TextForge');
+  assert.equal(nextDocument.viewState?.scrollTop, 128);
+  assert.equal(nextDocument.viewState?.scrollLeft, 24);
+  assert.equal(nextDocument.viewState?.focused, true);
   assert.equal(surface.model.lineCount, 1);
   assert.equal(surface.model.characterCount, 11);
   assert.equal(surface.model.engine, 'codemirror-6');

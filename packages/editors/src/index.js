@@ -144,6 +144,7 @@ export function createTextEditorDocument(
     languageId: options.languageId,
     selection: options.selection,
     sourceRange: options.sourceRange,
+    viewState: options.viewState,
     readOnly: options.readOnly,
   };
 }
@@ -180,6 +181,7 @@ export function applyTextEdit(document, operation) {
     text: nextText,
     version: document.version + 1,
     selection: clampTextSelection(document.selection ?? createTextEditorSelection(0), nextText),
+    viewState: document.viewState,
   };
 }
 
@@ -517,6 +519,19 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
       const handleStateUpdate = typeof handlers.onUpdate === 'function' ? handlers.onUpdate : onUpdate;
       let currentDocument = baseDocument;
 
+      const syncViewState = (partialViewState = {}) => {
+        currentDocument = {
+          ...currentDocument,
+          viewState: {
+            ...(currentDocument.viewState ?? {}),
+            ...partialViewState,
+          },
+        };
+        if (typeof handleStateUpdate === 'function') {
+          handleStateUpdate(currentDocument);
+        }
+      };
+
       const syncSurfaceState = (viewUpdate) => {
         const text = viewUpdate.state.doc.toString();
         const mainSelection = viewUpdate.state.selection.main;
@@ -538,6 +553,7 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
           version: viewUpdate.docChanged ? currentDocument.version + 1 : currentDocument.version,
           selection: nextSelection,
           sourceRange: selectionToSourceRange(nextSelection, text),
+          viewState: currentDocument.viewState,
         };
         if (typeof handleStateUpdate === 'function') {
           handleStateUpdate(currentDocument);
@@ -567,9 +583,38 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
         state,
         parent: editorHost,
       });
+      const restoreScrollTop = currentDocument.viewState?.scrollTop;
+      const restoreScrollLeft = currentDocument.viewState?.scrollLeft;
+      if (typeof restoreScrollTop === 'number') {
+        view.scrollDOM.scrollTop = restoreScrollTop;
+      }
+      if (typeof restoreScrollLeft === 'number') {
+        view.scrollDOM.scrollLeft = restoreScrollLeft;
+      }
+      if (!model.readOnly) {
+        view.focus();
+      }
+      const handleScroll = () => {
+        syncViewState({
+          scrollTop: view.scrollDOM.scrollTop,
+          scrollLeft: view.scrollDOM.scrollLeft,
+        });
+      };
+      const handleFocus = () => {
+        syncViewState({ focused: true });
+      };
+      const handleBlur = () => {
+        syncViewState({ focused: false });
+      };
+      view.scrollDOM.addEventListener('scroll', handleScroll, { passive: true });
+      view.dom.addEventListener('focusin', handleFocus);
+      view.dom.addEventListener('focusout', handleBlur);
       editorHost.dataset.editorEngine = 'codemirror-6';
       editorHost.textforgeCodeMirrorView = view;
       return () => {
+        view.scrollDOM.removeEventListener('scroll', handleScroll);
+        view.dom.removeEventListener('focusin', handleFocus);
+        view.dom.removeEventListener('focusout', handleBlur);
         view.destroy();
       };
     },

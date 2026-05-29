@@ -19,6 +19,12 @@ export interface TextEditorSelection {
   readonly head: number;
 }
 
+export interface TextEditorViewState {
+  readonly scrollTop?: number;
+  readonly scrollLeft?: number;
+  readonly focused?: boolean;
+}
+
 export interface TextEditorDocument {
   readonly resource: ResourceRef;
   readonly text: string;
@@ -26,6 +32,7 @@ export interface TextEditorDocument {
   readonly languageId?: string;
   readonly selection?: TextEditorSelection;
   readonly sourceRange?: SourceRange;
+  readonly viewState?: TextEditorViewState;
   readonly readOnly?: boolean;
 }
 
@@ -148,7 +155,7 @@ export function selectionToSourceRange(selection: TextEditorSelection, text = ''
 export function createTextEditorDocument(
   resource: ResourceRef,
   text = '',
-  options: Partial<Pick<TextEditorDocument, 'languageId' | 'selection' | 'sourceRange' | 'readOnly' | 'version'>> = {},
+  options: Partial<Pick<TextEditorDocument, 'languageId' | 'selection' | 'sourceRange' | 'viewState' | 'readOnly' | 'version'>> = {},
 ): TextEditorDocument {
   return {
     resource,
@@ -157,6 +164,7 @@ export function createTextEditorDocument(
     languageId: options.languageId,
     selection: options.selection,
     sourceRange: options.sourceRange,
+    viewState: options.viewState,
     readOnly: options.readOnly,
   };
 }
@@ -195,6 +203,7 @@ export function applyTextEdit(
     text: nextText,
     version: document.version + 1,
     selection: clampTextSelection(document.selection ?? createTextEditorSelection(0), nextText),
+    viewState: document.viewState,
   };
 }
 
