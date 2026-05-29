@@ -88,6 +88,7 @@ WP-ITM-01 should begin only after the recovery baseline from Phases 3.1-3.3 is u
 - The canonical source remains text.
 - Rich editors are optional and must be round-trip gated.
 - Includes and repositories are resolved by active providers; frontend does not fetch arbitrary URLs in local/offline mode.
+- Markdown preview document links should resolve back into workspace resources and reopen inside the shell rather than navigating the browser away from TextForge.
 - Document semantics do not change when optional backend capabilities are unavailable.
 
 

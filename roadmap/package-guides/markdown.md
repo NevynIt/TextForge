@@ -28,7 +28,7 @@ Third-party candidates: markdown-it, unified/remark/rehype, KaTeX integration ho
 
 ## Public surface
 
-Markdown preview/report surfaces, TF-MD parser/diagnostics interfaces, Markdown pipelines, local asset resolver integration, fenced-block handler integration, resolved Markdown output, and report block contribution APIs.
+Markdown preview/report surfaces, TF-MD parser/diagnostics interfaces, Markdown pipelines, local asset resolver integration, preview-link activation hooks, fenced-block handler integration, resolved Markdown output, and report block contribution APIs.
 
 ## Milestone plan
 
@@ -61,7 +61,7 @@ Implementation anchors:
 - pnpm packages: Phase 4: `pnpm --filter @textforge/markdown add @textforge/core@workspace:* @textforge/workspace@workspace:* @textforge/surfaces@workspace:* @textforge/pipeline@workspace:* @textforge/assets@workspace:* markdown-it markdown-it-anchor markdown-it-footnote markdown-it-katex katex`
 
 
-Create. TF-MD baseline processor and markdown-it preview surface: Markdown-compatible reader, explicit heading anchors, heading/paragraph/inline style references, `tf-md` control block scanner, `%metadata`, `%style`, diagnostics, workspace-relative image resolver, Markdown toolbar for inserting workspace images/diagram blocks, print-optimized HTML baseline, and provisional fenced-block dispatch for known local block types. Preserve unknown fenced blocks as code.
+Create. TF-MD baseline processor and markdown-it preview surface: Markdown-compatible reader, explicit heading anchors, heading/paragraph/inline style references, `tf-md` control block scanner, `%metadata`, `%style`, diagnostics, workspace-relative image resolver, preview-link activation for host-owned document routing, Markdown toolbar for inserting workspace images/diagram blocks, print-optimized HTML baseline, and provisional fenced-block dispatch for known local block types. Preserve unknown fenced blocks as code.
 
 ### Phase 4.1 — Foundation stabilization before contribution registries
 
@@ -175,6 +175,10 @@ The package now resolves active fence handlers directly from the current documen
 ## WP-ITM-01 progress note
 
 The package now passes parsed fence metadata, shared per-document fence state, and host workspace services into active fence handlers so `@textforge/itm` can publish embedded `itm` and `itm-pub` blocks through public contribution manifests. Markdown keeps the integration document-scoped and contribution-driven: the preview host resolves workspace includes through the shared workspace service, while ITM publication rendering stays inside the `@textforge/itm` package surface rather than duplicating model logic in Markdown.
+
+## Markdown preview link routing note
+
+The preview surface now exposes host-owned Markdown link activation hooks so the shell can resolve relative and repository-qualified document links through the usual workspace resolver path and reopen the target resource inside TextForge instead of navigating the browser view away from the app.
 
 
 ## V16 backend-optional responsibilities
