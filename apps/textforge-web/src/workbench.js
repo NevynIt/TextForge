@@ -1007,8 +1007,10 @@ function createTextForgeWorkbenchController() {
       return undefined;
     }
 
+    const entry = getEntry(session.resource.resourceId);
     return {
       resourceId: session.resource.resourceId,
+      resourcePath: entry?.path ?? session.resource.path,
       contributionId: session.contributionId,
       placement: session.placement,
       sessionKey: session.sessionKey,
@@ -1041,12 +1043,13 @@ function createTextForgeWorkbenchController() {
   }
 
   function focusRestoredSession(descriptor) {
-    if (!descriptor?.resourceId) {
+    if (!descriptor?.resourceId && !descriptor?.resourcePath) {
       return;
     }
 
     const matchingSession = getOpenSessions().find((session) =>
-      session.resource.resourceId === descriptor.resourceId
+      (session.resource.resourceId === descriptor.resourceId
+        || session.resource.path === descriptor.resourcePath)
       && session.placement === descriptor.placement
       && session.contributionId === descriptor.contributionId
       && (descriptor.sessionKey === undefined || session.sessionKey === descriptor.sessionKey));
@@ -1076,7 +1079,8 @@ function createTextForgeWorkbenchController() {
 
     const openStoredSessions = (sessions) => {
       for (const descriptor of sessions) {
-        const entry = getEntry(descriptor.resourceId);
+        const entry = getEntry(descriptor.resourceId)
+          ?? (descriptor.resourcePath ? workspace.getEntryByPath(descriptor.resourcePath) : undefined);
         if (!entry || entry.kind === 'folder') {
           continue;
         }
@@ -4546,6 +4550,11 @@ function SurfaceMount({ view }) {
       return undefined;
     }
 
+    const scrollHost = mountRef.current.closest('.tf-surface-frame__viewport, .tf-popup-host__body');
+    if (scrollHost && typeof scrollHost.scrollTo === 'function') {
+      scrollHost.scrollTo({ top: 0, left: 0 });
+    }
+
     const dispose = view.surface.mount(mountRef.current);
     return () => {
       if (typeof dispose === 'function') {
@@ -5463,7 +5472,10 @@ function TextForgeWorkbenchApp({ controller }) {
         onSelectTab: controller.actions.focusPopupSession,
         title: snapshot.activePopupView.title,
       },
-      element(SurfaceMount, { view: snapshot.activePopupView }),
+      element(SurfaceMount, {
+        key: snapshot.activePopupView.mountId ?? snapshot.activePopupView.id,
+        view: snapshot.activePopupView,
+      }),
     )
     : null;
   const visualTargetPickerOverlay = snapshot.visualTargetPicker
@@ -5551,7 +5563,10 @@ function TextForgeWorkbenchApp({ controller }) {
       ? element(RecoveryState, { controller, snapshot })
       : mainView.kind === 'welcome'
         ? element(WelcomeState, { hydrationSource: snapshot.runtime.hydrationSource })
-        : element(SurfaceMount, { view: mainView });
+        : element(SurfaceMount, {
+          key: mainView.mountId ?? mainView.id,
+          view: mainView,
+        });
 
   async function handleCommandPress(commandId) {
     setCommandPaletteOpen(false);
