@@ -4662,7 +4662,9 @@ function SurfaceMount({ view }) {
     const scrollHost = mountRef.current.closest('.tf-surface-frame__viewport, .tf-popup-host__body');
     const dispose = view.surface.mount(mountRef.current);
     const restoreScroll = surfaceViewportScrollByViewId.get(view.id) ?? { top: 0, left: 0 };
-    let restoreFrameId;
+    const restoreFrameIds = [];
+    let resizeObserver;
+    let removeScrollTracking;
     if (scrollHost) {
       const applyScroll = () => {
         if (typeof scrollHost.scrollTo === 'function') {
@@ -4672,24 +4674,49 @@ function SurfaceMount({ view }) {
         scrollHost.scrollTop = restoreScroll.top;
         scrollHost.scrollLeft = restoreScroll.left;
       };
-
-      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
-        restoreFrameId = window.requestAnimationFrame(applyScroll);
-      } else {
-        applyScroll();
-      }
-    }
-
-    return () => {
-      if (restoreFrameId !== undefined && typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
-        window.cancelAnimationFrame(restoreFrameId);
-      }
-      if (scrollHost) {
+      const rememberScroll = () => {
         surfaceViewportScrollByViewId.set(view.id, {
           top: scrollHost.scrollTop,
           left: scrollHost.scrollLeft,
         });
+      };
+      const scheduleRestore = (attempts) => {
+        if (attempts <= 0 || typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+          applyScroll();
+          return;
+        }
+
+        const frameId = window.requestAnimationFrame(() => {
+          applyScroll();
+          scheduleRestore(attempts - 1);
+        });
+        restoreFrameIds.push(frameId);
+      };
+
+      scrollHost.addEventListener('scroll', rememberScroll, { passive: true });
+      scheduleRestore(3);
+
+      if (typeof ResizeObserver === 'function') {
+        resizeObserver = new ResizeObserver(() => {
+          applyScroll();
+        });
+        resizeObserver.observe(scrollHost);
+        resizeObserver.observe(mountRef.current);
       }
+      removeScrollTracking = () => {
+        rememberScroll();
+        scrollHost.removeEventListener('scroll', rememberScroll);
+      };
+    }
+
+    return () => {
+      if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+        for (const frameId of restoreFrameIds) {
+          window.cancelAnimationFrame(frameId);
+        }
+      }
+      resizeObserver?.disconnect();
+      removeScrollTracking?.();
       if (typeof dispose === 'function') {
         dispose();
       }
