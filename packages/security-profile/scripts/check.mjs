@@ -35,7 +35,7 @@ assert.equal(createBrowserStorageBoundaryCheck().run({
     browserManaged: true,
     mechanism: 'indexeddb',
     driver: 'dexie',
-    notesUri: 'docs/specs/browser-managed-workspace-storage.md',
+    notesUri: 'docs/reference/specs/browser-managed-workspace-storage.md',
     usesFilesystemAccess: false,
     usesDirectoryHandles: false,
     usesBackgroundSync: false,
@@ -53,7 +53,7 @@ assert.equal(createVisualIdentityBoundaryCheck().run({
     usesRemoteImages: false,
     usesFilesystemDerivedIdentity: false,
     usesUserProvidedImages: false,
-    notesUri: 'docs/specs/resource-identity-badges.md',
+    notesUri: 'docs/reference/specs/resource-identity-badges.md',
   },
 }).passed, true);
 
@@ -76,7 +76,7 @@ const results = runSecurityChecks(defaultSecurityProfile, {
     usesRemoteImages: false,
     usesFilesystemDerivedIdentity: true,
     usesUserProvidedImages: true,
-    notesUri: 'docs/specs/resource-identity-badges.md',
+    notesUri: 'docs/reference/specs/resource-identity-badges.md',
   },
   storageBoundary: {
     documented: true,
@@ -88,7 +88,7 @@ const results = runSecurityChecks(defaultSecurityProfile, {
     usesBackgroundSync: true,
     usesRemoteSync: false,
     usesSilentLocalFileAccess: false,
-    notesUri: 'docs/specs/browser-managed-workspace-storage.md',
+    notesUri: 'docs/reference/specs/browser-managed-workspace-storage.md',
   },
 });
 

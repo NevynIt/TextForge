@@ -19,7 +19,7 @@ The recommended pivot is:
 1. Tag the current implementation as `textforge-v1-final`.
 2. Create `archive/v1-current` from the current implementation.
 3. Create `rewrite/v2-monorepo` for the greenfield modular rebuild.
-4. Preserve selected legacy docs/specs/fixtures under `docs/legacy`, `docs/specs`, and `fixtures/legacy`.
+4. Preserve selected legacy docs/reference/specs/fixtures under `docs/archive/legacy`, `docs/reference/specs`, and `fixtures/legacy`.
 5. Remove the old implementation from the rewrite branch in one explicit pivot commit.
 6. Add the pnpm workspace skeleton and package folders.
 7. Merge the rewrite branch back to the default branch only when the new shell is minimally runnable.

@@ -29,7 +29,7 @@ This folder is the canonical V19 planning layer from WP5 onward.
 
 The generator uses `workpackage-register.md` for topology and `implementation-status.md` for current coloring, so keep those two files current instead of editing the Mermaid file by hand.
 
-The generated mirror in `docs/design/dependency-map.md` should be refreshed alongside the roadmap copy when the map changes.
+The generated mirror in `docs/architecture/dependency-map.md` should be refreshed alongside the roadmap copy when the map changes.
 
 When updating the source files for the generator, keep the dependency map semantics aligned with `implementation-status.md`:
 

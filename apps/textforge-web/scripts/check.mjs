@@ -273,7 +273,7 @@ function assertSecurityEnvelope() {
       usesBackgroundSync: false,
       usesRemoteSync: false,
       usesSilentLocalFileAccess: false,
-      notesUri: 'docs/specs/browser-managed-workspace-storage.md',
+      notesUri: 'docs/reference/specs/browser-managed-workspace-storage.md',
     },
   }).passed !== true) {
     throw new Error('The shell must keep the workspace inside the browser-managed storage boundary');
@@ -289,7 +289,7 @@ function assertSecurityEnvelope() {
       usesRemoteImages: false,
       usesFilesystemDerivedIdentity: false,
       usesUserProvidedImages: false,
-      notesUri: 'docs/specs/resource-identity-badges.md',
+      notesUri: 'docs/reference/specs/resource-identity-badges.md',
     },
   }).passed !== true) {
     throw new Error('The shell must keep Phase 3.4 badges and icons local, deterministic, and browser-bounded');
@@ -302,7 +302,7 @@ function assertSecurityEnvelope() {
       localOnly: true,
       usesPluginExecution: false,
       usesRemoteExecution: false,
-      notesUri: 'docs/specs/local-command-dispatch.md',
+      notesUri: 'docs/reference/specs/local-command-dispatch.md',
     },
   }).passed !== true) {
     throw new Error('The shell must keep Phase 3.3 command dispatch local and bundled');
@@ -320,7 +320,7 @@ function assertSecurityEnvelope() {
       usesBackgroundSync: false,
       usesRemoteSync: false,
       usesFilesystemAccess: false,
-      notesUri: 'docs/specs/local-shell-ui-state.md',
+      notesUri: 'docs/reference/specs/local-shell-ui-state.md',
     },
   }).passed !== true) {
     throw new Error('The shell must keep popup and panel behavior inside local UI state only');

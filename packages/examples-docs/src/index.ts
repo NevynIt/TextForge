@@ -40,7 +40,7 @@ export const docsIndex = {
       id: 'resource-identity-badges',
       title: 'Resource identity badges',
       summary: 'Phase 3.4 guidance for deterministic badges, local icons, and collision repair.',
-      href: 'docs/specs/resource-identity-badges.md',
+      href: 'docs/reference/specs/resource-identity-badges.md',
       tags: ['phase-3.4', 'badges', 'icons', 'readability'],
     },
   ] satisfies ReadonlyArray<DocumentationTopic>,

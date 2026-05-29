@@ -30,7 +30,7 @@
 ## Manual UI validation
 
 - Reset the browser-managed workspace so the seeded bundled docs baseline is visible.
-- Open `/.textforge/resources/docs/design/capability-model.md` and confirm the source editor is read-only.
+- Open `/.textforge/resources/docs/architecture/capability-model.md` and confirm the source editor is read-only.
 - Confirm the inspector shows a provider descriptor section with `bundled-docs` metadata.
 - Use the workspace-item context menu action `Copy selected resource into workspace` on that bundled document.
 - Confirm the copied resource opens from the writable workspace and is editable.

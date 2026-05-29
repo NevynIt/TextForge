@@ -32,7 +32,7 @@ sequenceDiagram
   rect rgb(245,245,245)
     Note over App,Docs: Phase -1 — repository pivot and archival preservation
     App->>App: preserve v1 tag/branch and create rewrite branch
-    App->>Docs: preserve selected legacy docs/specs/examples/fixtures
+    App->>Docs: preserve selected legacy docs/reference/specs/examples/fixtures
     App->>App: create pnpm workspace monorepo skeleton
   end
 

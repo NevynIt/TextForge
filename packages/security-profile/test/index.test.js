@@ -41,7 +41,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       browserManaged: true,
       mechanism: 'indexeddb',
       driver: 'dexie',
-      notesUri: 'docs/specs/browser-managed-workspace-storage.md',
+      notesUri: 'docs/reference/specs/browser-managed-workspace-storage.md',
       usesFilesystemAccess: false,
       usesDirectoryHandles: false,
       usesBackgroundSync: false,
@@ -56,7 +56,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       localOnly: true,
       usesPluginExecution: false,
       usesRemoteExecution: false,
-      notesUri: 'docs/specs/local-command-dispatch.md',
+      notesUri: 'docs/reference/specs/local-command-dispatch.md',
     },
   }).passed, true);
   assert.equal(localUiStateCheck.run({
@@ -71,7 +71,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       usesBackgroundSync: false,
       usesRemoteSync: false,
       usesFilesystemAccess: false,
-      notesUri: 'docs/specs/local-shell-ui-state.md',
+      notesUri: 'docs/reference/specs/local-shell-ui-state.md',
     },
   }).passed, true);
   assert.equal(visualIdentityCheck.run({
@@ -84,7 +84,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       usesRemoteImages: false,
       usesFilesystemDerivedIdentity: false,
       usesUserProvidedImages: false,
-      notesUri: 'docs/specs/resource-identity-badges.md',
+      notesUri: 'docs/reference/specs/resource-identity-badges.md',
     },
   }).passed, true);
 
@@ -107,7 +107,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       usesRemoteImages: false,
       usesFilesystemDerivedIdentity: true,
       usesUserProvidedImages: true,
-      notesUri: 'docs/specs/resource-identity-badges.md',
+      notesUri: 'docs/reference/specs/resource-identity-badges.md',
     },
     storageBoundary: {
       documented: true,
@@ -119,14 +119,14 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       usesBackgroundSync: true,
       usesRemoteSync: false,
       usesSilentLocalFileAccess: false,
-      notesUri: 'docs/specs/browser-managed-workspace-storage.md',
+      notesUri: 'docs/reference/specs/browser-managed-workspace-storage.md',
     },
     commandDispatch: {
       documented: true,
       localOnly: false,
       usesPluginExecution: true,
       usesRemoteExecution: false,
-      notesUri: 'docs/specs/local-command-dispatch.md',
+      notesUri: 'docs/reference/specs/local-command-dispatch.md',
     },
     localUiState: {
       documented: true,
@@ -138,7 +138,7 @@ test('security profile checks license, filesystem APIs, and archive boundary doc
       usesBackgroundSync: false,
       usesRemoteSync: true,
       usesFilesystemAccess: false,
-      notesUri: 'docs/specs/local-shell-ui-state.md',
+      notesUri: 'docs/reference/specs/local-shell-ui-state.md',
     },
   });
 
