@@ -2671,6 +2671,19 @@ body {
   color: #152033;
 }
 
+.tfmd-block--mermaid {
+  background:
+    radial-gradient(circle at top, rgba(37, 99, 235, 0.12), rgba(15, 23, 42, 0.96) 62%),
+    #0f172a;
+  color: #e6edf7;
+}
+
+.tfmd-block--mermaid svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
 .tfmd-preview--loading,
 .tfmd-preview--error {
   padding: 24px;

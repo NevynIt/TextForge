@@ -114,7 +114,30 @@ function ensureMermaid() {
   mermaid.initialize({
     startOnLoad: false,
     securityLevel: 'strict',
-    theme: 'neutral',
+    theme: 'dark',
+    themeVariables: {
+      background: '#0b1020',
+      mainBkg: '#182235',
+      primaryColor: '#182235',
+      primaryTextColor: '#e6edf7',
+      primaryBorderColor: '#4fd1c5',
+      lineColor: '#7dd3fc',
+      textColor: '#e6edf7',
+      secondaryColor: '#131b2d',
+      secondaryTextColor: '#e6edf7',
+      secondaryBorderColor: '#7dd3fc',
+      tertiaryColor: '#101728',
+      tertiaryTextColor: '#d9e4f2',
+      tertiaryBorderColor: '#8fa0b8',
+      noteBkgColor: '#1f2937',
+      noteTextColor: '#e6edf7',
+      clusterBkg: '#101728',
+      clusterBorder: '#34425b',
+      defaultLinkColor: '#7dd3fc',
+      edgeLabelBackground: '#0f1626',
+      fontFamily: 'Segoe UI, sans-serif',
+      darkMode: true,
+    },
   });
   mermaidInitialized = true;
 }

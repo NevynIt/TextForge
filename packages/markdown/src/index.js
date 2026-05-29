@@ -1062,12 +1062,38 @@ export function createMarkdownPreviewSurface(source, result, options = {}) {
     contribution: markdownPreviewSurfaceContribution,
     model,
     mount(container) {
-      container.innerHTML = model.html;
+      if (!container || typeof container.innerHTML !== 'string') {
+        return () => {};
+      }
+
+      if (typeof container.ownerDocument?.createElement === 'function') {
+        const template = container.ownerDocument.createElement('template');
+        template.innerHTML = model.html;
+        const cspNonce = readCspNonce(container.ownerDocument);
+        if (cspNonce) {
+          for (const styleElement of template.content.querySelectorAll('style')) {
+            styleElement.setAttribute('nonce', cspNonce);
+          }
+        }
+        container.replaceChildren(template.content.cloneNode(true));
+      } else {
+        container.innerHTML = model.html;
+      }
       return () => {
         container.innerHTML = '';
       };
     },
   };
+}
+
+function readCspNonce(targetDocument) {
+  if (!targetDocument?.querySelector) {
+    return undefined;
+  }
+
+  const meta = targetDocument.querySelector('meta[name="textforge-csp-nonce"]');
+  const nonce = meta?.getAttribute('content')?.trim();
+  return nonce || undefined;
 }
 
 export function createMarkdownSnippet(kind, options = {}) {
