@@ -15,13 +15,19 @@ function createWorkspace(entries) {
   };
 }
 
-test('resolveMarkdownPreviewLinkTarget resolves relative and repository-qualified markdown links', () => {
+test('resolveMarkdownPreviewLinkTarget resolves relative, bare sibling, and repository-qualified markdown links', () => {
   const workspace = createWorkspace([
     {
       id: 'guide',
       kind: 'resource',
       representation: 'text',
       path: '/docs/guides/guide.md',
+    },
+    {
+      id: 'minimal-local',
+      kind: 'resource',
+      representation: 'text',
+      path: '/docs/examples/markdown-minimal.md',
     },
     {
       id: 'minimal',
@@ -36,6 +42,11 @@ test('resolveMarkdownPreviewLinkTarget resolves relative and repository-qualifie
     sourceResourcePath: '/docs/examples/phase-4.md',
     workspace,
   });
+  const bareSibling = resolveMarkdownPreviewLinkTarget({
+    href: 'markdown-minimal.md',
+    sourceResourcePath: '/docs/examples/phase-4.md',
+    workspace,
+  });
   const repositoryQualified = resolveMarkdownPreviewLinkTarget({
     href: 'bundled://docs/examples/markdown-minimal.md',
     sourceResourcePath: '/docs/examples/phase-4.md',
@@ -45,6 +56,8 @@ test('resolveMarkdownPreviewLinkTarget resolves relative and repository-qualifie
   assert.equal(relative.kind, 'resource');
   assert.equal(relative.entry.path, '/docs/guides/guide.md');
   assert.equal(relative.fragment, 'intro');
+  assert.equal(bareSibling.kind, 'resource');
+  assert.equal(bareSibling.entry.path, '/docs/examples/markdown-minimal.md');
   assert.equal(repositoryQualified.kind, 'resource');
   assert.equal(repositoryQualified.entry.path, '/.textforge/resources/docs/examples/markdown-minimal.md');
 });

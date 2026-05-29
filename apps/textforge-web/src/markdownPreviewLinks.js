@@ -3,6 +3,9 @@ import {
   resolveWorkspaceRepositoryLocation,
 } from '@textforge/workspace';
 
+const repositoryProtocolPattern = /^[A-Za-z][A-Za-z0-9+.-]*:\/\//u;
+const windowsAbsolutePathPattern = /^[A-Za-z]:[\\/]/u;
+
 function splitMarkdownLinkHref(href) {
   const normalizedHref = String(href ?? '').trim();
   if (!normalizedHref) {
@@ -33,6 +36,55 @@ function splitMarkdownLinkHref(href) {
   };
 }
 
+function looksLikeUrl(value) {
+  return repositoryProtocolPattern.test(String(value ?? ''));
+}
+
+function splitRepositoryTarget(target) {
+  const normalizedTarget = String(target ?? '').trim();
+  if (
+    normalizedTarget === ''
+    || normalizedTarget.startsWith('/')
+    || normalizedTarget.startsWith('./')
+    || normalizedTarget.startsWith('../')
+    || looksLikeUrl(normalizedTarget)
+    || windowsAbsolutePathPattern.test(normalizedTarget)
+  ) {
+    return undefined;
+  }
+
+  const separatorIndex = normalizedTarget.indexOf(':');
+  if (separatorIndex <= 0) {
+    return undefined;
+  }
+
+  return {
+    repositoryName: normalizedTarget.slice(0, separatorIndex),
+    path: normalizedTarget.slice(separatorIndex + 1),
+  };
+}
+
+function resolveMarkdownPreviewLocation(location, options) {
+  const normalizedLocation = String(location ?? '').trim();
+  const resolution = resolveWorkspaceRepositoryLocation(normalizedLocation, options);
+  if (resolution.status === 'resolved') {
+    return resolution;
+  }
+  if (
+    !normalizedLocation
+    || normalizedLocation.startsWith('/')
+    || normalizedLocation.startsWith('./')
+    || normalizedLocation.startsWith('../')
+    || looksLikeUrl(normalizedLocation)
+    || windowsAbsolutePathPattern.test(normalizedLocation)
+    || splitRepositoryTarget(normalizedLocation)
+  ) {
+    return resolution;
+  }
+
+  return resolveWorkspaceRepositoryLocation(`./${normalizedLocation}`, options);
+}
+
 export function resolveMarkdownPreviewLinkTarget({
   href,
   repositoryAliases,
@@ -49,7 +101,7 @@ export function resolveMarkdownPreviewLinkTarget({
     };
   }
 
-  const resolvedLocation = resolveWorkspaceRepositoryLocation(parsedHref.location, {
+  const resolvedLocation = resolveMarkdownPreviewLocation(parsedHref.location, {
     basePath: sourceResourcePath,
     repositoryAliases,
     repositoryRoots,
