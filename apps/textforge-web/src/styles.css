@@ -369,6 +369,15 @@ select {
   cursor: pointer;
 }
 
+.tf-tree__row.is-drop-target {
+  border-color: rgba(126, 231, 216, 0.58);
+  background: rgba(47, 143, 136, 0.22);
+}
+
+.tf-tree__row.is-editing {
+  cursor: default;
+}
+
 .tf-tree__kind,
 .tf-tree__badge,
 .tf-tab__state {
@@ -386,6 +395,24 @@ select {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-align: left;
+}
+
+.tf-tree__editor {
+  width: 100%;
+  min-width: 0;
+  min-height: 30px;
+  padding: 4px 8px;
+  border: 1px solid rgba(126, 231, 216, 0.42);
+  border-radius: 8px;
+  background: rgba(10, 16, 30, 0.9);
+  color: var(--text);
+  font: inherit;
+}
+
+.tf-tree__editor:focus {
+  outline: none;
+  border-color: rgba(126, 231, 216, 0.82);
+  box-shadow: 0 0 0 2px rgba(47, 143, 136, 0.2);
 }
 
 .tf-tree__badge {

@@ -856,6 +856,7 @@ function createTextForgeWorkbenchController() {
     activePopupSessionId: undefined,
     expandedFolderIds: [],
     selectedWorkspaceItemId: undefined,
+    workspaceTreeEdit: undefined,
     utilityPaneOpen: screenshotPreset.utilityPaneOpen,
     utilitySectionId: screenshotPreset.utilitySectionId,
     workspaceTreeCollapsed: screenshotPreset.workspaceTreeCollapsed,
@@ -1067,6 +1068,7 @@ function createTextForgeWorkbenchController() {
     luaConsoleSessionStateByResourceId.clear();
     state.activeMainSessionId = undefined;
     state.activePopupSessionId = undefined;
+    state.workspaceTreeEdit = undefined;
     state.surfaceFocusPlacement = 'main';
     state.visualTargetPicker = undefined;
   }
@@ -1354,6 +1356,7 @@ function createTextForgeWorkbenchController() {
       })
       .map((item) => ({
         ...item,
+        movable: supportsWorkspaceCapability(getEntry(item.id), 'resource.move'),
         hasChildren: item.kind === 'folder' ? item.expanded : false,
         expanded: item.kind === 'folder' ? state.expandedFolderIds.includes(item.id) : false,
       }));
@@ -1439,6 +1442,80 @@ function createTextForgeWorkbenchController() {
     return candidate;
   }
 
+  function getWorkspaceEntryName(entry) {
+    return basenameWorkspacePath(entry?.path ?? '') || entry?.metadata?.title || entry?.id || '';
+  }
+
+  function normalizeWorkspaceEntryName(name) {
+    const trimmed = String(name ?? '').trim();
+    if (!trimmed) {
+      throw new Error('Workspace item names cannot be empty.');
+    }
+    if (trimmed.includes('/') || trimmed.includes('\\')) {
+      throw new Error('Workspace item names cannot contain path separators.');
+    }
+    return trimmed;
+  }
+
+  function createWorkspaceEntryNameSelection(name, kind) {
+    if (kind === 'folder') {
+      return { start: 0, end: name.length };
+    }
+
+    const extensionIndex = String(name).lastIndexOf('.');
+    if (extensionIndex > 0) {
+      return { start: 0, end: extensionIndex };
+    }
+
+    return { start: 0, end: String(name).length };
+  }
+
+  function beginWorkspaceTreeEdit(itemId, options = {}) {
+    if (runtime.status !== 'ready') {
+      return;
+    }
+
+    const entry = getEntry(itemId);
+    if (!entry || !supportsWorkspaceCapability(entry, 'resource.rename')) {
+      return;
+    }
+
+    const name = options.initialValue ?? getWorkspaceEntryName(entry);
+    const selection = options.selection ?? createWorkspaceEntryNameSelection(name, entry.kind);
+    state.workspaceTreeCollapsed = false;
+    rememberSelection(itemId);
+    state.workspaceTreeEdit = {
+      itemId,
+      value: name,
+      selectionStart: selection.start,
+      selectionEnd: selection.end,
+    };
+    emit();
+  }
+
+  function updateWorkspaceTreeEditValue(value) {
+    if (!state.workspaceTreeEdit) {
+      return;
+    }
+
+    state.workspaceTreeEdit = {
+      ...state.workspaceTreeEdit,
+      value,
+      selectionStart: undefined,
+      selectionEnd: undefined,
+    };
+    emit();
+  }
+
+  function cancelWorkspaceTreeEdit() {
+    if (!state.workspaceTreeEdit) {
+      return;
+    }
+
+    state.workspaceTreeEdit = undefined;
+    emit();
+  }
+
   function createTextResourceAtPath(path, options = {}) {
     const nextPath = createAvailableWorkspacePath(path);
     const languageId = inferLanguageId({ path: nextPath, fallback: 'plaintext' });
@@ -1452,6 +1529,16 @@ function createTextForgeWorkbenchController() {
     });
     expandFolderAncestors(resource.path);
     return resource;
+  }
+
+  function createFolderAtPath(path) {
+    const nextPath = createAvailableWorkspacePath(path);
+    const folder = workspace.createFolder({
+      path: nextPath,
+      title: basenameWorkspacePath(nextPath),
+    });
+    expandFolderAncestors(folder.path);
+    return folder;
   }
 
   function isBundledWorkspaceEntry(entry) {
@@ -2947,6 +3034,123 @@ function createTextForgeWorkbenchController() {
     ];
   }
 
+  function refreshOpenSessionsForAffectedEntries(affectedIds) {
+    for (const session of getOpenSessions().filter((candidate) => affectedIds.includes(candidate.resource.resourceId))) {
+      const resource = getEntry(session.resource.resourceId);
+      if (resource && resource.kind !== 'folder') {
+        openResourceEntry(resource, {
+          placement: session.placement,
+          preferredSurfaceId: session.contributionId,
+          forceReopen: true,
+        });
+      }
+    }
+  }
+
+  function resolveWorkspaceMoveTargetFolder(entry) {
+    if (!entry) {
+      return undefined;
+    }
+
+    if (entry.kind === 'folder') {
+      return entry;
+    }
+
+    const parentPath = dirnameWorkspacePath(entry.path);
+    const parent = workspace.getEntryByPath(parentPath);
+    return parent?.kind === 'folder' ? parent : undefined;
+  }
+
+  function canMoveWorkspaceEntryToFolder(entry, folder) {
+    if (!entry || !folder || folder.kind !== 'folder') {
+      return false;
+    }
+    if (entry.id === folder.id) {
+      return false;
+    }
+    if (!supportsWorkspaceCapability(entry, 'resource.move')) {
+      return false;
+    }
+    if (!supportsWorkspaceCapability(folder, 'resource.create-child')) {
+      return false;
+    }
+    if (entry.kind === 'folder') {
+      const normalizedPath = normalizeWorkspacePath(entry.path);
+      if (folder.path === normalizedPath || folder.path.startsWith(`${normalizedPath}/`)) {
+        return false;
+      }
+    }
+
+    return dirnameWorkspacePath(entry.path) !== folder.path;
+  }
+
+  async function commitWorkspaceTreeEdit() {
+    const edit = state.workspaceTreeEdit;
+    if (!edit) {
+      return;
+    }
+
+    const entry = getEntry(edit.itemId);
+    if (!entry) {
+      cancelWorkspaceTreeEdit();
+      return;
+    }
+
+    try {
+      const nextName = normalizeWorkspaceEntryName(edit.value);
+      const nextPath = assertWorkspacePathAvailable(joinWorkspacePath(dirnameWorkspacePath(entry.path), nextName), entry.id);
+      if (nextPath === entry.path) {
+        cancelWorkspaceTreeEdit();
+        return;
+      }
+
+      const affectedIds = collectAffectedEntryIds(entry);
+      const renamed = workspace.renameEntry(entry.id, nextPath);
+      await persistWorkspace('workspace.rename-selected');
+      state.workspaceTreeEdit = undefined;
+      syncSelectionAfterMutation(renamed?.id ?? entry.id);
+      if (renamed?.path) {
+        expandFolderAncestors(renamed.path);
+      }
+      refreshOpenSessionsForAffectedEntries(affectedIds);
+      emit();
+    } catch (error) {
+      window.alert(error?.message ?? 'Could not rename workspace item.');
+    }
+  }
+
+  async function moveWorkspaceItem(sourceItemId, targetItemId) {
+    if (runtime.status !== 'ready') {
+      return;
+    }
+
+    const source = getEntry(sourceItemId);
+    const target = getEntry(targetItemId);
+    const targetFolder = resolveWorkspaceMoveTargetFolder(target);
+    if (!canMoveWorkspaceEntryToFolder(source, targetFolder)) {
+      return;
+    }
+
+    try {
+      const affectedIds = collectAffectedEntryIds(source);
+      const moved = workspace.moveEntry({
+        resourceId: source.id,
+        parentPath: targetFolder.path,
+      });
+      await persistWorkspace('workspace.move-selected');
+      state.workspaceTreeEdit = state.workspaceTreeEdit?.itemId === source.id ? undefined : state.workspaceTreeEdit;
+      syncSelectionAfterMutation(moved?.id ?? source.id);
+      expandFolderPath(targetFolder.path);
+      if (moved?.path) {
+        expandFolderAncestors(moved.path);
+      }
+      refreshOpenSessionsForAffectedEntries(affectedIds);
+      emit();
+    } catch (error) {
+      window.alert(error?.message ?? 'Could not move workspace item.');
+    }
+  }
+
   function assertWorkspacePathAvailable(path, ignoreResourceId) {
     const normalizedPath = normalizeWorkspacePath(path);
     const existingEntry = workspace.getEntryByPath(normalizedPath);
@@ -3335,34 +3539,16 @@ function createTextForgeWorkbenchController() {
   }
 
   async function createFolderCommand(commandContext) {
-    const defaultPath = joinWorkspacePath(getSelectedFolderPath(commandContext), 'new-folder');
-    const requestedPath = window.prompt('Folder path', defaultPath);
-    if (!requestedPath) {
-      return;
-    }
-
-    const nextPath = assertWorkspacePathAvailable(requestedPath);
-    const folder = workspace.createFolder({
-      path: nextPath,
-      title: basenameWorkspacePath(nextPath),
-    });
+    const folder = createFolderAtPath(joinWorkspacePath(getSelectedFolderPath(commandContext), 'new-folder'));
     await persistWorkspace('workspace.new-folder');
-    expandFolderAncestors(folder.path);
-    rememberSelection(folder.id);
-    emit();
+    beginWorkspaceTreeEdit(folder.id);
   }
 
   async function createResourceCommand(commandContext) {
-    const defaultPath = joinWorkspacePath(getSelectedFolderPath(commandContext), 'new-file.txt');
-    const requestedPath = window.prompt('Text resource path', defaultPath);
-    if (!requestedPath) {
-      return;
-    }
-
-    const nextPath = assertWorkspacePathAvailable(requestedPath);
-    const resource = createTextResourceAtPath(nextPath);
+    const resource = createTextResourceAtPath(joinWorkspacePath(getSelectedFolderPath(commandContext), 'new-file.txt'));
     await persistWorkspace('workspace.new-resource');
     openResourceEntry(resource, { placement: 'main' });
+    beginWorkspaceTreeEdit(resource.id);
   }
 
   async function createTextResourceInSelectedFolder(commandContext, options = {}) {
@@ -3370,6 +3556,7 @@ function createTextForgeWorkbenchController() {
     const resource = createTextResourceAtPath(joinWorkspacePath(folderPath, options.filename ?? 'new-file.txt'));
     await persistWorkspace('workspace.new-resource');
     openResourceEntry(resource, { placement: options.placement ?? 'main' });
+    beginWorkspaceTreeEdit(resource.id);
   }
 
   async function importWorkspaceCommand() {
@@ -3486,33 +3673,7 @@ function createTextForgeWorkbenchController() {
       return;
     }
 
-    const nextPathInput = window.prompt('Rename path', entry.path);
-    if (!nextPathInput) {
-      return;
-    }
-
-    const nextPath = assertWorkspacePathAvailable(nextPathInput, entry.id);
-    if (nextPath === entry.path) {
-      return;
-    }
-
-    const affectedIds = collectAffectedEntryIds(entry);
-    const renamed = workspace.renameEntry(entry.id, nextPath);
-    await persistWorkspace('workspace.rename-selected');
-    syncSelectionAfterMutation(renamed?.id ?? entry.id);
-
-    for (const session of getOpenSessions().filter((candidate) => affectedIds.includes(candidate.resource.resourceId))) {
-      const resource = getEntry(session.resource.resourceId);
-      if (resource && resource.kind !== 'folder') {
-        openResourceEntry(resource, {
-          placement: session.placement,
-          preferredSurfaceId: session.contributionId,
-          forceReopen: true,
-        });
-      }
-    }
-
-    emit();
+    beginWorkspaceTreeEdit(entry.id);
   }
 
   async function deleteSelectedEntryCommand(commandContext) {
@@ -4200,11 +4361,14 @@ function createTextForgeWorkbenchController() {
     dispose,
     actions: {
       activateWorkspaceItem,
+      beginWorkspaceTreeEdit,
       cancelStorageReset,
       closeActivePopupSurface,
       closeContextMenu,
+      cancelWorkspaceTreeEdit,
       closeVisualTargetPicker,
       closeSession,
+      commitWorkspaceTreeEdit,
       confirmStorageReset,
       createTextResourceInSelectedFolder,
       dropFilesOnTabStrip,
@@ -4216,6 +4380,7 @@ function createTextForgeWorkbenchController() {
       openPopupSessionContextMenu,
       openSelectedVisualTargets,
       openWorkspaceItemContextMenu,
+      moveWorkspaceItem,
       requestStorageReset,
       retryStorageInitialization,
       selectWorkspaceItem,
@@ -4226,6 +4391,7 @@ function createTextForgeWorkbenchController() {
       toggleWorkspaceFolder,
       toggleUtilityPane,
       toggleWorkspaceTree,
+      updateWorkspaceTreeEditValue,
     },
   };
 }
@@ -5276,12 +5442,20 @@ function TextForgeWorkbenchApp({ controller }) {
         }),
         sidebar: element(TextForgeWorkspaceSidebar, {
           collapsed: snapshot.state.workspaceTreeCollapsed,
+          editingItemId: snapshot.state.workspaceTreeEdit?.itemId,
+          editingSelectionEnd: snapshot.state.workspaceTreeEdit?.selectionEnd,
+          editingSelectionStart: snapshot.state.workspaceTreeEdit?.selectionStart,
+          editingValue: snapshot.state.workspaceTreeEdit?.value ?? '',
+          onCancelEdit: controller.actions.cancelWorkspaceTreeEdit,
           onClose: () => controller.actions.setWorkspaceTreeCollapsed(true),
+          onCommitEdit: () => void controller.actions.commitWorkspaceTreeEdit(),
           onDropFilesToFolder: controller.actions.dropFilesOnWorkspaceFolder,
+          onMoveItem: (sourceItemId, targetItemId) => void controller.actions.moveWorkspaceItem(sourceItemId, targetItemId),
           onActivateItem: controller.actions.activateWorkspaceItem,
           onRequestItemContextMenu: controller.actions.openWorkspaceItemContextMenu,
           onSelectItem: controller.actions.selectWorkspaceItem,
           onToggleFolder: controller.actions.toggleWorkspaceFolder,
+          onUpdateEditValue: controller.actions.updateWorkspaceTreeEditValue,
           workspaceTree: snapshot.chromeModel.workspaceTree,
         }),
         onSidebarCollapsedChange: controller.actions.setWorkspaceTreeCollapsed,

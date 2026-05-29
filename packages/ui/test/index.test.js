@@ -167,3 +167,34 @@ test('ui package renders react shell primitives from chrome models', () => {
   assert.match(html, /Collapse Workspace/);
   assert.match(html, /Collapse Utility/);
 });
+
+test('workspace sidebar renders inline rename editor state', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(TextForgeWorkspaceSidebar, {
+      collapsed: false,
+      editingItemId: 'folder-1',
+      editingSelectionStart: 0,
+      editingSelectionEnd: 4,
+      editingValue: 'docs',
+      onCancelEdit: () => {},
+      onCommitEdit: () => {},
+      onMoveItem: () => {},
+      onUpdateEditValue: () => {},
+      workspaceTree: createWorkspaceTreeFrameModel({
+        items: [{
+          id: 'folder-1',
+          label: 'docs',
+          path: '/docs',
+          kind: 'folder',
+          depth: 0,
+          movable: true,
+        }],
+        selectedResourceId: 'folder-1',
+      }),
+    }),
+  );
+
+  assert.match(html, /tf-tree__editor/);
+  assert.match(html, /draggable="false"/);
+  assert.match(html, /value="docs"/);
+});

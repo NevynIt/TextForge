@@ -116,6 +116,7 @@ export interface WorkspaceTreeItem {
   readonly active?: boolean;
   readonly attention?: ResourceAttention;
   readonly badge?: ResourceBadgeToken;
+  readonly movable?: boolean;
 }
 
 export interface WorkspaceTreeFrame {
@@ -241,13 +242,21 @@ export interface TextForgeTopBarProps {
 
 export interface TextForgeWorkspaceSidebarProps {
   readonly collapsed?: boolean;
+  readonly editingItemId?: string;
+  readonly editingSelectionEnd?: number;
+  readonly editingSelectionStart?: number;
+  readonly editingValue?: string;
   readonly footer?: ReactNode;
   readonly onActivateItem?: (itemId: string) => void;
+  readonly onCancelEdit?: () => void;
   readonly onClose?: () => void;
+  readonly onCommitEdit?: () => void;
   readonly onDropFilesToFolder?: (itemId: string, files: ReadonlyArray<File>) => void;
+  readonly onMoveItem?: (sourceItemId: string, targetItemId: string) => void;
   readonly onRequestItemContextMenu?: (itemId: string, anchor: ContextMenuAnchor) => void;
   readonly onSelectItem?: (itemId: string) => void;
   readonly onToggleFolder?: (itemId: string) => void;
+  readonly onUpdateEditValue?: (value: string) => void;
   readonly workspaceTree: WorkspaceTreeFrame;
 }
 

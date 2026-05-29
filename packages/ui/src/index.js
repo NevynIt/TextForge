@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 
 const element = React.createElement;
+const workspaceTreeDragMime = 'application/x-textforge-workspace-item';
 
 const iconRegistry = {
   success: CheckCircle2,
@@ -212,6 +213,85 @@ function handleWorkspaceTreeItemKeyDown(event, item, onSelect, onToggleFolder) {
   }
 
   handleTreeKeyDown(event, onSelect);
+}
+
+function readDraggedWorkspaceItemId(dataTransfer) {
+  if (!dataTransfer?.types?.includes?.(workspaceTreeDragMime)) {
+    return undefined;
+  }
+
+  return dataTransfer.getData(workspaceTreeDragMime) || undefined;
+}
+
+function WorkspaceTreeInlineEditor({
+  selectionEnd,
+  selectionStart,
+  value,
+  onCancel,
+  onChange,
+  onCommit,
+}) {
+  const inputRef = React.useRef(null);
+  const actionRef = React.useRef(undefined);
+
+  React.useEffect(() => {
+    const input = inputRef.current;
+    if (!input) {
+      return;
+    }
+
+    input.focus();
+    const nextSelectionStart = typeof selectionStart === 'number' ? selectionStart : 0;
+    const nextSelectionEnd = typeof selectionEnd === 'number' ? selectionEnd : value.length;
+    input.setSelectionRange(nextSelectionStart, nextSelectionEnd);
+  }, [selectionEnd, selectionStart, value]);
+
+  function commit() {
+    if (actionRef.current) {
+      return;
+    }
+
+    actionRef.current = 'commit';
+    onCommit?.();
+  }
+
+  function cancel() {
+    if (actionRef.current) {
+      return;
+    }
+
+    actionRef.current = 'cancel';
+    onCancel?.();
+  }
+
+  return element('input', {
+    ref: inputRef,
+    className: 'tf-tree__editor',
+    onBlur: () => {
+      if (actionRef.current === 'cancel') {
+        return;
+      }
+      commit();
+    },
+    onChange: (event) => onChange?.(event.currentTarget.value),
+    onClick: (event) => event.stopPropagation(),
+    onContextMenu: (event) => event.stopPropagation(),
+    onKeyDown: (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        commit();
+        return;
+      }
+
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        cancel();
+      }
+    },
+    spellCheck: false,
+    type: 'text',
+    value,
+  });
 }
 
 function matchesCommandPaletteEntry(entry, query) {
@@ -690,17 +770,26 @@ export function TextForgeTopBar({
 
 export function TextForgeWorkspaceSidebar({
   collapsed = false,
+  editingItemId,
+  editingSelectionEnd,
+  editingSelectionStart,
+  editingValue = '',
   footer,
   onActivateItem,
+  onCancelEdit,
   onClose,
+  onCommitEdit,
   onDropFilesToFolder,
+  onMoveItem,
   onRequestItemContextMenu,
   onSelectItem,
   onToggleFolder,
+  onUpdateEditValue,
   workspaceTree,
 }) {
   const selectedIndex = workspaceTree.items.findIndex((item) => item.id === workspaceTree.selectedResourceId);
   const fallbackIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  const [dropTargetId, setDropTargetId] = React.useState(undefined);
   const header = element(
     'div',
     { className: 'tf-pane__header' },
@@ -723,97 +812,159 @@ export function TextForgeWorkspaceSidebar({
   const items = collapsed
     ? []
     : workspaceTree.items.map((item, index) =>
-      element(
-        'li',
-        { key: item.id, className: 'tf-tree__item' },
-        element(
-          'button',
-          {
-            type: 'button',
-            className: classNames('tf-tree__row', item.id === workspaceTree.selectedResourceId && 'is-active'),
-            role: 'treeitem',
-            'aria-level': item.depth + 1,
-            'aria-selected': item.id === workspaceTree.selectedResourceId,
-            tabIndex: index === fallbackIndex ? 0 : -1,
-            'data-item-id': item.id,
-            'data-workspace-folder-drop': item.kind === 'folder' ? item.id : undefined,
-            onClick: () => onSelectItem?.(item.id),
-            onDoubleClick: () => onActivateItem?.(item.id),
-            onContextMenu: (event) => {
-              event.preventDefault();
-              onRequestItemContextMenu?.(item.id, {
-                x: event.clientX,
-                y: event.clientY,
-              });
-            },
-            onKeyDown: (event) => {
-              if (event.key === 'Enter') {
-                event.preventDefault();
-                onActivateItem?.(item.id);
-                return;
-              }
-
-              if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
-                event.preventDefault();
-                const rect = event.currentTarget.getBoundingClientRect();
-                onRequestItemContextMenu?.(item.id, {
-                  x: rect.left + (rect.width / 2),
-                  y: rect.top + 12,
-                });
-                return;
-              }
-
-              handleWorkspaceTreeItemKeyDown(event, item, onSelectItem, onToggleFolder);
-            },
-            title: item.path,
-            style: { '--depth': item.depth },
+      (() => {
+        const isEditing = editingItemId === item.id;
+        const rowTag = isEditing ? 'div' : 'button';
+        const rowProps = {
+          className: classNames(
+            'tf-tree__row',
+            item.id === workspaceTree.selectedResourceId && 'is-active',
+            isEditing && 'is-editing',
+            dropTargetId === item.id && 'is-drop-target',
+          ),
+          role: 'treeitem',
+          'aria-level': item.depth + 1,
+          'aria-selected': item.id === workspaceTree.selectedResourceId,
+          tabIndex: index === fallbackIndex ? 0 : -1,
+          'data-item-id': item.id,
+          'data-workspace-folder-drop': item.kind === 'folder' ? item.id : undefined,
+          draggable: Boolean(onMoveItem && item.movable !== false && !isEditing),
+          onClick: isEditing ? undefined : () => onSelectItem?.(item.id),
+          onDoubleClick: isEditing ? undefined : () => onActivateItem?.(item.id),
+          onContextMenu: (event) => {
+            event.preventDefault();
+            onRequestItemContextMenu?.(item.id, {
+              x: event.clientX,
+              y: event.clientY,
+            });
           },
-          item.kind === 'folder' && item.hasChildren
-            ? element(
-              'span',
-              {
-                className: 'tf-tree__toggle',
-                'aria-hidden': 'true',
-                onClick: (event) => {
-                  event.stopPropagation();
-                  onToggleFolder?.(item.id);
+          onDragEnd: onMoveItem ? () => setDropTargetId(undefined) : undefined,
+          onDragLeave: onMoveItem
+            ? (event) => {
+              if (!event.currentTarget.contains(event.relatedTarget)) {
+                setDropTargetId((current) => (current === item.id ? undefined : current));
+              }
+            }
+            : undefined,
+          onDragOver: onMoveItem
+            ? (event) => {
+              const sourceItemId = readDraggedWorkspaceItemId(event.dataTransfer);
+              if (!sourceItemId || sourceItemId === item.id) {
+                return;
+              }
+
+              event.preventDefault();
+              event.dataTransfer.dropEffect = 'move';
+              setDropTargetId(item.id);
+            }
+            : undefined,
+          onDragStart: onMoveItem
+            ? (event) => {
+              event.dataTransfer.setData(workspaceTreeDragMime, item.id);
+              event.dataTransfer.effectAllowed = 'move';
+            }
+            : undefined,
+          onDrop: onMoveItem
+            ? (event) => {
+              const sourceItemId = readDraggedWorkspaceItemId(event.dataTransfer);
+              if (!sourceItemId || sourceItemId === item.id) {
+                return;
+              }
+
+              event.preventDefault();
+              event.stopPropagation();
+              setDropTargetId(undefined);
+              onMoveItem?.(sourceItemId, item.id);
+            }
+            : undefined,
+          onKeyDown: (event) => {
+            if (!isEditing && event.key === 'Enter') {
+              event.preventDefault();
+              onActivateItem?.(item.id);
+              return;
+            }
+
+            if (event.key === 'ContextMenu' || (event.shiftKey && event.key === 'F10')) {
+              event.preventDefault();
+              const rect = event.currentTarget.getBoundingClientRect();
+              onRequestItemContextMenu?.(item.id, {
+                x: rect.left + (rect.width / 2),
+                y: rect.top + 12,
+              });
+              return;
+            }
+
+            if (!isEditing) {
+              handleWorkspaceTreeItemKeyDown(event, item, onSelectItem, onToggleFolder);
+            }
+          },
+          title: item.path,
+          style: { '--depth': item.depth },
+          ...(rowTag === 'button' ? { type: 'button' } : {}),
+        };
+
+        return element(
+          'li',
+          { key: item.id, className: 'tf-tree__item' },
+          element(
+            rowTag,
+            rowProps,
+            item.kind === 'folder' && item.hasChildren
+              ? element(
+                'span',
+                {
+                  className: 'tf-tree__toggle',
+                  'aria-hidden': 'true',
+                  onClick: (event) => {
+                    event.stopPropagation();
+                    onToggleFolder?.(item.id);
+                  },
                 },
-              },
-              element(IconGlyph, {
-                className: 'tf-tree__toggle-icon',
-                name: item.expanded ? 'disclosureOpen' : 'disclosureClosed',
-                size: 14,
-              }),
-            )
-            : element('span', { className: 'tf-tree__toggle tf-tree__toggle--placeholder', 'aria-hidden': 'true' }),
-          element(IconGlyph, {
-            className: 'tf-tree__icon',
-            name: resolveWorkspaceItemIcon(item),
-            size: 15,
-          }),
-          element(
-            'span',
-            { className: 'tf-tree__copy' },
-            element('span', { className: 'tf-tree__label' }, item.label),
-            item.detail ? element('span', { className: 'tf-tree__detail' }, item.detail) : null,
+                element(IconGlyph, {
+                  className: 'tf-tree__toggle-icon',
+                  name: item.expanded ? 'disclosureOpen' : 'disclosureClosed',
+                  size: 14,
+                }),
+              )
+              : element('span', { className: 'tf-tree__toggle tf-tree__toggle--placeholder', 'aria-hidden': 'true' }),
+            element(IconGlyph, {
+              className: 'tf-tree__icon',
+              name: resolveWorkspaceItemIcon(item),
+              size: 15,
+            }),
+            element(
+              'span',
+              { className: 'tf-tree__copy' },
+              isEditing
+                ? element(WorkspaceTreeInlineEditor, {
+                  selectionEnd: editingSelectionEnd,
+                  selectionStart: editingSelectionStart,
+                  value: editingValue,
+                  onCancel: onCancelEdit,
+                  onChange: onUpdateEditValue,
+                  onCommit: onCommitEdit,
+                })
+                : element('span', { className: 'tf-tree__label' }, item.label),
+              !isEditing && item.detail ? element('span', { className: 'tf-tree__detail' }, item.detail) : null,
+            ),
+            element(
+              'span',
+              { className: 'tf-tree__meta' },
+              item.badge
+                ? element(TextForgeResourceBadge, {
+                  active: item.id === workspaceTree.selectedResourceId,
+                  attention: item.attention,
+                  badge: item.badge,
+                  label: `${item.label} badge`,
+                })
+                : null,
+              item.attention === 'warning'
+                ? element(IconGlyph, { className: 'tf-tree__attention', name: 'warning', size: 12.5 })
+                : null,
+            ),
           ),
-          element(
-            'span',
-            { className: 'tf-tree__meta' },
-            item.badge
-              ? element(TextForgeResourceBadge, {
-                active: item.id === workspaceTree.selectedResourceId,
-                attention: item.attention,
-                badge: item.badge,
-                label: `${item.label} badge`,
-              })
-              : null,
-            item.attention === 'warning'
-              ? element(IconGlyph, { className: 'tf-tree__attention', name: 'warning', size: 12.5 })
-              : null,
-          ),
-        ),
-      ));
+        );
+      })());
 
   return element(
     'aside',
