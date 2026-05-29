@@ -6,8 +6,9 @@ This cluster covers domain-specific profiles and domain-driven views.
 
 | WP | Title | Split rationale |
 |---|---|---|
-| WP-BPMN-SEM | BPMN semantic profile and validation | Needs grilling/further definition before implementation; keep to an MVP subset before visual consumption depends on it. |
+| WP-BPMN-SEM | BPMN semantic profile and validation | Grilled/narrowed semantic MVP before visual consumption depends on it. |
 | WP-BPMN-VISUAL-A | BPMN.io viewer surface | Read-only BPMN XML visual consumption using `bpmn-js`. |
+| WP-BPMN-DI-01 | BPMN Diagram Interchange read-only fidelity | Explicit bridge for BPMN DI bounds/routes/label geometry before ITM target integration and before later generic delta normalization. |
 | WP-BPMN-VISUAL-B | ITM/BPMN visual target integration | Connect ITM `%view`/`%viewpoint` resolution to BPMN visual output. |
 | WP-BPMN-VISUAL-C | BPMN modeler/edit/write-back | Later controlled editing/write-back; not on the minimal consumption path. |
 | WP-ARCHIMATE-SEM | ArchiMate semantic profile | Semantic profile before visual editing investigation. |
@@ -53,7 +54,8 @@ WP-VITM-01
   -> WP-RENDER-SIGMA
   -> WP-BPMN-SEM
   -> WP-BPMN-VISUAL-A
+  -> WP-BPMN-DI-01
   -> WP-BPMN-VISUAL-B
 ```
 
-Grill or further define `WP-VITM-01`, `WP-ITM-VRESOLVE-01`, and `WP-BPMN-SEM` before implementation.
+Implement `WP-BPMN-SEM` against `grilling/bpmn-sem-grilling.md`. `WP-BPMN-DI-01` is the explicit read-only BPMN DI bridge before `WP-BPMN-VISUAL-B`. `WP-VITM-01` and `WP-ITM-VRESOLVE-01` remain governed by their existing grilling/spec records.

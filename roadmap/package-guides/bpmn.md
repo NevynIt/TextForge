@@ -94,13 +94,23 @@ The former monolithic BPMN visual work is split into three workpackages:
 | WP | Purpose | Minimal-chain status |
 |---|---|---|
 | WP-BPMN-VISUAL-A | Read-only BPMN.io / `bpmn-js` viewer surface for BPMN XML. | Required. |
+| WP-BPMN-DI-01 | Read-only BPMN Diagram Interchange extraction/fidelity bridge. | Required. |
 | WP-BPMN-VISUAL-B | ITM `%view` / `%viewpoint` visual-target integration for BPMN output. | Required. |
 | WP-BPMN-VISUAL-C | BPMN modeler/edit/write-back, including patch review and apply/discard. | Deferred. |
 
-`WP-BPMN-SEM` must be grilled/further defined before implementation. Its MVP should include only Events, Tasks, Gateways, Sequence Flows, basic attributes, basic validation, fixtures, and a BPMN-oriented ITM package/profile. Full BPMN completeness, advanced gateway semantics, mature import/export loss handling, and editing behavior are out of scope for the MVP.
+`WP-BPMN-SEM` is now defined by `roadmap/grilling/bpmn-sem-grilling.md`. Its MVP includes `Process`, `StartEvent`, `EndEvent`, `Task`, collapsed `SubProcess`, `ExclusiveGateway`, `SequenceFlow`, basic `association`, `DataObjectReference`, `DataStoreReference`, basic attributes, basic validation, focused fixtures, and a BPMN-oriented ITM package/profile. Full BPMN completeness, broader gateway families, lanes, groups, annotations, BPMN Diagram Interchange, mature import/export loss handling, and editing behavior remain out of scope for the MVP.
+
+Bundled BPMN reference assets now live under `docs/examples/bpmn/`:
+
+- `Training By Design.bpmn`
+- `training-by-design.lua-pipeline-reference.itm`
+- `bpmn-process-diagram-lite-profile.itm`
+- `bpmn-xml-to-itm.lua`
+
+Those sources are broader than the accepted MVP and are intentionally routed to future gates such as `WP-BPMN-DI-01`, `WP-BPMN-VISUAL-B`, and `WP-VITM-TRANSLATORS`.
 
 Selected minimal path after ITM visual recovery:
 
 ```text
-WP-BPMN-SEM -> WP-BPMN-VISUAL-A -> WP-BPMN-VISUAL-B
+WP-BPMN-SEM -> WP-BPMN-VISUAL-A -> WP-BPMN-DI-01 -> WP-BPMN-VISUAL-B
 ```

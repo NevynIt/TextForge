@@ -21,6 +21,7 @@ WP-VITM-01
   -> WP-RENDER-SIGMA
   -> WP-BPMN-SEM
   -> WP-BPMN-VISUAL-A
+  -> WP-BPMN-DI-01
   -> WP-BPMN-VISUAL-B
 ```
 
@@ -34,6 +35,7 @@ After that, BPMN visual consumption should be reached with the minimum extra sco
 
 - first define the BPMN semantic subset;
 - then mount a read-only BPMN.io / `bpmn-js` viewer;
+- then preserve/read BPMN Diagram Interchange fidelity through an explicit read-only bridge;
 - then connect ITM visual target resolution to BPMN visual output.
 
 Editing/write-back is valuable but not required for visual consumption and would pull in `WP-GRAPH-EDIT-VITM`, `WP-RES-03`, patch review, conflict handling, and persistence/write policy concerns too early.
@@ -49,6 +51,7 @@ It is replaced by:
 | WP | Scope | Minimal chain? |
 |---|---|---|
 | WP-BPMN-VISUAL-A | Read-only BPMN.io / `bpmn-js` viewer surface for BPMN XML. | Yes |
+| WP-BPMN-DI-01 | Read-only BPMN Diagram Interchange extraction/fidelity bridge. | Yes |
 | WP-BPMN-VISUAL-B | ITM `%view` / `%viewpoint` visual-target integration for BPMN output. | Yes |
 | WP-BPMN-VISUAL-C | BPMN modeler/edit/write-back, including patch review and apply/discard. | No, later |
 
@@ -58,10 +61,16 @@ It is replaced by:
 
 Its MVP should include only:
 
-- Events;
+- Process;
+- StartEvent;
+- EndEvent;
 - Tasks;
-- Gateways;
+- collapsed SubProcesses;
+- ExclusiveGateway;
 - Sequence Flows;
+- basic associations;
+- DataObjectReference;
+- DataStoreReference;
 - basic attributes;
 - basic validation;
 - example fixtures;
@@ -71,6 +80,7 @@ Out of scope for the MVP:
 
 - full BPMN completeness;
 - advanced gateway semantics;
+- lanes, groups, annotations, or BPMN DI fidelity;
 - import/export loss handling beyond basic fixtures;
 - visual editing;
 - write-back behavior.
@@ -81,7 +91,8 @@ Out of scope for the MVP:
 |---|---|---|
 | WP-VITM-01 | Definition drafted | Use `specs/architecture/visual-itm-v1-profile.md` as the concrete Visual ITM v1 profile/spec, examples, and acceptance baseline. |
 | WP-ITM-VRESOLVE-01 | Grilled | Use `grilling/v19a-visual-recovery-to-bpmn-chain-findings.md` as the resolver contract for `%view`, `%viewpoint`, raw model fallback, `render:` precedence, diagnostics, runtime/publication consistency, and no silent fallback. |
-| WP-BPMN-SEM | Grilling / further definition | Minimal BPMN MVP subset, validation rules, fixtures, and explicit exclusions. |
+| WP-BPMN-SEM | Grilled | Implement against `grilling/bpmn-sem-grilling.md`, which also routes the broader bundled BPMN sources to later gates. |
+| WP-BPMN-DI-01 | New explicit follow-on | Owns read-only BPMN Diagram Interchange fidelity before later generic delta work. |
 | WP-BPMN-VISUAL-A/B/C | Split already decided | Keep viewer, ITM integration, and modeler/write-back separate. |
 
 ## Explicitly not on the minimal chain

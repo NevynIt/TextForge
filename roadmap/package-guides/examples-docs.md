@@ -4,6 +4,8 @@
 
 Bundled documentation, examples, sample workspaces, tutorial resources, test fixtures, and resource-browser content.
 
+This package also preserves broader reference assets that are intentionally ahead of the currently accepted MVP boundary when the roadmap wants those assets bundled and explicitly linked to future gates rather than discarded. The BPMN examples under `docs/examples/bpmn/` are the current example of that rule.
+
 ## Ownership rule
 
 `@textforge/examples-docs` owns its contracts and tests. Other packages should interact with it through public interfaces and contribution manifests, not private imports.

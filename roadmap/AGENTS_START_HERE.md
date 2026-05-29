@@ -49,6 +49,12 @@ WP-VITM-01
 -> WP-ITM-VTARGET-01
 -> WP-ITM-VRESOLVE-01
 -> WP-RENDER-CYTOSCAPE
+-> WP-RENDER-JSMIND
+-> WP-RENDER-SIGMA
+-> WP-BPMN-SEM
+-> WP-BPMN-VISUAL-A
+-> WP-BPMN-DI-01
+-> WP-BPMN-VISUAL-B
 ```
 
 `WP-MD-REPORT`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, `WP-TABLES`, `WP-RES-02`, `WP-ID-01`, and `WP-SET-01` remain separately startable, but BPMN/ArchiMate visual work should not rely on `WP-ITM-VISUALS` alone for runtime renderer parity.
@@ -90,7 +96,7 @@ A selected release may require one of these, but generic roadmap progress should
 
 ## BPMN visual rule
 
-When BPMN visual work is implemented, use BPMN.io / `bpmn-js`. Use `WP-BPMN-VISUAL-A` for the read-only viewer, `WP-BPMN-VISUAL-B` for ITM/BPMN visual target integration, and defer `WP-BPMN-VISUAL-C` for modeler/edit/write-back.
+When BPMN visual work is implemented, use BPMN.io / `bpmn-js`. Implement the narrowed semantic MVP from `grilling/bpmn-sem-grilling.md`, then use `WP-BPMN-VISUAL-A` for the read-only viewer, `WP-BPMN-DI-01` for read-only Diagram Interchange fidelity, `WP-BPMN-VISUAL-B` for ITM/BPMN visual target integration, and defer `WP-BPMN-VISUAL-C` for modeler/edit/write-back.
 
 ## RAPID rule
 

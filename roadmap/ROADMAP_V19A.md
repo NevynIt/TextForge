@@ -127,6 +127,7 @@ WP-VITM-01
   -> WP-RENDER-SIGMA
   -> WP-BPMN-SEM
   -> WP-BPMN-VISUAL-A
+  -> WP-BPMN-DI-01
   -> WP-BPMN-VISUAL-B
 ```
 
@@ -138,7 +139,8 @@ The following gates must be resolved before implementation:
 |---|---|---|
 | WP-VITM-01 | Definition drafted | Concrete Visual ITM v1 profile now lives in `specs/architecture/visual-itm-v1-profile.md`; implement against that profile. |
 | WP-ITM-VRESOLVE-01 | Grilled | Resolver contract now lives in `grilling/v19a-visual-recovery-to-bpmn-chain-findings.md`; implement against that contract. |
-| WP-BPMN-SEM | Grilling / further definition | Needs a sharply bounded BPMN MVP subset before any visual work depends on it. |
+| WP-BPMN-SEM | Grilled | The accepted BPMN semantic MVP now lives in `grilling/bpmn-sem-grilling.md`; implement against that boundary instead of the broader bundled process-diagram-lite reference profile. |
+| WP-BPMN-DI-01 | New explicit follow-on | BPMN Diagram Interchange read-only fidelity must land before ITM/BPMN target integration reuses those bounds/routes/labels. |
 | WP-BPMN-VISUAL-A/B/C | Split confirmed | Viewer, ITM/BPMN visual target integration, and modeler/write-back must remain separate. |
 
 Not on the minimal BPMN visual consumption path: `WP-ITM-PUB-VISUAL-01`, `WP-MD-REPORT`, `WP-TABLES`, `WP-VITM-TRANSLATORS`, `WP-GRAPH-EDIT-VITM`, `WP-RES-03`, backend, identity, policy, and persistence work.
@@ -207,9 +209,10 @@ The selected path must be recorded in RAPID and reflected in `workpackages/imple
 | `workpackages/*.md` cluster files | Grouped detailed planning views. |
 | `decisions/RAPID.md` | Decision/progress/action/issue log. |
 | `grilling/itm-visuals-grilling.md` | Binding grilling record for the V19 visual recovery chain. |
+| `grilling/bpmn-sem-grilling.md` | Binding grilling record for the narrowed BPMN semantic MVP and its future-gate routing. |
 
 ## 13. Immediate recommendation
 
-Start with the selected V19a chain: `WP-VITM-01 -> WP-ITM-VTARGET-01 -> WP-ITM-VRESOLVE-01 -> WP-RENDER-CYTOSCAPE -> WP-RENDER-JSMIND -> WP-RENDER-SIGMA`, then proceed to `WP-BPMN-SEM -> WP-BPMN-VISUAL-A -> WP-BPMN-VISUAL-B`.
+Start with the selected V19a chain: `WP-VITM-01 -> WP-ITM-VTARGET-01 -> WP-ITM-VRESOLVE-01 -> WP-RENDER-CYTOSCAPE -> WP-RENDER-JSMIND -> WP-RENDER-SIGMA`, then proceed to `WP-BPMN-SEM -> WP-BPMN-VISUAL-A -> WP-BPMN-DI-01 -> WP-BPMN-VISUAL-B`.
 
 Do not start `WP-BPMN-VISUAL-C`, `WP-GRAPH-EDIT-VITM`, `WP-RES-03`, backend, or report/dashboard publication work as blockers for BPMN visual consumption.

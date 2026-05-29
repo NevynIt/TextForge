@@ -63,6 +63,7 @@ After ITM visual recovery, proceed with:
 ```text
 WP-BPMN-SEM
   -> WP-BPMN-VISUAL-A
+  -> WP-BPMN-DI-01
   -> WP-BPMN-VISUAL-B
 ```
 
@@ -77,6 +78,7 @@ WP-VITM-01
   -> WP-RENDER-SIGMA
   -> WP-BPMN-SEM
   -> WP-BPMN-VISUAL-A
+  -> WP-BPMN-DI-01
   -> WP-BPMN-VISUAL-B
 ```
 
@@ -88,7 +90,8 @@ WP-VITM-01
 |---|---|---|
 | WP-VITM-01 | Definition drafted | Use `specs/architecture/visual-itm-v1-profile.md` as the Visual ITM v1 contract, examples, and acceptance baseline. |
 | WP-ITM-VRESOLVE-01 | Grilled | Use `grilling/v19a-visual-recovery-to-bpmn-chain-findings.md` as the resolver contract for views, viewpoints, raw model fallback, `render:` precedence, renderer diagnostics, and no silent fallback. |
-| WP-BPMN-SEM | Grilling / further definition | Minimal BPMN MVP subset, validation rules, fixtures, and out-of-scope exclusions. |
+| WP-BPMN-SEM | Grilled | Use `grilling/bpmn-sem-grilling.md` as the narrowed BPMN semantic MVP contract, deferred-scope routing record, and bundled BPMN reference-asset map. |
+| WP-BPMN-DI-01 | New explicit follow-on | BPMN Diagram Interchange read-only fidelity is a separate gate between BPMN XML viewing and ITM/BPMN target integration. |
 | WP-BPMN-VISUAL-A/B/C | Split already decided | Keep BPMN.io viewer, ITM visual target integration, and modeler/write-back separate. |
 
 Not on this minimal chain: `WP-ITM-PUB-VISUAL-01`, `WP-MD-REPORT`, `WP-TABLES`, `WP-VITM-TRANSLATORS`, `WP-VITM-VDELTA-01`, `WP-VITM-LIVE-SYNC-01`, `WP-GRAPH-EDIT-VITM`, `WP-RES-03`, backend, identity, policy, and persistence work.
@@ -157,7 +160,7 @@ A user may load DOT, translate to Visual ITM, and export to Mermaid or BPMN with
 
 ## BPMN rule
 
-When BPMN visual work is implemented, use BPMN.io / `bpmn-js` as the BPMN viewer/runtime basis. BPMN visual work should not depend on `WP-ITM-VISUALS` alone for visual parity; it should depend on the V19a visual target/Visual ITM/runtime renderer chain where applicable. The former monolithic `WP-BPMN-VISUAL` is split into `WP-BPMN-VISUAL-A` for read-only BPMN.io viewing, `WP-BPMN-VISUAL-B` for ITM/BPMN visual-target integration, and later `WP-BPMN-VISUAL-C` for modeler/edit/write-back.
+When BPMN visual work is implemented, use BPMN.io / `bpmn-js` as the BPMN viewer/runtime basis. BPMN visual work should not depend on `WP-ITM-VISUALS` alone for visual parity; it should depend on the V19a visual target/Visual ITM/runtime renderer chain where applicable. The former monolithic `WP-BPMN-VISUAL` is split into `WP-BPMN-VISUAL-A` for read-only BPMN.io viewing, `WP-BPMN-DI-01` for read-only Diagram Interchange fidelity, `WP-BPMN-VISUAL-B` for ITM/BPMN visual-target integration, and later `WP-BPMN-VISUAL-C` for modeler/edit/write-back.
 
 ## Validation checks
 

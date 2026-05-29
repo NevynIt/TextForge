@@ -65,6 +65,7 @@ Minimal BPMN visual consumption follow-on:
 ```text
 WP-BPMN-SEM
   -> WP-BPMN-VISUAL-A
+  -> WP-BPMN-DI-01
   -> WP-BPMN-VISUAL-B
 ```
 

@@ -14,6 +14,7 @@ The grilling records are decision-support documents. They do not replace `roadma
 |---|---|---|---|
 | 4.1 | `phase-4.1-grilling.md` | Accepted stabilization gate | Read before implementing Phase 4.1. Treat it as the source for the foundation-stabilization scope, validation gates, audit checks, and package implications. |
 | 5 | `phase-5-grilling.md` | Round 1 complete | Read before implementing Phase 5. Treat it as the source for the canonical contribution/capability model, document-scoped resolver, `%require` semantics, package inspector, and golden fixture expectations. |
+| WP-BPMN-SEM | `bpmn-sem-grilling.md` | Round 1 complete | Read before implementing `WP-BPMN-SEM`. Treat it as the source for the narrowed BPMN semantic MVP boundary, deferred future-gate routing, bundled BPMN reference assets, and the introduction of `WP-BPMN-DI-01`. |
 | Backend optional | `backend-grilling.md` | Round 1 complete; integrated in V16 | Read before implementing any provider, backend, enterprise container, identity, settings, private/group space, GitLab, service-folder, AI, or changeset work. Treat it as cross-cutting guidance, not a replacement for phase-specific grilling. |
 
 ## Agent usage instructions
