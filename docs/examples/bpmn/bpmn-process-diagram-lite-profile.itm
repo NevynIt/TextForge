@@ -1,0 +1,348 @@
+%metadata
+{
+  title: "BPMN Process Diagram Lite ITM Profile"
+  version: "0.1.0"
+  profileId: "bpmn_process_diagram_lite"
+  description: "ITM profile covering the BPMN process-diagram subset observed in the supplied BPMN examples."
+}
+
+%package bpmn_process_diagram_lite
+{
+  version: "0.1.0"
+  namespace: "bpmn"
+  description: "BPMN process-diagram subset for ITM: flow nodes, sequence flows, associations, data/artifacts, groups, annotations, lanes, and BPMN DI view data."
+}
+
+%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%namespace bpmndi https://www.omg.org/spec/BPMN/20100524/DI
+%namespace dc https://www.omg.org/spec/DD/20100524/DC
+%namespace di https://www.omg.org/spec/DD/20100524/DI
+
+%entitytype bpmn::Definitions
+{
+  description: "Root BPMN definitions container."
+  attributes:
+    - id
+    - targetNamespace
+    - exporter
+    - exporterVersion
+}
+
+%entitytype bpmn::Process
+{
+  description: "A BPMN process containing flow nodes, artifacts, and relationships."
+  attributes:
+    - id
+    - name
+    - isExecutable
+}
+
+%entitytype bpmn::LaneSet
+{
+  description: "Container for BPMN lanes."
+  attributes:
+    - id
+}
+
+%entitytype bpmn::Lane
+{
+  description: "BPMN lane. Lane membership should use flowNodeRef when present; otherwise geometry-based membership is only an inference."
+  attributes:
+    - id
+    - name
+    - flowNodeRefs
+}
+
+%entitytype bpmn::FlowNode
+{
+  abstract: true
+  description: "Abstract grouping type for BPMN nodes that can participate in sequence flows."
+}
+
+%entitytype bpmn::Task
+{
+  extends: bpmn::FlowNode
+  description: "Atomic BPMN task."
+  attributes:
+    - id
+    - name
+}
+
+%entitytype bpmn::SubProcess
+{
+  extends: bpmn::FlowNode
+  description: "BPMN subprocess shown as a collapsed or expanded process element."
+  attributes:
+    - id
+    - name
+    - triggeredByEvent
+}
+
+%entitytype bpmn::StartEvent
+{
+  extends: bpmn::FlowNode
+  description: "BPMN start event."
+  attributes:
+    - id
+    - name
+}
+
+%entitytype bpmn::EndEvent
+{
+  extends: bpmn::FlowNode
+  description: "BPMN end event."
+  attributes:
+    - id
+    - name
+}
+
+%entitytype bpmn::ExclusiveGateway
+{
+  extends: bpmn::FlowNode
+  description: "BPMN exclusive gateway."
+  attributes:
+    - id
+    - name
+}
+
+%entitytype bpmn::DataObject
+{
+  description: "BPMN data object backing a data object reference."
+  attributes:
+    - id
+}
+
+%entitytype bpmn::DataObjectReference
+{
+  description: "Visible BPMN data object reference."
+  attributes:
+    - id
+    - name
+    - dataObjectRef
+}
+
+%entitytype bpmn::DataStoreReference
+{
+  description: "BPMN data store reference."
+  attributes:
+    - id
+    - name
+}
+
+%entitytype bpmn::Group
+{
+  description: "BPMN group artifact."
+  attributes:
+    - id
+    - categoryValueRef
+}
+
+%entitytype bpmn::Category
+{
+  description: "BPMN category container."
+  attributes:
+    - id
+}
+
+%entitytype bpmn::CategoryValue
+{
+  description: "BPMN category value."
+  attributes:
+    - id
+    - value
+}
+
+%entitytype bpmn::TextAnnotation
+{
+  description: "BPMN text annotation."
+  attributes:
+    - id
+    - text
+}
+
+%relationshiptype bpmn::sequenceFlow
+{
+  description: "Directed BPMN control-flow edge between flow nodes."
+  sourceTypes:
+    - bpmn::FlowNode
+  targetTypes:
+    - bpmn::FlowNode
+  attributes:
+    - id
+    - name
+    - sourceRef
+    - targetRef
+}
+
+%relationshiptype bpmn::association
+{
+  description: "Directed BPMN association edge between BPMN nodes/artifacts."
+  sourceTypes:
+    - bpmn::FlowNode
+    - bpmn::DataObjectReference
+    - bpmn::DataStoreReference
+    - bpmn::Group
+    - bpmn::TextAnnotation
+  targetTypes:
+    - bpmn::FlowNode
+    - bpmn::DataObjectReference
+    - bpmn::DataStoreReference
+    - bpmn::Group
+    - bpmn::TextAnnotation
+  attributes:
+    - id
+    - sourceRef
+    - targetRef
+}
+
+%relationshiptype bpmn::dataObjectRef
+{
+  description: "Reference from a visible data object reference to its backing data object."
+  sourceTypes:
+    - bpmn::DataObjectReference
+  targetTypes:
+    - bpmn::DataObject
+  attributes:
+    - id
+    - sourceRef
+    - targetRef
+    - xmlAttribute
+}
+
+%relationshiptype bpmn::categoryValueRef
+{
+  description: "Reference from a BPMN group to its category value."
+  sourceTypes:
+    - bpmn::Group
+  targetTypes:
+    - bpmn::CategoryValue
+  attributes:
+    - id
+    - sourceRef
+    - targetRef
+    - xmlAttribute
+}
+
+%relationshiptype bpmn::laneContains
+{
+  description: "Membership relation from lane to flow node when flowNodeRef is present or explicitly inferred."
+  sourceTypes:
+    - bpmn::Lane
+  targetTypes:
+    - bpmn::FlowNode
+  attributes:
+    - id
+    - sourceRef
+    - targetRef
+    - inferred
+}
+
+%rule bpmn_sequence_flow_must_connect_flow_nodes
+{
+  select: "@bpmn::sequenceFlow:*"
+  pipeline:
+    - requireSourceType: bpmn::FlowNode
+    - requireTargetType: bpmn::FlowNode
+  severity: error
+  message: "BPMN sequenceFlow must connect BPMN FlowNode elements."
+}
+
+%rule bpmn_data_object_reference_must_resolve
+{
+  select: "[bpmn::DataObjectReference]"
+  pipeline:
+    - requireRelationship: bpmn::dataObjectRef
+  severity: error
+  message: "BPMN dataObjectReference must resolve to a dataObject."
+}
+
+%rule bpmn_group_category_value_should_resolve
+{
+  select: "[bpmn::Group]"
+  pipeline:
+    - requireRelationship: bpmn::categoryValueRef
+  severity: warning
+  message: "BPMN group should resolve its categoryValueRef."
+}
+
+%rule bpmn_di_elements_must_reference_existing_model_elements
+{
+  select: "%view:bpmn_diagram"
+  pipeline:
+    - bpmn.validateDiagramReferences
+  severity: error
+  message: "BPMN DI shapes and edges must reference existing semantic model elements or relationships."
+}
+
+%style [bpmn::Task]
+{
+  shape: rectangle
+}
+
+%style [bpmn::SubProcess]
+{
+  shape: rounded-rectangle
+}
+
+%style [bpmn::StartEvent]
+{
+  shape: circle
+}
+
+%style [bpmn::EndEvent]
+{
+  shape: circle
+  stroke-width: 3
+}
+
+%style [bpmn::ExclusiveGateway]
+{
+  shape: diamond
+}
+
+%style [bpmn::DataObjectReference]
+{
+  shape: document
+}
+
+%style [bpmn::DataStoreReference]
+{
+  shape: cylinder
+}
+
+%style [bpmn::Group]
+{
+  shape: rounded-rectangle
+  line-style: dashed
+}
+
+%style [bpmn::TextAnnotation]
+{
+  shape: annotation
+}
+
+%style @bpmn::sequenceFlow:*
+{
+  line-style: solid
+  marker-end: arrow
+}
+
+%style @bpmn::association:*
+{
+  line-style: dotted
+  marker-end: none
+}
+
+%viewpoint bpmn_process_diagram
+{
+  description: "BPMN process diagram projection for the process-diagram-lite profile."
+  pipeline:
+    - select: "ANY([bpmn::Process], [bpmn::LaneSet], [bpmn::Lane], [bpmn::Task], [bpmn::SubProcess], [bpmn::StartEvent], [bpmn::EndEvent], [bpmn::ExclusiveGateway], [bpmn::DataObjectReference], [bpmn::DataStoreReference], [bpmn::Group], [bpmn::TextAnnotation])"
+    - includeEdges: "@bpmn::sequenceFlow:*"
+    - includeEdges: "@bpmn::association:*"
+    - includeEdges: "@bpmn::dataObjectRef:*"
+    - includeEdges: "@bpmn::categoryValueRef:*"
+    - validate: bpmn.processDiagramLite
+    - transform: bpmn.xml
+    - render: bpmn.viewer
+}
