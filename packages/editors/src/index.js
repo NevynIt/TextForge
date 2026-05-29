@@ -1,4 +1,5 @@
 import { EditorSelection, EditorState } from '@codemirror/state';
+import { indentWithTab } from '@codemirror/commands';
 import { json as jsonLanguage } from '@codemirror/lang-json';
 import { markdown as markdownLanguage } from '@codemirror/lang-markdown';
 import { xml as xmlLanguage } from '@codemirror/lang-xml';
@@ -6,7 +7,7 @@ import { yaml as yamlLanguage } from '@codemirror/lang-yaml';
 import { HighlightStyle, StreamLanguage, codeFolding, foldGutter, syntaxHighlighting } from '@codemirror/language';
 import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua';
 import { tags } from '@lezer/highlight';
-import { drawSelection, EditorView, lineNumbers } from '@codemirror/view';
+import { crosshairCursor, drawSelection, EditorView, keymap, lineNumbers, rectangularSelection } from '@codemirror/view';
 import {
   createCapability,
   createCommand,
@@ -434,11 +435,15 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
     foldGutter(),
     codeFolding(),
     drawSelection(),
+    rectangularSelection(),
+    crosshairCursor(),
     ...(languageExtension ? [languageExtension] : []),
     syntaxHighlighting(textForgeHighlightStyle),
+    EditorState.allowMultipleSelections.of(true),
     EditorState.readOnly.of(model.readOnly),
     EditorView.editable.of(!model.readOnly),
     EditorView.lineWrapping,
+    keymap.of([indentWithTab]),
     EditorView.domEventHandlers({
       blur() {
         return false;
