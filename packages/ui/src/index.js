@@ -233,6 +233,7 @@ function WorkspaceTreeInlineEditor({
 }) {
   const inputRef = React.useRef(null);
   const actionRef = React.useRef(undefined);
+  const initializedSelectionRef = React.useRef(false);
 
   React.useEffect(() => {
     const input = inputRef.current;
@@ -241,9 +242,15 @@ function WorkspaceTreeInlineEditor({
     }
 
     input.focus();
-    const nextSelectionStart = typeof selectionStart === 'number' ? selectionStart : 0;
-    const nextSelectionEnd = typeof selectionEnd === 'number' ? selectionEnd : value.length;
-    input.setSelectionRange(nextSelectionStart, nextSelectionEnd);
+    if (initializedSelectionRef.current) {
+      return;
+    }
+    initializedSelectionRef.current = true;
+    if (typeof selectionStart === 'number' || typeof selectionEnd === 'number') {
+      const nextSelectionStart = typeof selectionStart === 'number' ? selectionStart : 0;
+      const nextSelectionEnd = typeof selectionEnd === 'number' ? selectionEnd : value.length;
+      input.setSelectionRange(nextSelectionStart, nextSelectionEnd);
+    }
   }, [selectionEnd, selectionStart, value]);
 
   function commit() {
@@ -789,6 +796,7 @@ export function TextForgeWorkspaceSidebar({
 }) {
   const selectedIndex = workspaceTree.items.findIndex((item) => item.id === workspaceTree.selectedResourceId);
   const fallbackIndex = selectedIndex >= 0 ? selectedIndex : 0;
+  const [draggingItemId, setDraggingItemId] = React.useState(undefined);
   const [dropTargetId, setDropTargetId] = React.useState(undefined);
   const header = element(
     'div',
@@ -838,7 +846,12 @@ export function TextForgeWorkspaceSidebar({
               y: event.clientY,
             });
           },
-          onDragEnd: onMoveItem ? () => setDropTargetId(undefined) : undefined,
+          onDragEnd: onMoveItem
+            ? () => {
+              setDraggingItemId(undefined);
+              setDropTargetId(undefined);
+            }
+            : undefined,
           onDragLeave: onMoveItem
             ? (event) => {
               if (!event.currentTarget.contains(event.relatedTarget)) {
@@ -848,7 +861,7 @@ export function TextForgeWorkspaceSidebar({
             : undefined,
           onDragOver: onMoveItem
             ? (event) => {
-              const sourceItemId = readDraggedWorkspaceItemId(event.dataTransfer);
+              const sourceItemId = draggingItemId ?? readDraggedWorkspaceItemId(event.dataTransfer);
               if (!sourceItemId || sourceItemId === item.id) {
                 return;
               }
@@ -860,19 +873,22 @@ export function TextForgeWorkspaceSidebar({
             : undefined,
           onDragStart: onMoveItem
             ? (event) => {
+              setDraggingItemId(item.id);
               event.dataTransfer.setData(workspaceTreeDragMime, item.id);
+              event.dataTransfer.setData('text/plain', item.id);
               event.dataTransfer.effectAllowed = 'move';
             }
             : undefined,
           onDrop: onMoveItem
             ? (event) => {
-              const sourceItemId = readDraggedWorkspaceItemId(event.dataTransfer);
+              const sourceItemId = draggingItemId ?? readDraggedWorkspaceItemId(event.dataTransfer);
               if (!sourceItemId || sourceItemId === item.id) {
                 return;
               }
 
               event.preventDefault();
               event.stopPropagation();
+              setDraggingItemId(undefined);
               setDropTargetId(undefined);
               onMoveItem?.(sourceItemId, item.id);
             }
