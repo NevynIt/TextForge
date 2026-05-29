@@ -57,6 +57,7 @@ import {
 } from '@textforge/assets';
 import {
   contributions as bpmnContributionPack,
+  renderBpmnPublicationSvg,
 } from '@textforge/bpmn';
 import {
   contributions as pipelineContributionPack,
@@ -2730,6 +2731,9 @@ function createTextForgeWorkbenchController() {
       fenceExecutionOptions: {
         document: globalThis.document,
         hostServices: {
+          bpmn: {
+            renderPublicationSvg: renderBpmnPublicationSvg,
+          },
           workspace,
         },
         ...options.fenceExecutionOptions,

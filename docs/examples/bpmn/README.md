@@ -4,6 +4,7 @@ This folder contains bundled BPMN reference assets used by the active roadmap an
 
 - `Training By Design.bpmn` is the raw BPMN XML example preserved as a bundled reference fixture.
 - `training-by-design.lua-pipeline-reference.itm` is the corresponding converted ITM reference model.
+- `itm-bpmn-inline-publication.md` is a bundled Markdown example that combines `itm` and `itm-pub` to render the bundled BPMN XML inline in the Markdown preview.
 - `bpmn-process-diagram-lite-profile.itm` is the broader process-diagram-lite candidate profile preserved as a reference beyond the narrow `WP-BPMN-SEM` MVP boundary.
 - `bpmn-xml-to-itm.lua` is a bundled Lua converter example routed to future translator/import work rather than the semantic MVP.
 

@@ -182,6 +182,13 @@ export declare function applyBpmnDiagramInterchangeToXml(
   readonly diagnostics: ReadonlyArray<Diagnostic>;
 }>;
 
+export declare function renderBpmnPublicationSvg(
+  xml: string,
+  options?: {
+    readonly document?: Document;
+  },
+): Promise<string>;
+
 export declare const bpmnViewerSurfaceContribution: SurfaceContribution;
 export declare function createBpmnContributionManifest(overrides?: Partial<ContributionManifest>): ContributionManifest;
 export declare const contributions: ContributionManifest;

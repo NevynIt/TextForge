@@ -15,6 +15,10 @@ import {
   contributions as itmContributions,
 } from '@textforge/itm';
 import {
+  contributions as bpmnContributions,
+} from '../../bpmn/src/index.js';
+import {
+  contributions as coreContributions,
   createCapability,
   createContributionManifest,
   createContributionRegistry,
@@ -292,6 +296,87 @@ title: "Roadmap graph"
   assert.match(result.html, /data-itm-projection="graph"/);
   assert.match(result.html, /<svg/i);
   assert.equal(result.generatedResources.some((resource) => resource.path.endsWith('.svg')), true);
+});
+
+test('renderMarkdownDocument can render itm-pub BPMN publications through a host-provided SVG renderer', async () => {
+  const contributionRegistry = createContributionRegistry([
+    coreContributions,
+    contributions,
+    itmContributions,
+    bpmnContributions,
+  ]);
+
+  const result = await renderMarkdownDocument(`\`\`\`itm name=training-bpmn-publication
+%metadata
+{
+  title: "Training By Design inline BPMN publication"
+  sourceFile: "Training By Design.bpmn"
+}
+
+%require bpmn.viewer ^0.1.0
+
+%viewpoint training_bpmn_preview
+{
+  pipeline:
+    - render: bpmn.viewer
+}
+
+%view training_bpmn_diagram
+{
+  viewpoint: training_bpmn_preview
+}
+\`\`\`
+
+\`\`\`itm-pub
+source: training-bpmn-publication
+view: training_bpmn_diagram
+projection: graph
+title: "Training By Design BPMN Diagram"
+\`\`\`
+`, {
+    resource: {
+      resourceId: 'markdown-bpmn-inline',
+      path: '/docs/examples/bpmn/itm-bpmn-inline-publication.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+    contributionRegistry,
+    fenceExecutionOptions: {
+      generatedAssetBasePath: '/generated/itm-bpmn-inline-publication',
+      hostServices: {
+        workspace: {
+          getEntryByPath(path) {
+            if (String(path ?? '').replaceAll('\\', '/').endsWith('/Training By Design.bpmn')) {
+              return {
+                kind: 'resource',
+                representation: 'text',
+                path,
+                text: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="https://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs_1" targetNamespace="https://example.org/textforge/bpmn">
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" name="Start" />
+  </bpmn:process>
+</bpmn:definitions>`,
+              };
+            }
+            return undefined;
+          },
+        },
+        bpmn: {
+          async renderPublicationSvg(xml) {
+            return `<svg data-bpmn-inline="${xml.length}"></svg>`;
+          },
+        },
+      },
+    },
+  });
+
+  assert.match(result.html, /Training By Design BPMN Diagram/);
+  assert.match(result.html, /data-bpmn-inline=/);
+  assert.equal(result.generatedResources.some((resource) => resource.path.endsWith('.svg')), true);
+  assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
 });
 
 test('renderMarkdownDocument forwards itm package-rule diagnostics through the fence execution path', async () => {

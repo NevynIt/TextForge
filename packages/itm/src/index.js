@@ -3422,8 +3422,17 @@ function ensureProjectedItmModel(input, options = {}) {
   return isProjectedItmModel(input) ? input : projectItmDocument(input, options);
 }
 
+function coerceProjectionCapabilityContext(input, options = {}) {
+  return options.capabilityContext
+    ?? input?.capabilityContext
+    ?? input?.context?.capabilityContext;
+}
+
 export function projectItmDocument(input, options = {}) {
-  const evaluated = evaluateItmDocumentContext(input, options);
+  const evaluated = evaluateItmDocumentContext(input, {
+    ...options,
+    capabilityContext: coerceProjectionCapabilityContext(input, options),
+  });
   const resolvedDocument = evaluated.effectiveResolvedDocument;
   const document = resolvedDocument;
   const graph = createCanonicalGraph(resolvedDocument, {
@@ -3782,6 +3791,7 @@ export function resolveItmVisualTarget(input, options = {}) {
     title: options.title ?? resolvedTarget.label,
     includeImplicitRelationships: options.includeImplicitRelationships,
     includeAncestors: options.includeAncestors,
+    capabilityContext: coerceProjectionCapabilityContext(input, options),
   });
   const graphNodeById = new Map((projectedDocument.graph?.nodes ?? []).map((node) => [node.id, node]));
   const relationshipByUid = new Map((projectedDocument.resolvedDocument.relationships ?? []).map((relationship) => [relationship.uid, relationship]));
@@ -4098,7 +4108,10 @@ function renderModelCollection(models, options = {}) {
           ?? model.effectiveDocument
           ?? model.resolvedDocument
           ?? model.document,
-        options,
+        {
+          ...options,
+          capabilityContext: coerceProjectionCapabilityContext(model, options),
+        },
       ),
       {
         ...options,
@@ -4252,7 +4265,11 @@ export function renderItmPublicationHtml(input, options = {}) {
     return renderModelCollection(input, options);
   }
 
-  return renderProjectedModel(projectItmDocument(input, options), options);
+  const effectiveOptions = {
+    ...options,
+    capabilityContext: coerceProjectionCapabilityContext(input, options),
+  };
+  return renderProjectedModel(projectItmDocument(input, effectiveOptions), effectiveOptions);
 }
 
 function createItmPublicationNotFoundResult(sourceResource) {
@@ -4293,9 +4310,58 @@ function readPipelineBytesValue(value) {
   return undefined;
 }
 
+function readWorkspaceTextResource(workspace, path) {
+  const entry = workspace?.getEntryByPath?.(path);
+  if (!entry || entry.kind !== 'resource' || entry.representation !== 'text') {
+    return undefined;
+  }
+  return entry.text;
+}
+
+function readItmSourceFileReference(model) {
+  const value = model?.effectiveResolvedDocument?.metadata?.values?.sourceFile
+    ?? model?.effectiveResolvedDocument?.metadata?.sourceFile
+    ?? model?.resolvedDocument?.metadata?.values?.sourceFile
+    ?? model?.resolvedDocument?.metadata?.sourceFile
+    ?? model?.effectiveDocument?.metadata?.values?.sourceFile
+    ?? model?.effectiveDocument?.metadata?.sourceFile
+    ?? model?.document?.metadata?.values?.sourceFile
+    ?? model?.document?.metadata?.sourceFile;
+  const normalized = String(value ?? '').trim();
+  return normalized || undefined;
+}
+
 function createItmGeneratedDiagramPath(basePath, blockId, extension) {
   const normalizedBase = String(basePath ?? '/generated/itm-projection').replaceAll('\\', '/').replace(/\/+$/, '');
   return `${normalizedBase}-itm-pub-${blockId}.${extension}`;
+}
+
+function createItmGeneratedSvgResource(input) {
+  if (!input.basePath || typeof input.svg !== 'string') {
+    return [];
+  }
+
+  const generatedAt = new Date().toISOString();
+  return [{
+    kind: 'generated-resource',
+    path: createItmGeneratedDiagramPath(input.basePath, input.blockId, 'svg'),
+    title: createItmGeneratedDiagramPath(input.basePath, input.blockId, 'svg').split('/').pop(),
+    representation: 'text',
+    mimeType: 'image/svg+xml',
+    languageId: 'svg',
+    text: input.svg,
+    format: 'svg',
+    pipelineId: input.pipelineId,
+    sourceResourceId: input.sourceResource?.resourceId,
+    sourcePath: input.sourceResource?.path,
+    sourceUpdatedAt: input.sourceUpdatedAt,
+    blockId: input.blockId,
+    blockKind: 'itm-pub',
+    generatedAt,
+    metadata: {
+      projection: input.projection,
+    },
+  }];
 }
 
 function createItmGeneratedDiagramResources(input) {
@@ -4360,6 +4426,7 @@ async function renderItmGraphPublication(selectedModel, renderOptions, execution
     title: renderOptions.title,
     includeImplicitRelationships: renderOptions.includeImplicitRelationships,
     includeAncestors: renderOptions.includeAncestors,
+    capabilityContext: coerceProjectionCapabilityContext(selectedModel, renderOptions),
   });
   const projected = resolved.projectedDocument;
   const fallbackHtml = renderProjectedModel(projected, {
@@ -4439,6 +4506,140 @@ async function renderItmGraphPublication(selectedModel, renderOptions, execution
   }
 }
 
+function isBpmnPublicationTarget(selectedModel, renderOptions) {
+  const resolved = resolveItmVisualTarget(selectedModel, {
+    view: renderOptions.view,
+    viewpoint: renderOptions.viewpoint,
+    projection: 'graph',
+    title: renderOptions.title,
+    includeImplicitRelationships: renderOptions.includeImplicitRelationships,
+    includeAncestors: renderOptions.includeAncestors,
+    capabilityContext: coerceProjectionCapabilityContext(selectedModel, renderOptions),
+  });
+  return resolved.target.preferredSurfaceId === '@textforge/bpmn/viewer'
+    || resolved.target.rendererValue === 'bpmn.viewer';
+}
+
+async function renderItmBpmnPublication(selectedModel, renderOptions, execution, blockIdSuffix = '') {
+  const resolved = resolveItmVisualTarget(selectedModel, {
+    view: renderOptions.view,
+    viewpoint: renderOptions.viewpoint,
+    projection: 'graph',
+    title: renderOptions.title,
+    includeImplicitRelationships: renderOptions.includeImplicitRelationships,
+    includeAncestors: renderOptions.includeAncestors,
+    capabilityContext: coerceProjectionCapabilityContext(selectedModel, renderOptions),
+  });
+  const title = renderOptions.title ?? resolved.target.label ?? 'BPMN publication';
+  const renderer = execution.hostServices?.bpmn?.renderPublicationSvg;
+  if (typeof renderer !== 'function') {
+    return {
+      html: createItmSurfaceMessageHtml(title, 'Inline BPMN publication is unavailable in this host.', 'warning'),
+      diagnostics: mergeDiagnostics(resolved.diagnostics, [
+        createDiagnostic('Inline BPMN publication is unavailable in this host.', 'warning', {
+          resource: execution.sourceResource,
+          code: 'itm.pub.bpmn-renderer-unavailable',
+          origin: {
+            packageId: '@textforge/itm',
+            subsystem: 'itm-publication',
+            fenceName: 'itm-pub',
+          },
+        }),
+      ]),
+      generatedResources: [],
+    };
+  }
+
+  const sourceFile = readItmSourceFileReference(selectedModel);
+  const basePath = execution.sourceResource?.path
+    ?? selectedModel?.effectiveResolvedDocument?.uri
+    ?? selectedModel?.resolvedDocument?.uri
+    ?? selectedModel?.document?.uri;
+  const sourceProvider = execution.hostServices?.workspace?.getEntryByPath
+    ? createWorkspaceItmIncludeProvider(execution.hostServices.workspace, { basePath })
+    : undefined;
+  const sourceResource = sourceFile
+    ? sourceProvider?.load(sourceFile, {
+      sourceDocument: {
+        uri: basePath,
+      },
+    })
+    : undefined;
+  const sourcePath = sourceResource?.uri;
+  const sourceXml = typeof sourceResource?.text === 'string'
+    ? sourceResource.text
+    : (sourcePath ? readWorkspaceTextResource(execution.hostServices?.workspace, sourcePath) : undefined);
+
+  if (!sourceXml) {
+    return {
+      html: createItmSurfaceMessageHtml(
+        title,
+        sourceFile
+          ? `The referenced BPMN source '${sourceFile}' could not be loaded for this publication.`
+          : 'This ITM publication does not declare a sourceFile BPMN reference.',
+        'error',
+      ),
+      diagnostics: mergeDiagnostics(resolved.diagnostics, [
+        createDiagnostic(
+          sourceFile
+            ? `The referenced BPMN source '${sourceFile}' could not be loaded for this publication.`
+            : 'This ITM publication does not declare a sourceFile BPMN reference.',
+          'error',
+          {
+            resource: execution.sourceResource,
+            code: 'itm.pub.bpmn-source-missing',
+            origin: {
+              packageId: '@textforge/itm',
+              subsystem: 'itm-publication',
+              fenceName: 'itm-pub',
+            },
+          },
+        ),
+      ]),
+      generatedResources: [],
+    };
+  }
+
+  try {
+    const svg = await renderer(sourceXml, {
+      document: execution.document ?? globalThis.document,
+    });
+    return {
+      html: renderPublicationSection(
+        resolved.projectedDocument,
+        { ...renderOptions, projection: 'graph', title },
+        `<div class="tf-itm-graph__stage">${svg}</div>`,
+      ),
+      diagnostics: resolved.diagnostics,
+      generatedResources: createItmGeneratedSvgResource({
+        basePath: execution.generatedAssetBasePath,
+        blockId: `${execution.blockId}${blockIdSuffix}`,
+        sourceResource: execution.sourceResource,
+        sourceUpdatedAt: execution.sourceUpdatedAt,
+        svg,
+        projection: 'bpmn',
+        pipelineId: '@textforge/itm/bpmn-publication',
+      }),
+    };
+  } catch (error) {
+    return {
+      html: createItmSurfaceMessageHtml(title, error?.message ?? 'Inline BPMN publication failed.', 'warning'),
+      diagnostics: mergeDiagnostics(resolved.diagnostics, [
+        createDiagnostic(error?.message ?? 'Inline BPMN publication failed.', 'warning', {
+          resource: execution.sourceResource,
+          code: 'itm.pub.bpmn-render-failed',
+          origin: {
+            packageId: '@textforge/itm',
+            subsystem: 'itm-publication',
+            fenceName: 'itm-pub',
+          },
+        }),
+      ]),
+      generatedResources: [],
+    };
+  }
+}
+
 function ensureItmDocumentState(sharedState) {
   if (!sharedState[itmPublicationDocumentStateKey]) {
     sharedState[itmPublicationDocumentStateKey] = {
@@ -4476,6 +4677,12 @@ function findRequestedModel(state, request) {
     || model.document.metadata?.title === requestedSource);
 }
 
+function createEmbeddedItmDocumentResourcePath(sourcePath, blockId) {
+  const normalizedSourcePath = String(sourcePath ?? '/virtual/embedded-markdown').replaceAll('\\', '/');
+  const suffix = String(blockId ?? 'block').replace(/[^A-Za-z0-9._-]+/gu, '-');
+  return `${normalizedSourcePath}.${suffix}.itm`;
+}
+
 async function parseEmbeddedItmBlock(execution) {
   const includeProviders = [];
   const workspace = execution.hostServices?.workspace;
@@ -4494,7 +4701,7 @@ async function parseEmbeddedItmBlock(execution) {
     repositoryResolution,
     contributionRegistry: execution.contributionRegistry ?? execution.hostServices?.contributionRegistry,
     documentResource: {
-      path: execution.sourceResource?.path,
+      path: createEmbeddedItmDocumentResourcePath(execution.sourceResource?.path, execution.blockId),
       kind: 'resource',
       representation: 'text',
       languageId: 'itm',
@@ -4522,6 +4729,7 @@ export const itmMarkdownFenceHandlerContributions = [
       state.models.push({
         blockId: execution.blockId,
         name: modelName,
+        capabilityContext: parsed.capabilityContext,
         document: parsed.document,
         resolvedDocument: parsed.resolvedDocument,
         effectiveDocument: parsed.effectiveDocument,
@@ -4530,6 +4738,7 @@ export const itmMarkdownFenceHandlerContributions = [
 
       return {
         html: renderItmPublicationHtml(parsed.effectiveResolvedDocument ?? parsed.resolvedDocument, {
+          capabilityContext: parsed.capabilityContext,
           title: modelName,
         }),
         diagnostics: parsed.diagnostics.map((diagnostic) =>
@@ -4569,7 +4778,9 @@ export const itmMarkdownFenceHandlerContributions = [
       if (projectionKind === 'graph') {
         if (Array.isArray(selected)) {
           const rendered = await Promise.all(selected.map((model, index) =>
-            renderItmGraphPublication(model, {
+            (isBpmnPublicationTarget(model, renderOptions)
+              ? renderItmBpmnPublication
+              : renderItmGraphPublication)(model, {
               ...renderOptions,
               title: selected.length > 1
                 ? `${renderOptions.title ?? 'ITM publication'} ${index + 1}`
@@ -4582,11 +4793,18 @@ export const itmMarkdownFenceHandlerContributions = [
           };
         }
 
+        if (isBpmnPublicationTarget(selected, renderOptions)) {
+          return renderItmBpmnPublication(selected, renderOptions, execution);
+        }
+
         return renderItmGraphPublication(selected, renderOptions, execution);
       }
 
       return {
-        html: renderItmPublicationHtml(selected, renderOptions),
+        html: renderItmPublicationHtml(selected, {
+          ...renderOptions,
+          capabilityContext: coerceProjectionCapabilityContext(selected, renderOptions),
+        }),
         diagnostics: [],
         generatedResources: [],
       };
