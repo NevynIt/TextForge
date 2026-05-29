@@ -414,8 +414,19 @@ function createCodeMirrorLanguageExtension(languageId) {
   return typeof factory === 'function' ? factory() : undefined;
 }
 
+function getCodeMirrorCspNonce() {
+  if (typeof document === 'undefined') {
+    return undefined;
+  }
+
+  const meta = document.querySelector('meta[name="textforge-csp-nonce"]');
+  const nonce = meta?.getAttribute('content')?.trim();
+  return nonce || undefined;
+}
+
 function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
   const languageExtension = createCodeMirrorLanguageExtension(model.languageMode.languageId);
+  const cspNonce = getCodeMirrorCspNonce();
   return [
     lineNumbers(),
     foldGutter(),
@@ -432,6 +443,7 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
       },
     }),
     EditorView.updateListener.of(handleUpdate),
+    ...(cspNonce ? [EditorView.cspNonce.of(cspNonce)] : []),
     EditorView.theme({
       '&': {
         minHeight: '100%',

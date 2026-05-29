@@ -1685,6 +1685,10 @@ function createTextForgeWorkbenchController() {
       return [];
     }
 
+    if (isItmWorkspaceResource(entry)) {
+      return [];
+    }
+
     const documentContext = resolveDocumentContributionContextForEntry(entry);
     return createOpenWithSelection(surfaceRegistry, {
       resource: workspaceEntryToResourceRef(entry),
@@ -2389,6 +2393,10 @@ function createTextForgeWorkbenchController() {
   }
 
   function createOpenWithControl(session, resource) {
+    if (isItmWorkspaceResource(resource)) {
+      return undefined;
+    }
+
     const documentContext = resolveDocumentContributionContextForEntry(resource);
     const selection = createOpenWithSelection(surfaceRegistry, {
       resource: workspaceEntryToResourceRef(resource),
@@ -2651,7 +2659,7 @@ function createTextForgeWorkbenchController() {
 
     const contribution = surfaceRegistry.get(session.contributionId);
     const openWith = contribution?.label ?? 'Surface';
-    const controls = [createOpenWithControl(session, resource)];
+    const controls = [createOpenWithControl(session, resource)].filter(Boolean);
     const badge = resource.metadata.badge;
     const icon = resolveEntryIcon(resource);
     const resourceTitle = resource.metadata.title ?? basenameWorkspacePath(resource.path) ?? resource.path;
@@ -3130,7 +3138,7 @@ function createTextForgeWorkbenchController() {
       ? (target.selection?.kind === 'folder' ? workspaceFolderContextCommandIds : workspaceResourceContextCommandIds)
       : (model.kind === 'main-session' ? mainSessionContextCommandIds : popupSessionContextCommandIds);
     const targetEntry = resolveTargetEntryForCommands(commandContext);
-    const hideOpenWithCommands = model.kind === 'workspace-item' && isItmWorkspaceResource(targetEntry);
+    const hideOpenWithCommands = isItmWorkspaceResource(targetEntry);
     const items = visibleCommands.filter((command) => {
       if (!(allowedIds.includes(command.id) || isOpenWithCommand(command.id))) {
         return false;

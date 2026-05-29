@@ -145,6 +145,55 @@ test('surface registry picks the highest-priority compatible contribution', () =
   assert.equal(intermediateSelection.selectedSurfaceId, 'surface.editor');
 });
 
+test('surface matching honors documentPredicate for open-with candidates', () => {
+  const registry = createSurfaceRegistry([
+    {
+      id: 'surface.editor',
+      label: 'Editor',
+      resourceRepresentations: ['text'],
+      placements: ['main'],
+      openWithPriority: 20,
+    },
+    {
+      id: '@textforge/itm/tree',
+      label: 'ITM tree',
+      capabilities: ['@textforge/itm/capability/view'],
+      documentPredicate: {
+        representations: ['text'],
+        languageIds: ['itm'],
+        mimeTypes: ['text/itm', 'text/x-itm'],
+        fileExtensions: ['itm'],
+      },
+      placements: ['main'],
+      openWithPriority: 30,
+    },
+  ]);
+
+  const markdownSelection = createOpenWithSelection(registry, {
+    resource: {
+      resourceId: 'resource-markdown',
+      kind: 'resource',
+      representation: 'text',
+      path: '/docs/notes.md',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+  });
+  assert.deepEqual(markdownSelection.candidates.map((candidate) => candidate.surfaceId), ['surface.editor']);
+
+  const itmSelection = createOpenWithSelection(registry, {
+    resource: {
+      resourceId: 'resource-itm',
+      kind: 'resource',
+      representation: 'text',
+      path: '/docs/model.itm',
+      languageId: 'itm',
+      mimeType: 'text/x-itm',
+    },
+  });
+  assert.deepEqual(itmSelection.candidates.map((candidate) => candidate.surfaceId), ['@textforge/itm/tree', 'surface.editor']);
+});
+
 test('surface command contributions include shell actions and open-with descriptors', () => {
   const commands = createSurfaceCommandContributions([
     {

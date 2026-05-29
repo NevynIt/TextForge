@@ -142,6 +142,10 @@ export function canOpenWithSurface(contribution, request) {
     return false;
   }
 
+  if (contribution.documentPredicate && !matchesResourcePredicate(contribution.documentPredicate, request.resource)) {
+    return false;
+  }
+
   if (requestedPlacement === 'popup' && request.allowPopup === false) {
     return false;
   }
