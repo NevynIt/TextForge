@@ -6,6 +6,7 @@ import { xml as xmlLanguage } from '@codemirror/lang-xml';
 import { yaml as yamlLanguage } from '@codemirror/lang-yaml';
 import { HighlightStyle, StreamLanguage, codeFolding, foldGutter, syntaxHighlighting } from '@codemirror/language';
 import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua';
+import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
 import { tags } from '@lezer/highlight';
 import { crosshairCursor, drawSelection, EditorView, keymap, lineNumbers, rectangularSelection } from '@codemirror/view';
 import {
@@ -434,6 +435,10 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
     lineNumbers(),
     foldGutter(),
     codeFolding(),
+    search({
+      top: true,
+    }),
+    highlightSelectionMatches(),
     drawSelection(),
     rectangularSelection(),
     crosshairCursor(),
@@ -443,7 +448,7 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
     EditorState.readOnly.of(model.readOnly),
     EditorView.editable.of(!model.readOnly),
     EditorView.lineWrapping,
-    keymap.of([indentWithTab]),
+    keymap.of([...searchKeymap, indentWithTab]),
     EditorView.domEventHandlers({
       blur() {
         return false;
@@ -474,11 +479,70 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
         padding: '16px',
         caretColor: '#3b82f6', // blue-500
       },
+      '.cm-panels': {
+        backgroundColor: 'rgba(8, 15, 30, 0.94)',
+        color: '#d9e4f2',
+        borderBottom: '1px solid rgba(148, 163, 184, 0.14)',
+      },
+      '.cm-panels-top': {
+        borderTopLeftRadius: '14px',
+        borderTopRightRadius: '14px',
+      },
+      '.cm-search': {
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 12px',
+      },
+      '.cm-search label': {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        fontSize: '0.82rem',
+      },
+      '.cm-search input, .cm-search button, .cm-search select': {
+        font: 'inherit',
+      },
+      '.cm-search input': {
+        minHeight: '30px',
+        padding: '0 10px',
+        color: '#e2e8f0',
+        backgroundColor: 'rgba(15, 23, 42, 0.92)',
+        border: '1px solid rgba(148, 163, 184, 0.18)',
+        borderRadius: '10px',
+      },
+      '.cm-search button': {
+        minHeight: '30px',
+        padding: '0 10px',
+        color: '#d9e4f2',
+        backgroundColor: 'rgba(37, 99, 235, 0.18)',
+        border: '1px solid rgba(96, 165, 250, 0.24)',
+        borderRadius: '10px',
+        cursor: 'pointer',
+      },
+      '.cm-search button:disabled': {
+        cursor: 'default',
+        opacity: '0.48',
+      },
+      '.cm-search .cm-button': {
+        margin: 0,
+      },
+      '.cm-search [name=\"close\"]': {
+        marginLeft: 'auto',
+      },
       '.cm-cursor, .cm-dropCursor': {
         borderLeftColor: '#f7f7f7', // blue-500
       },
       '.cm-selectionBackground': {
         background: '#2563eb !important', // blue-600
+      },
+      '.cm-searchMatch': {
+        backgroundColor: 'rgba(250, 204, 21, 0.2)',
+        outline: '1px solid rgba(250, 204, 21, 0.45)',
+      },
+      '.cm-searchMatch.cm-searchMatch-selected': {
+        backgroundColor: 'rgba(250, 204, 21, 0.34)',
       },
       '.cm-line': {
         padding: '0',
