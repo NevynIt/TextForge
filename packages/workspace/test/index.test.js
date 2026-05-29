@@ -149,12 +149,15 @@ test('workspace service normalizes paths and mutates entries', () => {
     languageId: 'yaml',
     mimeType: 'text/yaml',
   });
+  const renamed = workspace.renameEntry(notes.id, '/docs/renamed-notes.md');
 
   assert.equal(normalizeWorkspacePath('docs/../docs/notes.md'), '/docs/notes.md');
   assert.equal(docs.path, '/docs');
   assert.equal(updated.text, '# Updated notes');
   assert.equal(updated.languageId, 'yaml');
   assert.equal(updated.mimeType, 'text/yaml');
+  assert.equal(renamed?.path, '/docs/renamed-notes.md');
+  assert.equal(renamed?.metadata.title, 'renamed-notes.md');
   assert.equal(createWorkspaceTreeItems(workspace.snapshot()).length >= 2, true);
 });
 

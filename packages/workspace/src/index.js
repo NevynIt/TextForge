@@ -2373,7 +2373,11 @@ export function createWorkspaceService(options = {}) {
         ...nextFolder,
         path: nextPath,
         parentId: parent?.id,
-        metadata: { ...nextFolder.metadata, updatedAt },
+        metadata: {
+          ...nextFolder.metadata,
+          title: basenameWorkspacePath(nextPath),
+          updatedAt,
+        },
         childIds: folderDescendants.filter((entry) => entry.parentId === current.id).map((entry) => entry.id),
       };
       folders = replaceById(folders, patchedFolder);
@@ -2388,7 +2392,11 @@ export function createWorkspaceService(options = {}) {
       ...current,
       path: nextPath,
       parentId: parent?.id,
-      metadata: { ...current.metadata, updatedAt },
+      metadata: {
+        ...current.metadata,
+        title: basenameWorkspacePath(nextPath),
+        updatedAt,
+      },
     };
     resources = replaceById(resources, nextResource);
     touchManifest(updatedAt);

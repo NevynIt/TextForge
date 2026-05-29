@@ -56,6 +56,9 @@ import {
   createBlobUrlLedger,
 } from '@textforge/assets';
 import {
+  contributions as bpmnContributionPack,
+} from '@textforge/bpmn';
+import {
   contributions as pipelineContributionPack,
 } from '@textforge/pipeline';
 import {
@@ -125,6 +128,7 @@ const element = React.createElement;
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const workspaceDatabaseName = 'textforge-workspace';
+const workbenchUiStateStorageKey = 'textforge-workbench-ui-state:v1';
 const sampleResourcePaths = {
   notes: '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md',
 };
@@ -588,6 +592,36 @@ function sanitizeFilenameSegment(value, fallback = 'textforge-workspace') {
   return normalized || fallback;
 }
 
+function readStoredWorkbenchUiState() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return undefined;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(workbenchUiStateStorageKey);
+    if (!raw) {
+      return undefined;
+    }
+
+    const parsed = JSON.parse(raw);
+    return typeof parsed === 'object' && parsed ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeStoredWorkbenchUiState(state) {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(workbenchUiStateStorageKey, JSON.stringify(state));
+  } catch {
+    // Ignore local UI-state persistence failures.
+  }
+}
+
 function escapeHtml(value) {
   return String(value ?? '')
     .replaceAll('&', '&amp;')
@@ -794,6 +828,8 @@ function createStorageFailure(error) {
 function createTextForgeWorkbenchController() {
   const screenshotPreset = readPhase35ScreenshotPreset();
   const workbenchTestProfile = readWorkbenchTestProfile();
+  const hasExplicitBootstrapProfile = typeof window !== 'undefined'
+    && new URL(window.location.href).searchParams.has('phase35');
   const luaBootstrapRecovery = readLuaBootstrapRecoveryState();
   const bootstrapOptions = readWorkbenchBootstrapOptions();
   const tracePreview = createTraceLogger(readPreviewTraceEnabled());
@@ -815,6 +851,7 @@ function createTextForgeWorkbenchController() {
     workspaceContributionPack,
     editorContributionPack,
     assetContributionPack,
+    bpmnContributionPack,
     pipelineContributionPack,
     diagramContributionPack,
     markdownContributionPack,
@@ -881,6 +918,9 @@ function createTextForgeWorkbenchController() {
 
   function emit() {
     cachedSnapshot = undefined;
+    if (runtime.status === 'ready') {
+      persistWorkbenchUiState();
+    }
     for (const listener of listeners) {
       listener();
     }
@@ -960,6 +1000,103 @@ function createTextForgeWorkbenchController() {
 
   function getOpenSessions() {
     return [...listMainSessions(), ...listPopupSessions()];
+  }
+
+  function serializeSessionForUiState(session) {
+    if (!session) {
+      return undefined;
+    }
+
+    return {
+      resourceId: session.resource.resourceId,
+      contributionId: session.contributionId,
+      placement: session.placement,
+      sessionKey: session.sessionKey,
+      title: session.title,
+      surfaceState: session.surfaceState,
+    };
+  }
+
+  function buildStoredWorkbenchUiState() {
+    const mainSessions = listMainSessions().map((session) => serializeSessionForUiState(session));
+    const popupSessions = listPopupSessions().map((session) => serializeSessionForUiState(session));
+    return {
+      sessions: {
+        main: mainSessions,
+        popup: popupSessions,
+      },
+      active: {
+        main: state.activeMainSessionId
+          ? serializeSessionForUiState(mainHost.get(state.activeMainSessionId))
+          : undefined,
+        popup: state.activePopupSessionId
+          ? serializeSessionForUiState(popupHost.get(state.activePopupSessionId))
+          : undefined,
+      },
+    };
+  }
+
+  function persistWorkbenchUiState() {
+    writeStoredWorkbenchUiState(buildStoredWorkbenchUiState());
+  }
+
+  function focusRestoredSession(descriptor) {
+    if (!descriptor?.resourceId) {
+      return;
+    }
+
+    const matchingSession = getOpenSessions().find((session) =>
+      session.resource.resourceId === descriptor.resourceId
+      && session.placement === descriptor.placement
+      && session.contributionId === descriptor.contributionId
+      && (descriptor.sessionKey === undefined || session.sessionKey === descriptor.sessionKey));
+    if (!matchingSession) {
+      return;
+    }
+
+    if (matchingSession.placement === 'popup') {
+      focusPopupSession(matchingSession.id);
+      return;
+    }
+
+    focusMainSession(matchingSession.id);
+  }
+
+  function restoreWorkbenchUiSessions() {
+    if (workbenchTestProfile || hasExplicitBootstrapProfile) {
+      return false;
+    }
+
+    const storedState = readStoredWorkbenchUiState();
+    const storedMainSessions = storedState?.sessions?.main ?? [];
+    const storedPopupSessions = storedState?.sessions?.popup ?? [];
+    if (storedMainSessions.length === 0 && storedPopupSessions.length === 0) {
+      return false;
+    }
+
+    const openStoredSessions = (sessions) => {
+      for (const descriptor of sessions) {
+        const entry = getEntry(descriptor.resourceId);
+        if (!entry || entry.kind === 'folder') {
+          continue;
+        }
+
+        openResourceEntry(entry, {
+          placement: descriptor.placement,
+          preferredSurfaceId: descriptor.contributionId,
+          sessionKey: descriptor.sessionKey,
+          surfaceState: descriptor.surfaceState,
+          title: descriptor.title,
+          expandSelection: false,
+        });
+      }
+    };
+
+    openStoredSessions(storedMainSessions);
+    openStoredSessions(storedPopupSessions);
+    focusRestoredSession(storedState?.active?.main);
+    focusRestoredSession(storedState?.active?.popup);
+    return getOpenSessions().length > 0;
   }
 
   function findSessionById(sessionId) {
@@ -4075,6 +4212,7 @@ function createTextForgeWorkbenchController() {
       const selectedEntry = getEntry(workspace.getManifest().selectedResourceId) ?? getDefaultSelection();
       rememberSelection(selectedEntry?.id, { expandAncestors: false });
       normalizeActiveSessions();
+      const restoredSessions = restoreWorkbenchUiSessions();
 
       const initialOpenProfile = workbenchTestProfile ?? screenshotPreset;
       const presetEntry = initialOpenProfile?.openResourcePath
@@ -4082,7 +4220,7 @@ function createTextForgeWorkbenchController() {
         : undefined;
       const initialEntry = presetEntry ?? selectedEntry;
 
-      if (initialEntry && initialEntry.kind !== 'folder' && listMainSessions().length === 0 && listPopupSessions().length === 0) {
+      if (!restoredSessions && initialEntry && initialEntry.kind !== 'folder' && listMainSessions().length === 0 && listPopupSessions().length === 0) {
         tracePreview('hydrateWorkspace:initial-open', {
           path: initialEntry.path,
           preferredSurfaceId: initialOpenProfile?.preferredSurfaceId ?? null,
@@ -4093,7 +4231,7 @@ function createTextForgeWorkbenchController() {
           expandSelection: false,
         });
       } else {
-        tracePreview('hydrateWorkspace:initial-open-skipped', {});
+        tracePreview('hydrateWorkspace:initial-open-skipped', { restoredSessions });
         emit();
       }
       await applyWorkbenchBootstrapOptions();
