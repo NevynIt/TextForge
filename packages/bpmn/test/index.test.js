@@ -11,6 +11,7 @@ import {
   bundledBpmnReferenceAssets,
   collectBpmnMvpScopeDiagnostics,
   contributions,
+  createBpmnViewerModelFromXml,
   importBpmnSemanticXmlResult,
   loadBpmnSemanticFixture,
   validateBpmnSemanticDocument,
@@ -94,4 +95,18 @@ test('minimal BPMN XML imports into the semantic MVP without scope errors', () =
 
   assert.equal(result.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
   assert.equal(result.value.entities.some((entity) => entity.typeRef === 'bpmn::Task'), true);
+});
+
+test('bpmn viewer model parses BPMN XML and surfaces parse diagnostics', async () => {
+  const validXml = readFileSync(resolve(workspaceRoot, bundledBpmnReferenceAssets.rawXmlPath), 'utf8');
+  const invalidXml = '<bpmn:definitions><broken></bpmn:definitions>';
+
+  const valid = await createBpmnViewerModelFromXml(validXml, { title: 'Valid BPMN' });
+  const invalid = await createBpmnViewerModelFromXml(invalidXml, { title: 'Invalid BPMN' });
+
+  assert.equal(valid.processes.length > 0, true);
+  assert.equal(valid.diagramCount > 0, true);
+  assert.equal(valid.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+  assert.equal(invalid.diagnostics.some((diagnostic) => diagnostic.code === 'bpmn.viewer.parse-failed'), true);
+  assert.equal(contributions.surfaces.some((surface) => surface.id === '@textforge/bpmn/viewer'), true);
 });

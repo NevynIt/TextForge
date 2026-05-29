@@ -4,6 +4,7 @@ import {
   createDiagnostic,
   createResourcePredicate,
 } from '@textforge/core';
+import BpmnModdle from 'bpmn-moddle';
 import {
   importBpmnXmlResult,
   isResolvedDocument,
@@ -39,6 +40,14 @@ export const bpmnItmDocumentPredicate = createResourcePredicate({
   languageIds: ['itm'],
   mimeTypes: ['text/itm', 'text/x-itm'],
   fileExtensions: ['itm'],
+});
+
+export const bpmnViewerSurfaceId = '@textforge/bpmn/viewer';
+export const bpmnViewerSurfaceDocumentPredicate = createResourcePredicate({
+  representations: ['text'],
+  languageIds: ['bpmn-xml', 'itm'],
+  mimeTypes: ['application/bpmn+xml', 'text/itm', 'text/x-itm'],
+  fileExtensions: ['bpmn', 'itm'],
 });
 
 export const bpmnSemanticProfileText = `%metadata
@@ -505,6 +514,8 @@ const bpmnCapabilities = Object.freeze([
   }),
 ]);
 
+const bpmnModdle = new BpmnModdle();
+
 function toResolvedDocument(document) {
   return isResolvedDocument(document) ? document : resolveDocument(document);
 }
@@ -521,6 +532,228 @@ function appendUniqueDiagnostics(target, diagnostics) {
     target.push(diagnostic);
   }
   return target;
+}
+
+function createBpmnSurfaceDiagnostic(resource, message, code, severity = 'error') {
+  return createDiagnostic(message, severity, {
+    code,
+    resource,
+    origin: {
+      packageId: '@textforge/bpmn',
+      contributionId: bpmnViewerSurfaceId,
+      subsystem: 'bpmn-viewer',
+    },
+  });
+}
+
+function escapeHtml(text) {
+  return String(text ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function stringifyBpmnWarning(warning) {
+  if (!warning) {
+    return 'Unknown BPMN XML warning.';
+  }
+  if (typeof warning === 'string') {
+    return warning;
+  }
+  if (typeof warning.message === 'string' && warning.message.trim()) {
+    return warning.message;
+  }
+  return String(warning);
+}
+
+function collectProcessSummaries(definitions) {
+  const rootElements = Array.isArray(definitions?.rootElements) ? definitions.rootElements : [];
+  return rootElements
+    .filter((element) => element?.$type === 'bpmn:Process')
+    .map((process) => ({
+      id: process.id,
+      name: process.name,
+      flowElementCount: Array.isArray(process.flowElements) ? process.flowElements.length : 0,
+    }));
+}
+
+function createBpmnViewerRuntimeMarkup(model) {
+  const diagnosticsList = model.diagnostics.length > 0
+    ? `<ul class="tf-bpmn-viewer__diagnostics">${model.diagnostics.map((diagnostic) =>
+      `<li><strong>${escapeHtml(diagnostic.severity)}</strong> ${escapeHtml(diagnostic.message)}</li>`).join('')}</ul>`
+    : '<p class="tf-bpmn-viewer__empty">No diagnostics.</p>';
+  return `
+    <section class="tf-bpmn-viewer">
+      <header class="tf-bpmn-viewer__header">
+        <div>
+          <span class="tf-bpmn-viewer__eyebrow">BPMN.io viewer</span>
+          <h4>${escapeHtml(model.title)}</h4>
+        </div>
+        <div class="tf-bpmn-viewer__meta">
+          <span data-bpmn-summary>${escapeHtml(model.summary)}</span>
+          <span data-bpmn-diagnostics>${model.diagnostics.length} diagnostics</span>
+        </div>
+      </header>
+      <div class="tf-bpmn-viewer__toolbar">
+        <button type="button" data-bpmn-fit>Fit</button>
+        <button type="button" data-bpmn-reset>Reset zoom</button>
+      </div>
+      <div class="tf-bpmn-viewer__body">
+        <div class="tf-bpmn-viewer__stage" data-bpmn-stage></div>
+        <aside class="tf-bpmn-viewer__sidebar">
+          <section class="tf-bpmn-viewer__panel">
+            <h5>Processes</h5>
+            <ul class="tf-bpmn-viewer__processes">
+              ${model.processes.length > 0
+                ? model.processes.map((process) =>
+                  `<li><strong>${escapeHtml(process.name ?? process.id ?? 'process')}</strong> <span>${process.flowElementCount} flow elements</span></li>`).join('')
+                : '<li class="tf-bpmn-viewer__empty">No process roots were found.</li>'}
+            </ul>
+          </section>
+          <section class="tf-bpmn-viewer__panel">
+            <h5>Diagnostics</h5>
+            ${diagnosticsList}
+          </section>
+        </aside>
+      </div>
+    </section>
+  `;
+}
+
+export async function createBpmnViewerModelFromXml(xml, options = {}) {
+  const diagnostics = [];
+  const trimmed = String(xml ?? '').trim();
+  if (!trimmed) {
+    diagnostics.push(createBpmnSurfaceDiagnostic(
+      options.resource,
+      'No BPMN XML source is available for this surface.',
+      'bpmn.viewer.source-missing',
+    ));
+    return {
+      id: 'bpmn-viewer:empty',
+      title: options.title ?? 'BPMN viewer',
+      summary: '0 processes / 0 diagrams',
+      detail: 'Read-only BPMN XML surface.',
+      diagnostics,
+      xml: '',
+      definitions: undefined,
+      processes: [],
+      diagramCount: 0,
+    };
+  }
+
+  try {
+    const parsed = await bpmnModdle.fromXML(trimmed);
+    const warnings = (parsed.warnings ?? []).map((warning, index) =>
+      createBpmnSurfaceDiagnostic(
+        options.resource,
+        stringifyBpmnWarning(warning),
+        `bpmn.viewer.parse-warning-${index + 1}`,
+        'warning',
+      ));
+    appendUniqueDiagnostics(diagnostics, warnings);
+    const definitions = parsed.rootElement;
+    const processes = collectProcessSummaries(definitions);
+    const diagrams = Array.isArray(definitions?.diagrams) ? definitions.diagrams : [];
+
+    return {
+      id: `bpmn-viewer:${options.title ?? 'document'}`,
+      title: options.title ?? 'BPMN viewer',
+      summary: `${processes.length} process${processes.length === 1 ? '' : 'es'} / ${diagrams.length} diagram${diagrams.length === 1 ? '' : 's'}`,
+      detail: 'Read-only BPMN XML surface.',
+      diagnostics,
+      xml: trimmed,
+      definitions,
+      processes,
+      diagramCount: diagrams.length,
+    };
+  } catch (error) {
+    diagnostics.push(createBpmnSurfaceDiagnostic(
+      options.resource,
+      error?.message ?? 'BPMN XML could not be parsed.',
+      'bpmn.viewer.parse-failed',
+    ));
+    return {
+      id: `bpmn-viewer:${options.title ?? 'document'}`,
+      title: options.title ?? 'BPMN viewer',
+      summary: '0 processes / 0 diagrams',
+      detail: 'Read-only BPMN XML surface.',
+      diagnostics,
+      xml: trimmed,
+      definitions: undefined,
+      processes: [],
+      diagramCount: 0,
+    };
+  }
+}
+
+function createBpmnViewerFailureHtml(title, message) {
+  return `
+    <section class="tf-bpmn-viewer tf-bpmn-viewer--error">
+      <header class="tf-bpmn-viewer__header">
+        <div>
+          <span class="tf-bpmn-viewer__eyebrow">BPMN.io viewer</span>
+          <h4>${escapeHtml(title)}</h4>
+        </div>
+      </header>
+      <div class="tf-bpmn-viewer__body tf-bpmn-viewer__body--message">
+        <p class="tf-bpmn-viewer__message">${escapeHtml(message)}</p>
+      </div>
+    </section>
+  `;
+}
+
+async function mountBpmnViewerRuntime(container, model) {
+  container.innerHTML = createBpmnViewerRuntimeMarkup(model);
+  const stage = container.querySelector('[data-bpmn-stage]');
+  const fitButton = container.querySelector('[data-bpmn-fit]');
+  const resetButton = container.querySelector('[data-bpmn-reset]');
+
+  if (!stage || !fitButton || !resetButton) {
+    container.innerHTML = createBpmnViewerFailureHtml(model.title, 'BPMN viewer UI failed to initialize.');
+    return () => {
+      container.innerHTML = '';
+    };
+  }
+
+  try {
+    await import('bpmn-js/dist/assets/diagram-js.css');
+    await import('bpmn-js/dist/assets/bpmn-js.css');
+    await import('bpmn-js/dist/assets/bpmn-font/css/bpmn.css');
+    const { default: NavigatedViewer } = await import('bpmn-js/lib/NavigatedViewer');
+    const viewer = new NavigatedViewer({
+      container: stage,
+      additionalModules: [],
+    });
+    await viewer.importXML(model.xml);
+    viewer.get('canvas')?.zoom('fit-viewport', 'auto');
+
+    const handleFit = () => viewer.get('canvas')?.zoom('fit-viewport', 'auto');
+    const handleReset = () => viewer.get('canvas')?.zoom(1);
+    fitButton.addEventListener('click', handleFit);
+    resetButton.addEventListener('click', handleReset);
+
+    return () => {
+      fitButton.removeEventListener('click', handleFit);
+      resetButton.removeEventListener('click', handleReset);
+      viewer.destroy();
+      container.innerHTML = '';
+    };
+  } catch (error) {
+    container.innerHTML = createBpmnViewerFailureHtml(model.title, error?.message ?? 'BPMN.io failed to load.');
+    return () => {
+      container.innerHTML = '';
+    };
+  }
+}
+
+async function resolveBpmnViewerSurfaceModel(execution, title) {
+  const model = await createBpmnViewerModelFromXml(execution.sourceText ?? '', {
+    title,
+    resource: execution.resource,
+  });
+  return model;
 }
 
 export function collectBpmnMvpScopeDiagnostics(document) {
@@ -628,6 +861,88 @@ export function importBpmnSemanticXmlResult(xml, options = {}) {
   return result;
 }
 
+export const bpmnViewerSurfaceContribution = {
+  id: bpmnViewerSurfaceId,
+  label: 'BPMN viewer',
+  description: 'Open BPMN XML in a read-only BPMN.io viewer surface.',
+  kind: 'visual-runtime',
+  localName: 'bpmn',
+  capabilities: [bpmnViewerCapabilityId],
+  readOnly: true,
+  defaultActive: true,
+  resourcePredicate: bpmnViewerSurfaceDocumentPredicate,
+  documentPredicate: bpmnViewerSurfaceDocumentPredicate,
+  resourceRepresentations: ['text'],
+  languageIds: ['bpmn-xml', 'itm'],
+  mimeTypes: ['application/bpmn+xml', 'text/itm', 'text/x-itm'],
+  fileExtensions: ['bpmn', 'itm'],
+  placements: ['main', 'popup'],
+  openWithPriority: 92,
+  open(execution = {}) {
+    const title = execution.resourceTitle ?? execution.resource?.path ?? 'BPMN viewer';
+    const placeholderHtml = createBpmnViewerFailureHtml(title, 'Resolving BPMN XML...');
+
+    return {
+      mountId: `${execution.session?.id ?? 'surface'}:${this.id}:${execution.updatedAt ?? 'current'}`,
+      summary: 'Resolving the BPMN.io viewer surface.',
+      detail: 'Read-only BPMN XML viewer',
+      readOnly: true,
+      inspectorSections: [
+        {
+          eyebrow: 'Runtime',
+          icon: 'status',
+          title: 'BPMN surface',
+          rows: [
+            { label: 'Renderer', value: 'bpmn-js' },
+            { label: 'Mode', value: 'Read-only' },
+          ],
+        },
+      ],
+      surface: {
+        model: {
+          html: placeholderHtml,
+          diagnostics: [],
+        },
+        mount(container) {
+          let disposed = false;
+          let disposeRuntime = () => {};
+          container.innerHTML = placeholderHtml;
+
+          void (async () => {
+            try {
+              const model = await resolveBpmnViewerSurfaceModel(execution, title);
+              if (disposed) {
+                return;
+              }
+              this.model.diagnostics = model.diagnostics;
+              this.model.html = createBpmnViewerRuntimeMarkup(model);
+              disposeRuntime = await mountBpmnViewerRuntime(container, model);
+            } catch (error) {
+              if (!disposed) {
+                this.model.diagnostics = [
+                  createBpmnSurfaceDiagnostic(
+                    execution.resource,
+                    error?.message ?? 'BPMN viewer resolution failed.',
+                    'bpmn.viewer.resolve-failed',
+                  ),
+                ];
+                this.model.html = createBpmnViewerFailureHtml(title, error?.message ?? 'BPMN viewer resolution failed.');
+                container.innerHTML = this.model.html;
+              }
+            }
+          })();
+
+          return () => {
+            disposed = true;
+            disposeRuntime();
+            container.innerHTML = '';
+          };
+        },
+      },
+    };
+  },
+};
+
 export function createBpmnContributionManifest(overrides = {}) {
   return createContributionManifest('@textforge/bpmn', {
     name: '@textforge/bpmn',
@@ -639,7 +954,7 @@ export function createBpmnContributionManifest(overrides = {}) {
       ...(overrides.dependencies ?? []),
     ],
     capabilities: bpmnCapabilities,
-    surfaces: overrides.surfaces ?? [],
+    surfaces: overrides.surfaces ?? [bpmnViewerSurfaceContribution],
     pipelines: overrides.pipelines ?? [],
   });
 }

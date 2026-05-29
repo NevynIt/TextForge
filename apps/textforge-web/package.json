@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@textforge/assets": "workspace:*",
+    "@textforge/bpmn": "workspace:*",
     "@textforge/core": "workspace:*",
     "@textforge/diagrams": "workspace:^",
     "@textforge/editors": "workspace:*",
