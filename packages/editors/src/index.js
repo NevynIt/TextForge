@@ -501,7 +501,7 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
         gap: '6px',
         fontSize: '0.82rem',
       },
-      '.cm-search input, .cm-search button, .cm-search select': {
+      '.cm-search input, .cm-search button, .cm-search select, .cm-search .cm-button': {
         font: 'inherit',
       },
       '.cm-search input': {
@@ -512,16 +512,24 @@ function createCodeMirrorExtensions({ model, diagnostics, handleUpdate }) {
         border: '1px solid rgba(148, 163, 184, 0.18)',
         borderRadius: '10px',
       },
-      '.cm-search button': {
+      '.cm-search button, .cm-search .cm-button': {
+        appearance: 'none',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
         minHeight: '30px',
         padding: '0 10px',
         color: '#d9e4f2',
-        backgroundColor: 'rgba(37, 99, 235, 0.18)',
-        border: '1px solid rgba(96, 165, 250, 0.24)',
+        background: 'linear-gradient(180deg, rgba(27, 39, 58, 0.98), rgba(16, 24, 38, 0.98))',
+        border: '1px solid rgba(109, 137, 183, 0.32)',
         borderRadius: '10px',
+        boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.04)',
         cursor: 'pointer',
       },
-      '.cm-search button:disabled': {
+      '.cm-search button:hover, .cm-search .cm-button:hover': {
+        background: 'linear-gradient(180deg, rgba(33, 48, 70, 0.98), rgba(20, 29, 44, 0.98))',
+      },
+      '.cm-search button:disabled, .cm-search .cm-button:disabled': {
         cursor: 'default',
         opacity: '0.48',
       },
@@ -660,9 +668,7 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
       if (typeof restoreScrollLeft === 'number') {
         view.scrollDOM.scrollLeft = restoreScrollLeft;
       }
-      if (!model.readOnly) {
-        view.focus();
-      }
+      view.focus();
       const handleScroll = () => {
         syncViewState({
           scrollTop: view.scrollDOM.scrollTop,
