@@ -48,6 +48,7 @@ import {
   contributions as editorContributionPack,
   createTextEditorDocument,
   listTextEditorLanguageModes,
+  sourceRangeToSelection,
 } from '@textforge/editors';
 import {
   contributions as assetContributionPack,
@@ -74,6 +75,9 @@ import {
   listItmVisualTargets,
   loadItmDocument,
 } from '@textforge/itm';
+import {
+  contributions as cytoscapeRendererContributionPack,
+} from '@textforge/renderer-cytoscape';
 import {
   contributions as securityProfileContributionPack,
 } from '@textforge/security-profile';
@@ -803,6 +807,7 @@ function createTextForgeWorkbenchController() {
     diagramContributionPack,
     markdownContributionPack,
     itmContributionPack,
+    cytoscapeRendererContributionPack,
     luaContributionPack,
     uiContributionPack,
     securityProfileContributionPack,
@@ -2428,6 +2433,41 @@ function createTextForgeWorkbenchController() {
     };
   }
 
+  function openSourceRange(resourcePath, sourceRange, options = {}) {
+    if (!resourcePath || runtime.status !== 'ready') {
+      return false;
+    }
+
+    const entry = workspace.getEntryByPath(normalizeWorkspacePath(resourcePath));
+    if (!entry || entry.kind !== 'resource' || entry.representation !== 'text') {
+      return false;
+    }
+
+    const selection = sourceRange ? sourceRangeToSelection(sourceRange) : undefined;
+    const currentDocument = activeTextDocuments.get(entry.id) ?? createTextEditorDocument(
+      workspaceEntryToResourceRef(entry),
+      entry.text,
+      {
+        languageId: entry.languageId,
+        readOnly: !isWorkspaceResourceWritable(entry),
+      },
+    );
+    activeTextDocuments.set(entry.id, {
+      ...currentDocument,
+      resource: workspaceEntryToResourceRef(entry),
+      text: entry.text,
+      selection: selection ?? currentDocument.selection,
+      sourceRange: sourceRange ?? currentDocument.sourceRange,
+    });
+
+    openResourceEntry(entry, {
+      placement: options.placement ?? 'main',
+      preferredSurfaceId: '@textforge/editors/code-mirror-text',
+      forceReopen: true,
+    });
+    return true;
+  }
+
   function reopenResourceInCurrentSurface(resource, preferredSurfaceId) {
     const currentSession = findSessionForResource(resource.id);
     if (!currentSession) {
@@ -2673,6 +2713,7 @@ function createTextForgeWorkbenchController() {
       runConsoleCommand(command) {
         return executeLuaConsoleCommand(resource, command);
       },
+      openSourceRange,
     });
     tracePreview('createSurfaceView:open-returned', {
       sessionId: session.id,

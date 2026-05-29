@@ -27,6 +27,7 @@
     "@textforge/lua": "workspace:^",
     "@textforge/markdown": "workspace:^",
     "@textforge/pipeline": "workspace:^",
+    "@textforge/renderer-cytoscape": "workspace:*",
     "@textforge/security-profile": "workspace:*",
     "@textforge/surfaces": "workspace:*",
     "@textforge/ui": "workspace:*",

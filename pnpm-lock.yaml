@@ -34,6 +34,9 @@ importers:
       '@textforge/pipeline':
         specifier: workspace:^
         version: link:../../packages/pipeline
+      '@textforge/renderer-cytoscape':
+        specifier: workspace:*
+        version: link:../../packages/renderer-cytoscape
       '@textforge/security-profile':
         specifier: workspace:*
         version: link:../../packages/security-profile
@@ -242,6 +245,21 @@ importers:
       '@textforge/workspace':
         specifier: workspace:*
         version: link:../workspace
+
+  packages/renderer-cytoscape:
+    dependencies:
+      '@textforge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@textforge/itm':
+        specifier: workspace:*
+        version: link:../itm
+      '@textforge/visual-itm':
+        specifier: workspace:*
+        version: link:../visual-itm
+      cytoscape:
+        specifier: ^3.33.4
+        version: 3.33.4
 
   packages/security-profile:
     dependencies:

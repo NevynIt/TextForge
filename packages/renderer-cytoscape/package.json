@@ -1,0 +1,25 @@
+{
+  "name": "@textforge/renderer-cytoscape",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "types": "./src/index.ts",
+  "dependencies": {
+    "@textforge/core": "workspace:*",
+    "@textforge/itm": "workspace:*",
+    "@textforge/visual-itm": "workspace:*",
+    "cytoscape": "^3.33.4"
+  },
+  "scripts": {
+    "build": "node --check src/index.js",
+    "test": "node --test test/index.test.js",
+    "lint": "node scripts/check.mjs",
+    "typecheck": "node --check src/index.js"
+  }
+}

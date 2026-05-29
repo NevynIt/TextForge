@@ -278,7 +278,7 @@ test('resolveItmVisualTarget derives Visual ITM with renderer precedence, proven
   });
 
   assert.equal(resolvedView.target.rendererValue, 'graph.viewer');
-  assert.equal(resolvedView.target.preferredSurfaceId, '@textforge/itm/graph');
+  assert.equal(resolvedView.target.preferredSurfaceId, '@textforge/renderer-cytoscape/runtime');
   assert.equal(resolvedView.visualDocument.origin.derivedTarget?.kind, 'view');
   assert.equal(resolvedView.visualDocument.nodes.some((node) => (node.provenance?.length ?? 0) >= 2), true);
   assert.equal(resolvedView.visualDiagnostics.length, 0);

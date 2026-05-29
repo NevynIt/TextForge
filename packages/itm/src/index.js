@@ -2697,7 +2697,7 @@ const itmVisualRawModelTargetTemplates = Object.freeze([
     projection: 'graph',
     rendererValue: 'graph.viewer',
     rendererSource: 'local',
-    preferredSurfaceId: '@textforge/itm/graph',
+    preferredSurfaceId: '@textforge/renderer-cytoscape/runtime',
   },
   {
     id: 'raw-model/mindmap',
@@ -2739,7 +2739,7 @@ const itmVisualRawModelTargetTemplates = Object.freeze([
 
 const itmVisualRendererBindings = Object.freeze([
   {
-    surfaceId: '@textforge/itm/graph',
+    surfaceId: '@textforge/renderer-cytoscape/runtime',
     projection: 'graph',
     aliases: ['cytoscape', 'graph.viewer', 'graph', 'sigma'],
   },
