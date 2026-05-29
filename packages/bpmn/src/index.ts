@@ -57,6 +57,48 @@ export interface BpmnViewerModel {
   readonly diagramCount: number;
 }
 
+export interface BpmnDiBoundsEntry {
+  readonly element: string;
+  readonly shapeId?: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface BpmnDiWaypoint {
+  readonly x: number;
+  readonly y: number;
+}
+
+export interface BpmnDiRouteEntry {
+  readonly relationship: string;
+  readonly edgeId?: string;
+  readonly waypoints: ReadonlyArray<BpmnDiWaypoint>;
+}
+
+export interface BpmnDiLabelBoundsEntry {
+  readonly element: string;
+  readonly sourceDiElement?: string;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}
+
+export interface BpmnDiagramInterchangeView {
+  readonly viewName: string;
+  readonly startLine: number;
+  readonly title?: string;
+  readonly viewpointRef?: string;
+  readonly sourceDiagramId?: string;
+  readonly sourcePlaneId?: string;
+  readonly planeElement?: string;
+  readonly bounds: ReadonlyArray<BpmnDiBoundsEntry>;
+  readonly routes: ReadonlyArray<BpmnDiRouteEntry>;
+  readonly labelBounds: ReadonlyArray<BpmnDiLabelBoundsEntry>;
+}
+
 export declare function collectBpmnMvpScopeDiagnostics(
   document: ItmDocument | ResolvedItmDocument,
 ): ReadonlyArray<Diagnostic>;
@@ -90,6 +132,33 @@ export declare function createBpmnViewerModelFromXml(
     readonly resource?: unknown;
   },
 ): Promise<BpmnViewerModel>;
+
+export declare function extractBpmnDiagramInterchangeView(
+  sourceText: string,
+  options?: {
+    readonly viewName?: string;
+    readonly startLine?: number;
+  },
+): BpmnDiagramInterchangeView;
+
+export declare function validateBpmnDiagramInterchangeView(
+  view: BpmnDiagramInterchangeView,
+  document: ItmDocument | ResolvedItmDocument,
+  options?: {
+    readonly resource?: unknown;
+  },
+): ReadonlyArray<Diagnostic>;
+
+export declare function applyBpmnDiagramInterchangeToXml(
+  xml: string,
+  view: BpmnDiagramInterchangeView,
+  options?: {
+    readonly resource?: unknown;
+  },
+): Promise<{
+  readonly xml: string;
+  readonly diagnostics: ReadonlyArray<Diagnostic>;
+}>;
 
 export declare const bpmnViewerSurfaceContribution: SurfaceContribution;
 export declare function createBpmnContributionManifest(overrides?: Partial<ContributionManifest>): ContributionManifest;

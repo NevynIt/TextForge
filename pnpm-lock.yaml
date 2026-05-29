@@ -104,6 +104,9 @@ importers:
       bpmn-moddle:
         specifier: ^9.0.4
         version: 9.0.4
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
 
   packages/core: {}
 

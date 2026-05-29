@@ -7,13 +7,16 @@ import { contributions as coreContributions, createContributionRegistry } from '
 import { contributions as itmContributions, loadItmDocument } from '@textforge/itm';
 
 import {
+  applyBpmnDiagramInterchangeToXml,
   bpmnCapabilityIds,
   bundledBpmnReferenceAssets,
   collectBpmnMvpScopeDiagnostics,
   contributions,
   createBpmnViewerModelFromXml,
+  extractBpmnDiagramInterchangeView,
   importBpmnSemanticXmlResult,
   loadBpmnSemanticFixture,
+  validateBpmnDiagramInterchangeView,
   validateBpmnSemanticDocument,
 } from '../src/index.js';
 
@@ -109,4 +112,63 @@ test('bpmn viewer model parses BPMN XML and surfaces parse diagnostics', async (
   assert.equal(valid.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
   assert.equal(invalid.diagnostics.some((diagnostic) => diagnostic.code === 'bpmn.viewer.parse-failed'), true);
   assert.equal(contributions.surfaces.some((surface) => surface.id === '@textforge/bpmn/viewer'), true);
+});
+
+test('bpmn DI extraction reads preserved bounds, routes, and label bounds from ITM views', () => {
+  const itmSource = readFileSync(resolve(workspaceRoot, bundledBpmnReferenceAssets.convertedItmPath), 'utf8');
+  const extracted = extractBpmnDiagramInterchangeView(itmSource, { viewName: 'bpmn_diagram' });
+
+  assert.equal(extracted.viewName, 'bpmn_diagram');
+  assert.equal(extracted.sourceDiagramId, 'BPMNDiagram_1');
+  assert.equal(extracted.sourcePlaneId, 'BPMNPlane_1');
+  assert.equal(extracted.bounds.length > 0, true);
+  assert.equal(extracted.routes.length > 0, true);
+  assert.equal(extracted.labelBounds.length > 0, true);
+});
+
+test('bpmn DI validation checks semantic element and relationship references without generic delta semantics', async () => {
+  const referencePath = resolve(workspaceRoot, bundledBpmnReferenceAssets.convertedItmPath);
+  const source = readFileSync(referencePath, 'utf8');
+  const extracted = extractBpmnDiagramInterchangeView(source, { viewName: 'bpmn_diagram' });
+  const loaded = await loadItmDocument(source, {
+    strict: false,
+    uri: '/docs/examples/bpmn/training-by-design.lua-pipeline-reference.itm',
+  });
+
+  const validDiagnostics = validateBpmnDiagramInterchangeView(extracted, loaded.effectiveResolvedDocument);
+  const invalidDiagnostics = validateBpmnDiagramInterchangeView({
+    ...extracted,
+    bounds: [
+      {
+        ...extracted.bounds[0],
+        element: 'Missing_Element',
+      },
+    ],
+  }, loaded.effectiveResolvedDocument);
+
+  assert.equal(validDiagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+  assert.equal(invalidDiagnostics.some((diagnostic) => diagnostic.code === 'bpmn.di.missing-bounds-element'), true);
+});
+
+test('bpmn DI application can project ITM view geometry back onto BPMN XML read-only', async () => {
+  const rawXml = readFileSync(resolve(workspaceRoot, bundledBpmnReferenceAssets.rawXmlPath), 'utf8');
+  const itmSource = readFileSync(resolve(workspaceRoot, bundledBpmnReferenceAssets.convertedItmPath), 'utf8');
+  const extracted = extractBpmnDiagramInterchangeView(itmSource, { viewName: 'bpmn_diagram' });
+  const updatedBounds = {
+    ...extracted.bounds[0],
+    x: extracted.bounds[0].x + 17,
+    y: extracted.bounds[0].y + 11,
+  };
+
+  const applied = await applyBpmnDiagramInterchangeToXml(rawXml, {
+    ...extracted,
+    bounds: [updatedBounds, ...extracted.bounds.slice(1)],
+  });
+  const parsed = await createBpmnViewerModelFromXml(applied.xml, { title: 'Applied BPMN DI' });
+  const planeElements = parsed.definitions?.diagrams?.[0]?.plane?.planeElement ?? [];
+  const updatedShape = planeElements.find((entry) => entry?.id === updatedBounds.shapeId);
+
+  assert.equal(applied.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+  assert.equal(updatedShape?.bounds?.x, updatedBounds.x);
+  assert.equal(updatedShape?.bounds?.y, updatedBounds.y);
 });
