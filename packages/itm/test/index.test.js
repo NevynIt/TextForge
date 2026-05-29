@@ -284,7 +284,7 @@ test('resolveItmVisualTarget derives Visual ITM with renderer precedence, proven
   assert.equal(resolvedView.visualDiagnostics.length, 0);
   assert.equal(renderItmPublicationHtml(loaded.effectiveResolvedDocument, { view: 'capability_surface', projection: 'graph' }).includes('data-itm-projection="graph"'), true);
   assert.equal(resolvedRawMindmap.target.rendererSource, 'local');
-  assert.equal(resolvedRawMindmap.target.preferredSurfaceId, '@textforge/itm/mindmap');
+  assert.equal(resolvedRawMindmap.target.preferredSurfaceId, '@textforge/renderer-jsmind/runtime');
 });
 
 test('resolveItmVisualTarget reports missing declared renderers without silently falling back', async () => {

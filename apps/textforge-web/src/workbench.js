@@ -79,6 +79,9 @@ import {
   contributions as cytoscapeRendererContributionPack,
 } from '@textforge/renderer-cytoscape';
 import {
+  contributions as jsmindRendererContributionPack,
+} from '@textforge/renderer-jsmind';
+import {
   contributions as securityProfileContributionPack,
 } from '@textforge/security-profile';
 import {
@@ -808,6 +811,7 @@ function createTextForgeWorkbenchController() {
     markdownContributionPack,
     itmContributionPack,
     cytoscapeRendererContributionPack,
+    jsmindRendererContributionPack,
     luaContributionPack,
     uiContributionPack,
     securityProfileContributionPack,

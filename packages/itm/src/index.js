@@ -2706,7 +2706,7 @@ const itmVisualRawModelTargetTemplates = Object.freeze([
     projection: 'mindmap',
     rendererValue: 'jsmind',
     rendererSource: 'local',
-    preferredSurfaceId: '@textforge/itm/mindmap',
+    preferredSurfaceId: '@textforge/renderer-jsmind/runtime',
   },
   {
     id: 'raw-model/catalogue',
@@ -2744,7 +2744,7 @@ const itmVisualRendererBindings = Object.freeze([
     aliases: ['cytoscape', 'graph.viewer', 'graph', 'sigma'],
   },
   {
-    surfaceId: '@textforge/itm/mindmap',
+    surfaceId: '@textforge/renderer-jsmind/runtime',
     projection: 'mindmap',
     aliases: ['jsmind', 'mindmap', 'mindmap.viewer'],
   },

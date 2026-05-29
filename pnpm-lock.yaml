@@ -37,6 +37,9 @@ importers:
       '@textforge/renderer-cytoscape':
         specifier: workspace:*
         version: link:../../packages/renderer-cytoscape
+      '@textforge/renderer-jsmind':
+        specifier: workspace:*
+        version: link:../../packages/renderer-jsmind
       '@textforge/security-profile':
         specifier: workspace:*
         version: link:../../packages/security-profile
@@ -260,6 +263,21 @@ importers:
       cytoscape:
         specifier: ^3.33.4
         version: 3.33.4
+
+  packages/renderer-jsmind:
+    dependencies:
+      '@textforge/core':
+        specifier: workspace:*
+        version: link:../core
+      '@textforge/itm':
+        specifier: workspace:*
+        version: link:../itm
+      '@textforge/visual-itm':
+        specifier: workspace:*
+        version: link:../visual-itm
+      jsmind:
+        specifier: ^0.8.7
+        version: 0.8.8
 
   packages/security-profile:
     dependencies:
@@ -888,6 +906,9 @@ packages:
 
   js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
+
+  jsmind@0.8.8:
+    resolution: {integrity: sha512-SPI1Hjomwyfz2nawqmtd4+J9yQwB0fJn8u7jo7BssCAYGLn9v8RcKOJ+6Q+nn3ILz5PF8MZXS2Vj2n3L3dKQ5Q==}
 
   katex@0.16.47:
     resolution: {integrity: sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg==}
@@ -1860,6 +1881,8 @@ snapshots:
   internmap@2.0.3: {}
 
   js-tokens@4.0.0: {}
+
+  jsmind@0.8.8: {}
 
   katex@0.16.47:
     dependencies:
