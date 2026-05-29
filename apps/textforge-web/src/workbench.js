@@ -135,6 +135,7 @@ const workbenchUiStateResourcePath = '/.textforge/state/workbench-ui.json';
 const workbenchUiStateFolderPath = dirnameWorkspacePath(workbenchUiStateResourcePath);
 const surfaceViewportScrollByViewId = new Map();
 const sampleResourcePaths = {
+  bundledReadme: '/.textforge/resources/docs/README.md',
   notes: '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md',
 };
 const utilitySections = [
@@ -1030,7 +1031,8 @@ function createTextForgeWorkbenchController() {
   }
 
   function getDefaultSelection() {
-    return getSampleEntry(sampleResourcePaths.notes)
+    return getSampleEntry(sampleResourcePaths.bundledReadme)
+      ?? getSampleEntry(sampleResourcePaths.notes)
       ?? workspace.snapshot().resources[0]
       ?? workspace.snapshot().folders.find((folder) => folder.id !== 'root');
   }
