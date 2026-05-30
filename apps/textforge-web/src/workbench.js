@@ -1196,12 +1196,70 @@ function createTextForgeWorkbenchController() {
     focusMainSession(matchingSession.id);
   }
 
+  function migrateStoredWorkbenchUiState(state) {
+    if (!state || typeof state !== 'object') {
+      return state;
+    }
+
+    const storedMainSessions = state.sessions?.main ?? [];
+    const storedPopupSessions = state.sessions?.popup ?? [];
+    const legacyDefaultPath = sampleResourcePaths.notes;
+    const bundledReadmePath = sampleResourcePaths.bundledReadme;
+    const legacyDefaultResourceId = createBundledOverlayId(legacyDefaultPath);
+    const bundledReadmeResourceId = createBundledOverlayId(bundledReadmePath);
+
+    // Migrate the old single-session seeded default so reloads open the bundled README instead.
+    if (
+      storedMainSessions.length !== 1
+      || storedPopupSessions.length !== 0
+      || (
+        storedMainSessions[0]?.resourcePath !== legacyDefaultPath
+        && storedMainSessions[0]?.resourceId !== legacyDefaultResourceId
+      )
+    ) {
+      return state;
+    }
+
+    const rewriteDescriptor = (descriptor) => {
+      if (!descriptor || typeof descriptor !== 'object') {
+        return descriptor;
+      }
+
+      if (
+        descriptor.resourcePath !== legacyDefaultPath
+        && descriptor.resourceId !== legacyDefaultResourceId
+      ) {
+        return descriptor;
+      }
+
+      return {
+        ...descriptor,
+        resourcePath: bundledReadmePath,
+        resourceId: bundledReadmeResourceId,
+      };
+    };
+
+    return {
+      ...state,
+      sessions: {
+        ...state.sessions,
+        main: storedMainSessions.map(rewriteDescriptor),
+        popup: storedPopupSessions,
+      },
+      active: {
+        ...state.active,
+        main: rewriteDescriptor(state.active?.main),
+        popup: state.active?.popup,
+      },
+    };
+  }
+
   function restoreWorkbenchUiSessions() {
     if (workbenchTestProfile || hasExplicitBootstrapProfile) {
       return false;
     }
 
-    const storedState = readPersistedWorkbenchUiState();
+    const storedState = migrateStoredWorkbenchUiState(readPersistedWorkbenchUiState());
     const storedMainSessions = storedState?.sessions?.main ?? [];
     const storedPopupSessions = storedState?.sessions?.popup ?? [];
     if (storedMainSessions.length === 0 && storedPopupSessions.length === 0) {
