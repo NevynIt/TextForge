@@ -80,9 +80,6 @@ import {
   loadItmDocument,
 } from '@textforge/itm';
 import {
-  contributions as tablesContributionPack,
-} from '@textforge/tables';
-import {
   contributions as cytoscapeRendererContributionPack,
 } from '@textforge/renderer-cytoscape';
 import {
@@ -233,22 +230,12 @@ const workbenchTestProfiles = {
   },
   'itm-catalogue': {
     openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
-    preferredSurfaceId: '@textforge/tables/catalogue',
+    preferredSurfaceId: '@textforge/itm/catalogue',
     openPlacement: 'main',
   },
   'itm-matrix': {
     openResourcePath: '/.textforge/resources/docs/examples/itm/test-profiles/itm-surface-smoke.itm',
-    preferredSurfaceId: '@textforge/tables/matrix',
-    openPlacement: 'main',
-  },
-  'tables-csv': {
-    openResourcePath: '/.textforge/resources/docs/examples/tables/application-portfolio.csv',
-    preferredSurfaceId: '@textforge/tables/delimited-grid',
-    openPlacement: 'main',
-  },
-  'tables-tsv': {
-    openResourcePath: '/.textforge/resources/docs/examples/tables/relationship-grid.tsv',
-    preferredSurfaceId: '@textforge/tables/delimited-grid',
+    preferredSurfaceId: '@textforge/itm/matrix',
     openPlacement: 'main',
   },
   'itm-report': {
@@ -883,7 +870,6 @@ function createTextForgeWorkbenchController() {
     diagramContributionPack,
     markdownContributionPack,
     itmContributionPack,
-    tablesContributionPack,
     cytoscapeRendererContributionPack,
     jsmindRendererContributionPack,
     sigmaRendererContributionPack,

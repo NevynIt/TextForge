@@ -2737,7 +2737,7 @@ const itmVisualRawModelTargetTemplates = Object.freeze([
     projection: 'catalogue',
     rendererValue: 'catalogue',
     rendererSource: 'local',
-    preferredSurfaceId: '@textforge/tables/catalogue',
+    preferredSurfaceId: '@textforge/itm/catalogue',
   },
   {
     id: 'raw-model/matrix',
@@ -2746,7 +2746,7 @@ const itmVisualRawModelTargetTemplates = Object.freeze([
     projection: 'matrix',
     rendererValue: 'matrix',
     rendererSource: 'local',
-    preferredSurfaceId: '@textforge/tables/matrix',
+    preferredSurfaceId: '@textforge/itm/matrix',
   },
   {
     id: 'raw-model/report',
@@ -2791,12 +2791,12 @@ const itmVisualRendererBindings = Object.freeze([
     aliases: ['tree'],
   },
   {
-    surfaceId: '@textforge/tables/catalogue',
+    surfaceId: '@textforge/itm/catalogue',
     projection: 'catalogue',
     aliases: ['catalogue', 'catalog'],
   },
   {
-    surfaceId: '@textforge/tables/matrix',
+    surfaceId: '@textforge/itm/matrix',
     projection: 'matrix',
     aliases: ['matrix'],
   },

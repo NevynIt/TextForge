@@ -33,7 +33,6 @@
     "@textforge/renderer-sigma": "workspace:*",
     "@textforge/security-profile": "workspace:*",
     "@textforge/surfaces": "workspace:*",
-    "@textforge/tables": "workspace:^",
     "@textforge/ui": "workspace:*",
     "@textforge/workspace": "workspace:*",
     "react": "^18.3.1",

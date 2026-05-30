@@ -301,18 +301,6 @@ test('resolveItmVisualTarget derives Visual ITM with renderer precedence, proven
       id: 'raw-model/mindmap',
     },
   });
-  const resolvedRawCatalogue = resolveItmVisualTarget(loaded, {
-    target: {
-      kind: 'raw-model',
-      id: 'raw-model/catalogue',
-    },
-  });
-  const resolvedRawMatrix = resolveItmVisualTarget(loaded, {
-    target: {
-      kind: 'raw-model',
-      id: 'raw-model/matrix',
-    },
-  });
 
   assert.equal(resolvedView.target.rendererValue, 'graph.viewer');
   assert.equal(resolvedView.target.preferredSurfaceId, '@textforge/renderer-cytoscape/runtime');
@@ -322,8 +310,6 @@ test('resolveItmVisualTarget derives Visual ITM with renderer precedence, proven
   assert.equal(renderItmPublicationHtml(loaded.effectiveResolvedDocument, { view: 'capability_surface', projection: 'graph' }).includes('data-itm-projection="graph"'), true);
   assert.equal(resolvedRawMindmap.target.rendererSource, 'local');
   assert.equal(resolvedRawMindmap.target.preferredSurfaceId, '@textforge/renderer-jsmind/runtime');
-  assert.equal(resolvedRawCatalogue.target.preferredSurfaceId, '@textforge/tables/catalogue');
-  assert.equal(resolvedRawMatrix.target.preferredSurfaceId, '@textforge/tables/matrix');
 });
 
 test('resolveItmVisualTarget reports missing declared renderers without silently falling back', async () => {

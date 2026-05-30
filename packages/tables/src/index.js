@@ -1033,7 +1033,7 @@ function SortableHeader({ header, theme }) {
   );
 }
 
-function ReadOnlyTablePane({ title, subtitle, rows, columns, emptyLabel, searchPlaceholder }) {
+function ReadOnlyDataTable({ title, subtitle, rows, columns, emptyLabel, searchPlaceholder }) {
   const theme = readSurfaceTheme();
   const [searchText, setSearchText] = React.useState('');
   const [sorting, setSorting] = React.useState([]);
@@ -1049,36 +1049,19 @@ function ReadOnlyTablePane({ title, subtitle, rows, columns, emptyLabel, searchP
   });
 
   return element(
-    'div',
-    { style: theme.tableFrame },
-    element(
-      'div',
-      {
-        style: {
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '10px',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-        },
-      },
-      element(
-        'div',
-        null,
-        element('h4', { style: { margin: 0, fontSize: '1rem' } }, title),
-        subtitle ? element('p', { style: { ...theme.subtle, margin: '4px 0 0' } }, subtitle) : null,
-      ),
-      element(
-        'div',
-        {
-          style: {
-            display: 'flex',
-            gap: '10px',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-          },
-        },
+    SurfaceShell,
+    {
+      eyebrow: 'TanStack table',
+      title,
+      subtitle,
+      stats: [
+        { label: 'Rows', value: String(rows.length) },
+        { label: 'Visible', value: String(filteredRows.length) },
+        { label: 'Columns', value: String(columns.length) },
+      ],
+      toolbarChildren: [
         element('input', {
+          key: 'search',
           type: 'search',
           value: searchText,
           placeholder: searchPlaceholder,
@@ -1089,53 +1072,54 @@ function ReadOnlyTablePane({ title, subtitle, rows, columns, emptyLabel, searchP
           },
           style: theme.search,
         }),
-        element('span', { style: theme.badge }, `${filteredRows.length}/${rows.length} rows`),
-        element('span', { style: theme.badge }, `${columns.length} cols`),
-      ),
-    ),
+        element('span', { key: 'badge', style: theme.badge }, 'Read only'),
+      ],
+    },
     element(
       'div',
-      { style: theme.scroll },
-      filteredRows.length === 0
-        ? element('p', { style: theme.empty }, emptyLabel)
-        : element(
-          'table',
-          { style: theme.table },
-          element(
-            'thead',
-            null,
-            ...table.getHeaderGroups().map((headerGroup) =>
-              element(
-                'tr',
-                { key: headerGroup.id },
-                ...headerGroup.headers.map((header) =>
-                  element(
-                    'th',
-                    { key: header.id, style: theme.th },
-                    header.isPlaceholder
-                      ? null
-                      : element(SortableHeader, { header, theme }),
-                  )),
-              )),
+      { style: theme.tableFrame },
+      element(
+        'div',
+        { style: theme.scroll },
+        filteredRows.length === 0
+          ? element('p', { style: theme.empty }, emptyLabel)
+          : element(
+            'table',
+            { style: theme.table },
+            element(
+              'thead',
+              null,
+              ...table.getHeaderGroups().map((headerGroup) =>
+                element(
+                  'tr',
+                  { key: headerGroup.id },
+                  ...headerGroup.headers.map((header) =>
+                    element(
+                      'th',
+                      { key: header.id, style: theme.th },
+                      header.isPlaceholder
+                        ? null
+                        : element(SortableHeader, { header, theme }),
+                    )),
+                )),
+            ),
+            element(
+              'tbody',
+              null,
+              ...table.getRowModel().rows.map((row) =>
+                element(
+                  'tr',
+                  { key: row.id },
+                  ...row.getVisibleCells().map((cell) =>
+                    element(
+                      'td',
+                      { key: cell.id, style: theme.td },
+                      flexRender(cell.column.columnDef.cell ?? cell.column.columnDef.accessorKey, cell.getContext()),
+                    )),
+                )),
+            ),
           ),
-          element(
-            'tbody',
-            null,
-            ...table.getRowModel().rows.map((row) =>
-              element(
-                'tr',
-                { key: row.id },
-                ...row.getVisibleCells().map((cell) =>
-                  element(
-                    'td',
-                    { key: cell.id, style: theme.td },
-                    cell.column.columnDef.cell
-                      ? flexRender(cell.column.columnDef.cell, cell.getContext())
-                      : formatValue(cell.getValue()),
-                  )),
-              )),
-          ),
-        ),
+      ),
     ),
   );
 }
@@ -1147,57 +1131,53 @@ function CatalogueSurfaceApp({ projected, target }) {
   const theme = readSurfaceTheme();
 
   return element(
-    'div',
-    { 'data-tf-tables-surface': 'catalogue', style: { display: 'contents' } },
-    element(
-      SurfaceShell,
-      {
-        eyebrow: 'Catalogue surface',
-        title: target?.label ?? 'ITM catalogue',
-        subtitle: projected?.view
-          ? `View ${projected.view.name} through ${projected.view.viewpointRef}`
-          : projected?.viewpoint
-            ? `Viewpoint ${projected.viewpoint.name}`
-            : 'Unconstrained model catalogue',
-        stats: [
-          { label: 'Entities', value: String(projected?.catalogues?.entities?.length ?? 0) },
-          { label: 'Relationships', value: String(projected?.catalogues?.relationships?.length ?? 0) },
-          { label: 'Views', value: String(projected?.catalogues?.views?.length ?? 0) },
-          { label: 'Viewpoints', value: String(projected?.catalogues?.viewpoints?.length ?? 0) },
-        ],
-        toolbarChildren: [
-          element(
-            'div',
-            { key: 'tabs', style: theme.sectionTabs },
-            ...sections.map((section) =>
-              element(
-                'button',
-                {
-                  key: section.id,
-                  type: 'button',
-                  style: section.id === activeSectionId ? theme.button : theme.buttonMuted,
-                  onClick() {
-                    React.startTransition(() => {
-                      setActiveSectionId(section.id);
-                    });
-                  },
+    SurfaceShell,
+    {
+      eyebrow: 'Catalogue surface',
+      title: target?.label ?? 'ITM catalogue',
+      subtitle: projected?.view
+        ? `View ${projected.view.name} through ${projected.view.viewpointRef}`
+        : projected?.viewpoint
+          ? `Viewpoint ${projected.viewpoint.name}`
+          : 'Unconstrained model catalogue',
+      stats: [
+        { label: 'Entities', value: String(projected?.catalogues?.entities?.length ?? 0) },
+        { label: 'Relationships', value: String(projected?.catalogues?.relationships?.length ?? 0) },
+        { label: 'Views', value: String(projected?.catalogues?.views?.length ?? 0) },
+        { label: 'Viewpoints', value: String(projected?.catalogues?.viewpoints?.length ?? 0) },
+      ],
+      toolbarChildren: [
+        element(
+          'div',
+          { key: 'tabs', style: theme.sectionTabs },
+          ...sections.map((section) =>
+            element(
+              'button',
+              {
+                key: section.id,
+                type: 'button',
+                style: section.id === activeSectionId ? theme.button : theme.buttonMuted,
+                onClick() {
+                  React.startTransition(() => {
+                    setActiveSectionId(section.id);
+                  });
                 },
-                `${section.label} (${section.rows.length})`,
-              )),
-          ),
-        ],
-      },
-      activeSection
-        ? element(ReadOnlyTablePane, {
-          title: activeSection.label,
-          subtitle: `Filter and sort ${activeSection.label.toLowerCase()} without leaving the workbench.`,
-          rows: activeSection.rows,
-          columns: activeSection.columns,
-          emptyLabel: activeSection.emptyLabel,
-          searchPlaceholder: `Filter ${activeSection.label.toLowerCase()}...`,
-        })
-        : element('p', { style: theme.empty }, 'No catalogue sections are available.'),
-    ),
+              },
+              `${section.label} (${section.rows.length})`,
+            )),
+        ),
+      ],
+    },
+    activeSection
+      ? element(ReadOnlyDataTable, {
+        title: activeSection.label,
+        subtitle: `Filter and sort ${activeSection.label.toLowerCase()} without leaving the workbench.`,
+        rows: activeSection.rows,
+        columns: activeSection.columns,
+        emptyLabel: activeSection.emptyLabel,
+        searchPlaceholder: `Filter ${activeSection.label.toLowerCase()}...`,
+      })
+      : element('p', { style: theme.empty }, 'No catalogue sections are available.'),
   );
 }
 
@@ -1218,7 +1198,7 @@ function MatrixGridTable({ model }) {
       },
     })),
   ];
-  return element(ReadOnlyTablePane, {
+  return element(ReadOnlyDataTable, {
     title: 'Relationship matrix',
     subtitle: 'Sort by source or by target-column counts; hidden empty axes keep the matrix readable.',
     rows: model.rows,
@@ -1229,7 +1209,7 @@ function MatrixGridTable({ model }) {
 }
 
 function MatrixCellTable({ model }) {
-  return element(ReadOnlyTablePane, {
+  return element(ReadOnlyDataTable, {
     title: 'Relationship cells',
     subtitle: 'Non-empty matrix cells flattened for easier filtering and severity triage.',
     rows: model.cellRows,
@@ -1256,80 +1236,76 @@ function MatrixSurfaceApp({ projected, target }) {
   const model = buildItmMatrixTableModel(projected, { showEmptyRows, showEmptyColumns });
 
   return element(
-    'div',
-    { 'data-tf-tables-surface': 'matrix', style: { display: 'contents' } },
-    element(
-      SurfaceShell,
-      {
-        eyebrow: 'Matrix surface',
-        title: target?.label ?? 'Relationship matrix',
-        subtitle: projected?.view
-          ? `View ${projected.view.name} relationship matrix`
-          : projected?.viewpoint
-            ? `Viewpoint ${projected.viewpoint.name} relationship matrix`
-            : 'Unconstrained model relationship matrix',
-        stats: [
-          { label: 'Rows', value: `${model.rows.length}/${model.totalRowCount}` },
-          { label: 'Columns', value: `${model.visibleColumns.length}/${model.totalColumnCount}` },
-          { label: 'Non-empty cells', value: String(model.nonEmptyCellCount) },
-        ],
-        toolbarChildren: [
+    SurfaceShell,
+    {
+      eyebrow: 'Matrix surface',
+      title: target?.label ?? 'Relationship matrix',
+      subtitle: projected?.view
+        ? `View ${projected.view.name} relationship matrix`
+        : projected?.viewpoint
+          ? `Viewpoint ${projected.viewpoint.name} relationship matrix`
+          : 'Unconstrained model relationship matrix',
+      stats: [
+        { label: 'Rows', value: `${model.rows.length}/${model.totalRowCount}` },
+        { label: 'Columns', value: `${model.visibleColumns.length}/${model.totalColumnCount}` },
+        { label: 'Non-empty cells', value: String(model.nonEmptyCellCount) },
+      ],
+      toolbarChildren: [
+        element(
+          'div',
+          { key: 'tabs', style: theme.sectionTabs },
           element(
-            'div',
-            { key: 'tabs', style: theme.sectionTabs },
-            element(
-              'button',
-              {
-                type: 'button',
-                style: activeTab === 'grid' ? theme.button : theme.buttonMuted,
-                onClick() {
-                  setActiveTab('grid');
-                },
+            'button',
+            {
+              type: 'button',
+              style: activeTab === 'grid' ? theme.button : theme.buttonMuted,
+              onClick() {
+                setActiveTab('grid');
               },
-              'Grid view',
-            ),
-            element(
-              'button',
-              {
-                type: 'button',
-                style: activeTab === 'cells' ? theme.button : theme.buttonMuted,
-                onClick() {
-                  setActiveTab('cells');
-                },
-              },
-              `Cell list (${model.cellRows.length})`,
-            ),
+            },
+            'Grid view',
           ),
           element(
-            'label',
-            { key: 'empty-rows', style: theme.checkboxLabel },
-            element('input', {
-              type: 'checkbox',
-              checked: showEmptyRows,
-              onChange(event) {
-                setShowEmptyRows(event.target.checked);
+            'button',
+            {
+              type: 'button',
+              style: activeTab === 'cells' ? theme.button : theme.buttonMuted,
+              onClick() {
+                setActiveTab('cells');
               },
-            }),
-            'Show empty rows',
+            },
+            `Cell list (${model.cellRows.length})`,
           ),
-          element(
-            'label',
-            { key: 'empty-columns', style: theme.checkboxLabel },
-            element('input', {
-              type: 'checkbox',
-              checked: showEmptyColumns,
-              onChange(event) {
-                setShowEmptyColumns(event.target.checked);
-              },
-            }),
-            'Show empty columns',
-          ),
-        ],
-      },
-      activeTab === 'cells'
-        ? element(MatrixCellTable, { model })
-        : element(MatrixGridTable, { model }),
-    ),
+        ),
+        element(
+          'label',
+          { key: 'empty-rows', style: theme.checkboxLabel },
+          element('input', {
+            type: 'checkbox',
+            checked: showEmptyRows,
+            onChange(event) {
+              setShowEmptyRows(event.target.checked);
+            },
+          }),
+          'Show empty rows',
+        ),
+        element(
+          'label',
+          { key: 'empty-columns', style: theme.checkboxLabel },
+          element('input', {
+            type: 'checkbox',
+            checked: showEmptyColumns,
+            onChange(event) {
+              setShowEmptyColumns(event.target.checked);
+            },
+          }),
+          'Show empty columns',
+        ),
+      ],
+    },
+    activeTab === 'cells'
+      ? element(MatrixCellTable, { model })
+      : element(MatrixGridTable, { model }),
   );
 }
 
@@ -1426,106 +1402,102 @@ function DelimitedSurfaceApp({ resourceTitle, dialectLabel, initialState, onAppl
   }
 
   return element(
-    'div',
-    { 'data-tf-tables-surface': 'delimited-grid', style: { display: 'contents' } },
+    SurfaceShell,
+    {
+      eyebrow: 'Structured editor',
+      title: resourceTitle,
+      subtitle: 'Edit grid-native state, then explicitly regenerate and apply the canonical delimited source.',
+      stats: [
+        { label: 'Format', value: dialectLabel },
+        { label: 'Rows', value: String(gridState.rows.length) },
+        { label: 'Columns', value: String(gridState.columns.length) },
+        { label: 'Dirty', value: dirty ? 'Yes' : 'No' },
+      ],
+      warning: initialState.diagnostics[0]?.message,
+      toolbarChildren: [
+        element(
+          'button',
+          {
+            key: 'add-row',
+            type: 'button',
+            style: theme.button,
+            onClick() {
+              setGridState((current) => addDelimitedRow(current));
+            },
+          },
+          'Add row',
+        ),
+        element(
+          'button',
+          {
+            key: 'add-column',
+            type: 'button',
+            style: theme.button,
+            onClick() {
+              setGridState((current) => addDelimitedColumn(current));
+            },
+          },
+          'Add column',
+        ),
+        element(
+          'label',
+          { key: 'header-toggle', style: theme.checkboxLabel },
+          element('input', {
+            type: 'checkbox',
+            checked: gridState.hasHeader,
+            onChange(event) {
+              setGridState((current) => normalizeDelimitedState({
+                ...current,
+                hasHeader: event.target.checked,
+              }));
+            },
+          }),
+          'Header row',
+        ),
+        element(
+          'span',
+          { key: 'summary', style: theme.subtle },
+          `${patchSummary.changedCellCount} cell edits, ${patchSummary.changedHeaderCount} header edits, +${patchSummary.addedRowCount}/-${patchSummary.removedRowCount} rows, +${patchSummary.addedColumnCount}/-${patchSummary.removedColumnCount} columns`,
+        ),
+        element(
+          'button',
+          {
+            key: 'discard',
+            type: 'button',
+            style: theme.buttonMuted,
+            disabled: !dirty,
+            onClick() {
+              setGridState(baselineState);
+            },
+          },
+          'Discard',
+        ),
+        element(
+          'button',
+          {
+            key: 'apply',
+            type: 'button',
+            style: theme.button,
+            disabled: !dirty,
+            onClick() {
+              void applyChanges();
+            },
+          },
+          'Apply source update',
+        ),
+      ],
+    },
     element(
-      SurfaceShell,
-      {
-        eyebrow: 'Structured editor',
-        title: resourceTitle,
-        subtitle: 'Edit grid-native state, then explicitly regenerate and apply the canonical delimited source.',
-        stats: [
-          { label: 'Format', value: dialectLabel },
-          { label: 'Rows', value: String(gridState.rows.length) },
-          { label: 'Columns', value: String(gridState.columns.length) },
-          { label: 'Dirty', value: dirty ? 'Yes' : 'No' },
-        ],
-        warning: initialState.diagnostics[0]?.message,
-        toolbarChildren: [
-          element(
-            'button',
-            {
-              key: 'add-row',
-              type: 'button',
-              style: theme.button,
-              onClick() {
-                setGridState((current) => addDelimitedRow(current));
-              },
-            },
-            'Add row',
-          ),
-          element(
-            'button',
-            {
-              key: 'add-column',
-              type: 'button',
-              style: theme.button,
-              onClick() {
-                setGridState((current) => addDelimitedColumn(current));
-              },
-            },
-            'Add column',
-          ),
-          element(
-            'label',
-            { key: 'header-toggle', style: theme.checkboxLabel },
-            element('input', {
-              type: 'checkbox',
-              checked: gridState.hasHeader,
-              onChange(event) {
-                setGridState((current) => normalizeDelimitedState({
-                  ...current,
-                  hasHeader: event.target.checked,
-                }));
-              },
-            }),
-            'Header row',
-          ),
-          element(
-            'span',
-            { key: 'summary', style: theme.subtle },
-            `${patchSummary.changedCellCount} cell edits, ${patchSummary.changedHeaderCount} header edits, +${patchSummary.addedRowCount}/-${patchSummary.removedRowCount} rows, +${patchSummary.addedColumnCount}/-${patchSummary.removedColumnCount} columns`,
-          ),
-          element(
-            'button',
-            {
-              key: 'discard',
-              type: 'button',
-              style: theme.buttonMuted,
-              disabled: !dirty,
-              onClick() {
-                setGridState(baselineState);
-              },
-            },
-            'Discard',
-          ),
-          element(
-            'button',
-            {
-              key: 'apply',
-              type: 'button',
-              style: theme.button,
-              disabled: !dirty,
-              onClick() {
-                void applyChanges();
-              },
-            },
-            'Apply source update',
-          ),
-        ],
-      },
+      'div',
+      { style: theme.tableFrame },
       element(
         'div',
-        { style: theme.tableFrame },
+        { style: theme.scroll },
         element(
-          'div',
-          { style: theme.scroll },
-          element(
-            'table',
-            { style: theme.table },
-            element('thead', null, headerRow),
-            element('tbody', null, ...rowElements),
-          ),
+          'table',
+          { style: theme.table },
+          element('thead', null, headerRow),
+          element('tbody', null, ...rowElements),
         ),
       ),
     ),
@@ -1534,32 +1506,14 @@ function DelimitedSurfaceApp({ resourceTitle, dialectLabel, initialState, onAppl
 
 function DiagnosticsSurfaceApp({ title, diagnostics }) {
   const model = buildDiagnosticsTableModel(diagnostics, { title });
-  return element(
-    'div',
-    { 'data-tf-tables-surface': 'diagnostics', style: { display: 'contents' } },
-    element(
-      SurfaceShell,
-      {
-        eyebrow: 'Issues surface',
-        title,
-        subtitle: 'Document-capability and resource diagnostics collected through the active registry and workspace descriptors.',
-        stats: [
-          { label: 'Entries', value: String(model.rows.length) },
-          { label: 'Severities', value: String(new Set(model.rows.map((row) => row.severity)).size) },
-          { label: 'Codes', value: String(new Set(model.rows.map((row) => row.code).filter(Boolean)).size) },
-        ],
-        toolbarChildren: element('span', { style: readSurfaceTheme().badge }, 'Read only'),
-      },
-      element(ReadOnlyTablePane, {
-        title: 'Issue list',
-        subtitle: 'Filter, sort, and inspect grouped diagnostics without dropping into raw source.',
-        rows: model.rows,
-        columns: model.columns,
-        emptyLabel: 'No diagnostics are currently attached to this resource.',
-        searchPlaceholder: 'Filter diagnostics...',
-      }),
-    ),
-  );
+  return element(ReadOnlyDataTable, {
+    title,
+    subtitle: 'Document-capability and resource diagnostics collected through the active registry and workspace descriptors.',
+    rows: model.rows,
+    columns: model.columns,
+    emptyLabel: 'No diagnostics are currently attached to this resource.',
+    searchPlaceholder: 'Filter diagnostics...',
+  });
 }
 
 function mountReactSurface(container, render) {
@@ -1693,14 +1647,13 @@ function createItmCatalogueSurfaceContribution() {
           model: surfaceModel,
           mount(container) {
             let disposed = false;
-            let disposeRuntime = () => {};
             container.innerHTML = '<p style="padding:16px;color:#d9e4f2;">Resolving ITM catalogue...</p>';
             void (async () => {
               try {
                 const resolved = await resolveItmProjectionTable(execution, 'catalogue');
                 surfaceModel.diagnostics = [...resolved.diagnostics, ...resolved.visualDiagnostics];
                 if (!disposed) {
-                  disposeRuntime = mountReactSurface(container, element(CatalogueSurfaceApp, {
+                  mountReactSurface(container, element(CatalogueSurfaceApp, {
                     projected: resolved.projectedDocument,
                     target: resolved.target,
                   }));
@@ -1719,7 +1672,7 @@ function createItmCatalogueSurfaceContribution() {
             })();
             return () => {
               disposed = true;
-              disposeRuntime();
+              container.innerHTML = '';
             };
           },
         },
@@ -1757,14 +1710,13 @@ function createItmMatrixSurfaceContribution() {
           model: surfaceModel,
           mount(container) {
             let disposed = false;
-            let disposeRuntime = () => {};
             container.innerHTML = '<p style="padding:16px;color:#d9e4f2;">Resolving ITM relationship matrix...</p>';
             void (async () => {
               try {
                 const resolved = await resolveItmProjectionTable(execution, 'matrix');
                 surfaceModel.diagnostics = [...resolved.diagnostics, ...resolved.visualDiagnostics];
                 if (!disposed) {
-                  disposeRuntime = mountReactSurface(container, element(MatrixSurfaceApp, {
+                  mountReactSurface(container, element(MatrixSurfaceApp, {
                     projected: resolved.projectedDocument,
                     target: resolved.target,
                   }));
@@ -1783,7 +1735,7 @@ function createItmMatrixSurfaceContribution() {
             })();
             return () => {
               disposed = true;
-              disposeRuntime();
+              container.innerHTML = '';
             };
           },
         },
