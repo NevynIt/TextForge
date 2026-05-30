@@ -82,6 +82,7 @@ import {
 } from '@textforge/itm';
 import {
   contributions as tablesContributionPack,
+  tablesDiagnosticsSurfaceId,
 } from '@textforge/tables';
 import {
   contributions as cytoscapeRendererContributionPack,
@@ -3283,6 +3284,9 @@ function createTextForgeWorkbenchController() {
         createResourceDescriptorInspectorSection(resource),
       ].filter(Boolean),
       controls: [...controls, ...(runtimeView?.controls ?? [])],
+      openDiagnostics: Array.isArray(surface.model?.diagnostics) && surface.model.diagnostics.length > 0
+        ? () => void executeCommand('tables.open-diagnostics')
+        : undefined,
       surface,
     };
   }
@@ -4214,6 +4218,19 @@ function createTextForgeWorkbenchController() {
     });
   }
 
+  async function openDiagnosticsTableCommand(commandContext) {
+    const resource = resolveTargetResourceForCommands(commandContext);
+    if (!resource) {
+      return;
+    }
+
+    openResourceEntry(resource, {
+      placement: 'main',
+      preferredSurfaceId: tablesDiagnosticsSurfaceId,
+      forceReopen: true,
+    });
+  }
+
   async function setEditorLanguageCommand(commandId, commandContext) {
     const languageId = commandId.slice('editor.set-language:'.length);
     const resource = resolveTargetResourceForCommands(commandContext);
@@ -4381,6 +4398,7 @@ function createTextForgeWorkbenchController() {
       .register('surface.move-active-to-popup', ({ context }) => moveActiveSurfaceCommand('popup', context))
       .register('surface.focus-main-session', ({ context }) => focusMainSurfaceCommand(context))
       .register('surface.focus-popup-session', ({ context }) => focusPopupSurfaceCommand(context))
+      .register('tables.open-diagnostics', ({ context }) => openDiagnosticsTableCommand(context))
       .register('asset.download-selected', ({ context }) => downloadSelectedAssetCommand(context))
       .register('asset.export-selected-svg', ({ context }) => exportSelectedSvgCommand(context))
       .register('asset.export-selected-png', ({ context }) => exportSelectedPngCommand(context))
@@ -5197,6 +5215,16 @@ function SurfaceDetails({ view }) {
           eyebrow: 'Diagnostics',
           icon: 'warning',
           title: `Surface diagnostics (${view.diagnostics.length})`,
+          actions: view.openDiagnostics
+            ? [
+              element(TextForgeToolbarButton, {
+                key: 'open-diagnostics-table',
+                kind: 'secondary',
+                label: 'Open table',
+                onPress: view.openDiagnostics,
+              }),
+            ]
+            : undefined,
         },
         element(
           'ul',

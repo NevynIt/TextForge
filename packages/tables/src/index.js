@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-table';
 import {
   createCapability,
+  createCommand,
   createContributionManifest,
   createDiagnostic,
   createResourcePredicate,
@@ -1796,6 +1797,7 @@ function createDiagnosticsSurfaceContribution() {
     capabilities: [tablesSurfaceCapabilityId, tablesDiagnosticsCapabilityId],
     readOnly: true,
     defaultActive: true,
+    openWithHidden: true,
     resourcePredicate: genericResourcePredicate,
     placements: ['main', 'popup'],
     openWithPriority: 18,
@@ -1838,6 +1840,21 @@ function createDiagnosticsSurfaceContribution() {
     },
   };
 }
+
+export const tableCommandContributions = Object.freeze([
+  createCommand('tables.open-diagnostics', 'Open diagnostics table', {
+    category: 'surface',
+    capabilities: [tablesDiagnosticsCapabilityId],
+    description: 'Open the grouped diagnostics table for the selected or focused resource in the main document area.',
+    keywords: ['diagnostics', 'issues', 'table', 'inspector', 'surface'],
+    menu: { id: 'surface', label: 'Surface', groupOrder: 20, order: 72 },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['resource'],
+    },
+  }),
+]);
 
 export const tablesCapabilities = Object.freeze([
   createCapability(tablesSurfaceCapabilityId, {
@@ -1889,6 +1906,7 @@ export function createTablesContributionManifest() {
       '@textforge/itm',
     ],
     capabilities: tablesCapabilities,
+    commands: tableCommandContributions,
     surfaces: tableSurfaceContributions,
   });
 }
