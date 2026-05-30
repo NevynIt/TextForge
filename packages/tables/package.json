@@ -3,10 +3,27 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "types": "./src/index.ts",
   "scripts": {
-    "build": "echo build placeholder",
-    "test": "echo test placeholder",
-    "lint": "echo lint placeholder",
-    "typecheck": "echo typecheck placeholder"
+    "build": "node --check src/index.js",
+    "test": "node --test test/index.test.js",
+    "lint": "node --check src/index.js",
+    "typecheck": "node --check src/index.js"
+  },
+  "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
+    "@textforge/core": "workspace:^",
+    "@textforge/itm": "workspace:^",
+    "@textforge/surfaces": "workspace:^",
+    "@textforge/ui": "workspace:^",
+    "@textforge/workspace": "workspace:^",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
   }
 }
