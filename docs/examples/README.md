@@ -8,4 +8,4 @@ This folder contains Phase 4 example material that the browser-seeded workspace 
 - `diagrams/` contains the main-branch Graphviz and Mermaid example corpus.
 - `itm/` contains the main-branch ITM example models plus the `itm-visual-projections.md` Markdown fixture for tree, graph, mindmap, catalogue, matrix, and report publication modes.
 - `itm/test-profiles/` contains small smoke fixtures for opening one ITM surface or Markdown publication mode at a time.
-- `tables/` contains CSV and TSV fixtures for the structured grid and richer table surfaces.
+- `tables/` contains CSV and TSV fixtures for the structured grid and richer table surfaces, plus direct `?testProfile=tables-csv`, `?testProfile=tables-tsv`, `?testProfile=itm-catalogue`, and `?testProfile=itm-matrix` UI validation entry points.
