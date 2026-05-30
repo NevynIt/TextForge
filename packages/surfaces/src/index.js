@@ -72,9 +72,7 @@ export const surfaceCommandContributions = [
 ];
 
 export function createSurfaceOpenWithCommands(surfaceContributions = []) {
-  return surfaceContributions
-    .filter((contribution) => contribution.openWithHidden !== true)
-    .map((contribution) =>
+  return surfaceContributions.map((contribution) =>
     createCommand(`surface.open-with:${contribution.id}`, `Open with ${contribution.label ?? contribution.id}`, {
       category: 'surface',
       description: contribution.description ?? `Open the selected resource with ${contribution.label ?? contribution.id}.`,
@@ -86,7 +84,8 @@ export function createSurfaceOpenWithCommands(surfaceContributions = []) {
         selectionKinds: ['resource'],
         availableSurfaceIds: [contribution.id],
       },
-    }));
+    }),
+  );
 }
 
 export function createSurfaceCommandContributions(surfaceContributions = []) {
@@ -199,7 +198,6 @@ export function createOpenWithSelection(registry, request) {
   const placement = request.placement ?? getDefaultSurfacePlacement(registry, request);
   const candidates = registry.list()
     .filter((contribution) => canOpenWithSurface(contribution, { ...request, placement }))
-    .filter((contribution) => contribution.openWithHidden !== true)
     .sort((left, right) => (right.openWithPriority ?? 0) - (left.openWithPriority ?? 0));
   const selectedSurfaceId = request.preferredSurfaceIds?.find((surfaceId) =>
     candidates.some((candidate) => candidate.id === surfaceId),

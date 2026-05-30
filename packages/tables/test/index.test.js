@@ -113,10 +113,6 @@ test('tables delimited surface activates when the surfaces package manifest is r
   assert.equal(context.activeSurfaces.some((surface) => surface.id === '@textforge/tables/delimited-grid'), true);
 });
 
-test('tables contribution manifest exposes an explicit diagnostics command', () => {
-  assert.equal(contributions.commands.some((command) => command.id === 'tables.open-diagnostics'), true);
-});
-
 test('parseDelimitedText handles headers, quotes, and newlines', () => {
   const parsed = parseDelimitedText('Name,Notes\n"Alpha","Line 1\nLine 2"\n"Beta","Plain"', {
     delimiter: ',',

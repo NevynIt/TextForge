@@ -122,7 +122,6 @@ export declare const tsvDocumentPredicate: ResourcePredicate;
 export declare const delimitedDocumentPredicate: ResourcePredicate;
 export declare const itmDocumentPredicate: ResourcePredicate;
 export declare const tablesCapabilities: ReadonlyArray<Capability>;
-export declare const tableCommandContributions: ReadonlyArray<unknown>;
 export declare const tableSurfaceContributions: ReadonlyArray<SurfaceContribution>;
 
 export declare function inferDelimitedDialect(resource?: {
