@@ -2722,6 +2722,15 @@ const itmVisualRawModelTargetTemplates = Object.freeze([
     preferredSurfaceId: '@textforge/renderer-cytoscape/runtime',
   },
   {
+    id: 'raw-model/network',
+    label: 'Raw model · Network',
+    description: 'Open the unconstrained ITM model through the dense network surface.',
+    projection: 'graph',
+    rendererValue: 'sigma',
+    rendererSource: 'local',
+    preferredSurfaceId: '@textforge/renderer-sigma/runtime',
+  },
+  {
     id: 'raw-model/mindmap',
     label: 'Raw model · Mindmap',
     description: 'Open the unconstrained ITM model through the mindmap surface.',

@@ -283,6 +283,11 @@ test('listItmVisualTargets exposes views, viewpoints, and explicit raw-model fal
   assert.equal(targets.some((target) => target.kind === 'view' && target.id === 'capability_surface' && target.available), true);
   assert.equal(targets.some((target) => target.kind === 'viewpoint' && target.id === 'capability_focus' && target.available), true);
   assert.equal(targets.some((target) => target.kind === 'raw-model' && target.projection === 'graph'), true);
+  assert.equal(targets.some((target) =>
+    target.kind === 'raw-model'
+    && target.id === 'raw-model/network'
+    && target.projection === 'graph'
+    && target.preferredSurfaceId === '@textforge/renderer-sigma/runtime'), true);
   assert.equal(targets.some((target) => target.kind === 'raw-model' && target.projection === 'mindmap'), true);
 });
 
@@ -294,6 +299,12 @@ test('resolveItmVisualTarget derives Visual ITM with renderer precedence, proven
   const resolvedView = resolveItmVisualTarget(loaded, {
     view: 'capability_surface',
     title: 'Capability surface',
+  });
+  const resolvedRawNetwork = resolveItmVisualTarget(loaded, {
+    target: {
+      kind: 'raw-model',
+      id: 'raw-model/network',
+    },
   });
   const resolvedRawMindmap = resolveItmVisualTarget(loaded, {
     target: {
@@ -308,6 +319,8 @@ test('resolveItmVisualTarget derives Visual ITM with renderer precedence, proven
   assert.equal(resolvedView.visualDocument.nodes.some((node) => (node.provenance?.length ?? 0) >= 2), true);
   assert.equal(resolvedView.visualDiagnostics.length, 0);
   assert.equal(renderItmPublicationHtml(loaded.effectiveResolvedDocument, { view: 'capability_surface', projection: 'graph' }).includes('data-itm-projection="graph"'), true);
+  assert.equal(resolvedRawNetwork.target.rendererValue, 'sigma');
+  assert.equal(resolvedRawNetwork.target.preferredSurfaceId, '@textforge/renderer-sigma/runtime');
   assert.equal(resolvedRawMindmap.target.rendererSource, 'local');
   assert.equal(resolvedRawMindmap.target.preferredSurfaceId, '@textforge/renderer-jsmind/runtime');
 });
