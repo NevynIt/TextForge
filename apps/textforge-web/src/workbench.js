@@ -1032,7 +1032,6 @@ function createTextForgeWorkbenchController() {
 
   function getDefaultSelection() {
     return getSampleEntry(sampleResourcePaths.bundledReadme)
-      ?? getSampleEntry(sampleResourcePaths.notes)
       ?? workspace.snapshot().resources[0]
       ?? workspace.snapshot().folders.find((folder) => folder.id !== 'root');
   }
