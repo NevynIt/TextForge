@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { matchesResourcePredicate } from '@textforge/core';
 
 import {
   addDelimitedColumn,
@@ -7,6 +8,7 @@ import {
   buildDiagnosticsTableModel,
   buildItmCatalogueTableSections,
   buildItmMatrixTableModel,
+  delimitedDocumentPredicate,
   createDelimitedPatchSummary,
   inferDelimitedDialect,
   parseDelimitedText,
@@ -63,6 +65,24 @@ test('inferDelimitedDialect returns TSV for tsv resources', () => {
 
   assert.equal(dialect.id, 'tsv');
   assert.equal(dialect.delimiter, '\t');
+});
+
+test('delimited predicate keys off canonical language id even with browser-specific mime types', () => {
+  assert.equal(matchesResourcePredicate(delimitedDocumentPredicate, {
+    kind: 'resource',
+    representation: 'text',
+    path: '/docs/sample.csv',
+    languageId: 'csv',
+    mimeType: 'application/vnd.ms-excel',
+  }), true);
+
+  assert.equal(matchesResourcePredicate(delimitedDocumentPredicate, {
+    kind: 'resource',
+    representation: 'text',
+    path: '/docs/sample.tsv',
+    languageId: 'tsv',
+    mimeType: 'text/plain',
+  }), true);
 });
 
 test('parseDelimitedText handles headers, quotes, and newlines', () => {

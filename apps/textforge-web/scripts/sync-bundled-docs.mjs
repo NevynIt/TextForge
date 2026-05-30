@@ -10,9 +10,11 @@ const bundledDocsGeneratedAt = new Date().toISOString();
 
 const mimeTypeByExtension = {
   '.bpmn': 'application/bpmn+xml',
+  '.csv': 'text/csv',
   '.md': 'text/markdown',
   '.txt': 'text/plain',
   '.itm': 'text/x-itm',
+  '.tsv': 'text/tab-separated-values',
   '.yaml': 'text/yaml',
   '.yml': 'text/yaml',
   '.json': 'application/json',
@@ -22,8 +24,10 @@ const mimeTypeByExtension = {
 
 const languageIdByExtension = {
   '.bpmn': 'bpmn-xml',
+  '.csv': 'csv',
   '.md': 'markdown',
   '.itm': 'itm',
+  '.tsv': 'tsv',
   '.yaml': 'yaml',
   '.yml': 'yaml',
   '.json': 'json',
