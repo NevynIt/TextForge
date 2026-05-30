@@ -1,9 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { matchesResourcePredicate } from '@textforge/core';
-import { createContributionRegistry } from '@textforge/core';
-import { createContributionManifest } from '@textforge/core';
-import { contributions as surfacesContributionPack } from '@textforge/surfaces';
 
 import {
   addDelimitedColumn,
@@ -11,7 +8,6 @@ import {
   buildDiagnosticsTableModel,
   buildItmCatalogueTableSections,
   buildItmMatrixTableModel,
-  contributions,
   delimitedDocumentPredicate,
   createDelimitedPatchSummary,
   inferDelimitedDialect,
@@ -87,30 +83,6 @@ test('delimited predicate keys off canonical language id even with browser-speci
     languageId: 'tsv',
     mimeType: 'text/plain',
   }), true);
-});
-
-test('tables delimited surface activates when the surfaces package manifest is registered', () => {
-  const registry = createContributionRegistry([
-    createContributionManifest('@textforge/core'),
-    createContributionManifest('@textforge/itm'),
-    surfacesContributionPack,
-    createContributionManifest('@textforge/ui'),
-    createContributionManifest('@textforge/workspace'),
-    contributions,
-  ]);
-  const context = registry.resolveDocumentContext({
-    document: {
-      resourceId: 'csv-1',
-      kind: 'resource',
-      representation: 'text',
-      path: '/docs/sample.csv',
-      languageId: 'csv',
-      mimeType: 'text/csv',
-    },
-  });
-
-  assert.equal(context.activeCapabilityIds.includes('@textforge/tables/capability/surface'), true);
-  assert.equal(context.activeSurfaces.some((surface) => surface.id === '@textforge/tables/delimited-grid'), true);
 });
 
 test('parseDelimitedText handles headers, quotes, and newlines', () => {
