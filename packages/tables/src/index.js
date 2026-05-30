@@ -32,16 +32,22 @@ export const tablesDiagnosticsSurfaceId = '@textforge/tables/diagnostics';
 export const csvDocumentPredicate = createResourcePredicate({
   representations: ['text'],
   languageIds: ['csv'],
+  mimeTypes: ['text/csv'],
+  fileExtensions: ['csv'],
 });
 
 export const tsvDocumentPredicate = createResourcePredicate({
   representations: ['text'],
   languageIds: ['tsv'],
+  mimeTypes: ['text/tab-separated-values'],
+  fileExtensions: ['tsv'],
 });
 
 export const delimitedDocumentPredicate = createResourcePredicate({
   representations: ['text'],
   languageIds: ['csv', 'tsv'],
+  mimeTypes: ['text/csv', 'text/tab-separated-values'],
+  fileExtensions: ['csv', 'tsv'],
 });
 
 export const itmDocumentPredicate = createResourcePredicate({
@@ -1849,6 +1855,8 @@ export const tablesCapabilities = Object.freeze([
     documentPredicate: createResourcePredicate({
       representations: ['text'],
       languageIds: ['itm', 'csv', 'tsv'],
+      mimeTypes: ['text/itm', 'text/x-itm', 'text/csv', 'text/tab-separated-values'],
+      fileExtensions: ['itm', 'csv', 'tsv'],
     }),
   }),
   createCapability(tablesStructuredEditCapabilityId, {
