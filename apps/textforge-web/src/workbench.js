@@ -33,6 +33,7 @@ import {
   workspaceStorageErrorCodes,
 } from '@textforge/workspace';
 import {
+  contributions as surfacesContributionPack,
   createMainSessionTabStrip,
   createMainSurfaceHost,
   createOpenWithSelection,
@@ -876,6 +877,7 @@ function createTextForgeWorkbenchController() {
   const contributionRegistry = createContributionRegistry([
     coreContributions,
     workspaceContributionPack,
+    surfacesContributionPack,
     editorContributionPack,
     assetContributionPack,
     bpmnContributionPack,
