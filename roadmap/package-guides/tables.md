@@ -50,6 +50,8 @@ Implementation anchors:
 
 Create. TanStack Table semantic table surfaces, CSV/TSV grid editor, catalogue/matrix abstractions, validation issue table.
 
+Pre-implementation gate: do not restart `WP-TABLES` until a dedicated grilling session clarifies the scope and ownership of diagnostics visualization, the intended entry points for any diagnostics table surface, and whether the CSV/TSV editor should be built on a pre-existing grid/editor component instead of bespoke surface code.
+
 ### Phase 12 — Enterprise architecture and ArchiMate foundation
 
 Implementation anchors:

@@ -25,6 +25,7 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 | WP-BPMN-SEM | Grilled | Use `grilling/bpmn-sem-grilling.md` as the narrowed BPMN semantic MVP contract and future-gate routing record. |
 | WP-BPMN-DI-01 | New explicit follow-on | Read-only BPMN Diagram Interchange fidelity bridge between BPMN XML viewing and ITM/BPMN target integration. |
 | WP-BPMN-VISUAL-A/B/C | Split already decided | Keep read-only viewer, ITM target integration, and modeler/write-back separate. |
+| WP-TABLES | Grilling required | Before implementation, run a dedicated grilling session to clarify diagnostics visualization ownership and entry points, confirm the package scope/boundary, and decide whether CSV/TSV editing should rely on a pre-existing grid/editor component instead of bespoke table-editing UI. |
 
 ## Status update table
 
@@ -59,7 +60,7 @@ Use this file for operational status. Keep `decisions/RAPID.md` append-only for 
 | WP-BPMN-VISUAL-B | Validated | V19a split from `WP-BPMN-VISUAL`; `package-guides/bpmn.md`; `validation/workpackage-checklists/WP-BPMN-VISUAL-B-itm-bpmn-visual-target-integration.md`; `corepack pnpm --filter @textforge/itm test`; `corepack pnpm --filter @textforge/bpmn test`; `corepack pnpm --filter @textforge/textforge-web build`; `corepack pnpm verify` | 2026-05-29 | ITM `%view`/`%viewpoint` targets now resolve through the shared `WP-ITM-VRESOLVE-01` path into the BPMN viewer surface, including BPMN renderer binding, sibling include resolution, source-file BPMN loading, DI view application, provenance-preserving diagnostics, and no silent fallback to generic graph rendering. |
 | WP-BPMN-VISUAL-C | Candidate / later | V19a split from `WP-BPMN-VISUAL`; `package-guides/bpmn.md`; `validation/workpackage-checklists/WP-BPMN-VISUAL-C-bpmn-modeler-edit-writeback.md` | 2026-05-28 | Deferred BPMN modeler/edit/write-back. Must not block visual consumption. |
 | WP-ARCHIMATE-SEM | Not started | Dependency-ready via WP-ITM-02 validation | 2026-05-27 | Candidate semantic startable slice for ArchiMate profile-owned rules and provider mappings. |
-| WP-TABLES | Not started | Dependency-ready via WP-ITM-01 baseline completion | 2026-05-27 | Candidate startable slice; can proceed independently of optional BPMN semantics dependency. |
+| WP-TABLES | Not started | Dependency-ready via WP-ITM-01 baseline completion; pending dedicated grilling on diagnostics visualization and table-module scope | 2026-05-30 | Hold implementation until the grilling session clarifies diagnostics ownership/entry points, package scope, and the editing-component strategy. |
 | WP-ID-DEV | Not started | Depends on WP-ID-01 | 2026-05-26 | Required to keep local backend development unblocked. |
 | WP-SSO-ENTRA | Deferred / standalone | Depends on identity/policy/backend manifest | 2026-05-26 | Does not block generic roadmap progress. |
 | WP-RELEASE-GATE | Recurring | Applies to selected release scopes | 2026-05-26 | Run at meaningful delivery milestones. |
