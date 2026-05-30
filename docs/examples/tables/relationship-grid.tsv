@@ -1,0 +1,4 @@
+Source	Target	Relationship	Status
+Capability A	Application B	serving	Active
+Capability A	Data Product C	association	Planned
+Application B	Capability D	realization	Review

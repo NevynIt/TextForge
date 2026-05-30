@@ -52,6 +52,9 @@ importers:
       '@textforge/surfaces':
         specifier: workspace:*
         version: link:../../packages/surfaces
+      '@textforge/tables':
+        specifier: workspace:^
+        version: link:../../packages/tables
       '@textforge/ui':
         specifier: workspace:*
         version: link:../../packages/ui
