@@ -6,3 +6,4 @@ tsconfig.tsbuildinfo
 .vscode
 tmp
 apps/textforge-web/src/generated/bundledDocs.js
+roadmap/workpackages/dependency-map.md
