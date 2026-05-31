@@ -28,9 +28,7 @@ Some papers in this resource set are retained as architecture history. When a pa
 
 | Title | File name | Abstract |
 |---|---|---|
-| Capability Development Operating Model Whitepaper | `docs/papers/capability-model.md` | Operating model concepts and source diagrams. |
 | Continuous Accreditation Secure Web Apps Whitepaper | `docs/papers/secure-web-apps.md` | Security model for local-first deployment. |
-| Operating Model POC Relationships Whitepaper | `docs/papers/model-links.md` | How the main papers connect. |
 | TextForge Executive Summary | `docs/papers/summary.md` | Short product and architecture summary. |
 | TextForge Rebuild Whitepaper | `docs/papers/rebuild.md` | Rebuild direction and implementation shape. |
 
