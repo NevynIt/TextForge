@@ -29,9 +29,9 @@ semantic model/profile -> validation/catalogue/report value -> visual editing/wr
 Do not make mature visual editing a prerequisite for useful semantic validation or reporting.
 
 
-## V19 runtime renderer and BPMN update
+## V20 runtime renderer and BPMN baseline
 
-V19 adds runtime renderer packages as domain workpackages:
+V20 keeps the runtime renderer packages as validated domain workpackages:
 
 | WP | Title | Notes |
 |---|---|---|
@@ -43,7 +43,7 @@ V19 adds runtime renderer packages as domain workpackages:
 
 Domain visual work should not treat static `WP-ITM-VISUALS` output as runtime renderer parity. BPMN and ArchiMate visual work should depend on Visual ITM/visual-target/runtime-renderer foundations where applicable.
 
-## V19a selected domain sequence
+## V20 validated domain sequence
 
 ```text
 WP-VITM-01

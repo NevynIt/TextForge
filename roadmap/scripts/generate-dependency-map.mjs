@@ -115,6 +115,9 @@ const startableIds = new Set(
     if (completedIds.has(workpackageId)) {
       return false;
     }
+    if (!selectedStartableIds.has(workpackageId) && isCandidate(registerById.get(workpackageId))) {
+      return false;
+    }
     return !isBlocked(registerById.get(workpackageId));
   }),
 );
@@ -262,7 +265,7 @@ function buildDocument({ orderedIds, registerById, completedIds, startableIds, e
   lines.push('');
   lines.push('- Green nodes are completed or validated workpackages in the current roadmap baseline.');
   lines.push('- Blue nodes can be started now according to the current implementation baseline.');
-  lines.push('- Candidate workpackages with satisfied dependencies should still appear as blue/startable when they are included in the current dependency view; sequencing remains a manual per-slice decision.');
+  lines.push('- Candidate workpackages are not blue merely because dependencies are satisfied. They become blue only when explicitly listed in current implementation options.');
   lines.push('- Blue edges indicate a direct dependency path from completed work to a startable node.');
   lines.push('- Nodes without explicit styling are not currently startable or not yet marked as completed.');
   lines.push('');
@@ -315,6 +318,10 @@ function computeDependencyReadyIds({ orderedIds, registerById, completedIds, inc
 
 function isBlocked(row) {
   return /\bblocked\b/i.test(row?.Status ?? '');
+}
+
+function isCandidate(row) {
+  return /\bcandidate\b/i.test(row?.Status ?? '');
 }
 
 function formatNode(workpackageId, registerById) {

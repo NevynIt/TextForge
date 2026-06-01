@@ -28,11 +28,9 @@ Definition and grilling are now closed. Implement against `roadmap/grilling/bpmn
 - BPMN modeler/edit/write-back.
 - Backend or persistence changes.
 
-## Evidence to attach when implemented
+## Validation evidence
 
-- Updated package/profile files.
-- Fixture examples.
-- Validation tests.
-- Links to the bundled BPMN reference assets that remain preserved for later gates.
-- Build/test commands.
-- Manual validation notes if visual fixtures are inspected.
+- Implemented in `@textforge/bpmn` and recorded in RAPID `P-092`.
+- Focused BPMN package test/build commands passed.
+- Repo-wide `corepack pnpm verify` passed for the validation run.
+- Bundled BPMN reference assets remain under `docs/examples/bpmn/` for later gates.

@@ -14,9 +14,8 @@ Connect ITM visual target resolution to BPMN visual output for read-only consump
 - The integration remains read-only; no modeler/write-back behavior is introduced.
 - Fixtures include at least one BPMN-oriented ITM model rendered through the target picker/resolver path.
 
-## Evidence to attach when implemented
+## Validation evidence
 
-- Resolver integration tests.
-- BPMN target fixture.
-- Build/test commands.
-- Manual validation notes for selecting a BPMN view/viewpoint from an ITM file.
+- Implemented across `@textforge/itm`, `@textforge/bpmn`, and the web shell, and recorded in RAPID `P-095`.
+- Focused ITM/BPMN tests, web build, bundled-doc typing, and repo-wide `corepack pnpm verify` passed.
+- The slice remains read-only and does not claim BPMN modeler/edit/write-back behavior.

@@ -10,7 +10,7 @@ Contribution-based pipeline runner, trace, intermediate values, generated resour
 
 ## Agent note
 
-When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
+When this package is updated, the agent must also update `roadmap/decisions/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
 ## Allowed dependencies
 
@@ -133,6 +133,6 @@ The package now aligns step identity and failure reporting with the shared diagn
 The package now executes active pipeline contributions directly from the validated document contribution context. Short names and qualified IDs both resolve over active bundled contributions, ambiguous short-name execution fails diagnostically, successful runs keep deterministic trace output plus intermediate values with representation metadata, and document-scoped runners can be created directly from the resolved WP-05B context for later reopening through surfaces.
 
 
-## V16 backend-optional responsibilities
+## Backend-optional responsibilities
 
 `@textforge/pipeline` should represent generated outputs as source, derived, or controlled-generated resources and integrate with changesets only when explicit. Backend-backed service execution must use explicit job APIs, not file writes as fake commands. AI-generated patch text must remain non-mutating until a later user-approved changeset workflow exists.

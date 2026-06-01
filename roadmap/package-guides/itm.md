@@ -10,7 +10,7 @@ Canonical ITM parser, serializer, resolver, selectors, styles, views, validation
 
 ## Agent note
 
-When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
+When this package is updated, the agent must also update `roadmap/decisions/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
 Current validated implementation note:
 
@@ -120,7 +120,7 @@ Do not import app-shell internals. Do not bypass contribution registries. Do not
 This package lives inside the main TextForge Git repository as an npm workspace package. It should remain independently buildable and testable, but it should not be managed as a Git submodule. Cross-package changes may be made in one branch by one agent, with commits scoped by package where practical. Package dependencies should use `workspace:*` references, and public integration should happen through contribution manifests or stable exported contracts rather than direct app-shell coupling.
 
 
-## V16 backend-optional responsibilities
+## Backend-optional responsibilities
 
 `@textforge/itm` must treat `%repository` as a provider-resolved declaration. Repository values may look like aliases, URLs, URIs, or hints, but the frontend must not fetch them directly. Resolver diagnostics must distinguish unresolved, unsupported, unauthorized, unavailable, conflicting alias, and version/capability mismatch cases.
 
@@ -136,4 +136,4 @@ V19 splits follow-on visual responsibilities as follows:
 - Runtime renderer packages consume validated Visual ITM; they do not parse arbitrary ITM text.
 - `itm-pub` should use the same resolver internally, while allowing users to author against ordinary ITM sources/views/viewpoints.
 
-`WP-ITM-VISUALS` remains the frozen static projection/publication baseline. New runtime parity must be implemented in the V19 follow-on workpackages.
+`WP-ITM-VISUALS` remains the frozen static projection/publication baseline. Runtime parity is handled by the validated V20 visual/BPMN baseline and later V20 follow-on workpackages.

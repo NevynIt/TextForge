@@ -12,5 +12,5 @@ This folder contains the architecture and profile source material used by the ac
 | `security-invariants.md` | Consolidated security/accreditation invariants. |
 | `visual-itm-runtime-recovery.md` | Runtime-visual recovery architecture note. |
 | `visual-itm-v1-profile.md` | Concrete Visual ITM v1 profile for `WP-VITM-01`. |
-| `v19a-itm-recovery-to-bpmn-visual-chain.md` | Historical chain selection, gates, and scope boundaries now superseded by V20 status. |
+| `v20-itm-recovery-to-bpmn-visual-chain.md` | Visual/BPMN chain selection, gates, and scope boundaries carried forward into V20 status. |
 | `itm-visual-renderer-equivalence-assessment.md` | Static-vs-runtime renderer parity assessment. |

@@ -6,7 +6,7 @@ These records remain binding when referenced by a workpackage. Earlier records a
 
 This folder records focused grilling sessions used to test TextForge roadmap phases before implementation changes are proposed or applied.
 
-The grilling records are decision-support documents. They do not replace `roadmap/00_package_aware_roadmap.md`, package guides, or `roadmap/RAPID.md`; instead, their accepted decisions must be woven back into those authoritative implementation files when the roadmap is updated.
+The grilling records are decision-support documents. They do not replace `roadmap/ROADMAP_V20.md`, workpackage files, package guides, or `roadmap/decisions/RAPID.md`; instead, their accepted decisions must be woven back into those authoritative implementation files when the roadmap is updated.
 
 ## Current grilling records
 
@@ -100,4 +100,4 @@ A grilling document is considered integrated only after:
 - the main roadmap references the phase-specific implications;
 - affected package guides include the relevant implementation responsibilities;
 - validation or definition-of-done checks reflect the accepted decisions;
-- `roadmap/RAPID.md` records the decision or progress rows append-only.
+- `roadmap/decisions/RAPID.md` records the decision or progress rows append-only.

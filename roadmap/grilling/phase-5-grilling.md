@@ -583,7 +583,7 @@ Phase 5 should not be considered complete unless all of the following are true:
 14. **Package inspector:** UI exposes package status, active capabilities, exposed contributions, and conflicts for the current document.
 15. **Intermediate reopening:** pipeline intermediate values reopen through active compatible surfaces or safe fallback with diagnostics.
 16. **Golden fixtures:** fixture packages/documents cover available inactive capability, activation, missing capability, inactive conflict, active conflict, qualified binding, disabled package, and inspector read-model determinism.
-17. **RAPID update:** implementation decisions and deviations are appended to `roadmap/RAPID.md`.
+17. **RAPID update:** implementation decisions and deviations are appended to `roadmap/decisions/RAPID.md`.
 18. **Package guide updates:** if implementation changes the plan, affected package guides are updated in the same commit.
 
 ---

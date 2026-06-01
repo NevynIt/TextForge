@@ -10,7 +10,7 @@ Read-only image/SVG/PDF/generic binary resource surfaces, blob URL lifecycle, as
 
 ## Agent note
 
-When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
+When this package is updated, the agent must also update `roadmap/decisions/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
 ## Allowed dependencies
 
@@ -212,6 +212,6 @@ The package now exposes its viewers and asset commands as default-active contrib
 The asset viewer contributions now also own their package runtime opening path. The shell no longer maps asset contribution IDs to local viewer factories; instead it calls the registered asset contribution runtime, which preserves blob binding, provenance sections, and stale-state display through canonical contribution execution.
 
 
-## V16 backend-optional responsibilities
+## Backend-optional responsibilities
 
 `@textforge/assets` must display provenance and persistence state for generated and service-produced artifacts. Derived resources should remain ephemeral unless explicitly selected or produced by an approved workflow as controlled-generated resources.

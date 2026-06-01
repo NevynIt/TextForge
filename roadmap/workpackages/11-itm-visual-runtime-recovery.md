@@ -1,6 +1,6 @@
 # 11 — ITM Visual Runtime Recovery and Minimal BPMN Visual Chain
 
-This cluster contains the V19a follow-on work needed to recover old interactive visual functionality without reopening the validated `WP-ITM-VISUALS` static projection baseline, then proceed to the shortest viable BPMN visual consumption chain.
+This cluster records the V20 visual/BPMN baseline that recovered old interactive visual functionality without reopening the validated `WP-ITM-VISUALS` static projection baseline, then proceeded through the shortest viable BPMN visual consumption chain.
 
 ## Core decision
 
@@ -67,7 +67,7 @@ WP-BPMN-SEM
   -> WP-BPMN-VISUAL-B
 ```
 
-Together with the preceding recovery chain, the selected V19a main path is:
+Together with the preceding recovery chain, the V20 validated visual/BPMN baseline is:
 
 ```text
 WP-VITM-01
@@ -89,7 +89,7 @@ WP-VITM-01
 | WP | Gate | Required before implementation |
 |---|---|---|
 | WP-VITM-01 | Definition drafted | Use `specs/architecture/visual-itm-v1-profile.md` as the Visual ITM v1 contract, examples, and acceptance baseline. |
-| WP-ITM-VRESOLVE-01 | Grilled | Use `grilling/v19a-visual-recovery-to-bpmn-chain-findings.md` as the resolver contract for views, viewpoints, raw model fallback, `render:` precedence, renderer diagnostics, and no silent fallback. |
+| WP-ITM-VRESOLVE-01 | Grilled | Use `grilling/v20-visual-recovery-to-bpmn-chain-findings.md` as the resolver contract for views, viewpoints, raw model fallback, `render:` precedence, renderer diagnostics, and no silent fallback. |
 | WP-BPMN-SEM | Grilled | Use `grilling/bpmn-sem-grilling.md` as the narrowed BPMN semantic MVP contract, deferred-scope routing record, and bundled BPMN reference-asset map. |
 | WP-BPMN-DI-01 | New explicit follow-on | BPMN Diagram Interchange read-only fidelity is a separate gate between BPMN XML viewing and ITM/BPMN target integration. |
 | WP-BPMN-VISUAL-A/B/C | Split already decided | Keep BPMN.io viewer, ITM visual target integration, and modeler/write-back separate. |
@@ -160,11 +160,11 @@ A user may load DOT, translate to Visual ITM, and export to Mermaid or BPMN with
 
 ## BPMN rule
 
-When BPMN visual work is implemented, use BPMN.io / `bpmn-js` as the BPMN viewer/runtime basis. BPMN visual work should not depend on `WP-ITM-VISUALS` alone for visual parity; it should depend on the V19a visual target/Visual ITM/runtime renderer chain where applicable. The former monolithic `WP-BPMN-VISUAL` is split into `WP-BPMN-VISUAL-A` for read-only BPMN.io viewing, `WP-BPMN-DI-01` for read-only Diagram Interchange fidelity, `WP-BPMN-VISUAL-B` for ITM/BPMN visual-target integration, and later `WP-BPMN-VISUAL-C` for modeler/edit/write-back.
+When BPMN visual work is implemented, use BPMN.io / `bpmn-js` as the BPMN viewer/runtime basis. BPMN visual work should not depend on `WP-ITM-VISUALS` alone for visual parity; it should depend on the V20 visual target/Visual ITM/runtime renderer baseline where applicable. The former monolithic `WP-BPMN-VISUAL` is split into `WP-BPMN-VISUAL-A` for read-only BPMN.io viewing, `WP-BPMN-DI-01` for read-only Diagram Interchange fidelity, `WP-BPMN-VISUAL-B` for ITM/BPMN visual-target integration, and later `WP-BPMN-VISUAL-C` for modeler/edit/write-back.
 
 ## Validation checks
 
-A V19 visual workpackage is not complete unless its relevant checks are satisfied:
+A V20 visual workpackage is not complete unless its relevant checks are satisfied:
 
 | Check | Meaning |
 |---|---|
@@ -181,7 +181,7 @@ A V19 visual workpackage is not complete unless its relevant checks are satisfie
 ## Binding records
 
 - `grilling/itm-visuals-grilling.md`
-- `grilling/v19a-visual-recovery-to-bpmn-chain-findings.md`
+- `grilling/v20-visual-recovery-to-bpmn-chain-findings.md`
 - `specs/architecture/visual-itm-runtime-recovery.md`
 - `specs/architecture/visual-itm-v1-profile.md`
 - `specs/architecture/itm-visual-renderer-equivalence-assessment.md`

@@ -1,8 +1,8 @@
-# V19a — ITM Visual Recovery to Minimal BPMN Visual Chain
+# V20 - ITM Visual Recovery to Minimal BPMN Visual Chain
 
 ## Purpose
 
-This note records the V19a roadmap reassessment so the reasoning is not lost in chat history.
+This note records the visual/BPMN chain reassessment now carried forward as part of Roadmap V20.
 
 The selected delivery strategy is:
 
@@ -57,7 +57,7 @@ It is replaced by:
 
 ### `WP-BPMN-SEM`
 
-`WP-BPMN-SEM` is not split in V19a, but it must be narrowed before implementation.
+`WP-BPMN-SEM` is not split in this chain, but it must be narrowed before implementation.
 
 Its MVP should include only:
 
@@ -90,7 +90,7 @@ Out of scope for the MVP:
 | WP | Gate | Required before implementation |
 |---|---|---|
 | WP-VITM-01 | Definition drafted | Use `specs/architecture/visual-itm-v1-profile.md` as the concrete Visual ITM v1 profile/spec, examples, and acceptance baseline. |
-| WP-ITM-VRESOLVE-01 | Grilled | Use `grilling/v19a-visual-recovery-to-bpmn-chain-findings.md` as the resolver contract for `%view`, `%viewpoint`, raw model fallback, `render:` precedence, diagnostics, runtime/publication consistency, and no silent fallback. |
+| WP-ITM-VRESOLVE-01 | Grilled | Use `grilling/v20-visual-recovery-to-bpmn-chain-findings.md` as the resolver contract for `%view`, `%viewpoint`, raw model fallback, `render:` precedence, diagnostics, runtime/publication consistency, and no silent fallback. |
 | WP-BPMN-SEM | Grilled | Implement against `grilling/bpmn-sem-grilling.md`, which also routes the broader bundled BPMN sources to later gates. |
 | WP-BPMN-DI-01 | New explicit follow-on | Owns read-only BPMN Diagram Interchange fidelity before later generic delta work. |
 | WP-BPMN-VISUAL-A/B/C | Split already decided | Keep viewer, ITM integration, and modeler/write-back separate. |

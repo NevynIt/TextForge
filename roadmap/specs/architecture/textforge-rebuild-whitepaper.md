@@ -3,7 +3,7 @@
 **Version:** 15d  
 **Purpose:** Standalone architecture blueprint for rebuilding TextForge from scratch as a React-based, local-first, text-first, secure browser workbench. The design centers on an application-private virtual workspace, ITM as the canonical structural model, explicit pipelines, restricted Lua automation, binary workspace resources, Markdown/report generation, enterprise architecture and ArchiMate support, browser-envelope accreditation, and a Surface-based UI where editors, rich editors, structured editors, viewers, consoles, inspectors, and generated previews are peers.
 
-This document is self-contained and states the target architecture directly. It does not own the authoritative implementation phase order, phase scopes, or current execution status; those live in the companion V15h roadmap documents under `roadmap/`.
+This document is self-contained and states the target architecture directly. It does not own the authoritative implementation order, workpackage scopes, or current execution status; those live in the companion V20 roadmap documents under `roadmap/`.
 
 ---
 
@@ -3230,7 +3230,7 @@ This avoids a separate `TextForge2` repository while avoiding a confusing side-b
 
 ## 10. Companion roadmap set and authority split
 
-The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V15h roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current phase state.
+The implementation roadmap is deliberately separated from this main architecture paper. This document defines the target architecture, invariants, security posture, surface model, and long-lived design rules. The companion V20 roadmap documents define the authoritative implementation sequence, package ownership, repository strategy, and current workpackage state.
 
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
 
@@ -3244,23 +3244,26 @@ Use the roadmap set as follows:
 roadmap/AGENTS_START_HERE.md
   First operational instructions for every coding agent run.
 
-roadmap/00_package_aware_roadmap.md
-  Authoritative phase order, including the runnable-shell checkpoint and package-by-package phase flow.
+roadmap/ROADMAP_V20.md
+  Canonical V20 roadmap entrypoint and current validated-baseline summary.
 
-roadmap/01_repository_and_package_strategy.md
-  Authoritative repository, package-boundary, and versioning strategy.
+roadmap/workpackages/workpackage-register.md
+  Authoritative workpackage register, status posture, dependency edges, and candidate backlog.
 
-roadmap/RAPID.md
+roadmap/workpackages/implementation-status.md
+  Mutable status summary for validated work, blocked work, startable candidates, and selected next-slice guidance.
+
+roadmap/decisions/RAPID.md
   Authoritative current-status pointer and append-only execution log.
 
-roadmap/packages/*.md
-  Authoritative package-level phase ownership, dependency rules, and definition-of-done guidance.
+roadmap/package-guides/*.md
+  Authoritative package-level ownership, dependency rules, and definition-of-done guidance.
 ```
 
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
 
 
-When this whitepaper and the roadmap set overlap, the roadmap set is authoritative for implementation sequencing and package rollout. The correct fix for drift is to update or reduce the duplicate implementation text here, not to maintain a second phase plan inside the whitepaper.
+When this whitepaper and the roadmap set overlap, the roadmap set is authoritative for implementation sequencing and package rollout. The correct fix for drift is to update or reduce the duplicate implementation text here, not to maintain a second workpackage plan inside the whitepaper.
 
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation; Phase 0 — Repository foundation, package skeleton, security envelope, and dependency policy, through `apps/textforge-web`, `packages/*`, `@textforge/core`, `@textforge/security-profile`, `@textforge/ui`, `@textforge/examples-docs`, `roadmap/`.
 
@@ -3602,15 +3605,16 @@ For implementation sequencing, always use:
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
 
 
-- `roadmap/00_package_aware_roadmap.md` for the authoritative phase order.
-- `roadmap/01_repository_and_package_strategy.md` for runnable-shell and repository-boundary rules.
-- `roadmap/packages/*.md` for package-specific phase participation.
-- `roadmap/RAPID.md` for the current active phase and execution state.
+- `roadmap/ROADMAP_V20.md` for the active roadmap baseline and operator entrypoint.
+- `roadmap/workpackages/workpackage-register.md` for the authoritative workpackage register and dependency posture.
+- `roadmap/workpackages/implementation-status.md` for current status and selected next-slice guidance.
+- `roadmap/package-guides/*.md` for package-specific ownership, dependency rules, and validation guidance.
+- `roadmap/decisions/RAPID.md` for the append-only decision/progress log and mutable current-status block.
 
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
 
 
-When updating this whitepaper, keep only the architecture-level statements that remain valid across multiple roadmap revisions. If a change affects phase order, package creation timing, or current work sequencing, update the roadmap documents instead of adding another implementation summary here.
+When updating this whitepaper, keep only the architecture-level statements that remain valid across multiple roadmap revisions. If a change affects workpackage order, package creation timing, or current work sequencing, update the roadmap documents instead of adding another implementation summary here.
 
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
 
@@ -3623,9 +3627,9 @@ If the whitepaper and the roadmap set ever diverge again, treat that as document
 
 
 1. keep the architectural target state here;
-2. keep implementation order and current phase control in the roadmap set;
+2. keep implementation order and current workpackage control in the roadmap set;
 3. remove or shorten duplicated implementation guidance in this whitepaper;
-4. record the correction in `roadmap/RAPID.md`.
+4. record the correction in `roadmap/decisions/RAPID.md`.
 
 **Reverse traceability:** Implemented wholly or in part by Phase -1 — Repository pivot and archival preservation, through `apps/textforge-web`, `packages/*`.
 

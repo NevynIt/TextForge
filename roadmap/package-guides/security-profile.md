@@ -10,7 +10,7 @@ Reusable browser-envelope accreditation profile, CSP/manifest/service-worker che
 
 ## Agent note
 
-When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
+When this package is updated, the agent must also update `roadmap/decisions/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
 ## Allowed dependencies
 
@@ -191,6 +191,6 @@ The default profile now also checks the local command-dispatch boundary introduc
 The default profile now also includes a local UI state boundary check for popup overlays and resizable shell rails. Phase 3.5 validation confirms that popup visibility, inspector placement, and panel-size preferences stay ordinary browser-local UI state documented in `docs/reference/specs/local-shell-ui-state.md`, while detached windows, remote popup content, background sync, remote sync, File System Access API usage, and silent local-file probing remain rejected.
 
 
-## V16 backend-optional responsibilities
+## Backend-optional responsibilities
 
 `@textforge/security-profile` must verify both clean claims: local/offline mode uses app-managed browser storage and explicit user import/export only; enterprise mode communicates with one approved backend origin and keeps GitLab, Entra, AI provider SDKs, backend persistence, and private/group enforcement out of frontend-safe packages.

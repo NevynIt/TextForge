@@ -10,7 +10,7 @@ Virtual workspace resources, folders, text/byte content representation, Dexie pe
 
 ## Agent note
 
-When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
+When this package is updated, the agent must also update `roadmap/decisions/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
 ## Allowed dependencies
 
@@ -169,6 +169,6 @@ Keep these concepts separate:
 - Reviewable change proposals sit above raw changesets and should not be treated as GitLab-specific state.
 
 
-## V16 backend-optional responsibilities
+## Backend-optional responsibilities
 
 `@textforge/workspace` owns the first local provider implementation seams: IndexedDB, ZIP/folder import/export, generated resources, local service-folder conventions, dirty state, base revisions, and local changeset assembly. It must keep local/offline storage app-managed and must not introduce File System Access API, persistent directory handles, silent file reads/writes, background sync, or arbitrary network providers.

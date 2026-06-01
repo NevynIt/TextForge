@@ -10,7 +10,7 @@ Shared contracts, diagnostics, contribution manifests, capabilities, resource re
 
 ## Agent note
 
-When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
+When this package is updated, the agent must also update `roadmap/decisions/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
 ## Allowed dependencies
 
@@ -174,6 +174,6 @@ The package now owns the stabilized Phase 4.1 foundation contracts: normalized `
 `@textforge/core` now extends the canonical resource and command-context contracts for provider-aware resource descriptors instead of introducing a second metadata model. `ResourceRef`, `ResourceFacts`, and command selection context now carry provider IDs, revision IDs, capability IDs, owner/provenance metadata, and resource diagnostics, with shared helpers for provider-aware capability checks consumed by workspace and shell code.
 
 
-## V16 backend-optional responsibilities
+## Backend-optional responsibilities
 
 `@textforge/core` is the preferred starting point for frontend-safe contracts: provider-aware resource descriptors, revisions, changesets, repository diagnostics, identity metadata, permission diagnostics, settings schemas, and AI/persistence contract placeholders where physical extraction is not yet justified. Keep these as contracts and pure helpers. Do not import backend-only adapters.

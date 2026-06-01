@@ -20,9 +20,9 @@ The phase should not expand product scope. It should stabilize the architectural
 
 ## Source context inspected
 
-- `roadmap/RAPID.md`
+- `roadmap/decisions/RAPID.md`
 - `roadmap/README.md`
-- `roadmap/00_package_aware_roadmap.md`
+- `roadmap/ROADMAP_V20.md`
 - Existing project-format context for ITT/ITM, including diagnostics, packages, capabilities, styles, views, overlays, and processing model.
 
 ## Index of grilling topics
@@ -703,9 +703,9 @@ Phase 4.1 is done when all of the following are true:
 ## Follow-up changes to apply later
 
 1. Add `roadmap/grilling/phase-4.1-grilling.md`.
-2. Add Phase 4.1 to `roadmap/00_package_aware_roadmap.md`.
+2. Carry the Phase 4.1 stabilization guidance into the V20 workpackage foundation records if it is reopened.
 3. Update relevant package guides for Phase 4.1 responsibilities.
-4. Update `roadmap/RAPID.md` append-only with:
+4. Update `roadmap/decisions/RAPID.md` append-only with:
    - decision to insert Phase 4.1;
    - action to perform Phase 4.1 implementation audit;
    - current status pointing to Phase 4.1.

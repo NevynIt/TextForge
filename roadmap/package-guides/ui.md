@@ -10,7 +10,7 @@ Reusable React UI primitives, workbench chrome, surface frame, dialogs, menus, c
 
 ## Agent note
 
-When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
+When this package is updated, the agent must also update `roadmap/decisions/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
 ## Allowed dependencies
 
@@ -214,6 +214,6 @@ The shell now uses the existing inspector-card, empty-state, and utility-pane pr
 Do not treat these as generic popups or sketch annotations. They need explicit resource identity, anchor, revision, and write-back semantics from their owning workpackages.
 
 
-## V16 backend-optional responsibilities
+## Backend-optional responsibilities
 
 `@textforge/ui` may expose provider, settings, private/group, service, AI, and backend actions only when the active profile/manifest/capability state allows them. Private/group roots must not appear before backend identity and policy enforcement. Settings UI customizes presentation/defaults only and never grants permissions.

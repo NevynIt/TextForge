@@ -10,7 +10,7 @@ Markdown preview, TF-MD profile processing, report pipeline, workspace image res
 
 ## Agent note
 
-When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
+When this package is updated, the agent must also update `roadmap/decisions/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
 ## Allowed dependencies
 
@@ -187,7 +187,7 @@ The preview surface now exposes host-owned Markdown link activation hooks so the
 Preview link activation does not satisfy backlinks by itself. `WP-LINK-INDEX` must cover stored index state, reverse lookup, unresolved-link reporting, and document-neighborhood inputs without changing Markdown document semantics.
 
 
-## V16 backend-optional responsibilities
+## Backend-optional responsibilities
 
 `@textforge/markdown` must preserve TF-MD document semantics independently from optional backend capabilities. `%include` and `%repository` resolution must use provider/repository contracts and diagnostics. Missing backend/GitLab/AI/service capabilities may disable actions or emit diagnostics, but must not change how Markdown is parsed.
 

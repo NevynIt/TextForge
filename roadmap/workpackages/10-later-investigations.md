@@ -25,7 +25,7 @@ V20 separates concrete reviewable proposal scope from later advanced review rese
 - This later-investigation cluster keeps deeper compare/merge, true live collaboration, and autonomous editing out of the near-term proposal model.
 
 
-## V19 visual editing reframing
+## V20 visual editing follow-ons
 
 The old broad graph-editing concept is reframed as `WP-GRAPH-EDIT-VITM`.
 

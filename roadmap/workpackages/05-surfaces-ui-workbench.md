@@ -29,7 +29,7 @@ Settings personalize UI/defaults only. They never grant permissions, repository 
 Phase 3.5 validation material is preserved under `validation/ui/` and remains relevant when later surface/UI work changes chrome density, popups, panels, or scroll behavior.
 
 
-## V19 visual target picker update
+## V20 visual target picker baseline
 
 V19 adds `WP-ITM-VTARGET-01` to this cluster.
 

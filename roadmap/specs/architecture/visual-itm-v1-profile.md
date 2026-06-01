@@ -4,7 +4,7 @@
 
 `WP-VITM-01` now has a concrete v1 profile draft for implementation.
 
-This document defines the minimum Visual ITM contract to use for the V19a runtime recovery chain before any renderer package is implemented.
+This document defines the minimum Visual ITM contract used by the V20 runtime recovery chain before renderer packages are implemented.
 
 ## Purpose
 

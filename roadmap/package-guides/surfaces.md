@@ -10,7 +10,7 @@ Surface registry, sessions, placement, main/popup hosts, open-with logic, source
 
 ## Agent note
 
-When this package is updated, the agent must also update `roadmap/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
+When this package is updated, the agent must also update `roadmap/decisions/RAPID.md` and review the package milestone plan below. If implementation reality changes the plan, update the roadmap/package guide in the same commit.
 
 ## Allowed dependencies
 
@@ -209,7 +209,7 @@ Surface open-with eligibility now also respects the resolved document capability
 The package now participates in canonical execution rather than stopping at metadata and selection. Surface contributions may open package-owned runtime views directly from their registered contribution records, and the package can synthesize surface-open requests for pipeline values so intermediate outputs reopen through the same active-context compatibility logic as ordinary resources, with source-editor fallback when no richer active surface is available.
 
 
-## V16 backend-optional responsibilities
+## Backend-optional responsibilities
 
 `@textforge/surfaces` must keep openability based on resource facts, active capabilities, and provider affordances. Optional backend capability absence should remove or disable actions, not change document semantics or bypass the Phase 5 contribution model.
 

@@ -1,21 +1,23 @@
-# Backend-Optional Package Guidance — V16
+# Backend-Optional Package Guidance - Roadmap V20
 
 ## Purpose
 
-This guide records the V16 package-split and dependency-boundary guidance for the backend-optional TextForge architecture. It is cross-cutting: use it together with the phase roadmap, the backend whitepaper, and the backend grilling record.
+This guide records the package-split and dependency-boundary guidance for the backend-optional TextForge architecture. It is cross-cutting: use it together with the V20 roadmap, backend architecture spec, backend workpackage cluster, and backend grilling record.
 
 Required references:
 
-- `roadmap/textforge_backend_optional_architecture_whitepaper.md`
+- `roadmap/specs/architecture/backend-optional-architecture.md`
 - `roadmap/grilling/backend-grilling.md`
-- `roadmap/00_package_aware_roadmap.md`
-- `roadmap/02_phase_architecture_pnpm_matrix.md`
+- `roadmap/ROADMAP_V20.md`
+- `roadmap/workpackages/workpackage-register.md`
+- `roadmap/workpackages/06-backend-optional-enterprise.md`
+- `roadmap/decisions/RAPID.md`
 
 ## Core rule
 
 Backend support is optional. Local/offline TextForge remains first-class and must not acquire a backend dependency.
 
-Resource providers are workspace/storage/repository abstractions. They do not register executable contributions, commands, renderers, transformers, validators, pipelines, or UI contributions. Those remain under the Phase 5 contribution/capability model.
+Resource providers are workspace/storage/repository abstractions. They do not register executable contributions, commands, renderers, transformers, validators, pipelines, or UI contributions. Those remain under the contribution/capability model.
 
 ## Security invariants
 
@@ -40,33 +42,26 @@ Resource providers are workspace/storage/repository abstractions. They do not re
 | AI | `ai-contract`, `ai-client`, `ai-server-mediator`, `ai-chat-surface` | Backend-mediated; initial client/chat surface is read/suggest only. |
 | Distribution | `app-distribution`, `server-app-host`, `enterprise-container`, `browser-extension-wrapper`, `local-static-build` | Local static and browser extension stay thin wrappers. Enterprise container serves frontend and API from one origin. |
 
-## Phase responsibilities
+## Workpackage responsibilities
 
-| Phase | Responsibility |
+| Workpackage area | Responsibility |
 |---|---|
-| 5.1 | Provider-aware resource descriptors, revisions, dirty state, multi-resource changesets, provider allowlists, and local provider seams. |
-| 5.2 | Neutral identity contract and permission diagnostic shapes. |
-| 5.3 | User settings core and local persistence. |
-| 6.1 | Provider-backed repository resolver and repository diagnostics. |
-| 7.1 | Local service-folder data-plane conventions. |
-| 7.2 | User settings UI. |
-| 8.1 | Private/group space contracts, UI gated until backend enforcement exists. |
-| 9.1 | Enterprise distribution profile and container skeleton. |
-| 9.2 | Backend API contract and optional frontend provider client. |
-| 9.3 | Reference persistence server with revisions/changesets and manifest/schema compatibility. |
-| 9.4 | Enterprise SSO and server-side policy. |
-| 9.5 | Private/group spaces server. |
-| 9.6 | Roaming user settings. |
-| 9.7 | GitLab adapter behind the persistence server. |
-| 10.1 | Backend-backed service folders with explicit job APIs. |
-| 10.2 | Advisory, time-bound soft collaboration leases. |
-| 11.1 | AI contract and backend mediator. |
-| 11.2 | AI client and chat surface, non-mutating. |
-| 11.3 | AI preference integration under settings/policy. |
+| `WP-RES-02` / `WP-RES-03` | Revision-aware resources, dirty state, multi-resource changesets, provider allowlists, and local provider seams. |
+| `WP-ID-01` / `WP-ID-DEV` | Neutral identity contract, fixture identity, and permission diagnostic shapes. |
+| `WP-SET-01` | User settings core and local persistence. |
+| `WP-REPO-01` and follow-ons | Provider-backed repository resolver and repository diagnostics. |
+| `WP-SERVICES-BE` | Service-folder data-plane conventions and explicit backend job APIs. |
+| `WP-SET-SYNC` | User settings UI and roaming settings where a backend profile exists. |
+| `WP-POLICY-01` / `WP-PRIVATE-SERVER` | Private/group space contracts and policy-gated UI. |
+| `WP-BE-HOST` / `WP-BE-API` / `WP-BE-PERSIST` | Enterprise distribution, backend API contract, and reference persistence server. |
+| `WP-SSO-ENTRA` / `WP-SSO-OIDC` / `WP-SSO-SAML` | Enterprise SSO and server-side policy adapters. |
+| `WP-GITLAB` | GitLab adapter behind the persistence server. |
+| `WP-COLLAB-LEASES` | Advisory, time-bound soft collaboration leases. |
+| `WP-AI-MEDIATOR` / `WP-AI-CHAT` / `WP-AI-PREF` | AI contract, backend mediator, non-mutating chat surface, and AI preferences under policy. |
 
-## Definition of done for backend-related phases
+## Definition of done for backend-related workpackages
 
-A backend-related phase is done only when:
+A backend-related workpackage is done only when:
 
 - the local/offline profile remains buildable and runnable;
 - frontend package dependency graphs contain no backend-only adapters;

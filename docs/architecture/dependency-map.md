@@ -108,16 +108,12 @@ flowchart TD
   classDef startable fill:#1565c0,stroke:#0d47a1,color:#ffffff,stroke-width:2px;
 
   class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D,WP_ITM_01,WP_LUA,WP_LUA_POWER_SESSION,WP_RES_01,WP_REPO_01,WP_ITM_02,WP_ITM_VISUALS,WP_VITM_01,WP_ITM_VTARGET_01,WP_ITM_VRESOLVE_01,WP_RENDER_CYTOSCAPE,WP_RENDER_JSMIND,WP_RENDER_SIGMA,WP_BPMN_SEM,WP_BPMN_VISUAL_A,WP_BPMN_DI_01,WP_BPMN_VISUAL_B done;
-  class WP_SET_01,WP_RES_02,WP_LINK_INDEX,WP_ITM_PUB_VISUAL_01,WP_VITM_TRANSLATORS,WP_GRAPH_EDIT_VITM,WP_CANVAS,WP_MD_REPORT,WP_ID_01,WP_ARCHIMATE_SEM,WP_SKETCH startable;
+  class WP_SET_01,WP_RES_02,WP_ITM_PUB_VISUAL_01,WP_GRAPH_EDIT_VITM,WP_MD_REPORT,WP_ID_01,WP_ARCHIMATE_SEM,WP_SKETCH startable;
 
   linkStyle 6 stroke:#1565c0,stroke-width:2px;
   linkStyle 10 stroke:#1565c0,stroke-width:2px;
-  linkStyle 14 stroke:#1565c0,stroke-width:2px;
-  linkStyle 15 stroke:#1565c0,stroke-width:2px;
   linkStyle 32 stroke:#1565c0,stroke-width:2px;
-  linkStyle 37 stroke:#1565c0,stroke-width:2px;
   linkStyle 38 stroke:#1565c0,stroke-width:2px;
-  linkStyle 39 stroke:#1565c0,stroke-width:2px;
   linkStyle 40 stroke:#1565c0,stroke-width:2px;
   linkStyle 41 stroke:#1565c0,stroke-width:2px;
   linkStyle 42 stroke:#1565c0,stroke-width:2px;
@@ -148,6 +144,6 @@ The graph shows dependency direction only. It is not a mandatory calendar sequen
 
 - Green nodes are completed or validated workpackages in the current roadmap baseline.
 - Blue nodes can be started now according to the current implementation baseline.
-- Candidate workpackages with satisfied dependencies should still appear as blue/startable when they are included in the current dependency view; sequencing remains a manual per-slice decision.
+- Candidate workpackages are not blue merely because dependencies are satisfied. They become blue only when explicitly listed in current implementation options.
 - Blue edges indicate a direct dependency path from completed work to a startable node.
 - Nodes without explicit styling are not currently startable or not yet marked as completed.

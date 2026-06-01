@@ -1,4 +1,4 @@
-# TextForge V16 Repository and Package Strategy
+# TextForge Repository and Package Strategy - Roadmap V20
 
 ## Purpose
 
@@ -75,7 +75,7 @@ textforge/
     archimate/
     examples-docs/
 
-  # V16 planned/staged backend-optional package families, extracted only when boundaries justify it:
+  # Planned/staged backend-optional package families, extracted only when boundaries justify it:
   packages or logical slices:
     workspace-core / workspace-indexeddb / workspace-zip / workspace-services
     repository-core / repository-itm
@@ -193,14 +193,16 @@ Package-to-package references should use workspace dependencies:
 
 This keeps local development fast and avoids accidental dependency on a published older package version.
 
-## Phase dependency command discipline
+## Workpackage dependency command discipline
 
-The roadmap now records dependency actions in two places:
+The roadmap now records dependency actions in active V20 workpackage and package-guide files:
 
-- `roadmap/00_package_aware_roadmap.md` under each phase;
-- `roadmap/02_phase_architecture_pnpm_matrix.md` as the consolidated phase/package matrix.
+- `roadmap/workpackages/workpackage-register.md` for dependency and status posture;
+- `roadmap/workpackages/*.md` for workpackage-cluster sequencing;
+- `roadmap/package-guides/*.md` for package-owned dependency and validation guidance;
+- `docs/architecture/dependency-map.md` for the tracked generated dependency-map mirror.
 
-Every dependency introduced by a phase should be installed through an explicit `pnpm` command and then committed through `package.json` and `pnpm-lock.yaml`. Workspace dependencies should use `workspace:*`; third-party dependencies should be added to the package that imports them, not to the root, unless they are truly root build/test tooling.
+Every dependency introduced by a workpackage should be installed through an explicit `pnpm` command and then committed through `package.json` and `pnpm-lock.yaml`. Workspace dependencies should use `workspace:*`; third-party dependencies should be added to the package that imports them, not to the root, unless they are truly root build/test tooling.
 
 Recommended command forms:
 
@@ -218,12 +220,12 @@ pnpm --filter @textforge/<package> add -D <npm-package>
 pnpm add -D -w <npm-package>
 ```
 
-If implementation chooses a different package than the roadmap candidate, the agent must record the reason in `roadmap/RAPID.md`, update the relevant package guide, and keep the security/license gate green.
+If implementation chooses a different package than the roadmap candidate, the agent must record the reason in `roadmap/decisions/RAPID.md`, update the relevant package guide, and keep the security/license gate green.
 
 ---
 
 
-## V16 package-split staging rule
+## Package-split staging rule
 
 The backend-optional architecture introduces planned package families for providers, repositories, user settings, persistence, identity, private/group spaces, AI, and distribution. These names are intentional roadmap targets, but they are not a command to explode the monorepo immediately.
 
@@ -233,7 +235,17 @@ Extraction should be progressive:
 2. Extract a new package when it represents a real dependency boundary, security boundary, backend-only adapter, independently testable contract, or distribution boundary.
 3. Keep frontend-safe contracts separate from backend-only implementations.
 4. Never let backend-only dependencies such as GitLab, Entra, LLM provider SDKs, or server persistence adapters leak into the browser app shell.
-5. Record each physical extraction in RAPID and update `02_phase_architecture_pnpm_matrix.md` with the exact workspace dependency commands.
+5. Record each physical extraction in RAPID and update the relevant workpackage cluster, package guide, and validation checklist with the exact workspace dependency commands.
+
+## Retired matrix and activity-diagram guidance
+
+The former V16 phase/package matrix and package dependency activity diagram are retired as local archive files. Their surviving rules are promoted here and into the active V20 workpackage/package-guide set:
+
+- Record dependency introductions at the package that imports them; do not hide feature dependencies at the root.
+- Keep package-to-package consumption directional: feature packages consume `@textforge/core`, workspace, surface, pipeline, and UI contracts; core packages do not import feature packages.
+- Treat each workpackage as package-boundary validation, not only feature delivery.
+- Use generated dependency maps for workpackage sequencing and package guides for dependency command evidence.
+- Keep backend/provider/identity/AI adapter packages contract-first and prevent backend-only dependencies from entering frontend-safe packages.
 
 Recommended dependency rule:
 

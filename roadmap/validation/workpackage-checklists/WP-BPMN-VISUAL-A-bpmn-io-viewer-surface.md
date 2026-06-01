@@ -15,8 +15,8 @@ Read-only BPMN XML visual consumption using BPMN.io / `bpmn-js`.
 - Package dependencies are declared through the package manifest and pass license checks.
 - Surface lifecycle works with open/close/reopen flows.
 
-## Evidence to attach when implemented
+## Validation evidence
 
-- Unit/integration tests.
-- Build/test commands.
-- Manual screenshot or validation notes for loading a BPMN XML fixture.
+- Implemented in `@textforge/bpmn` and recorded in RAPID `P-093`.
+- Focused BPMN tests, web build, and repo-wide `corepack pnpm verify` passed.
+- The slice remains read-only and does not claim modeler/edit/write-back behavior.

@@ -20,10 +20,9 @@ Implement after `WP-BPMN-VISUAL-A` and against the BPMN routing captured in `roa
 - BPMN modeler behavior.
 - Cross-renderer delta persistence contracts.
 
-## Evidence to attach when implemented
+## Validation evidence
 
-- Updated BPMN/view-model contracts.
-- Focused BPMN DI fixtures or fixture assertions.
-- Validation tests.
-- Build/test commands.
-- Manual read-only fidelity notes if a viewer surface is exercised visually.
+- Implemented in `@textforge/bpmn` and recorded in RAPID `P-094`.
+- Focused BPMN package test/build commands passed.
+- Repo-wide `corepack pnpm verify` passed for the validation run.
+- Bundled BPMN reference assets under `docs/examples/bpmn/` remain the preserved read-only fidelity inputs.
