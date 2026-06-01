@@ -6,7 +6,7 @@ import { spawn } from 'node:child_process';
 const repoRoot = fileURLToPath(new URL('../..', import.meta.url));
 const generatorScriptPath = resolve(repoRoot, 'roadmap', 'scripts', 'generate-dependency-map.mjs');
 const sourcePath = resolve(repoRoot, 'roadmap', 'workpackages', 'dependency-map.md');
-const publishedPath = resolve(repoRoot, 'docs', 'design', 'dependency-map.md');
+const publishedPath = resolve(repoRoot, 'docs', 'architecture', 'dependency-map.md');
 const checkMode = process.argv.includes('--check');
 
 await runGenerator({ checkMode });
