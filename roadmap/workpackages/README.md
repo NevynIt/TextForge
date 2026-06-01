@@ -1,6 +1,6 @@
 # Workpackages
 
-This folder is the canonical V19 planning layer from WP5 onward.
+This folder is the canonical V20 planning layer from WP5 onward.
 
 ## Files
 
@@ -21,7 +21,7 @@ This folder is the canonical V19 planning layer from WP5 onward.
 | `08-distribution-security-accreditation.md` | Security invariants, distributions, release evidence. |
 | `09-optional-adapters.md` | Entra, OIDC/SAML, GitLab, AI, SharePoint-like adapters, Visual ITM translators. |
 | `10-later-investigations.md` | True live collaboration, advanced editing, future wrappers. |
-| `11-itm-visual-runtime-recovery.md` | V19a Visual ITM and runtime renderer recovery chain. |
+| `11-itm-visual-runtime-recovery.md` | Visual ITM and runtime renderer recovery chain, now validated through read-only BPMN visual consumption. |
 
 ## Dependency map styling guidance
 

@@ -1,28 +1,25 @@
-# AGENTS START HERE - Roadmap V19a
+# Agents Start Here - Roadmap V20
 
-This roadmap is workpackage-first and active-roadmap-only.
+This roadmap is workpackage-first. Do not plan or implement from older phase-roadmap material.
 
-## Required reading order
+## Required Reading
 
-1. `README.md`
-2. `ROADMAP_V19A.md`
-3. `decisions/RAPID.md`
-4. `workpackages/workpackage-register.md`
-5. The relevant workpackage cluster file under `workpackages/`
-6. Any package guide under `package-guides/` touched by the work
-7. Any grilling record under `grilling/` referenced by the workpackage
+1. `roadmap/README.md`
+2. `roadmap/ROADMAP_V20.md`
+3. `roadmap/decisions/RAPID.md`
+4. `roadmap/workpackages/workpackage-register.md`
+5. `roadmap/workpackages/implementation-status.md`
+6. The relevant workpackage cluster, package guide, spec, grilling record, and validation checklist for the selected work.
 
-## Active-roadmap rule
+## Current Status
 
-Do not use `roadmap/archive/` or `ROADMAP_V18.md` as active implementation instructions. They are retained locally for traceability only.
+The Visual ITM/runtime renderer chain and the read-only BPMN visual chain are validated through `WP-BPMN-VISUAL-B`.
 
-The active roadmap is the V19a file set. Implement against current workpackages, package guides, specs, validation files, and RAPID entries.
+Select the next slice from V20 dependency-ready options. `WP-TABLES` remains on hold until its dedicated grilling session resolves diagnostics ownership, package boundary, and grid/editor strategy.
 
-## Frozen baseline rule
+## Frozen Baseline
 
-Already validated work is frozen unless a later RAPID decision explicitly reopens a defect.
-
-Frozen baseline:
+Do not reopen or expand these validated workpackages unless a later RAPID decision explicitly reopens a defect:
 
 ```text
 WP-05A
@@ -36,81 +33,33 @@ WP-ITM-02
 WP-ITM-VISUALS
 WP-LUA
 WP-LUA-POWER-SESSION
-```
-
-Do not absorb new scope into frozen workpackages. Add or implement follow-on workpackages instead.
-
-## Current implementation posture
-
-Unless a newer RAPID entry supersedes this, the recommended visual recovery path is:
-
-```text
-WP-VITM-01
--> WP-ITM-VTARGET-01
--> WP-ITM-VRESOLVE-01
--> WP-RENDER-CYTOSCAPE
--> WP-RENDER-JSMIND
--> WP-RENDER-SIGMA
--> WP-BPMN-SEM
--> WP-BPMN-VISUAL-A
--> WP-BPMN-DI-01
--> WP-BPMN-VISUAL-B
-```
-
-`WP-MD-REPORT`, `WP-BPMN-SEM`, `WP-ARCHIMATE-SEM`, `WP-TABLES`, `WP-RES-02`, `WP-ID-01`, and `WP-SET-01` remain separately startable, but BPMN/ArchiMate visual work should not rely on `WP-ITM-VISUALS` alone for runtime renderer parity.
-
-## ITM visual recovery rule
-
-`WP-ITM-VISUALS` is the validated static projection/publication baseline. It is not full runtime renderer parity.
-
-Runtime visual recovery must use the V19a chain:
-
-```text
 WP-VITM-01
 WP-ITM-VTARGET-01
 WP-ITM-VRESOLVE-01
 WP-RENDER-CYTOSCAPE
-WP-ITM-PUB-VISUAL-01
 WP-RENDER-JSMIND
 WP-RENDER-SIGMA
+WP-BPMN-SEM
+WP-BPMN-VISUAL-A
+WP-BPMN-DI-01
+WP-BPMN-VISUAL-B
 ```
 
-A `.itm` file may contain a model, `%viewpoint` pipelines, and `%view` instances. Visual opening must resolve those targets instead of treating the file as one monolithic graph.
+New scope belongs in follow-on workpackages.
 
-## Adapter rule
+## Completion Rule
 
-Provider-specific integrations are not hidden blockers.
+A workpackage can be marked `Implemented` or `Validated` only when:
 
-Standalone optional adapters include, at minimum:
-
-- `WP-SSO-ENTRA`
-- `WP-SSO-OIDC`
-- `WP-SSO-SAML`
-- `WP-GITLAB`
-- `WP-AI-*` provider adapters
-- SharePoint-like repository adapters
-- browser extension wrapper
-- future PWA/native/local packaged variants
-
-A selected release may require one of these, but generic roadmap progress should depend on contracts, fixtures, and policy engines, not on enterprise infrastructure access.
-
-## BPMN visual rule
-
-When BPMN visual work is implemented, use BPMN.io / `bpmn-js`. Implement the narrowed semantic MVP from `grilling/bpmn-sem-grilling.md`, then use `WP-BPMN-VISUAL-A` for the read-only viewer, `WP-BPMN-DI-01` for read-only Diagram Interchange fidelity, `WP-BPMN-VISUAL-B` for ITM/BPMN visual target integration, and defer `WP-BPMN-VISUAL-C` for modeler/edit/write-back.
-
-## RAPID rule
-
-`decisions/RAPID.md` remains append-only for historical rows. Keep new entries at the end of the table. Update the status block when the active recommendation changes.
-
-## Completion rule
-
-A workpackage can only be marked `Implemented` or `Validated` when:
-
-- its dependencies are satisfied or explicitly waived in RAPID;
-- its acceptance criteria are met;
+- dependencies are satisfied or explicitly waived in RAPID;
+- acceptance criteria are met;
 - relevant package checks pass;
 - security/accreditation invariants are preserved;
 - any remaining verification gap is recorded in RAPID;
 - `workpackages/implementation-status.md` is updated.
 
-Facade closure is not accepted. A workpackage cannot be closed by preserving API shape while omitting promised behavior.
+Facade closure is not accepted. Do not claim completion by preserving API shape while omitting promised behavior.
+
+## RAPID Rule
+
+`decisions/RAPID.md` historical rows are append-only. New rows go at the end of the table. The current status block may be edited because it is an operational pointer.
