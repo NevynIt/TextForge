@@ -12,6 +12,7 @@
     "prelint": "node scripts/sync-bundled-docs.mjs",
     "pretypecheck": "node scripts/sync-bundled-docs.mjs",
     "build": "vite build && node scripts/check-dist.mjs",
+    "build:zip": "corepack pnpm build && node scripts/archive-dist.mjs",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
     "test": "node --test test/markdownPreviewState.test.js test/markdownPreviewLinks.test.js && node scripts/check.mjs",

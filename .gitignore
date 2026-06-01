@@ -5,5 +5,6 @@ tsconfig.tsbuildinfo
 .tmp-playwright
 .vscode
 tmp
+apps/textforge-web/releases
 apps/textforge-web/src/generated/bundledDocs.js
 roadmap/workpackages/dependency-map.md
