@@ -1,6 +1,8 @@
-# 00 — Foundation Archive
+# 00 - Foundation Archive
 
-This file summarizes the preserved phase-shaped foundation.
+This file summarizes the preserved phase-shaped foundation. It is the active
+V20 traceability record for legacy phase intent; the retired source snapshots
+are available from Git history rather than from a local roadmap archive folder.
 
 ## Scope
 
@@ -8,7 +10,8 @@ This file summarizes the preserved phase-shaped foundation.
 Phase -1 through Phase 4.1
 ```
 
-These phases remain archived foundation history in V18. They are not converted into workpackages unless a future decision explicitly reopens a narrow slice.
+These phases remain frozen foundation history in V20. They are not converted
+into workpackages unless a future decision explicitly reopens a narrow slice.
 
 ## Preserved foundation items
 
@@ -32,11 +35,12 @@ These phases remain archived foundation history in V18. They are not converted i
 
 ## Traceability
 
-Exact V16/V17 text is preserved in:
+The active roadmap keeps only the summarized foundation intent above. Exact
+V16/V17/V18 source text is superseded by:
 
-- `archive/v16-linear-roadmap.md`
-- `archive/source-v17-roadmap/00_package_aware_roadmap.md`
-- `archive/source-v17-roadmap/RAPID.md` equivalent in the source package
+- Git history for pre-V20 roadmap source snapshots.
+- `roadmap/decisions/RAPID.md` for append-only decisions and progress rows.
+- V20 active workpackage, package-guide, spec, grilling, and validation files.
 
 ## Reopen rule
 
