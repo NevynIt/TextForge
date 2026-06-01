@@ -12,6 +12,7 @@ This cluster covers TextForge Markdown, ITM, report generation, packages, reposi
 | WP-MD-REPORT | Markdown + ITM report generation | Markdown base, WP-ITM-01, WP-REPO-01 | Keeps the old Phase 9 report role separate from backend work. |
 | WP-MD-RICH | Rich Markdown editing | Markdown/report baseline | Optional and round-trip gated. |
 | WP-PDF-EXPORT | PDF generation/export | WP-MD-REPORT | Optional late export capability. |
+| WP-LINK-INDEX | Document link, backlink, and mention index | WP-RES-01, WP-REPO-01 | Index Markdown/resource links and unresolved references without changing document semantics. |
 
 ## WP-ITM-01 implementation foundation
 
@@ -89,6 +90,7 @@ WP-ITM-01 should begin only after the recovery baseline from Phases 3.1-3.3 is u
 - Rich editors are optional and must be round-trip gated.
 - Includes and repositories are resolved by active providers; frontend does not fetch arbitrary URLs in local/offline mode.
 - Markdown preview document links should resolve back into workspace resources and reopen inside the shell rather than navigating the browser away from TextForge.
+- Backlinks, mentions, and document-neighborhood data belong to `WP-LINK-INDEX`; Markdown preview link activation alone does not satisfy that workpackage.
 - Document semantics do not change when optional backend capabilities are unavailable.
 
 

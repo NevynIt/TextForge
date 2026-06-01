@@ -10,6 +10,7 @@ flowchart TD
   WP_05B[WP-05B\nCapability activation and resolver context] --> WP_05C[WP-05C\nPipeline/contribution execution integration]
   WP_05A[WP-05A\nContribution manifest and registry model] --> WP_05D[WP-05D\nMinimal package/capability inspector]
   WP_05B[WP-05B\nCapability activation and resolver context] --> WP_05D[WP-05D\nMinimal package/capability inspector]
+  FOUNDATION[Frozen baseline\nValidated foundations] --> WP_SET_01[WP-SET-01\nUser settings core and local persistence]
   WP_05C[WP-05C\nPipeline/contribution execution integration] --> WP_LUA[WP-LUA\nLua automation]
   WP_LUA[WP-LUA\nLua automation] --> WP_LUA_POWER_SESSION[WP-LUA-POWER-SESSION\nLua self-escalation session and one-click recovery]
   FOUNDATION[Frozen baseline\nValidated foundations] --> WP_RES_01[WP-RES-01\nProvider-aware resource descriptors]
@@ -17,6 +18,9 @@ flowchart TD
   WP_RES_02[WP-RES-02\nRevisions, dirty state, and conflict diagnostics] --> WP_RES_03[WP-RES-03\nMulti-resource changesets and provider allowlists]
   WP_RES_01[WP-RES-01\nProvider-aware resource descriptors] --> WP_REPO_01[WP-REPO-01\nRepository reference and include resolver]
   WP_ITM_01[WP-ITM-01\nITM parser/model foundation] --> WP_REPO_01[WP-REPO-01\nRepository reference and include resolver]
+  WP_RES_01[WP-RES-01\nProvider-aware resource descriptors] --> WP_LINK_INDEX[WP-LINK-INDEX\nDocument link, backlink, and mention index]
+  WP_REPO_01[WP-REPO-01\nRepository reference and include resolver] --> WP_LINK_INDEX[WP-LINK-INDEX\nDocument link, backlink, and mention index]
+  WP_LINK_INDEX[WP-LINK-INDEX\nDocument link, backlink, and mention index] --> WP_DOC_GRAPH[WP-DOC-GRAPH\nDocument neighborhood and local graph surface]
   WP_ITM_01[WP-ITM-01\nITM parser/model foundation] --> WP_ITM_02[WP-ITM-02\nITM directives, packages, validation, diagnostics]
   WP_05B[WP-05B\nCapability activation and resolver context] --> WP_ITM_02[WP-ITM-02\nITM directives, packages, validation, diagnostics]
   WP_ITM_01[WP-ITM-01\nITM parser/model foundation] --> WP_ITM_VISUALS[WP-ITM-VISUALS\nITM static visual projections and publication baseline]
@@ -39,6 +43,7 @@ flowchart TD
   WP_ITM_VRESOLVE_01[WP-ITM-VRESOLVE-01\nShared ITM visual target resolver] --> WP_RENDER_SIGMA[WP-RENDER-SIGMA\nSigma/Graphology runtime renderer package]
   WP_VITM_01[WP-VITM-01\nVisual ITM profile v1] --> WP_VITM_TRANSLATORS[WP-VITM-TRANSLATORS\nVisual ITM translator utilities]
   WP_VITM_01[WP-VITM-01\nVisual ITM profile v1] --> WP_GRAPH_EDIT_VITM[WP-GRAPH-EDIT-VITM\nVisual ITM edit/write-back foundation]
+  WP_RES_01[WP-RES-01\nProvider-aware resource descriptors] --> WP_CANVAS[WP-CANVAS\nSpatial workspace canvas]
   WP_ITM_01[WP-ITM-01\nITM parser/model foundation] --> WP_MD_REPORT[WP-MD-REPORT\nMarkdown + ITM report generation]
   WP_REPO_01[WP-REPO-01\nRepository reference and include resolver] --> WP_MD_REPORT[WP-MD-REPORT\nMarkdown + ITM report generation]
   FOUNDATION[Frozen baseline\nValidated foundations] --> WP_ID_01[WP-ID-01\nIdentity contract]
@@ -70,6 +75,8 @@ flowchart TD
   WP_BE_PERSIST[WP-BE-PERSIST\nReference persistence server] --> WP_COLLAB_LEASES[WP-COLLAB-LEASES\nSoft collaboration leases]
   WP_RES_02[WP-RES-02\nRevisions, dirty state, and conflict diagnostics] --> WP_COLLAB_LEASES[WP-COLLAB-LEASES\nSoft collaboration leases]
   WP_POLICY_01[WP-POLICY-01\nProvider-neutral server policy engine] --> WP_COLLAB_LEASES[WP-COLLAB-LEASES\nSoft collaboration leases]
+  WP_RES_02[WP-RES-02\nRevisions, dirty state, and conflict diagnostics] --> WP_COMMENTS_SIDECAR[WP-COMMENTS-SIDECAR\nComments and review sidecars]
+  WP_RES_03[WP-RES-03\nMulti-resource changesets and provider allowlists] --> WP_CHANGE_PROPOSALS[WP-CHANGE-PROPOSALS\nReviewable change proposals]
   WP_BE_PERSIST[WP-BE-PERSIST\nReference persistence server] --> WP_AI_MEDIATOR[WP-AI-MEDIATOR\nAI contract and backend mediator]
   WP_POLICY_01[WP-POLICY-01\nProvider-neutral server policy engine] --> WP_AI_MEDIATOR[WP-AI-MEDIATOR\nAI contract and backend mediator]
   WP_AI_MEDIATOR[WP-AI-MEDIATOR\nAI contract and backend mediator] --> WP_AI_CHAT[WP-AI-CHAT\nAI client and chat surface]
@@ -101,17 +108,21 @@ flowchart TD
   classDef startable fill:#1565c0,stroke:#0d47a1,color:#ffffff,stroke-width:2px;
 
   class FOUNDATION,WP_05A,WP_05B,WP_05C,WP_05D,WP_ITM_01,WP_LUA,WP_LUA_POWER_SESSION,WP_RES_01,WP_REPO_01,WP_ITM_02,WP_ITM_VISUALS,WP_VITM_01,WP_ITM_VTARGET_01,WP_ITM_VRESOLVE_01,WP_RENDER_CYTOSCAPE,WP_RENDER_JSMIND,WP_RENDER_SIGMA,WP_BPMN_SEM,WP_BPMN_VISUAL_A,WP_BPMN_DI_01,WP_BPMN_VISUAL_B done;
-  class WP_RES_02,WP_ITM_PUB_VISUAL_01,WP_VITM_TRANSLATORS,WP_GRAPH_EDIT_VITM,WP_MD_REPORT,WP_ARCHIMATE_SEM,WP_TABLES,WP_SKETCH startable;
+  class WP_SET_01,WP_RES_02,WP_LINK_INDEX,WP_ITM_PUB_VISUAL_01,WP_VITM_TRANSLATORS,WP_GRAPH_EDIT_VITM,WP_CANVAS,WP_MD_REPORT,WP_ID_01,WP_ARCHIMATE_SEM,WP_SKETCH startable;
 
-  linkStyle 9 stroke:#1565c0,stroke-width:2px;
-  linkStyle 28 stroke:#1565c0,stroke-width:2px;
-  linkStyle 33 stroke:#1565c0,stroke-width:2px;
-  linkStyle 34 stroke:#1565c0,stroke-width:2px;
-  linkStyle 35 stroke:#1565c0,stroke-width:2px;
-  linkStyle 36 stroke:#1565c0,stroke-width:2px;
-  linkStyle 82 stroke:#1565c0,stroke-width:2px;
-  linkStyle 86 stroke:#1565c0,stroke-width:2px;
-  linkStyle 91 stroke:#1565c0,stroke-width:2px;
+  linkStyle 6 stroke:#1565c0,stroke-width:2px;
+  linkStyle 10 stroke:#1565c0,stroke-width:2px;
+  linkStyle 14 stroke:#1565c0,stroke-width:2px;
+  linkStyle 15 stroke:#1565c0,stroke-width:2px;
+  linkStyle 32 stroke:#1565c0,stroke-width:2px;
+  linkStyle 37 stroke:#1565c0,stroke-width:2px;
+  linkStyle 38 stroke:#1565c0,stroke-width:2px;
+  linkStyle 39 stroke:#1565c0,stroke-width:2px;
+  linkStyle 40 stroke:#1565c0,stroke-width:2px;
+  linkStyle 41 stroke:#1565c0,stroke-width:2px;
+  linkStyle 42 stroke:#1565c0,stroke-width:2px;
+  linkStyle 89 stroke:#1565c0,stroke-width:2px;
+  linkStyle 98 stroke:#1565c0,stroke-width:2px;
 ```
 
 ## Validated visual/BPMN chain

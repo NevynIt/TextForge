@@ -2,6 +2,8 @@
 
 This cluster covers editor/surface capacity, workbench usability, command projection, and settings UI.
 
+V20 also tracks the knowledge-workspace UI layer here: document-neighborhood graph surfaces, a persisted spatial canvas, and comments sidecars are explicit follow-on workpackages rather than implicit parts of sketch resources or Markdown preview.
+
 ## Workpackages
 
 | WP | Title | Role |
@@ -9,6 +11,9 @@ This cluster covers editor/surface capacity, workbench usability, command projec
 | WP-SET-01 | User settings core and local persistence | Frontend-safe personalization. |
 | WP-SET-UI | User settings UI | Manage command/menu/layout complexity. |
 | WP-SURFACES-ADV | Advanced tabbed main surfaces | Stage 2 surface capacity. |
+| WP-DOC-GRAPH | Document neighborhood and local graph surface | Backlinks/local graph UI over `WP-LINK-INDEX`. |
+| WP-CANVAS | Spatial workspace canvas | Persisted canvas resource for arranging documents, cards, and embedded surfaces. |
+| WP-COMMENTS-SIDECAR | Comments and review sidecars | Review/comment UI over resource ranges and anchors. |
 | WP-ITM-VISUALS | ITM static visual projections/publication baseline | Validated projection/publication baseline, not runtime parity. |
 | WP-ITM-VTARGET-01 | ITM visual target picker MVP | View/viewpoint/raw-model visual target selection. |
 | WP-GRAPH-EDIT-VITM | Visual ITM edit/write-back foundation | Later review/apply patch model before direct write-back. |

@@ -207,6 +207,12 @@ As a pre-Phase-4 shell follow-up, the workspace tree rows and the main tab strip
 
 The shell now uses the existing inspector-card, empty-state, and utility-pane primitives to render a real package/capability inspector rather than a thin package list. The delivered `WP-05D` baseline shows a registry overview, current-document activation flow, `%require` state, exposed active contributions, per-package capability/contribution state, dependency/conflict summaries, and diagnostics, while still stopping short of plugin installation, remote loading, or editable package configuration.
 
+## V20 knowledge-workspace UI
+
+`@textforge/ui` should provide reusable primitives for `WP-DOC-GRAPH`, `WP-CANVAS`, and `WP-COMMENTS-SIDECAR` only after those workpackages define their contracts. Expected UI responsibilities include graph/neighborhood controls, canvas object chrome, sidecar comment threads, proposal status indicators, and non-destructive review/apply affordances.
+
+Do not treat these as generic popups or sketch annotations. They need explicit resource identity, anchor, revision, and write-back semantics from their owning workpackages.
+
 
 ## V16 backend-optional responsibilities
 

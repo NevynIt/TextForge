@@ -157,6 +157,17 @@ The bundled docs subtree is now expected to project into the live workspace as a
 
 `@textforge/workspace` now exposes frontend-safe repository-root helpers for local resolution: `createDefaultWorkspaceRepositoryRoots(...)` defines the default writable-workspace and bundled-docs roots, and `resolveWorkspaceRepositoryLocation(...)` resolves workspace paths, relative paths, provider-URI hints such as `bundled://...`, and explicit logical alias fixtures down to canonical workspace paths without direct fetch behavior. This keeps repository/include resolution on the same provider-aware resource model introduced by `WP-RES-01` instead of inventing a second repository metadata stack.
 
+## V20 knowledge-workspace responsibilities
+
+`@textforge/workspace` should own the persistence and resource-facing contracts for `WP-LINK-INDEX`, `WP-CANVAS`, `WP-COMMENTS-SIDECAR`, and `WP-CHANGE-PROPOSALS` where those contracts describe resource identity, anchors, link facts, sidecar resources, canvas resources, revisions, or multi-resource proposal payloads.
+
+Keep these concepts separate:
+
+- Link/backlink facts are workspace/document metadata, not ITM model graph data.
+- Canvas placement metadata is a workspace resource model, not a sketch/PDF annotation shortcut.
+- Comment sidecars require stable resource/range anchors and should not be implemented before revision-aware state is available.
+- Reviewable change proposals sit above raw changesets and should not be treated as GitLab-specific state.
+
 
 ## V16 backend-optional responsibilities
 

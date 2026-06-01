@@ -180,13 +180,19 @@ The package now passes parsed fence metadata, shared per-document fence state, a
 
 The preview surface now exposes host-owned Markdown link activation hooks so the shell can resolve relative and repository-qualified document links through the usual workspace resolver path and reopen the target resource inside TextForge instead of navigating the browser view away from the app.
 
+## V20 link index responsibilities
+
+`@textforge/markdown` is a producer for `WP-LINK-INDEX`, not the owner of the whole backlink system. It should expose parsed Markdown links, heading anchors, image/resource references, mentions if accepted by the workpackage, source ranges, and unresolved-reference diagnostics through public contracts that workspace/indexing code can consume.
+
+Preview link activation does not satisfy backlinks by itself. `WP-LINK-INDEX` must cover stored index state, reverse lookup, unresolved-link reporting, and document-neighborhood inputs without changing Markdown document semantics.
+
 
 ## V16 backend-optional responsibilities
 
 `@textforge/markdown` must preserve TF-MD document semantics independently from optional backend capabilities. `%include` and `%repository` resolution must use provider/repository contracts and diagnostics. Missing backend/GitLab/AI/service capabilities may disable actions or emit diagnostics, but must not change how Markdown is parsed.
 
 
-## V19 itm-pub visual pipeline
+## V20 itm-pub visual pipeline
 
 `itm-pub` should use the same visual target resolver and Visual ITM generation pipeline as interactive surfaces.
 

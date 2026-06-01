@@ -24,6 +24,7 @@ WP-BE-HOST -> WP-BE-API -> WP-BE-PERSIST
 | WP-SET-SYNC | Roaming user settings | Sync preferences only; never permissions. |
 | WP-SERVICES-BE | Backend-backed service folders | Server-side jobs with explicit control APIs. |
 | WP-COLLAB-LEASES | Soft collaboration leases | Advisory, time-bound locks; no live collaboration. |
+| WP-CHANGE-PROPOSALS | Reviewable change proposals | Review layer over multi-resource changesets; backend/GitLab can consume it later. |
 
 ## Entra rule
 
@@ -32,3 +33,7 @@ WP-BE-HOST -> WP-BE-API -> WP-BE-PERSIST
 ## Development rule
 
 A local Node/container preview server with fixture identity must be enough to develop backend persistence, policy checks, private/group spaces, settings sync, leases, GitLab scaffolding, and AI mediator scaffolding.
+
+## Review rule
+
+Raw changesets, GitLab merge requests, AI patch suggestions, and reviewable TextForge change proposals are separate concepts. `WP-CHANGE-PROPOSALS` owns the core review proposal model; GitLab and AI workpackages may adapt to it later.

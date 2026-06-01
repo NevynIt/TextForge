@@ -214,9 +214,9 @@ The package now participates in canonical execution rather than stopping at meta
 `@textforge/surfaces` must keep openability based on resource facts, active capabilities, and provider affordances. Optional backend capability absence should remove or disable actions, not change document semantics or bypass the Phase 5 contribution model.
 
 
-## V19 ITM visual target picker and runtime surfaces
+## V20 ITM visual target picker and runtime surfaces
 
-Surface/open-with behavior for `.itm` resources should follow the V19 rule:
+Surface/open-with behavior for `.itm` resources should follow the V20 visual baseline:
 
 - plain open opens the CodeMirror source editor;
 - `Open visuals…` launches a visual target picker;
@@ -225,3 +225,13 @@ Surface/open-with behavior for `.itm` resources should follow the V19 rule:
 - renderer unavailability is a diagnostic, not a silent fallback.
 
 Renderer surfaces must be package-owned contributions and should consume Visual ITM or renderer-specific contracts rather than shell-private ITM structures.
+
+## V20 knowledge-workspace surfaces
+
+`@textforge/surfaces` should treat `WP-DOC-GRAPH`, `WP-CANVAS`, and `WP-COMMENTS-SIDECAR` as distinct surface families:
+
+- Document graph surfaces consume `WP-LINK-INDEX`; they are not Visual ITM graph renderers.
+- Canvas surfaces mount persisted canvas resources and embed/refer to other resource surfaces through explicit descriptors.
+- Comments sidecars attach to stable resource anchors/ranges and should not mutate source documents directly.
+
+These surfaces must use normal contribution/surface eligibility rules and must not bypass command routing, provider capabilities, or write-back contracts.

@@ -7,7 +7,7 @@ This cluster contains valuable but deliberately delayed or investigatory work.
 | Candidate | Why delayed |
 |---|---|
 | True live collaborative editing | Requires deeper editor, undo/redo, cursor, conflict, offline, audit, and AI-edit interactions. |
-| Advanced compare/merge and review workflow | Useful after revisions/changesets/leasing are stable. |
+| Advanced compare/merge and review workflow | Useful after `WP-CHANGE-PROPOSALS`, revisions/changesets, and leasing are stable. |
 | AI patch application/autonomous editing | Requires explicit user approval, changeset integration, audit, policy, and rollback. |
 | ArchiMate visual editing | Best treated as investigation after semantic profile and graph write-back foundation. |
 | Native/local packaged app | Would require a distinct security profile if it introduces filesystem or OS integration. |
@@ -17,6 +17,12 @@ This cluster contains valuable but deliberately delayed or investigatory work.
 ## Rule
 
 Do not pull these forward unless their dependencies are met and a RAPID decision records why they are now needed.
+
+V20 separates concrete reviewable proposal scope from later advanced review research:
+
+- `WP-COMMENTS-SIDECAR` owns comments and review sidecars.
+- `WP-CHANGE-PROPOSALS` owns the core reviewable proposal model over changesets.
+- This later-investigation cluster keeps deeper compare/merge, true live collaboration, and autonomous editing out of the near-term proposal model.
 
 
 ## V19 visual editing reframing

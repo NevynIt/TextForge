@@ -21,6 +21,8 @@ const includedWorkpackageIds = [
   'WP-RES-02',
   'WP-RES-03',
   'WP-REPO-01',
+  'WP-LINK-INDEX',
+  'WP-DOC-GRAPH',
   'WP-ITM-02',
   'WP-ITM-VISUALS',
   'WP-VITM-01',
@@ -32,6 +34,7 @@ const includedWorkpackageIds = [
   'WP-RENDER-SIGMA',
   'WP-VITM-TRANSLATORS',
   'WP-GRAPH-EDIT-VITM',
+  'WP-CANVAS',
   'WP-MD-REPORT',
   'WP-ID-01',
   'WP-ID-DEV',
@@ -47,6 +50,8 @@ const includedWorkpackageIds = [
   'WP-GITLAB',
   'WP-SERVICES-BE',
   'WP-COLLAB-LEASES',
+  'WP-COMMENTS-SIDECAR',
+  'WP-CHANGE-PROPOSALS',
   'WP-AI-MEDIATOR',
   'WP-AI-CHAT',
   'WP-AI-PREF',
@@ -105,7 +110,14 @@ for (const row of registerRows) {
 
 const selectedStartableIds = new Set(extractCurrentStartableIds(implementationStatusMarkdown).filter((workpackageId) => includedSet.has(workpackageId)));
 const dependencyReadyIds = computeDependencyReadyIds({ orderedIds, registerById, completedIds, includedSet });
-const startableIds = new Set([...selectedStartableIds, ...dependencyReadyIds].filter((workpackageId) => !completedIds.has(workpackageId)));
+const startableIds = new Set(
+  [...selectedStartableIds, ...dependencyReadyIds].filter((workpackageId) => {
+    if (completedIds.has(workpackageId)) {
+      return false;
+    }
+    return !isBlocked(registerById.get(workpackageId));
+  }),
+);
 const edges = buildEdges({ orderedIds, registerById, completedIds, startableIds, includedSet });
 const generated = buildDocument({ orderedIds, registerById, completedIds, startableIds, edges });
 const existing = await readFile(outputPath, 'utf8');
@@ -266,6 +278,10 @@ function computeDependencyReadyIds({ orderedIds, registerById, completedIds, inc
     }
 
     const row = registerById.get(workpackageId);
+    if (isBlocked(row)) {
+      continue;
+    }
+
     const dependencySegments = splitDependencySegments(row['Depends on']);
     const blockingDependencyIds = [];
 
@@ -295,6 +311,10 @@ function computeDependencyReadyIds({ orderedIds, registerById, completedIds, inc
   }
 
   return new Set(dependencyReadyIds);
+}
+
+function isBlocked(row) {
+  return /\bblocked\b/i.test(row?.Status ?? '');
 }
 
 function formatNode(workpackageId, registerById) {
