@@ -19,6 +19,7 @@ TextForge gains an embedded `@textforge/ea-viewer` surface that is an exact loca
 - Keep React Flow and Dagre for the global, business, system, and AI-response graph layouts where the source viewer uses them.
 - Keep the custom SVG/detail views for datacenter, rack/server, project, capabilities, process, and related architecture detail views.
 - Normalize Django fixture array JSON from the full and diagrams-only exports into the local viewer state.
+- Bundle an EA Dashboard ITM profile plus Lua JSON-to-ITM and ITM-to-JSON translators that preserve the same fixture model for semantic round-trip evidence.
 - Preserve timeline/year slider behavior, level-of-detail slider behavior, viewpoint filters, impact trace state, selected-node panels, and drill-down flows.
 - Render from `sourceText`, `resource`, and workspace resource metadata; no default network calls.
 - Use package-scoped CSS/assets that do not depend on remote fonts or backend-hosted static files.
@@ -36,7 +37,7 @@ TextForge gains an embedded `@textforge/ea-viewer` surface that is an exact loca
 - New package: `packages/ea-viewer` / `@textforge/ea-viewer`.
 - Expected third-party runtime dependencies: `@xyflow/react` and `dagre`, versioned for the TextForge React/Vite build.
 - App touchpoint: `apps/textforge-web` package manifest registration only.
-- Optional examples/evidence: local EA JSON fixtures under a docs or validation fixture path once implementation starts.
+- Bundled examples/evidence: local EA JSON fixture, ITM profile, and Lua translators under `docs/examples/ea/`.
 
 ## Interfaces / Contracts Changed
 
@@ -52,6 +53,7 @@ Use `validation/checklists/workpackages/WP-EA-VIEWER-01-exact-ea-dashboard-viewe
 ## Evidence Required
 
 - Focused parser/normalizer tests for full and diagrams-only fixture exports.
+- Focused ITM profile and Lua translator round-trip tests for the bundled EA example fixture.
 - Surface mount smoke test covering open, close, and reopen of a recognized JSON resource.
 - Browser screenshot or equivalent UI verification showing graph rendering plus working timeline and detail-level sliders.
 - Build verification for touched packages and `apps/textforge-web`.

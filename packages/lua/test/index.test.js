@@ -560,6 +560,42 @@ test('power-session registry host objects return cloned read-only snapshots and 
   assert.equal(sharedPipelines[0]?.label, 'Render HTML');
 });
 
+test('bundled EA Dashboard Lua translators round-trip representative fixture JSON', () => {
+  const jsonToItm = readFileSync(new URL('../../../docs/examples/ea/ea-dashboard-json-to-itm.lua', import.meta.url), 'utf8');
+  const itmToJson = readFileSync(new URL('../../../docs/examples/ea/ea-dashboard-itm-to-json.lua', import.meta.url), 'utf8');
+  const fixtureJson = readFileSync(new URL('../../../docs/examples/ea/ea-dashboard-sample.json', import.meta.url), 'utf8');
+  const limits = {
+    ...defaultLuaExecutionLimits,
+    maxInstructions: 20_000_000,
+    maxWallTimeMs: 5_000,
+    maxOutputBytes: 5_000_000,
+  };
+
+  const itmResult = runLuaScript({
+    scriptPath: '/docs/examples/ea/ea-dashboard-json-to-itm.lua',
+    source: jsonToItm,
+    input: createPipelineValue('text', fixtureJson),
+    limits,
+  });
+
+  assert.equal(itmResult.ok, true);
+  assert.equal(itmResult.value?.kind, 'text');
+  assert.match(itmResult.value?.value ?? '', /%include ea-dashboard-profile\.itm/);
+  assert.match(itmResult.value?.value ?? '', /\[ead::System\]/);
+  assert.match(itmResult.value?.value ?? '', /@ead::systems:ead_system_30/);
+
+  const jsonResult = runLuaScript({
+    scriptPath: '/docs/examples/ea/ea-dashboard-itm-to-json.lua',
+    source: itmToJson,
+    input: createPipelineValue('text', itmResult.value.value),
+    limits,
+  });
+
+  assert.equal(jsonResult.ok, true);
+  assert.equal(jsonResult.value?.kind, 'text');
+  assert.deepEqual(JSON.parse(jsonResult.value.value), JSON.parse(fixtureJson));
+});
+
 test('Lua guide only documents the shipped Lua surface', () => {
   const guide = readFileSync(new URL('../../../docs/guides/lua-guide.md', import.meta.url), 'utf8');
 

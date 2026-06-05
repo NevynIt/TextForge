@@ -1,0 +1,665 @@
+%metadata
+{
+  title: TextForge EA Dashboard ITM Profile
+  version: 0.1.0
+  status: draft
+  defaultNamespace: ead
+  profile: itm.ea.dashboard
+  sourceFormat: Django fixture JSON
+  description: Reusable ITM package for the EA Dashboard architecture JSON exports from C:/Stuff/ea-dashboard.
+}
+
+%package ea_dashboard_profile
+{
+  version: 0.1.0
+  namespace: ead
+  profileKind: enterprise-architecture-json-profile
+  sourceFormat: Django fixture JSON
+  sourceApplication: ea-dashboard
+  sourceModels:
+    - architecture.securitydomain
+    - architecture.domain
+    - architecture.capability
+    - architecture.system
+    - architecture.service
+    - architecture.dataentity
+    - architecture.datacenter
+    - architecture.rack
+    - architecture.server
+    - architecture.cloudresource
+    - architecture.database
+    - architecture.project
+    - architecture.strategicgoal
+    - architecture.valuestream
+    - architecture.businessunit
+    - architecture.businessprocess
+  activation:
+    - ea_dashboard_profile.types
+    - ea_dashboard_profile.relationships
+    - ea_dashboard_profile.rules
+    - ea_dashboard_profile.styles
+    - ea_dashboard_profile.viewpoints
+}
+
+%namespace ead https://example.org/textforge/ea-dashboard
+%namespace itm https://example.org/itm
+%namespace prov https://www.w3.org/ns/prov
+%namespace layout https://example.org/itm/layout
+
+%require itm.core ^0.1.0
+%require itm.validation ^0.1.0
+%require itm.graph-model ^0.1.0
+%require itm.viewpoint ^0.1.0
+%require itm.roundtrip.meta ^0.1.0
+%require ead.translator.lua ^0.1.0
+
+%entitytype ead::Record
+{
+  abstract: true
+  description: Base type for one Django fixture record from the EA Dashboard JSON export.
+  requiredAttributes:
+    - sourceModel
+    - sourcePk
+  recommendedAttributes:
+    - sourceOrder
+    - name
+    - description
+    - security_domain
+}
+
+%entitytype ead::SecurityDomain
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.securitydomain
+  sourceFields:
+    - name
+    - abbreviation
+    - level
+    - color
+  requiredAttributes:
+    - name
+    - abbreviation
+    - level
+    - color
+}
+
+%entitytype ead::Domain
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.domain
+  sourceFields:
+    - name
+    - description
+    - security_domain
+}
+
+%entitytype ead::Capability
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.capability
+  sourceFields:
+    - domain
+    - name
+    - description
+    - security_domain
+}
+
+%entitytype ead::System
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.system
+  sourceFields:
+    - name
+    - description
+    - security_domain
+    - technology_stack
+    - api_version
+    - network_zone
+    - capabilities
+}
+
+%entitytype ead::Service
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.service
+  sourceFields:
+    - name
+    - description
+    - system
+    - security_domain
+    - port
+    - protocol
+    - bandwidth
+    - consumed_by
+}
+
+%entitytype ead::DataEntity
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.dataentity
+  sourceFields:
+    - name
+    - description
+    - system
+    - security_domain
+}
+
+%entitytype ead::Datacenter
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.datacenter
+  sourceFields:
+    - name
+    - location
+    - security_domain
+}
+
+%entitytype ead::Rack
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.rack
+  sourceFields:
+    - datacenter
+    - name
+    - row
+    - column
+    - security_domain
+}
+
+%entitytype ead::Server
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.server
+  sourceFields:
+    - hostname
+    - datacenter
+    - rack
+    - u_position
+    - u_size
+    - ip_address
+    - os
+    - cpu_cores
+    - ram_gb
+    - security_domain
+    - mac_address
+    - subnet
+    - switch_port
+    - role
+    - systems
+}
+
+%entitytype ead::CloudResource
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.cloudresource
+  sourceFields:
+    - name
+    - provider
+    - resource_type
+    - security_domain
+    - systems
+}
+
+%entitytype ead::Database
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.database
+  sourceFields:
+    - name
+    - engine
+    - system
+    - server
+    - cloud_resource
+    - security_domain
+    - port
+    - connection_pool
+    - max_connections
+}
+
+%entitytype ead::Project
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.project
+  sourceFields:
+    - name
+    - status
+    - description
+    - start_date
+    - end_date
+    - planned_start_date
+    - planned_end_date
+    - completion_percentage
+    - security_domain
+    - dependencies
+    - domains
+    - capabilities
+    - systems
+    - services
+    - servers
+    - cloud_resources
+}
+
+%entitytype ead::StrategicGoal
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.strategicgoal
+  sourceFields:
+    - name
+    - description
+    - security_domain
+    - capabilities
+    - projects
+}
+
+%entitytype ead::ValueStream
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.valuestream
+  sourceFields:
+    - name
+    - description
+    - security_domain
+    - strategic_goals
+}
+
+%entitytype ead::BusinessUnit
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.businessunit
+  sourceFields:
+    - name
+    - description
+    - security_domain
+    - value_streams
+    - systems
+}
+
+%entitytype ead::BusinessProcess
+{
+  extends:
+    - ead::Record
+  sourceModel: architecture.businessprocess
+  sourceFields:
+    - name
+    - description
+    - value_stream
+    - business_unit
+    - security_domain
+    - systems
+}
+
+%relationshiptype ead::security_domain
+{
+  description: Django foreign key to architecture.securitydomain.
+  sourceTypes:
+    - ead::Record
+  targetTypes:
+    - ead::SecurityDomain
+  jsonField: security_domain
+  cardinality: optional-one
+}
+
+%relationshiptype ead::domain
+{
+  sourceTypes:
+    - ead::Capability
+  targetTypes:
+    - ead::Domain
+  jsonField: domain
+  cardinality: required-one
+}
+
+%relationshiptype ead::capabilities
+{
+  sourceTypes:
+    - ead::System
+    - ead::Project
+    - ead::StrategicGoal
+  targetTypes:
+    - ead::Capability
+  jsonField: capabilities
+  cardinality: many
+}
+
+%relationshiptype ead::system
+{
+  sourceTypes:
+    - ead::Service
+    - ead::DataEntity
+    - ead::Database
+  targetTypes:
+    - ead::System
+  jsonField: system
+  cardinality: required-one
+}
+
+%relationshiptype ead::consumed_by
+{
+  sourceTypes:
+    - ead::Service
+  targetTypes:
+    - ead::System
+  jsonField: consumed_by
+  cardinality: many
+}
+
+%relationshiptype ead::datacenter
+{
+  sourceTypes:
+    - ead::Rack
+    - ead::Server
+  targetTypes:
+    - ead::Datacenter
+  jsonField: datacenter
+  cardinality: required-one
+}
+
+%relationshiptype ead::systems
+{
+  sourceTypes:
+    - ead::Server
+    - ead::CloudResource
+    - ead::Project
+    - ead::BusinessUnit
+    - ead::BusinessProcess
+  targetTypes:
+    - ead::System
+  jsonField: systems
+  cardinality: many
+}
+
+%relationshiptype ead::rack
+{
+  sourceTypes:
+    - ead::Server
+  targetTypes:
+    - ead::Rack
+  jsonField: rack
+  cardinality: optional-one
+}
+
+%relationshiptype ead::cloud_resource
+{
+  sourceTypes:
+    - ead::Database
+  targetTypes:
+    - ead::CloudResource
+  jsonField: cloud_resource
+  cardinality: optional-one
+}
+
+%relationshiptype ead::dependencies
+{
+  sourceTypes:
+    - ead::Project
+  targetTypes:
+    - ead::Project
+  jsonField: dependencies
+  cardinality: many
+}
+
+%relationshiptype ead::domains
+{
+  sourceTypes:
+    - ead::Project
+  targetTypes:
+    - ead::Domain
+  jsonField: domains
+  cardinality: many
+}
+
+%relationshiptype ead::services
+{
+  sourceTypes:
+    - ead::Project
+  targetTypes:
+    - ead::Service
+  jsonField: services
+  cardinality: many
+}
+
+%relationshiptype ead::servers
+{
+  sourceTypes:
+    - ead::Project
+  targetTypes:
+    - ead::Server
+  jsonField: servers
+  cardinality: many
+}
+
+%relationshiptype ead::cloud_resources
+{
+  sourceTypes:
+    - ead::Project
+  targetTypes:
+    - ead::CloudResource
+  jsonField: cloud_resources
+  cardinality: many
+}
+
+%relationshiptype ead::projects
+{
+  sourceTypes:
+    - ead::StrategicGoal
+  targetTypes:
+    - ead::Project
+  jsonField: projects
+  cardinality: many
+}
+
+%relationshiptype ead::strategic_goals
+{
+  sourceTypes:
+    - ead::ValueStream
+  targetTypes:
+    - ead::StrategicGoal
+  jsonField: strategic_goals
+  cardinality: many
+}
+
+%relationshiptype ead::value_streams
+{
+  sourceTypes:
+    - ead::BusinessUnit
+  targetTypes:
+    - ead::ValueStream
+  jsonField: value_streams
+  cardinality: many
+}
+
+%relationshiptype ead::value_stream
+{
+  sourceTypes:
+    - ead::BusinessProcess
+  targetTypes:
+    - ead::ValueStream
+  jsonField: value_stream
+  cardinality: required-one
+}
+
+%relationshiptype ead::business_unit
+{
+  sourceTypes:
+    - ead::BusinessProcess
+  targetTypes:
+    - ead::BusinessUnit
+  jsonField: business_unit
+  cardinality: optional-one
+}
+
+%rule ead_records_preserve_source_identity
+{
+  select: "[ead::Record]"
+  pipeline:
+    - requireAttribute: sourceModel
+    - requireAttribute: sourcePk
+  severity: error
+  message: "EA Dashboard records must keep sourceModel and sourcePk for JSON round-trip export."
+}
+
+%rule ead_relationships_preserve_json_field
+{
+  select: "ANY(@ead::security_domain:*, @ead::domain:*, @ead::capabilities:*, @ead::system:*, @ead::consumed_by:*, @ead::datacenter:*, @ead::systems:*, @ead::rack:*, @ead::cloud_resource:*, @ead::dependencies:*, @ead::domains:*, @ead::services:*, @ead::servers:*, @ead::cloud_resources:*, @ead::projects:*, @ead::strategic_goals:*, @ead::value_streams:*, @ead::value_stream:*, @ead::business_unit:*)"
+  pipeline:
+    - requireSourceId
+    - requireTargetResolvedOrRoundTripId
+  severity: warning
+  message: "EA Dashboard relationship targets should resolve or keep deterministic round-trip ids."
+}
+
+%style [ead::SecurityDomain]
+{
+  shape: tag
+  fill: "#f8fafc"
+  stroke: "#64748b"
+}
+
+%style [ead::Domain]
+{
+  shape: rounded-rectangle
+  fill: "#e0f2fe"
+  stroke: "#0284c7"
+}
+
+%style [ead::Capability]
+{
+  shape: rounded-rectangle
+  fill: "#fef3c7"
+  stroke: "#d97706"
+}
+
+%style [ead::System]
+{
+  shape: rectangle
+  fill: "#dcfce7"
+  stroke: "#16a34a"
+}
+
+%style [ead::Service]
+{
+  shape: rectangle
+  fill: "#f0f9ff"
+  stroke: "#2563eb"
+}
+
+%style [ead::Datacenter]
+{
+  shape: cylinder
+  fill: "#ede9fe"
+  stroke: "#7c3aed"
+}
+
+%style [ead::Rack]
+{
+  shape: rectangle
+  fill: "#f1f5f9"
+  stroke: "#475569"
+}
+
+%style [ead::Server]
+{
+  shape: rectangle
+  fill: "#e2e8f0"
+  stroke: "#334155"
+}
+
+%style [ead::Project]
+{
+  shape: rounded-rectangle
+  fill: "#fae8ff"
+  stroke: "#c026d3"
+}
+
+%style @ead::security_domain:*
+{
+  stroke: "#64748b"
+  stroke-dasharray: "3 3"
+}
+
+%viewpoint ead_global_dashboard
+{
+  description: Mirrors the EA Dashboard global systems map with network, capability, and dependency perspectives.
+  parameters:
+    timelineYear:
+      type: integer
+      default: 2026
+      minimum: 2012
+      maximum: 2042
+    detailLevel:
+      type: integer
+      default: 2
+      minimum: 1
+      maximum: 3
+    viewpoint:
+      enum:
+        - network
+        - capability
+        - dependency
+      default: network
+  pipeline:
+    - select: "ANY([ead::System], [ead::Service], [ead::Database], [ead::CloudResource], [ead::Datacenter], [ead::Project])"
+    - includeEdges: "ANY(@ead::capabilities:*, @ead::system:*, @ead::consumed_by:*, @ead::datacenter:*, @ead::systems:*, @ead::cloud_resource:*, @ead::dependencies:*, @ead::services:*, @ead::servers:*, @ead::cloud_resources:*)"
+    - transform: graph.model
+    - layout: dagre
+    - render: graph.viewer
+}
+
+%viewpoint ead_business_dashboard
+{
+  description: Mirrors the business architecture path from strategic goals to value streams, processes, and systems.
+  pipeline:
+    - select: "ANY([ead::StrategicGoal], [ead::ValueStream], [ead::BusinessUnit], [ead::BusinessProcess], [ead::System], [ead::Capability], [ead::Domain])"
+    - includeEdges: "ANY(@ead::strategic_goals:*, @ead::value_streams:*, @ead::value_stream:*, @ead::business_unit:*, @ead::systems:*, @ead::capabilities:*, @ead::domain:*)"
+    - transform: graph.model
+    - layout: dagre
+    - render: graph.viewer
+}
+
+%viewpoint ead_infrastructure_dashboard
+{
+  description: Mirrors the datacenter/rack/server physical placement and hosting model.
+  pipeline:
+    - select: "ANY([ead::Datacenter], [ead::Rack], [ead::Server], [ead::System], [ead::Database], [ead::CloudResource])"
+    - includeEdges: "ANY(@ead::datacenter:*, @ead::rack:*, @ead::systems:*, @ead::system:*, @ead::cloud_resource:*)"
+    - transform: graph.model
+    - layout: dagre
+    - render: graph.viewer
+}
+
+%view ea_dashboard_global
+{
+  viewpoint: ead_global_dashboard
+  title: EA Dashboard global map
+  parameters:
+    timelineYear: 2026
+    detailLevel: 2
+    viewpoint: network
+}
+
+%view ea_dashboard_business
+{
+  viewpoint: ead_business_dashboard
+  title: EA Dashboard business architecture
+}
+
+%view ea_dashboard_infrastructure
+{
+  viewpoint: ead_infrastructure_dashboard
+  title: EA Dashboard infrastructure architecture
+}

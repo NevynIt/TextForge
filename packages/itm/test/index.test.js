@@ -24,6 +24,7 @@ import {
 const testDirectory = dirname(fileURLToPath(import.meta.url));
 const examplesDirectory = resolve(testDirectory, '../src/examples');
 const docsExamplesDirectory = resolve(testDirectory, '..', '..', '..', 'docs', 'examples', 'itm', 'test-profiles');
+const docsEaDirectory = resolve(testDirectory, '..', '..', '..', 'docs', 'examples', 'ea');
 
 test('upstream parser is available through the package wrapper', () => {
   const document = parseDocument(`%metadata
@@ -681,4 +682,21 @@ test('vendored ArchiMate and BPMN profile fixtures remain loadable through the p
   assert.equal((bpmn.document.packages?.length ?? 0) > 0, true);
   assert.equal((bpmn.document.relationshipTypes?.length ?? 0) > 0, true);
   assert.equal((bpmn.document.viewpoints?.length ?? 0) > 0, true);
+});
+
+test('bundled EA Dashboard profile fixture remains loadable through the public package APIs', async () => {
+  const eaProfile = readFileSync(resolve(docsEaDirectory, 'ea-dashboard-profile.itm'), 'utf8');
+
+  const loaded = await loadItmDocument(eaProfile, {
+    uri: '/docs/examples/ea/ea-dashboard-profile.itm',
+    includeStdProfiles: false,
+  });
+
+  assert.equal((loaded.document.packages?.length ?? 0) > 0, true);
+  assert.equal(loaded.document.entityTypes.some((entityType) => entityType.name === 'ead::System'), true);
+  assert.equal(loaded.document.entityTypes.some((entityType) => entityType.name === 'ead::BusinessProcess'), true);
+  assert.equal(loaded.document.relationshipTypes.some((relationshipType) => relationshipType.name === 'ead::systems'), true);
+  assert.equal(loaded.document.relationshipTypes.some((relationshipType) => relationshipType.name === 'ead::security_domain'), true);
+  assert.equal(loaded.document.viewpoints.some((viewpoint) => viewpoint.name === 'ead_global_dashboard'), true);
+  assert.equal(loaded.document.views.some((view) => view.name === 'ea_dashboard_global'), true);
 });

@@ -32,6 +32,7 @@ Enterprise Architecture Viewer owns the TextForge module boundary for an exact l
 - `@textforge/ea-viewer` package contribution
 - `packages/ea-viewer` module implementation boundary
 - EA dashboard fixture JSON profile detection for workspace `.json` resources
+- bundled EA Dashboard ITM profile and Lua JSON/ITM round-trip translator examples
 - surface contribution ID for the embedded architecture dashboard viewer
 - local-only rendering profile compatible with the TextForge CSP
 

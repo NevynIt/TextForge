@@ -9,6 +9,7 @@ Embedded TextForge surface port of the EA Dashboard React viewer for local JSON 
 - `@textforge/ea-viewer` registers as a package contribution and surface.
 - Recognized EA dashboard JSON fixture exports open from workspace `.json` resources.
 - Full architecture export and diagrams-only export normalization paths are covered.
+- Bundled EA Dashboard ITM profile and Lua JSON-to-ITM / ITM-to-JSON translators cover the same Django fixture model.
 - React Flow and Dagre graph views render from local data.
 - Custom SVG/detail views render from local data.
 - Timeline/year slider is present and changes the same data/view state as the source dashboard.
@@ -21,4 +22,6 @@ Embedded TextForge surface port of the EA Dashboard React viewer for local JSON 
 
 ## Validation evidence
 
-- Pending implementation evidence.
+- Bundled profile/translators: `docs/examples/ea/ea-dashboard-profile.itm`, `docs/examples/ea/ea-dashboard-json-to-itm.lua`, `docs/examples/ea/ea-dashboard-itm-to-json.lua`.
+- Representative fixture: `docs/examples/ea/ea-dashboard-sample.json`.
+- Focused checks: `corepack pnpm --filter @textforge/lua test`, `corepack pnpm --filter @textforge/itm test`.

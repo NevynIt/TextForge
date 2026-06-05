@@ -1,0 +1,201 @@
+[
+  {
+    "model": "architecture.securitydomain",
+    "pk": 1,
+    "fields": {
+      "name": "NATO RESTRICTED",
+      "abbreviation": "NR",
+      "level": 2,
+      "color": "#3b82f6"
+    }
+  },
+  {
+    "model": "architecture.domain",
+    "pk": 10,
+    "fields": {
+      "name": "Enterprise Secure Networks",
+      "description": "Static routing, identity, cyber defense, and guards.",
+      "security_domain": 1
+    }
+  },
+  {
+    "model": "architecture.capability",
+    "pk": 20,
+    "fields": {
+      "domain": 10,
+      "name": "Federated Directory & Access",
+      "description": "Directory and PKI access services.",
+      "security_domain": 1
+    }
+  },
+  {
+    "model": "architecture.system",
+    "pk": 30,
+    "fields": {
+      "name": "N-DIR Core",
+      "description": "Directory and certificate services.",
+      "security_domain": 1,
+      "technology_stack": "Windows Active Directory / PKI Services",
+      "api_version": "v1.2.0",
+      "network_zone": "Core Security Zone",
+      "capabilities": [20]
+    }
+  },
+  {
+    "model": "architecture.service",
+    "pk": 40,
+    "fields": {
+      "name": "Directory Lookup",
+      "description": "LDAPS identity lookup.",
+      "system": 30,
+      "security_domain": 1,
+      "port": 636,
+      "protocol": "LDAPS",
+      "bandwidth": "10 Mbps",
+      "consumed_by": [30]
+    }
+  },
+  {
+    "model": "architecture.dataentity",
+    "pk": 50,
+    "fields": {
+      "name": "Identity Record",
+      "description": "User and certificate identity data.",
+      "system": 30,
+      "security_domain": 1
+    }
+  },
+  {
+    "model": "architecture.datacenter",
+    "pk": 60,
+    "fields": {
+      "name": "Mons Primary DC",
+      "location": "Mons",
+      "security_domain": 1
+    }
+  },
+  {
+    "model": "architecture.rack",
+    "pk": 70,
+    "fields": {
+      "datacenter": 60,
+      "name": "1A",
+      "row": 1,
+      "column": 1,
+      "security_domain": 1
+    }
+  },
+  {
+    "model": "architecture.server",
+    "pk": 80,
+    "fields": {
+      "hostname": "ndir-core-01",
+      "datacenter": 60,
+      "rack": 70,
+      "u_position": 10,
+      "u_size": 2,
+      "ip_address": "10.10.1.10",
+      "os": "Windows Server",
+      "cpu_cores": 16,
+      "ram_gb": 64,
+      "security_domain": 1,
+      "mac_address": "AA:BB:CC:DD:EE:01",
+      "subnet": "10.10.1.0/24",
+      "switch_port": "SW-01/Port-10",
+      "role": "application",
+      "systems": [30]
+    }
+  },
+  {
+    "model": "architecture.cloudresource",
+    "pk": 90,
+    "fields": {
+      "name": "Audit Archive",
+      "provider": "Azure",
+      "resource_type": "StorageAccount",
+      "security_domain": 1,
+      "systems": [30]
+    }
+  },
+  {
+    "model": "architecture.database",
+    "pk": 100,
+    "fields": {
+      "name": "Directory DB",
+      "engine": "PostgreSQL",
+      "system": 30,
+      "server": 80,
+      "cloud_resource": 90,
+      "security_domain": 1,
+      "port": 5432,
+      "connection_pool": "PgBouncer",
+      "max_connections": 500
+    }
+  },
+  {
+    "model": "architecture.project",
+    "pk": 110,
+    "fields": {
+      "name": "PKI Refresh",
+      "status": "In Progress",
+      "description": "Modernize certificate authority services.",
+      "start_date": "2026-01-01",
+      "end_date": null,
+      "planned_start_date": "2026-01-01",
+      "planned_end_date": "2028-12-31",
+      "completion_percentage": 40,
+      "security_domain": 1,
+      "dependencies": [],
+      "domains": [10],
+      "capabilities": [20],
+      "systems": [30],
+      "services": [40],
+      "servers": [80],
+      "cloud_resources": [90]
+    }
+  },
+  {
+    "model": "architecture.strategicgoal",
+    "pk": 120,
+    "fields": {
+      "name": "Secure Identity",
+      "description": "Improve resilient identity services.",
+      "security_domain": 1,
+      "capabilities": [20],
+      "projects": [110]
+    }
+  },
+  {
+    "model": "architecture.valuestream",
+    "pk": 130,
+    "fields": {
+      "name": "Identity Assurance",
+      "description": "Deliver trusted identities to mission systems.",
+      "security_domain": 1,
+      "strategic_goals": [120]
+    }
+  },
+  {
+    "model": "architecture.businessunit",
+    "pk": 140,
+    "fields": {
+      "name": "Cyber Operations",
+      "description": "Runs cyber and identity operations.",
+      "security_domain": 1,
+      "value_streams": [130],
+      "systems": [30]
+    }
+  },
+  {
+    "model": "architecture.businessprocess",
+    "pk": 150,
+    "fields": {
+      "name": "Provision Identity",
+      "description": "Create and validate identities.",
+      "value_stream": 130,
+      "business_unit": 140,
+      "security_domain": 1,
+      "systems": [30]
+    }
+  }
+]
