@@ -7,6 +7,7 @@
 | WP | Title | Status | Module |
 |---|---|---|---|
 | `WP-TABLES` | Tables, catalogues, and matrices | blocked | `MOD-TABLES` |
+| `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | ready | `MOD-EA-VIEWER` |
 
 ## Next Candidates
 

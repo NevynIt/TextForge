@@ -10,6 +10,7 @@
 | candidate | 14 |
 | deferred | 1 |
 | defined | 32 |
+| ready | 1 |
 | validated | 22 |
 
 ## Workpackages
@@ -76,6 +77,7 @@
 | `WP-MD-RICH` | Rich Markdown editing | defined | `MOD-MARKDOWN-ITM` |
 | `WP-PIPELINE-EDITOR` | Pipeline/diagram editor surfaces | defined | `MOD-SURFACES-UI` |
 | `WP-ARCHIMATE-VISUAL` | ArchiMate visual editing investigation | defined | `MOD-ARCHIMATE` |
+| `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | ready | `MOD-EA-VIEWER` |
 | `WP-SKETCH` | Sketch and annotation resources | defined | `MOD-SKETCH` |
 | `WP-COMMENTS-SIDECAR` | Comments and review sidecars | candidate | `MOD-KNOWLEDGE-WORKSPACE` |
 | `WP-CHANGE-PROPOSALS` | Reviewable change proposals | candidate | `MOD-KNOWLEDGE-WORKSPACE` |

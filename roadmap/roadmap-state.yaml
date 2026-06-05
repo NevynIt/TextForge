@@ -216,6 +216,32 @@
         "archive/registers/specs/legacy-specs/architecture/textforge-rebuild-whitepaper.md"
       ]
     },
+    "MOD-EA-VIEWER": {
+      "title": "Enterprise architecture viewer",
+      "path": "modules/enterprise-architecture-viewer.md",
+      "status": "defined",
+      "owns": [
+        "EA dashboard exact-port surface package",
+        "Django fixture JSON normalization for architecture datasets",
+        "React Flow and Dagre architecture map runtime",
+        "timeline and detail-level viewer controls"
+      ],
+      "depends_on": [
+        "MOD-WORKSPACE-RESOURCES",
+        "MOD-SURFACES-UI",
+        "MOD-SECURITY-DISTRIBUTION"
+      ],
+      "enables": [
+        "WP-EA-VIEWER-01"
+      ],
+      "archive_trace": [
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/App.jsx",
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/GlobalDashboard.jsx",
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/SystemView.jsx",
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/SettingsView.jsx",
+        "external reference: C:/Stuff/ea-dashboard/data_export/ea_architecture_backup_2026-06-05.json"
+      ]
+    },
     "MOD-TABLES": {
       "title": "Tables",
       "path": "modules/tables.md",
@@ -422,7 +448,8 @@
         "WP-SET-01",
         "WP-05D",
         "WP-SET-UI",
-        "WP-SURFACES-ADV"
+        "WP-SURFACES-ADV",
+        "WP-EA-VIEWER-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -454,7 +481,8 @@
         "WP-05D",
         "WP-ITM-02",
         "WP-REPO-01",
-        "WP-RES-03"
+        "WP-RES-03",
+        "WP-EA-VIEWER-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -487,7 +515,8 @@
         "WP-ITM-VTARGET-01",
         "WP-LUA",
         "WP-SERVICES-LOCAL",
-        "WP-PIPELINE-EDITOR"
+        "WP-PIPELINE-EDITOR",
+        "WP-EA-VIEWER-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -547,7 +576,8 @@
         "WP-SERVICES-LOCAL",
         "WP-CANVAS",
         "WP-PRIVATE-CONTRACT",
-        "WP-SKETCH"
+        "WP-SKETCH",
+        "WP-EA-VIEWER-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -2171,6 +2201,40 @@
       ],
       "validation_checklist": null
     },
+    "WP-EA-VIEWER-01": {
+      "title": "Exact EA dashboard viewer surface",
+      "path": "workpackages/WP-EA-VIEWER-01.md",
+      "module": "MOD-EA-VIEWER",
+      "status": "ready",
+      "type": "Feature / exact port",
+      "depends_on": [
+        "WP-05A",
+        "WP-05B",
+        "WP-05C",
+        "WP-RES-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-EA-VIEWER-MVP"
+      ],
+      "production_required": false,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/App.jsx",
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/GlobalDashboard.jsx",
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/BusinessDashboard.jsx",
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/SystemView.jsx",
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/DataCenterView.jsx",
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/ProcessMapView.jsx",
+        "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/SettingsView.jsx",
+        "external reference: C:/Stuff/ea-dashboard/data_export/ea_architecture_backup_2026-06-05.json",
+        "external reference: C:/Stuff/ea-dashboard/data_export/ea_diagrams_backup_2026-06-05.json"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-EA-VIEWER-01-exact-ea-dashboard-viewer-surface.md"
+    },
     "WP-SKETCH": {
       "title": "Sketch and annotation resources",
       "path": "workpackages/WP-SKETCH.md",
@@ -2506,6 +2570,15 @@
         "WP-ARCHIMATE-VISUAL"
       ],
       "target_outcome": "Runtime Visual ITM and read-only BPMN consumption baseline with clearly deferred edit/write-back gates."
+    },
+    "R-EA-VIEWER-MVP": {
+      "title": "Enterprise architecture viewer MVP",
+      "status": "candidate",
+      "path": "releases/R-EA-VIEWER-MVP.md",
+      "workpackages": [
+        "WP-EA-VIEWER-01"
+      ],
+      "target_outcome": "Exact local TextForge surface port of the EA dashboard viewer over workspace JSON architecture fixtures."
     },
     "R-BACKEND-PREVIEW": {
       "title": "Backend preview",
