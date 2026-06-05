@@ -1,16 +1,19 @@
-# WP-ID — Title
+# WP-<AREA>-<ID> — <workpackage title>
 
-| Field | Value |
-|---|---|
-| Legacy source | Phase / file / decision |
-| Type | core / contract / implementation / adapter / profile / ui / domain / security / validation / investigation |
-| Status | not started / ready / in progress / implemented / validated / deferred / blocked |
-| Depends on | ... |
-| Enables | ... |
-| Can be deferred | yes/no |
-| Production required | yes/no / only for selected profile |
+## Metadata
 
-## Purpose
+- Status:
+- Module:
+- Type:
+- Depends on:
+- Enables:
+- Release candidates:
+- Production required:
+- Deferrable:
+- Owner packages:
+- Archive trace:
+
+## Outcome
 
 ## Scope
 
@@ -18,8 +21,12 @@
 
 ## Package impact
 
-## Validation / definition of done
+## Interfaces / contracts changed
 
-## RAPID updates required
+## Validation criteria
+
+## Evidence required
+
+## Open decisions
 
 ## Notes

@@ -1,0 +1,2557 @@
+{
+  "schema_version": 1,
+  "format_note": "This file is JSON-compatible YAML. It is the authoritative roadmap registry.",
+  "status_values": [
+    "candidate",
+    "defined",
+    "ready",
+    "in-progress",
+    "implemented",
+    "validated",
+    "blocked",
+    "deferred",
+    "archived"
+  ],
+  "modules": {
+    "MOD-ROADMAP-GOVERNANCE": {
+      "title": "Roadmap governance",
+      "path": "modules/roadmap-governance.md",
+      "status": "active",
+      "owns": [
+        "roadmap authority model",
+        "module/workpackage/release registry conventions",
+        "ADR and RAPID placement",
+        "generated view governance"
+      ],
+      "depends_on": [],
+      "enables": [
+        "WP-ROADMAP-CLEANUP",
+        "WP-RELEASE-GATE",
+        "WP-REPO-SHAREPOINT"
+      ],
+      "archive_trace": [
+        "archive/registers/AGENTS_START_HERE.md",
+        "archive/phases/ROADMAP_V20.md",
+        "archive/registers/package-guides/README.md",
+        "archive/registers/specs/legacy-specs/architecture/package-strategy.md",
+        "decisions/ADR-0001-roadmap-governance-reset.md"
+      ]
+    },
+    "MOD-WORKSPACE-RESOURCES": {
+      "title": "Workspace resources",
+      "path": "modules/workspace-resources.md",
+      "status": "defined",
+      "owns": [
+        "workspace resource facts",
+        "provider-aware descriptors",
+        "local resource revisions and changesets",
+        "workspace import/export boundaries"
+      ],
+      "depends_on": [],
+      "enables": [
+        "WP-RES-01",
+        "WP-RES-02",
+        "WP-RES-03",
+        "WP-SERVICES-LOCAL"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/workspace.md",
+        "archive/registers/package-guides/assets.md",
+        "archive/registers/package-guides/editors.md",
+        "archive/registers/specs/legacy-specs/architecture/backend-optional-architecture.md"
+      ]
+    },
+    "MOD-REPOSITORY": {
+      "title": "Repository",
+      "path": "modules/repository.md",
+      "status": "defined",
+      "owns": [
+        "logical repository declarations",
+        "provider-backed include resolution",
+        "repository diagnostics"
+      ],
+      "depends_on": [
+        "MOD-WORKSPACE-RESOURCES",
+        "MOD-ITM"
+      ],
+      "enables": [
+        "WP-REPO-01"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/workspace.md",
+        "archive/registers/package-guides/itm.md",
+        "archive/registers/package-guides/markdown.md",
+        "archive/grilling/legacy-grilling/backend-grilling.md"
+      ]
+    },
+    "MOD-ITM": {
+      "title": "ITM",
+      "path": "modules/itm.md",
+      "status": "defined",
+      "owns": [
+        "ITM parsing and serialization",
+        "ITM directives and package activation",
+        "ITM profile validation",
+        "semantic target extraction"
+      ],
+      "depends_on": [
+        "MOD-SURFACES-UI"
+      ],
+      "enables": [
+        "WP-ITM-01",
+        "WP-ITM-02"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/itm.md",
+        "archive/registers/specs/legacy-specs/architecture/textforge-rebuild-whitepaper.md",
+        "archive/grilling/legacy-grilling/itm-visuals-grilling.md"
+      ]
+    },
+    "MOD-MARKDOWN-ITM": {
+      "title": "Markdown and ITM publication",
+      "path": "modules/markdown-itm.md",
+      "status": "defined",
+      "owns": [
+        "TextForge Markdown compatibility profile",
+        "Markdown preview/report flows",
+        "ITM publication blocks",
+        "PDF export flow"
+      ],
+      "depends_on": [
+        "MOD-ITM",
+        "MOD-REPOSITORY"
+      ],
+      "enables": [
+        "WP-ITM-PUB-VISUAL-01",
+        "WP-MD-REPORT",
+        "WP-MD-RICH",
+        "WP-PDF-EXPORT"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/markdown.md",
+        "archive/registers/specs/legacy-specs/architecture/textforge-markdown-profile.md",
+        "archive/registers/package-guides/pipeline.md"
+      ]
+    },
+    "MOD-VISUAL-ITM-RENDERERS": {
+      "title": "Visual ITM renderers",
+      "path": "modules/visual-itm-renderers.md",
+      "status": "defined",
+      "owns": [
+        "Visual ITM document profile",
+        "visual target picker and resolver integration",
+        "runtime renderer package parity",
+        "visual edit/write-back follow-ons"
+      ],
+      "depends_on": [
+        "MOD-ITM",
+        "MOD-SURFACES-UI"
+      ],
+      "enables": [
+        "WP-ITM-VISUALS",
+        "WP-VITM-01",
+        "WP-ITM-VTARGET-01",
+        "WP-ITM-VRESOLVE-01",
+        "WP-RENDER-CYTOSCAPE",
+        "WP-RENDER-JSMIND",
+        "WP-RENDER-SIGMA",
+        "WP-VITM-TRANSLATORS",
+        "WP-VITM-VDELTA-01",
+        "WP-VITM-LIVE-SYNC-01",
+        "WP-GRAPH-EDIT-VITM"
+      ],
+      "archive_trace": [
+        "archive/registers/specs/legacy-specs/architecture/visual-itm-v1-profile.md",
+        "archive/registers/specs/legacy-specs/architecture/visual-itm-runtime-recovery.md",
+        "archive/grilling/legacy-grilling/v20-visual-recovery-to-bpmn-chain-findings.md",
+        "archive/grilling/legacy-grilling/itm-visuals-grilling.md"
+      ]
+    },
+    "MOD-BPMN": {
+      "title": "BPMN",
+      "path": "modules/bpmn.md",
+      "status": "defined",
+      "owns": [
+        "BPMN semantic MVP",
+        "BPMN XML viewer integration",
+        "BPMN Diagram Interchange read-only fidelity",
+        "BPMN modeler/write-back follow-on"
+      ],
+      "depends_on": [
+        "MOD-ITM",
+        "MOD-VISUAL-ITM-RENDERERS"
+      ],
+      "enables": [
+        "WP-BPMN-SEM",
+        "WP-BPMN-VISUAL-A",
+        "WP-BPMN-DI-01",
+        "WP-BPMN-VISUAL-B",
+        "WP-BPMN-VISUAL-C"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/bpmn.md",
+        "archive/grilling/legacy-grilling/bpmn-sem-grilling.md",
+        "archive/registers/specs/legacy-specs/architecture/v20-itm-recovery-to-bpmn-visual-chain.md"
+      ]
+    },
+    "MOD-ARCHIMATE": {
+      "title": "ArchiMate",
+      "path": "modules/archimate.md",
+      "status": "defined",
+      "owns": [
+        "ArchiMate semantic profile",
+        "ArchiMate validation",
+        "ArchiMate visual investigation"
+      ],
+      "depends_on": [
+        "MOD-ITM",
+        "MOD-VISUAL-ITM-RENDERERS"
+      ],
+      "enables": [
+        "WP-ARCHIMATE-SEM",
+        "WP-ARCHIMATE-VISUAL"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/archimate.md",
+        "archive/registers/specs/legacy-specs/architecture/textforge-rebuild-whitepaper.md"
+      ]
+    },
+    "MOD-TABLES": {
+      "title": "Tables",
+      "path": "modules/tables.md",
+      "status": "defined",
+      "owns": [
+        "tables, catalogues, and matrices",
+        "CSV/TSV grid editing strategy",
+        "diagnostics table presentation"
+      ],
+      "depends_on": [
+        "MOD-ITM",
+        "MOD-BPMN"
+      ],
+      "enables": [
+        "WP-TABLES"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/tables.md",
+        "archive/registers/package-guides/ui.md",
+        "archive/registers/package-guides/itm.md"
+      ]
+    },
+    "MOD-SKETCH": {
+      "title": "Sketch",
+      "path": "modules/sketch.md",
+      "status": "defined",
+      "owns": [
+        "sketch resources",
+        "annotation resource model",
+        "PDF annotation follow-on"
+      ],
+      "depends_on": [
+        "MOD-WORKSPACE-RESOURCES",
+        "MOD-SURFACES-UI"
+      ],
+      "enables": [
+        "WP-SKETCH",
+        "WP-PDF-ANNOTATE"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/assets.md",
+        "archive/registers/package-guides/markdown.md",
+        "archive/registers/specs/legacy-specs/architecture/textforge-rebuild-whitepaper.md"
+      ]
+    },
+    "MOD-SURFACES-UI": {
+      "title": "Surfaces and UI",
+      "path": "modules/surfaces-ui.md",
+      "status": "defined",
+      "owns": [
+        "surface registry/session/open-with behavior",
+        "command/action projections",
+        "settings UI and advanced surface capacity",
+        "local Lua automation UI integration"
+      ],
+      "depends_on": [],
+      "enables": [
+        "WP-05A",
+        "WP-05B",
+        "WP-05C",
+        "WP-05D",
+        "WP-DOC-GRAPH",
+        "WP-SET-01",
+        "WP-SET-UI",
+        "WP-LUA",
+        "WP-LUA-POWER-SESSION",
+        "WP-SET-SYNC",
+        "WP-AI-CHAT",
+        "WP-SURFACES-ADV",
+        "WP-PIPELINE-EDITOR"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/surfaces.md",
+        "archive/registers/package-guides/ui.md",
+        "archive/registers/package-guides/editors.md",
+        "archive/grilling/legacy-grilling/phase-4.1-grilling.md",
+        "archive/grilling/legacy-grilling/phase-5-grilling.md"
+      ]
+    },
+    "MOD-BACKEND-ENTERPRISE": {
+      "title": "Backend and enterprise",
+      "path": "modules/backend-enterprise.md",
+      "status": "defined",
+      "owns": [
+        "optional backend host/API/persistence",
+        "identity fixture and enterprise profile foundations",
+        "server-side service jobs",
+        "backend-mediated AI and collaboration primitives"
+      ],
+      "depends_on": [
+        "MOD-WORKSPACE-RESOURCES",
+        "MOD-SECURITY-DISTRIBUTION"
+      ],
+      "enables": [
+        "WP-ID-01",
+        "WP-ID-DEV",
+        "WP-POLICY-01",
+        "WP-PRIVATE-CONTRACT",
+        "WP-BE-HOST",
+        "WP-BE-API",
+        "WP-BE-PERSIST",
+        "WP-PRIVATE-SERVER",
+        "WP-GITLAB",
+        "WP-SERVICES-BE",
+        "WP-COLLAB-LEASES",
+        "WP-AI-MEDIATOR",
+        "WP-AI-PREF"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/backend-optional.md",
+        "archive/registers/specs/legacy-specs/architecture/backend-optional-architecture.md",
+        "archive/grilling/legacy-grilling/backend-grilling.md"
+      ]
+    },
+    "MOD-SECURITY-DISTRIBUTION": {
+      "title": "Security and distribution",
+      "path": "modules/security-distribution.md",
+      "status": "defined",
+      "owns": [
+        "local/offline security profile",
+        "enterprise distribution constraints",
+        "SSO adapter security gates",
+        "PWA/local package investigations"
+      ],
+      "depends_on": [],
+      "enables": [
+        "WP-SSO-ENTRA",
+        "WP-SSO-OIDC",
+        "WP-SSO-SAML",
+        "WP-SSO-KEYCLOAK",
+        "WP-DIST-PWA"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/security-profile.md",
+        "archive/registers/specs/legacy-specs/architecture/security-invariants.md",
+        "archive/grilling/legacy-grilling/phase-4.1-grilling.md"
+      ]
+    },
+    "MOD-KNOWLEDGE-WORKSPACE": {
+      "title": "Knowledge workspace",
+      "path": "modules/knowledge-workspace.md",
+      "status": "defined",
+      "owns": [
+        "link/backlink/mention index",
+        "document-neighborhood graph surface",
+        "spatial workspace canvas",
+        "comments sidecars and change proposals"
+      ],
+      "depends_on": [
+        "MOD-WORKSPACE-RESOURCES",
+        "MOD-REPOSITORY",
+        "MOD-SURFACES-UI"
+      ],
+      "enables": [
+        "WP-LINK-INDEX",
+        "WP-CANVAS",
+        "WP-COMMENTS-SIDECAR",
+        "WP-CHANGE-PROPOSALS"
+      ],
+      "archive_trace": [
+        "archive/registers/package-guides/workspace.md",
+        "archive/registers/package-guides/surfaces.md",
+        "archive/registers/package-guides/ui.md",
+        "archive/registers/package-guides/markdown.md"
+      ]
+    }
+  },
+  "workpackages": {
+    "WP-ROADMAP-CLEANUP": {
+      "title": "Roadmap cleanup and governance reset",
+      "path": "workpackages/WP-ROADMAP-CLEANUP.md",
+      "module": "MOD-ROADMAP-GOVERNANCE",
+      "status": "validated",
+      "type": "governance",
+      "depends_on": [],
+      "enables": [],
+      "release_candidates": [
+        "R-ROADMAP-RESET"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/rapid/RAPID-up-to-2026-06-05.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/",
+        "archive/registers/legacy-workpackages/workpackage-register.md"
+      ],
+      "validation_checklist": null
+    },
+    "WP-05A": {
+      "title": "Contribution manifest and registry model",
+      "path": "workpackages/WP-05A.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "validated",
+      "type": "Core gate",
+      "depends_on": [],
+      "enables": [
+        "WP-05B",
+        "WP-05C",
+        "WP-RES-01",
+        "WP-ITM-01",
+        "WP-SET-01",
+        "WP-05D",
+        "WP-SET-UI",
+        "WP-SURFACES-ADV"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 5"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-05A-contribution-manifest-and-registry-model.md"
+    },
+    "WP-05B": {
+      "title": "Capability activation and resolver context",
+      "path": "workpackages/WP-05B.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "validated",
+      "type": "Core gate",
+      "depends_on": [
+        "WP-05A"
+      ],
+      "enables": [
+        "WP-05C",
+        "WP-05D",
+        "WP-ITM-02",
+        "WP-REPO-01",
+        "WP-RES-03"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 5"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-05B-capability-activation-and-resolver-context.md"
+    },
+    "WP-05C": {
+      "title": "Pipeline/contribution execution integration",
+      "path": "workpackages/WP-05C.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "validated",
+      "type": "Core gate",
+      "depends_on": [
+        "WP-05A",
+        "WP-05B"
+      ],
+      "enables": [
+        "WP-ITM-VISUALS",
+        "WP-ITM-VTARGET-01",
+        "WP-LUA",
+        "WP-SERVICES-LOCAL",
+        "WP-PIPELINE-EDITOR"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 5"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-05C-pipeline-contribution-execution-integration.md"
+    },
+    "WP-05D": {
+      "title": "Minimal package/capability inspector",
+      "path": "workpackages/WP-05D.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "validated",
+      "type": "Feature / diagnostics",
+      "depends_on": [
+        "WP-05A",
+        "WP-05B"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 5"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-05D-minimal-package-capability-inspector.md"
+    },
+    "WP-RES-01": {
+      "title": "Provider-aware resource descriptors",
+      "path": "workpackages/WP-RES-01.md",
+      "module": "MOD-WORKSPACE-RESOURCES",
+      "status": "validated",
+      "type": "Core foundation",
+      "depends_on": [],
+      "enables": [
+        "WP-RES-02",
+        "WP-REPO-01",
+        "WP-BE-API",
+        "WP-LINK-INDEX",
+        "WP-SERVICES-LOCAL",
+        "WP-CANVAS",
+        "WP-PRIVATE-CONTRACT",
+        "WP-SKETCH"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 5.1"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-RES-01-provider-aware-resource-descriptors.md"
+    },
+    "WP-RES-02": {
+      "title": "Revisions, dirty state, and conflict diagnostics",
+      "path": "workpackages/WP-RES-02.md",
+      "module": "MOD-WORKSPACE-RESOURCES",
+      "status": "defined",
+      "type": "Core foundation",
+      "depends_on": [
+        "WP-RES-01"
+      ],
+      "enables": [
+        "WP-RES-03",
+        "WP-BE-PERSIST",
+        "WP-COLLAB-LEASES",
+        "WP-COMMENTS-SIDECAR"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 5.1"
+      ],
+      "validation_checklist": null
+    },
+    "WP-RES-03": {
+      "title": "Multi-resource changesets and provider allowlists",
+      "path": "workpackages/WP-RES-03.md",
+      "module": "MOD-WORKSPACE-RESOURCES",
+      "status": "defined",
+      "type": "Core foundation",
+      "depends_on": [
+        "WP-RES-02",
+        "WP-05B"
+      ],
+      "enables": [
+        "WP-BE-API",
+        "WP-GITLAB",
+        "WP-AI-MEDIATOR",
+        "WP-GRAPH-EDIT-VITM",
+        "WP-CHANGE-PROPOSALS",
+        "WP-BPMN-VISUAL-C",
+        "WP-REPO-SHAREPOINT"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 5.1"
+      ],
+      "validation_checklist": null
+    },
+    "WP-LINK-INDEX": {
+      "title": "Document link, backlink, and mention index",
+      "path": "workpackages/WP-LINK-INDEX.md",
+      "module": "MOD-KNOWLEDGE-WORKSPACE",
+      "status": "candidate",
+      "type": "Knowledge workspace foundation",
+      "depends_on": [
+        "WP-RES-01",
+        "WP-REPO-01"
+      ],
+      "enables": [
+        "WP-DOC-GRAPH",
+        "WP-COMMENTS-SIDECAR",
+        "WP-CANVAS"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 knowledge workspace"
+      ],
+      "validation_checklist": null
+    },
+    "WP-DOC-GRAPH": {
+      "title": "Document neighborhood and local graph surface",
+      "path": "workpackages/WP-DOC-GRAPH.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "candidate",
+      "type": "Knowledge workspace UI",
+      "depends_on": [
+        "WP-LINK-INDEX",
+        "WP-SURFACES-ADV"
+      ],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 knowledge workspace"
+      ],
+      "validation_checklist": null
+    },
+    "WP-ID-01": {
+      "title": "Identity contract",
+      "path": "workpackages/WP-ID-01.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Core contract",
+      "depends_on": [],
+      "enables": [
+        "WP-ID-DEV",
+        "WP-POLICY-01",
+        "WP-PRIVATE-CONTRACT",
+        "WP-SSO-ENTRA",
+        "WP-SSO-OIDC",
+        "WP-SSO-SAML",
+        "WP-SSO-KEYCLOAK"
+      ],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 5.2"
+      ],
+      "validation_checklist": null
+    },
+    "WP-ID-DEV": {
+      "title": "Development identity fixture provider",
+      "path": "workpackages/WP-ID-DEV.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Development enabler",
+      "depends_on": [
+        "WP-ID-01"
+      ],
+      "enables": [
+        "WP-POLICY-01",
+        "WP-BE-PERSIST",
+        "WP-PRIVATE-SERVER",
+        "WP-SET-SYNC"
+      ],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": false,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Backend split"
+      ],
+      "validation_checklist": null
+    },
+    "WP-POLICY-01": {
+      "title": "Provider-neutral server policy engine",
+      "path": "workpackages/WP-POLICY-01.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Core backend gate",
+      "depends_on": [
+        "WP-ID-01",
+        "WP-ID-DEV",
+        "WP-BE-HOST",
+        "WP-BE-PERSIST"
+      ],
+      "enables": [
+        "WP-PRIVATE-SERVER",
+        "WP-SET-SYNC",
+        "WP-GITLAB",
+        "WP-SERVICES-BE",
+        "WP-COLLAB-LEASES",
+        "WP-AI-MEDIATOR",
+        "WP-SSO-ENTRA",
+        "WP-SSO-OIDC",
+        "WP-BE-PERSIST",
+        "WP-SSO-SAML",
+        "WP-SSO-KEYCLOAK",
+        "WP-REPO-SHAREPOINT"
+      ],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 9.4 split"
+      ],
+      "validation_checklist": null
+    },
+    "WP-SSO-ENTRA": {
+      "title": "Microsoft Entra SSO adapter",
+      "path": "workpackages/WP-SSO-ENTRA.md",
+      "module": "MOD-SECURITY-DISTRIBUTION",
+      "status": "deferred",
+      "type": "Optional production adapter",
+      "depends_on": [
+        "WP-ID-01",
+        "WP-POLICY-01",
+        "WP-BE-HOST"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-ENTERPRISE-PROFILE"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 9.4 split"
+      ],
+      "validation_checklist": null
+    },
+    "WP-SSO-OIDC": {
+      "title": "Generic OIDC / Keycloak adapter",
+      "path": "workpackages/WP-SSO-OIDC.md",
+      "module": "MOD-SECURITY-DISTRIBUTION",
+      "status": "candidate",
+      "type": "Optional production adapter",
+      "depends_on": [
+        "WP-ID-01",
+        "WP-POLICY-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-ENTERPRISE-PROFILE"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Future optional"
+      ],
+      "validation_checklist": null
+    },
+    "WP-SET-01": {
+      "title": "User settings core and local persistence",
+      "path": "workpackages/WP-SET-01.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "defined",
+      "type": "Core UX foundation",
+      "depends_on": [
+        "WP-05A"
+      ],
+      "enables": [
+        "WP-SET-UI",
+        "WP-SET-SYNC",
+        "WP-AI-PREF"
+      ],
+      "release_candidates": [],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 5.3"
+      ],
+      "validation_checklist": null
+    },
+    "WP-ITM-01": {
+      "title": "ITM parser/model foundation",
+      "path": "workpackages/WP-ITM-01.md",
+      "module": "MOD-ITM",
+      "status": "validated",
+      "type": "Domain foundation",
+      "depends_on": [
+        "WP-05A"
+      ],
+      "enables": [
+        "WP-ITM-02",
+        "WP-REPO-01",
+        "WP-ITM-VISUALS",
+        "WP-VITM-01",
+        "WP-BPMN-SEM",
+        "WP-MD-REPORT",
+        "WP-TABLES"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 6"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-01-itm-parser-model-foundation.md"
+    },
+    "WP-ITM-02": {
+      "title": "ITM directives, packages, validation, diagnostics",
+      "path": "workpackages/WP-ITM-02.md",
+      "module": "MOD-ITM",
+      "status": "validated",
+      "type": "Domain foundation",
+      "depends_on": [
+        "WP-ITM-01",
+        "WP-05B"
+      ],
+      "enables": [
+        "WP-REPO-01",
+        "WP-VITM-01",
+        "WP-ITM-VRESOLVE-01",
+        "WP-BPMN-SEM",
+        "WP-ARCHIMATE-SEM"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 6"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-02-directives-packages-validation-diagnostics.md"
+    },
+    "WP-REPO-01": {
+      "title": "Repository reference and include resolver",
+      "path": "workpackages/WP-REPO-01.md",
+      "module": "MOD-REPOSITORY",
+      "status": "validated",
+      "type": "Core/domain bridge",
+      "depends_on": [
+        "WP-RES-01",
+        "WP-ITM-01"
+      ],
+      "enables": [
+        "WP-MD-REPORT",
+        "WP-ITM-VRESOLVE-01",
+        "WP-GITLAB",
+        "WP-LINK-INDEX"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 6.1"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-REPO-01-repository-include-resolver.md"
+    },
+    "WP-ITM-VISUALS": {
+      "title": "ITM static visual projections and publication baseline",
+      "path": "workpackages/WP-ITM-VISUALS.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "validated",
+      "type": "Feature",
+      "depends_on": [
+        "WP-ITM-01",
+        "WP-05C"
+      ],
+      "enables": [
+        "WP-VITM-01",
+        "WP-ITM-VTARGET-01",
+        "WP-ITM-VRESOLVE-01",
+        "WP-ITM-PUB-VISUAL-01"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 7"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-VISUALS-itm-visual-projections.md"
+    },
+    "WP-VITM-01": {
+      "title": "Visual ITM profile v1",
+      "path": "workpackages/WP-VITM-01.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "validated",
+      "type": "Contract / domain",
+      "depends_on": [
+        "WP-ITM-01",
+        "WP-ITM-02"
+      ],
+      "enables": [
+        "WP-ITM-VTARGET-01",
+        "WP-ITM-VRESOLVE-01",
+        "WP-RENDER-CYTOSCAPE",
+        "WP-RENDER-JSMIND",
+        "WP-RENDER-SIGMA",
+        "WP-VITM-TRANSLATORS",
+        "WP-GRAPH-EDIT-VITM"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 visual/BPMN baseline"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-VITM-01-visual-itm-profile-v1.md"
+    },
+    "WP-ITM-VTARGET-01": {
+      "title": "ITM visual target picker MVP",
+      "path": "workpackages/WP-ITM-VTARGET-01.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "validated",
+      "type": "UI / domain",
+      "depends_on": [
+        "WP-ITM-VISUALS",
+        "WP-VITM-01",
+        "WP-05C"
+      ],
+      "enables": [
+        "WP-ITM-VRESOLVE-01"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 visual/BPMN baseline"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-VTARGET-01-itm-visual-target-picker.md"
+    },
+    "WP-ITM-VRESOLVE-01": {
+      "title": "Shared ITM visual target resolver",
+      "path": "workpackages/WP-ITM-VRESOLVE-01.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "validated",
+      "type": "Contract / domain",
+      "depends_on": [
+        "WP-VITM-01",
+        "WP-ITM-02",
+        "WP-ITM-VISUALS",
+        "WP-REPO-01"
+      ],
+      "enables": [
+        "WP-RENDER-CYTOSCAPE",
+        "WP-RENDER-JSMIND",
+        "WP-RENDER-SIGMA",
+        "WP-ITM-PUB-VISUAL-01",
+        "WP-BPMN-VISUAL-B",
+        "WP-VITM-VDELTA-01",
+        "WP-VITM-LIVE-SYNC-01"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 visual/BPMN baseline"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-VRESOLVE-01-shared-visual-target-resolver.md"
+    },
+    "WP-RENDER-CYTOSCAPE": {
+      "title": "Cytoscape runtime renderer package",
+      "path": "workpackages/WP-RENDER-CYTOSCAPE.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "validated",
+      "type": "Feature / domain",
+      "depends_on": [
+        "WP-VITM-01",
+        "WP-ITM-VRESOLVE-01"
+      ],
+      "enables": [
+        "WP-BPMN-VISUAL-A",
+        "WP-RENDER-SIGMA",
+        "WP-BPMN-VISUAL-B",
+        "WP-ARCHIMATE-VISUAL"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Old runtime recovery"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-RENDER-CYTOSCAPE-runtime-renderer.md"
+    },
+    "WP-ITM-PUB-VISUAL-01": {
+      "title": "Shared visual pipeline for itm-pub",
+      "path": "workpackages/WP-ITM-PUB-VISUAL-01.md",
+      "module": "MOD-MARKDOWN-ITM",
+      "status": "defined",
+      "type": "Domain / feature",
+      "depends_on": [
+        "WP-ITM-VRESOLVE-01",
+        "WP-MD-REPORT"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 visual follow-on"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-PUB-VISUAL-01-shared-itm-pub-visual-pipeline.md"
+    },
+    "WP-RENDER-JSMIND": {
+      "title": "jsMind runtime renderer package",
+      "path": "workpackages/WP-RENDER-JSMIND.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "validated",
+      "type": "Feature / domain",
+      "depends_on": [
+        "WP-VITM-01",
+        "WP-ITM-VRESOLVE-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Old runtime recovery"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-RENDER-JSMIND-runtime-renderer.md"
+    },
+    "WP-RENDER-SIGMA": {
+      "title": "Sigma/Graphology runtime renderer package",
+      "path": "workpackages/WP-RENDER-SIGMA.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "validated",
+      "type": "Feature / domain",
+      "depends_on": [
+        "WP-VITM-01",
+        "WP-ITM-VRESOLVE-01",
+        "WP-RENDER-CYTOSCAPE"
+      ],
+      "enables": [
+        "WP-ARCHIMATE-VISUAL"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Old runtime recovery"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-RENDER-SIGMA-runtime-renderer.md"
+    },
+    "WP-VITM-TRANSLATORS": {
+      "title": "Visual ITM translator utilities",
+      "path": "workpackages/WP-VITM-TRANSLATORS.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "candidate",
+      "type": "Adapter / domain",
+      "depends_on": [
+        "WP-VITM-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 visual follow-on"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-VITM-TRANSLATORS-visual-itm-translator-utilities.md"
+    },
+    "WP-VITM-VDELTA-01": {
+      "title": "Visual ITM view-delta consumption and capture",
+      "path": "workpackages/WP-VITM-VDELTA-01.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "candidate",
+      "type": "Visual consumption follow-on",
+      "depends_on": [
+        "WP-ITM-VRESOLVE-01",
+        "WP-GRAPH-EDIT-VITM"
+      ],
+      "enables": [
+        "WP-VITM-LIVE-SYNC-01"
+      ],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 visual follow-on"
+      ],
+      "validation_checklist": null
+    },
+    "WP-VITM-LIVE-SYNC-01": {
+      "title": "Bidirectional source/visual live sync",
+      "path": "workpackages/WP-VITM-LIVE-SYNC-01.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "candidate",
+      "type": "Visual consumption follow-on",
+      "depends_on": [
+        "WP-ITM-VRESOLVE-01",
+        "WP-VITM-VDELTA-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 visual follow-on"
+      ],
+      "validation_checklist": null
+    },
+    "WP-GRAPH-EDIT-VITM": {
+      "title": "Visual ITM edit/write-back foundation",
+      "path": "workpackages/WP-GRAPH-EDIT-VITM.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "defined",
+      "type": "Visual editing foundation",
+      "depends_on": [
+        "WP-VITM-01",
+        "WP-RES-03"
+      ],
+      "enables": [
+        "WP-VITM-VDELTA-01",
+        "WP-BPMN-VISUAL-C",
+        "WP-PIPELINE-EDITOR",
+        "WP-ARCHIMATE-VISUAL"
+      ],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V19 reframing"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-GRAPH-EDIT-VITM-visual-itm-edit-writeback.md"
+    },
+    "WP-SERVICES-LOCAL": {
+      "title": "Local service-folder convention",
+      "path": "workpackages/WP-SERVICES-LOCAL.md",
+      "module": "MOD-WORKSPACE-RESOURCES",
+      "status": "defined",
+      "type": "Core/service seam",
+      "depends_on": [
+        "WP-RES-01",
+        "WP-05C"
+      ],
+      "enables": [
+        "WP-SERVICES-BE"
+      ],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 7.1"
+      ],
+      "validation_checklist": null
+    },
+    "WP-SET-UI": {
+      "title": "User settings UI",
+      "path": "workpackages/WP-SET-UI.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "defined",
+      "type": "Feature / UX",
+      "depends_on": [
+        "WP-SET-01",
+        "WP-05A"
+      ],
+      "enables": [
+        "WP-AI-PREF",
+        "WP-SURFACES-ADV"
+      ],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 7.2"
+      ],
+      "validation_checklist": null
+    },
+    "WP-CANVAS": {
+      "title": "Spatial workspace canvas",
+      "path": "workpackages/WP-CANVAS.md",
+      "module": "MOD-KNOWLEDGE-WORKSPACE",
+      "status": "candidate",
+      "type": "Knowledge workspace UI",
+      "depends_on": [
+        "WP-RES-01",
+        "WP-SURFACES-ADV",
+        "WP-LINK-INDEX"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 knowledge workspace"
+      ],
+      "validation_checklist": null
+    },
+    "WP-LUA": {
+      "title": "Lua automation",
+      "path": "workpackages/WP-LUA.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "validated",
+      "type": "Optional automation",
+      "depends_on": [
+        "WP-05C"
+      ],
+      "enables": [
+        "WP-LUA-POWER-SESSION"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 8"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-LUA-lua-automation.md"
+    },
+    "WP-LUA-POWER-SESSION": {
+      "title": "Lua self-escalation session and one-click recovery",
+      "path": "workpackages/WP-LUA-POWER-SESSION.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "validated",
+      "type": "Optional automation",
+      "depends_on": [
+        "WP-LUA"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Lua follow-on"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-LUA-POWER-SESSION-self-escalation-session-recovery.md"
+    },
+    "WP-PRIVATE-CONTRACT": {
+      "title": "Private/group space contracts",
+      "path": "workpackages/WP-PRIVATE-CONTRACT.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Core backend contract",
+      "depends_on": [
+        "WP-ID-01",
+        "WP-RES-01"
+      ],
+      "enables": [
+        "WP-PRIVATE-SERVER"
+      ],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": true,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 8.1"
+      ],
+      "validation_checklist": null
+    },
+    "WP-MD-REPORT": {
+      "title": "Markdown + ITM report generation",
+      "path": "workpackages/WP-MD-REPORT.md",
+      "module": "MOD-MARKDOWN-ITM",
+      "status": "defined",
+      "type": "Feature",
+      "depends_on": [
+        "WP-ITM-01",
+        "WP-REPO-01"
+      ],
+      "enables": [
+        "WP-ITM-PUB-VISUAL-01",
+        "WP-MD-RICH",
+        "WP-PDF-EXPORT"
+      ],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 9"
+      ],
+      "validation_checklist": null
+    },
+    "WP-BE-HOST": {
+      "title": "Enterprise container and app host",
+      "path": "workpackages/WP-BE-HOST.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Profile foundation",
+      "depends_on": [],
+      "enables": [
+        "WP-BE-API",
+        "WP-POLICY-01",
+        "WP-SSO-ENTRA"
+      ],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": true,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 9.1"
+      ],
+      "validation_checklist": null
+    },
+    "WP-BE-API": {
+      "title": "Backend API contract and frontend provider",
+      "path": "workpackages/WP-BE-API.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Backend foundation",
+      "depends_on": [
+        "WP-RES-03",
+        "WP-BE-HOST"
+      ],
+      "enables": [
+        "WP-BE-PERSIST"
+      ],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": true,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 9.2"
+      ],
+      "validation_checklist": null
+    },
+    "WP-BE-PERSIST": {
+      "title": "Reference persistence server",
+      "path": "workpackages/WP-BE-PERSIST.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Backend foundation",
+      "depends_on": [
+        "WP-BE-API",
+        "WP-ID-DEV",
+        "WP-POLICY-01"
+      ],
+      "enables": [
+        "WP-PRIVATE-SERVER",
+        "WP-SET-SYNC",
+        "WP-GITLAB",
+        "WP-COLLAB-LEASES",
+        "WP-POLICY-01",
+        "WP-SERVICES-BE",
+        "WP-AI-MEDIATOR",
+        "WP-REPO-SHAREPOINT"
+      ],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": true,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 9.3"
+      ],
+      "validation_checklist": null
+    },
+    "WP-PRIVATE-SERVER": {
+      "title": "Private/group spaces server",
+      "path": "workpackages/WP-PRIVATE-SERVER.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Backend feature",
+      "depends_on": [
+        "WP-PRIVATE-CONTRACT",
+        "WP-BE-PERSIST",
+        "WP-POLICY-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 9.5"
+      ],
+      "validation_checklist": null
+    },
+    "WP-SET-SYNC": {
+      "title": "Roaming user settings",
+      "path": "workpackages/WP-SET-SYNC.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "defined",
+      "type": "Backend feature",
+      "depends_on": [
+        "WP-SET-01",
+        "WP-BE-PERSIST",
+        "WP-POLICY-01"
+      ],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 9.6"
+      ],
+      "validation_checklist": null
+    },
+    "WP-GITLAB": {
+      "title": "GitLab persistence adapter",
+      "path": "workpackages/WP-GITLAB.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Optional adapter",
+      "depends_on": [
+        "WP-BE-PERSIST",
+        "WP-RES-03",
+        "WP-POLICY-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW",
+        "R-ENTERPRISE-PROFILE"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 9.7"
+      ],
+      "validation_checklist": null
+    },
+    "WP-BPMN-SEM": {
+      "title": "BPMN semantic profile and validation",
+      "path": "workpackages/WP-BPMN-SEM.md",
+      "module": "MOD-BPMN",
+      "status": "validated",
+      "type": "Domain profile",
+      "depends_on": [
+        "WP-ITM-02"
+      ],
+      "enables": [
+        "WP-BPMN-VISUAL-A",
+        "WP-BPMN-DI-01",
+        "WP-BPMN-VISUAL-B",
+        "WP-TABLES"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 visual/BPMN baseline"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-BPMN-SEM-bpmn-semantic-profile-mvp.md"
+    },
+    "WP-BPMN-VISUAL-A": {
+      "title": "BPMN.io viewer surface",
+      "path": "workpackages/WP-BPMN-VISUAL-A.md",
+      "module": "MOD-BPMN",
+      "status": "validated",
+      "type": "Feature / domain",
+      "depends_on": [
+        "WP-BPMN-SEM"
+      ],
+      "enables": [
+        "WP-BPMN-DI-01",
+        "WP-BPMN-VISUAL-B"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 BPMN split"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-BPMN-VISUAL-A-bpmn-io-viewer-surface.md"
+    },
+    "WP-BPMN-DI-01": {
+      "title": "BPMN Diagram Interchange read-only fidelity",
+      "path": "workpackages/WP-BPMN-DI-01.md",
+      "module": "MOD-BPMN",
+      "status": "validated",
+      "type": "Feature / domain",
+      "depends_on": [
+        "WP-BPMN-SEM",
+        "WP-BPMN-VISUAL-A"
+      ],
+      "enables": [
+        "WP-BPMN-VISUAL-B",
+        "WP-VITM-VDELTA-01"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: BPMN DI bridge"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-BPMN-DI-01-bpmn-di-read-only-fidelity.md"
+    },
+    "WP-BPMN-VISUAL-B": {
+      "title": "ITM/BPMN visual target integration",
+      "path": "workpackages/WP-BPMN-VISUAL-B.md",
+      "module": "MOD-BPMN",
+      "status": "validated",
+      "type": "Feature / domain",
+      "depends_on": [
+        "WP-BPMN-SEM",
+        "WP-ITM-VRESOLVE-01",
+        "WP-BPMN-VISUAL-A",
+        "WP-BPMN-DI-01",
+        "WP-RENDER-CYTOSCAPE"
+      ],
+      "enables": [
+        "WP-BPMN-VISUAL-C"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP",
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 BPMN split"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-BPMN-VISUAL-B-itm-bpmn-visual-target-integration.md"
+    },
+    "WP-BPMN-VISUAL-C": {
+      "title": "BPMN modeler/edit/write-back",
+      "path": "workpackages/WP-BPMN-VISUAL-C.md",
+      "module": "MOD-BPMN",
+      "status": "candidate",
+      "type": "Feature / visual editing",
+      "depends_on": [
+        "WP-BPMN-VISUAL-B",
+        "WP-GRAPH-EDIT-VITM",
+        "WP-RES-03"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 BPMN split"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-BPMN-VISUAL-C-bpmn-modeler-edit-writeback.md"
+    },
+    "WP-SERVICES-BE": {
+      "title": "Backend-backed service folders",
+      "path": "workpackages/WP-SERVICES-BE.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Backend feature",
+      "depends_on": [
+        "WP-SERVICES-LOCAL",
+        "WP-BE-PERSIST",
+        "WP-POLICY-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 10.1"
+      ],
+      "validation_checklist": null
+    },
+    "WP-COLLAB-LEASES": {
+      "title": "Soft collaboration leases",
+      "path": "workpackages/WP-COLLAB-LEASES.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Backend feature",
+      "depends_on": [
+        "WP-BE-PERSIST",
+        "WP-RES-02",
+        "WP-POLICY-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 10.2"
+      ],
+      "validation_checklist": null
+    },
+    "WP-TABLES": {
+      "title": "Tables, catalogues, and matrices",
+      "path": "workpackages/WP-TABLES.md",
+      "module": "MOD-TABLES",
+      "status": "blocked",
+      "type": "Feature",
+      "depends_on": [
+        "WP-ITM-01",
+        "WP-BPMN-SEM"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 11"
+      ],
+      "validation_checklist": null
+    },
+    "WP-AI-MEDIATOR": {
+      "title": "AI contract and backend mediator",
+      "path": "workpackages/WP-AI-MEDIATOR.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Optional backend capability",
+      "depends_on": [
+        "WP-BE-PERSIST",
+        "WP-POLICY-01"
+      ],
+      "enables": [
+        "WP-AI-CHAT"
+      ],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 11.1"
+      ],
+      "validation_checklist": null
+    },
+    "WP-AI-CHAT": {
+      "title": "AI client and chat surface",
+      "path": "workpackages/WP-AI-CHAT.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "defined",
+      "type": "Optional feature",
+      "depends_on": [
+        "WP-AI-MEDIATOR"
+      ],
+      "enables": [
+        "WP-AI-PREF"
+      ],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 11.2"
+      ],
+      "validation_checklist": null
+    },
+    "WP-AI-PREF": {
+      "title": "AI preference integration",
+      "path": "workpackages/WP-AI-PREF.md",
+      "module": "MOD-BACKEND-ENTERPRISE",
+      "status": "defined",
+      "type": "Optional feature",
+      "depends_on": [
+        "WP-AI-CHAT",
+        "WP-SET-01",
+        "WP-SET-UI"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-BACKEND-PREVIEW"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 11.3"
+      ],
+      "validation_checklist": null
+    },
+    "WP-ARCHIMATE-SEM": {
+      "title": "ArchiMate semantic profile",
+      "path": "workpackages/WP-ARCHIMATE-SEM.md",
+      "module": "MOD-ARCHIMATE",
+      "status": "defined",
+      "type": "Domain profile",
+      "depends_on": [
+        "WP-ITM-02"
+      ],
+      "enables": [
+        "WP-ARCHIMATE-VISUAL"
+      ],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 12 split"
+      ],
+      "validation_checklist": null
+    },
+    "WP-SURFACES-ADV": {
+      "title": "Advanced tabbed main surfaces",
+      "path": "workpackages/WP-SURFACES-ADV.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "defined",
+      "type": "UX capacity",
+      "depends_on": [
+        "WP-05A",
+        "WP-SET-UI"
+      ],
+      "enables": [
+        "WP-DOC-GRAPH",
+        "WP-CANVAS"
+      ],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 13"
+      ],
+      "validation_checklist": null
+    },
+    "WP-MD-RICH": {
+      "title": "Rich Markdown editing",
+      "path": "workpackages/WP-MD-RICH.md",
+      "module": "MOD-MARKDOWN-ITM",
+      "status": "defined",
+      "type": "Optional editor feature",
+      "depends_on": [
+        "WP-MD-REPORT"
+      ],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 14"
+      ],
+      "validation_checklist": null
+    },
+    "WP-PIPELINE-EDITOR": {
+      "title": "Pipeline/diagram editor surfaces",
+      "path": "workpackages/WP-PIPELINE-EDITOR.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "defined",
+      "type": "Optional editor feature",
+      "depends_on": [
+        "WP-GRAPH-EDIT-VITM",
+        "WP-05C"
+      ],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 15 split"
+      ],
+      "validation_checklist": null
+    },
+    "WP-ARCHIMATE-VISUAL": {
+      "title": "ArchiMate visual editing investigation",
+      "path": "workpackages/WP-ARCHIMATE-VISUAL.md",
+      "module": "MOD-ARCHIMATE",
+      "status": "defined",
+      "type": "Optional investigation",
+      "depends_on": [
+        "WP-ARCHIMATE-SEM",
+        "WP-GRAPH-EDIT-VITM",
+        "WP-RENDER-CYTOSCAPE",
+        "WP-RENDER-SIGMA"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 16"
+      ],
+      "validation_checklist": null
+    },
+    "WP-SKETCH": {
+      "title": "Sketch and annotation resources",
+      "path": "workpackages/WP-SKETCH.md",
+      "module": "MOD-SKETCH",
+      "status": "defined",
+      "type": "Optional feature",
+      "depends_on": [
+        "WP-RES-01"
+      ],
+      "enables": [
+        "WP-PDF-ANNOTATE"
+      ],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 17"
+      ],
+      "validation_checklist": null
+    },
+    "WP-COMMENTS-SIDECAR": {
+      "title": "Comments and review sidecars",
+      "path": "workpackages/WP-COMMENTS-SIDECAR.md",
+      "module": "MOD-KNOWLEDGE-WORKSPACE",
+      "status": "candidate",
+      "type": "Knowledge workspace / review",
+      "depends_on": [
+        "WP-RES-02",
+        "WP-LINK-INDEX"
+      ],
+      "enables": [
+        "WP-CHANGE-PROPOSALS"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 knowledge workspace"
+      ],
+      "validation_checklist": null
+    },
+    "WP-CHANGE-PROPOSALS": {
+      "title": "Reviewable change proposals",
+      "path": "workpackages/WP-CHANGE-PROPOSALS.md",
+      "module": "MOD-KNOWLEDGE-WORKSPACE",
+      "status": "candidate",
+      "type": "Review / backend bridge",
+      "depends_on": [
+        "WP-RES-03",
+        "WP-COMMENTS-SIDECAR"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: V20 knowledge workspace"
+      ],
+      "validation_checklist": null
+    },
+    "WP-PDF-EXPORT": {
+      "title": "PDF generation/export",
+      "path": "workpackages/WP-PDF-EXPORT.md",
+      "module": "MOD-MARKDOWN-ITM",
+      "status": "defined",
+      "type": "Optional export",
+      "depends_on": [
+        "WP-MD-REPORT"
+      ],
+      "enables": [
+        "WP-PDF-ANNOTATE"
+      ],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 18 split"
+      ],
+      "validation_checklist": null
+    },
+    "WP-PDF-ANNOTATE": {
+      "title": "PDF annotation",
+      "path": "workpackages/WP-PDF-ANNOTATE.md",
+      "module": "MOD-SKETCH",
+      "status": "defined",
+      "type": "Optional feature",
+      "depends_on": [
+        "WP-PDF-EXPORT",
+        "WP-SKETCH"
+      ],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 18 split"
+      ],
+      "validation_checklist": null
+    },
+    "WP-RELEASE-GATE": {
+      "title": "Release envelope and accreditation evidence",
+      "path": "workpackages/WP-RELEASE-GATE.md",
+      "module": "MOD-ROADMAP-GOVERNANCE",
+      "status": "defined",
+      "type": "Recurring gate",
+      "depends_on": [],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 19 reframed"
+      ],
+      "validation_checklist": null
+    },
+    "WP-SSO-SAML": {
+      "title": "Generic SAML / enterprise IdP adapter",
+      "path": "workpackages/WP-SSO-SAML.md",
+      "module": "MOD-SECURITY-DISTRIBUTION",
+      "status": "candidate",
+      "type": "Optional production adapter",
+      "depends_on": [
+        "WP-ID-01",
+        "WP-POLICY-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-ENTERPRISE-PROFILE"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Future optional"
+      ],
+      "validation_checklist": null
+    },
+    "WP-SSO-KEYCLOAK": {
+      "title": "Keycloak adapter",
+      "path": "workpackages/WP-SSO-KEYCLOAK.md",
+      "module": "MOD-SECURITY-DISTRIBUTION",
+      "status": "candidate",
+      "type": "Optional production adapter",
+      "depends_on": [
+        "WP-ID-01",
+        "WP-POLICY-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-ENTERPRISE-PROFILE"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Future optional"
+      ],
+      "validation_checklist": null
+    },
+    "WP-REPO-SHAREPOINT": {
+      "title": "SharePoint-like repository adapter",
+      "path": "workpackages/WP-REPO-SHAREPOINT.md",
+      "module": "MOD-ROADMAP-GOVERNANCE",
+      "status": "candidate",
+      "type": "Optional adapter",
+      "depends_on": [
+        "WP-BE-PERSIST",
+        "WP-RES-03",
+        "WP-POLICY-01"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Future optional"
+      ],
+      "validation_checklist": null
+    },
+    "WP-DIST-PWA": {
+      "title": "PWA/local packaged variant investigation",
+      "path": "workpackages/WP-DIST-PWA.md",
+      "module": "MOD-SECURITY-DISTRIBUTION",
+      "status": "candidate",
+      "type": "Optional distribution",
+      "depends_on": [],
+      "enables": [],
+      "release_candidates": [
+        "R-ENTERPRISE-PROFILE"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Future optional"
+      ],
+      "validation_checklist": null
+    }
+  },
+  "releases": {
+    "R-ROADMAP-RESET": {
+      "title": "Roadmap governance reset",
+      "status": "validated",
+      "path": "releases/R-ROADMAP-RESET.md",
+      "workpackages": [
+        "WP-ROADMAP-CLEANUP"
+      ],
+      "target_outcome": "Clean module/workpackage/release-based roadmap with archived legacy material."
+    },
+    "R-LOCAL-AUTHORING-MVP": {
+      "title": "Local authoring MVP",
+      "status": "defined",
+      "path": "releases/R-LOCAL-AUTHORING-MVP.md",
+      "workpackages": [
+        "WP-05A",
+        "WP-05B",
+        "WP-05C",
+        "WP-05D",
+        "WP-RES-01",
+        "WP-RES-02",
+        "WP-RES-03",
+        "WP-LINK-INDEX",
+        "WP-ITM-01",
+        "WP-ITM-02",
+        "WP-REPO-01",
+        "WP-ITM-VISUALS",
+        "WP-VITM-01",
+        "WP-ITM-VTARGET-01",
+        "WP-ITM-VRESOLVE-01",
+        "WP-RENDER-CYTOSCAPE",
+        "WP-ITM-PUB-VISUAL-01",
+        "WP-RENDER-JSMIND",
+        "WP-RENDER-SIGMA",
+        "WP-CANVAS",
+        "WP-LUA",
+        "WP-LUA-POWER-SESSION",
+        "WP-BPMN-SEM",
+        "WP-BPMN-VISUAL-A",
+        "WP-BPMN-DI-01",
+        "WP-BPMN-VISUAL-B",
+        "WP-COMMENTS-SIDECAR",
+        "WP-CHANGE-PROPOSALS",
+        "WP-REPO-SHAREPOINT"
+      ],
+      "target_outcome": "Validated local/offline authoring baseline plus selected next local workspace capabilities."
+    },
+    "R-VISUAL-MODELING-MVP": {
+      "title": "Visual modeling MVP",
+      "status": "defined",
+      "path": "releases/R-VISUAL-MODELING-MVP.md",
+      "workpackages": [
+        "WP-ITM-VISUALS",
+        "WP-VITM-01",
+        "WP-ITM-VTARGET-01",
+        "WP-ITM-VRESOLVE-01",
+        "WP-RENDER-CYTOSCAPE",
+        "WP-RENDER-JSMIND",
+        "WP-RENDER-SIGMA",
+        "WP-VITM-TRANSLATORS",
+        "WP-VITM-VDELTA-01",
+        "WP-VITM-LIVE-SYNC-01",
+        "WP-GRAPH-EDIT-VITM",
+        "WP-BPMN-SEM",
+        "WP-BPMN-VISUAL-A",
+        "WP-BPMN-DI-01",
+        "WP-BPMN-VISUAL-B",
+        "WP-BPMN-VISUAL-C",
+        "WP-TABLES",
+        "WP-ARCHIMATE-SEM",
+        "WP-ARCHIMATE-VISUAL"
+      ],
+      "target_outcome": "Runtime Visual ITM and read-only BPMN consumption baseline with clearly deferred edit/write-back gates."
+    },
+    "R-BACKEND-PREVIEW": {
+      "title": "Backend preview",
+      "status": "candidate",
+      "path": "releases/R-BACKEND-PREVIEW.md",
+      "workpackages": [
+        "WP-ID-01",
+        "WP-ID-DEV",
+        "WP-POLICY-01",
+        "WP-PRIVATE-CONTRACT",
+        "WP-BE-HOST",
+        "WP-BE-API",
+        "WP-BE-PERSIST",
+        "WP-PRIVATE-SERVER",
+        "WP-GITLAB",
+        "WP-SERVICES-BE",
+        "WP-COLLAB-LEASES",
+        "WP-AI-MEDIATOR",
+        "WP-AI-PREF"
+      ],
+      "target_outcome": "Optional local backend host/API/persistence preview behind provider-neutral identity and policy contracts."
+    },
+    "R-ENTERPRISE-PROFILE": {
+      "title": "Enterprise profile",
+      "status": "candidate",
+      "path": "releases/R-ENTERPRISE-PROFILE.md",
+      "workpackages": [
+        "WP-SSO-ENTRA",
+        "WP-SSO-OIDC",
+        "WP-GITLAB",
+        "WP-SSO-SAML",
+        "WP-SSO-KEYCLOAK",
+        "WP-DIST-PWA"
+      ],
+      "target_outcome": "Enterprise distribution, SSO, repository, and accreditation profile after backend foundations are viable."
+    }
+  },
+  "adrs": {
+    "ADR-0001": {
+      "title": "Roadmap governance reset",
+      "status": "accepted",
+      "path": "decisions/ADR-0001-roadmap-governance-reset.md",
+      "supersedes": [],
+      "archive_trace": [
+        "archive/rapid/RAPID-up-to-2026-06-05.md"
+      ]
+    }
+  }
+}
