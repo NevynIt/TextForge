@@ -700,3 +700,36 @@ test('bundled EA Dashboard profile fixture remains loadable through the public p
   assert.equal(loaded.document.viewpoints.some((viewpoint) => viewpoint.name === 'ead_global_dashboard'), true);
   assert.equal(loaded.document.views.some((view) => view.name === 'ea_dashboard_global'), true);
 });
+
+test('bundled retail EA ITM example loads with the shared profile and exposes retail viewpoints and views', async () => {
+  const eaProfile = readFileSync(resolve(docsEaDirectory, 'ea-dashboard-profile.itm'), 'utf8');
+  const retailItm = readFileSync(resolve(docsEaDirectory, 'ea-dashboard-retail-architecture.itm'), 'utf8');
+  const workspace = {
+    getEntryByPath(path) {
+      if (path === '/docs/examples/ea/ea-dashboard-profile.itm') {
+        return {
+          kind: 'resource',
+          representation: 'text',
+          path,
+          text: eaProfile,
+        };
+      }
+      return undefined;
+    },
+  };
+
+  const loaded = await loadItmDocument(retailItm, {
+    uri: '/docs/examples/ea/ea-dashboard-retail-architecture.itm',
+    includeProviders: [createWorkspaceItmIncludeProvider(workspace)],
+    includeStdProfiles: false,
+  });
+
+  assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.code === itmResolverDiagnosticCodes.unresolved), false);
+  assert.equal(loaded.effectiveDocument.entities.length, 2815);
+  assert.equal(loaded.document.viewpoints.some((viewpoint) => viewpoint.name === 'retail_portfolio_delivery'), true);
+  assert.equal(loaded.document.viewpoints.some((viewpoint) => viewpoint.name === 'retail_data_trust_landscape'), true);
+  assert.equal(loaded.document.viewpoints.some((viewpoint) => viewpoint.name === 'retail_execution_dashboard'), true);
+  assert.equal(loaded.document.views.some((view) => view.name === 'retail_global_network_2026'), true);
+  assert.equal(loaded.document.views.some((view) => view.name === 'retail_portfolio_delivery_map'), true);
+  assert.equal(loaded.document.views.some((view) => view.name === 'retail_execution_map'), true);
+});

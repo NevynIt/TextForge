@@ -8,4 +8,4 @@ This folder contains Phase 4 example material that the browser-seeded workspace 
 - `diagrams/` contains the main-branch Graphviz and Mermaid example corpus.
 - `itm/` contains the main-branch ITM example models plus the `itm-visual-projections.md` Markdown fixture for tree, graph, mindmap, catalogue, matrix, and report publication modes.
 - `itm/test-profiles/` contains small smoke fixtures for opening one ITM surface or Markdown publication mode at a time.
-- `ea/` contains the bundled EA Dashboard ITM profile, JSON/ITM Lua translators, a small representative fixture, and the larger retail architecture example bundle.
+- `ea/` contains the bundled EA Dashboard ITM profile, JSON/ITM Lua translators, a small representative fixture, and the larger retail architecture example bundle in both JSON and ITM forms.
