@@ -266,6 +266,11 @@ const workbenchTestProfiles = {
     preferredSurfaceId: '@textforge/markdown/preview',
     openPlacement: 'main',
   },
+  'ea-dashboard-sample': {
+    openResourcePath: '/.textforge/resources/docs/examples/ea/ea-dashboard-sample.json',
+    preferredSurfaceId: '@textforge/ea-viewer/dashboard',
+    openPlacement: 'main',
+  },
 };
 
 const workspaceFolderContextCommandIds = [

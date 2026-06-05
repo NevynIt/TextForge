@@ -73,11 +73,40 @@ test('accepts diagrams-only fixtures while reporting partial deployment coverage
 test('reports malformed and unrelated JSON without producing a blank model', () => {
   const malformed = normalizeEaDashboardFixture('{ nope');
   const unrelated = normalizeEaDashboardFixture(JSON.stringify({ ok: true }));
+  const unrelatedDjango = normalizeEaDashboardFixture(JSON.stringify([
+    { model: 'auth.user', pk: 1, fields: { username: 'admin' } },
+  ]));
 
   assert.equal(malformed.recognized, false);
   assert.equal(malformed.diagnostics[0].code, 'ea.fixture.parse-failed');
   assert.equal(unrelated.recognized, false);
   assert.equal(unrelated.diagnostics[0].code, 'ea.fixture.not-array');
+  assert.equal(unrelatedDjango.recognized, false);
+  assert.equal(unrelatedDjango.diagnostics[0].code, 'ea.fixture.unrecognized');
+});
+
+test('unsupported architecture records do not block supported fixture models', () => {
+  const result = normalizeEaDashboardFixture(JSON.stringify([
+    {
+      model: 'architecture.securitydomain',
+      pk: 1,
+      fields: { name: 'NATO UNCLASSIFIED', abbreviation: 'NU', level: 1, color: '#10b981' },
+    },
+    {
+      model: 'architecture.system',
+      pk: 2,
+      fields: { name: 'Supported System', security_domain: 1, capabilities: [] },
+    },
+    {
+      model: 'architecture.unknown',
+      pk: 3,
+      fields: { name: 'Skipped' },
+    },
+  ]));
+
+  assert.equal(result.recognized, true);
+  assert.equal(result.model.systems.length, 1);
+  assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'ea.fixture.model-unsupported'), true);
 });
 
 test('surface open returns mountable fallback for unrelated JSON and runtime model for fixture JSON', () => {
