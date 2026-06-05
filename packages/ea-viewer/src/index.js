@@ -535,6 +535,7 @@ function createStyleElement(documentRef) {
     .tf-ea-flow .react-flow__edge-textwrapper{pointer-events:all}
     .tf-ea-flow .react-flow__edge-text{font-size:11px;fill:#e0f2fe;font-weight:700;pointer-events:none;user-select:none}
     .tf-ea-flow .react-flow__edge-textbg{fill:rgba(8,23,44,.9)}
+    .tf-ea-edge-label{position:absolute;padding:4px 8px;border:1px solid #38bdf8;border-radius:4px;font-size:10px;font-weight:700;line-height:1;white-space:nowrap;pointer-events:all;box-shadow:0 4px 12px rgba(0,0,0,.55);transition:opacity .25s ease}
     .tf-ea-flow .react-flow__handle{position:absolute;pointer-events:none;min-width:5px;min-height:5px;background-color:#60a5fa}
     .tf-ea-flow .react-flow__handle-bottom{top:auto;left:50%;bottom:0;transform:translate(-50%,50%)}
     .tf-ea-flow .react-flow__handle-top{top:0;left:50%;transform:translate(-50%,-50%)}
@@ -601,6 +602,36 @@ function getLifecycle(entity, year) {
   return { status: entity?.status ?? 'Operational', opacity: 1, color: '#10b981' };
 }
 
+function readYear(value) {
+  const year = Number.parseInt(String(value ?? '').slice(0, 4), 10);
+  return Number.isFinite(year) ? year : undefined;
+}
+
+function resolveTimelineState(entity, year) {
+  const start = readYear(entity?.start_date ?? entity?.planned_start_date);
+  const end = readYear(entity?.end_date ?? entity?.planned_end_date);
+  const text = `${entityTitle(entity)} ${entity?.status ?? ''}`.toLowerCase();
+
+  if (start && year < start) {
+    return { status: 'Planned (Future)', active: false, opacity: 0.25, color: '#a855f7' };
+  }
+  if (end && year > end + 1) {
+    return { status: 'Retired', active: false, opacity: 0.22, color: '#64748b' };
+  }
+  if (text.includes('legacy') || text.includes('obsolete')) {
+    return year >= 2029
+      ? { status: 'Operational (Obsolete)', active: true, opacity: 1, color: '#ef4444' }
+      : { status: 'Operational', active: true, opacity: 1, color: '#10b981' };
+  }
+  if (year < 2026 && !start) {
+    return { status: 'Planned (Future)', active: false, opacity: 0.35, color: '#a855f7' };
+  }
+  if (year >= 2038 && !end) {
+    return { status: 'Operational (Aging)', active: true, opacity: 0.85, color: '#f59e0b' };
+  }
+  return { status: entity?.status ?? 'Operational', active: true, opacity: 1, color: '#10b981' };
+}
+
 function formatLifecycleMeta(entity, lifecycle, state) {
   const yearSuffix = state.showFutureState ? ` / ${state.timelineYear}` : '';
   return `${formatSecurity(entity)} / ${lifecycle.status}${yearSuffix}`;
@@ -609,27 +640,35 @@ function formatLifecycleMeta(entity, lifecycle, state) {
 function groupForSystem(system) {
   const capabilities = coerceArray(system?.capabilities).map((capability) => entityTitle(capability).toLowerCase());
   const name = entityTitle(system).toLowerCase();
-  if (capabilities.some((capability) => capability.includes('identity') || capability.includes('security')) || name.includes('dir') || name.includes('guard')) {
-    return 'Enterprise Security & Identity';
+  if (capabilities.some((capability) => capability.includes('isr') || capability.includes('sensor') || capability.includes('target') || capability.includes('air command') || capability.includes('maritime'))) {
+    return 'ISR & Sensors';
   }
-  if (capabilities.some((capability) => capability.includes('sat') || capability.includes('communication')) || name.includes('sat') || name.includes('wan')) {
-    return 'Communications & SATCOM';
-  }
-  if (capabilities.some((capability) => capability.includes('command') || capability.includes('intelligence')) || name.includes('c2')) {
+  if (capabilities.some((capability) => capability.includes('intelligence') || capability.includes('fusion') || capability.includes('command') || capability.includes('control') || capability.includes('messaging')) || name.includes('c2') || name.includes('fas')) {
     return 'C2 & Intelligence';
   }
-  if (capabilities.some((capability) => capability.includes('deploy') || capability.includes('edge')) || name.includes('edge')) {
-    return 'Deployable Edge';
+  if (capabilities.some((capability) => capability.includes('sat') || capability.includes('communication') || capability.includes('voice') || capability.includes('routing') || capability.includes('wide area') || capability.includes('deployable edge')) || name.includes('sat') || name.includes('wan') || name.includes('voice')) {
+    return 'Communications & SATCOM';
+  }
+  if (capabilities.some((capability) => capability.includes('identity') || capability.includes('security') || capability.includes('multi-level')) || name.includes('dir') || name.includes('guard') || name.includes('soc')) {
+    return 'Enterprise Security & Identity';
+  }
+  if (capabilities.some((capability) => capability.includes('tactical hq')) || name.includes('t-hq')) {
+    return 'Tactical HQ Services';
+  }
+  if (capabilities.some((capability) => capability.includes('supply') || capability.includes('asset') || capability.includes('personnel') || capability.includes('roster')) || name.includes('hr') || name.includes('logistics')) {
+    return 'Logistics & Supply Chain';
   }
   return 'Other Operations';
 }
 
 function groupColor(groupName) {
   switch (groupName) {
-    case 'Enterprise Security & Identity': return '#3b82f6';
-    case 'Communications & SATCOM': return '#10b981';
-    case 'C2 & Intelligence': return '#a855f7';
-    case 'Deployable Edge': return '#f59e0b';
+    case 'ISR & Sensors': return '#38bdf8';
+    case 'C2 & Intelligence': return '#f43f5e';
+    case 'Communications & SATCOM': return '#a855f7';
+    case 'Enterprise Security & Identity': return '#10b981';
+    case 'Tactical HQ Services': return '#eab308';
+    case 'Logistics & Supply Chain': return '#f97316';
     default: return '#64748b';
   }
 }
@@ -644,16 +683,20 @@ function createNodeLabel(ReactRef, node) {
   );
 }
 
-function shouldShowServiceNodes(state) {
-  return state.detailLevel >= 2 || state.view === 'dependency' || state.showDataFlow;
-}
-
 function edgeStyle(color, state, lifecycle) {
   return {
     stroke: color,
     strokeWidth: state.showDataFlow ? 3 : 2.4,
     opacity: lifecycle?.opacity ?? 1,
   };
+}
+
+function edgeLabelStyle(color) {
+  return { fill: color };
+}
+
+function edgeLabelBgStyle() {
+  return { fill: 'rgba(8,23,44,.94)' };
 }
 
 function edgeMarker(color) {
@@ -663,6 +706,73 @@ function edgeMarker(color) {
     width: 16,
     height: 16,
   };
+}
+
+function displayLevelForEntity(entity, kind) {
+  if (kind === 'project') {
+    return 1;
+  }
+  if (kind === 'database' || kind === 'cloud') {
+    return 3;
+  }
+  const name = entityTitle(entity).toLowerCase();
+  if (name.includes('tgt') || name.includes('accs') || name.includes('mccis') || name.includes('m-rad') || securityLevel(entity) >= 4) {
+    return 2;
+  }
+  return 1;
+}
+
+function displayLevelForService(service) {
+  const protocol = String(service?.protocol ?? '').toLowerCase();
+  const bandwidth = String(service?.bandwidth ?? '').toLowerCase();
+  if (protocol.includes('sip') || protocol.includes('rtp') || protocol.includes('tcp/ip') || protocol.includes('bgp') || protocol.includes('ospf')) {
+    return 3;
+  }
+  if (protocol.includes('ipsec') || protocol.includes('ldaps') || bandwidth.includes('gbps')) {
+    return 2;
+  }
+  return 1;
+}
+
+function isEncryptedService(service) {
+  const protocol = String(service?.protocol ?? '').toLowerCase();
+  return protocol.includes('https')
+    || protocol.includes('tls')
+    || protocol.includes('mtls')
+    || protocol.includes('ldaps')
+    || protocol.includes('ipsec')
+    || Number(service?.port) === 443
+    || Number(service?.port) === 500
+    || Number(service?.port) === 636;
+}
+
+function deconflictEdges(edges) {
+  const grouped = new Map();
+  for (const edge of edges) {
+    const key = `${edge.source}->${edge.target}`;
+    const group = grouped.get(key) ?? [];
+    group.push(edge);
+    grouped.set(key, group);
+  }
+
+  const offsetForIndex = (index) => {
+    if (index === 0) return 0;
+    const magnitude = 18 * Math.ceil(index / 2);
+    return index % 2 === 1 ? -magnitude : magnitude;
+  };
+
+  return edges.map((edge) => {
+    const group = grouped.get(`${edge.source}->${edge.target}`) ?? [];
+    const index = group.indexOf(edge);
+    return {
+      ...edge,
+      type: 'offset',
+      data: {
+        ...edge.data,
+        offset: edge.data?.offset ?? offsetForIndex(index),
+      },
+    };
+  });
 }
 
 function layoutWithDagre(dagre, nodes, edges, direction) {
@@ -751,17 +861,28 @@ function createDefaultGraphState(overrides = {}) {
 
 export function buildGlobalGraph(ReactRef, dagre, model, incomingState = {}) {
   const state = createDefaultGraphState(incomingState);
-  const visibleSystems = model.systems.filter((system) => {
-    if (state.detailLevel <= 1 && securityLevel(system) > 4) {
-      return false;
-    }
-    return state.enabledGroups[groupForSystem(system)] !== false;
-  });
-  const nodes = visibleSystems.map((system) => {
-    const lifecycle = getLifecycle(system, state.showFutureState ? state.timelineYear : 2026);
+  const year = state.showFutureState ? state.timelineYear : 2026;
+  const nodes = [];
+  const nodeIds = new Set();
+  const nodeTimelines = new Map();
+
+  const addNode = (node) => {
+    if (nodeIds.has(node.id)) return;
+    nodes.push(node);
+    nodeIds.add(node.id);
+  };
+
+  const visibleSystems = model.systems.filter((system) => (
+    displayLevelForEntity(system, 'system') <= state.detailLevel
+    && state.enabledGroups[groupForSystem(system)] !== false
+  ));
+
+  for (const system of visibleSystems) {
+    const lifecycle = resolveTimelineState(system, year);
     const group = groupForSystem(system);
     const borderColor = state.showFutureState || state.showLifecycle ? lifecycle.color : groupColor(group);
-    return {
+    nodeTimelines.set(`system-${system.id}`, lifecycle);
+    addNode({
       id: `system-${system.id}`,
       raw: system,
       kindLabel: group,
@@ -772,134 +893,261 @@ export function buildGlobalGraph(ReactRef, dagre, model, incomingState = {}) {
         background: 'transparent',
         opacity: lifecycle.opacity,
       },
-    };
-  });
+    });
+  }
 
-  if (state.detailLevel === 1) {
-    for (const project of model.projects) {
-      nodes.push({
-        id: `project-${project.id}`,
-        raw: project,
-        kindLabel: 'Project',
-        title: entityTitle(project),
-        meta: `${project.status ?? 'Planned'} / ${project.completion_percentage ?? 0}%`,
-        style: { border: '2px solid #f59e0b', background: 'transparent' },
+  if (state.detailLevel >= 3) {
+    for (const database of model.databases) {
+      const systemNodeId = database.system?.id ? `system-${database.system.id}` : undefined;
+      if (!systemNodeId || !nodeIds.has(systemNodeId)) continue;
+      const lifecycle = resolveTimelineState(database, year);
+      nodeTimelines.set(`database-${database.id}`, lifecycle);
+      addNode({
+        id: `database-${database.id}`,
+        raw: database,
+        kindLabel: 'Database',
+        title: entityTitle(database),
+        meta: `${formatSecurity(database)} / ${lifecycle.status}${state.showFutureState ? ` / ${year}` : ''}`,
+        style: {
+          border: `2px solid ${state.showFutureState || state.showLifecycle ? lifecycle.color : '#06b6d4'}`,
+          background: 'rgba(22,78,99,.36)',
+          opacity: lifecycle.opacity,
+        },
+      });
+    }
+
+    for (const cloud of model.cloudResources) {
+      if (!(cloud.systems ?? []).some((system) => nodeIds.has(`system-${system.id}`))) continue;
+      const lifecycle = resolveTimelineState(cloud, year);
+      nodeTimelines.set(`cloud-${cloud.id}`, lifecycle);
+      addNode({
+        id: `cloud-${cloud.id}`,
+        raw: cloud,
+        kindLabel: 'Cloud Resource',
+        title: entityTitle(cloud),
+        meta: `${cloud.provider ?? 'Cloud'} / ${lifecycle.status}${state.showFutureState ? ` / ${year}` : ''}`,
+        style: {
+          border: `2px solid ${state.showFutureState || state.showLifecycle ? lifecycle.color : '#60a5fa'}`,
+          background: 'rgba(30,64,175,.28)',
+          opacity: lifecycle.opacity,
+        },
       });
     }
   }
 
-  const nodeIds = new Set(nodes.map((node) => node.id));
-  if (shouldShowServiceNodes(state)) {
-    for (const service of model.services) {
-      const providerId = service.system?.id ? `system-${service.system.id}` : undefined;
-      const consumerIds = (service.consumed_by ?? [])
-        .map((consumer) => consumer?.id ? `system-${consumer.id}` : undefined)
-        .filter(Boolean);
-      const linkedToVisibleSystem = Boolean(
-        (providerId && nodeIds.has(providerId))
-        || consumerIds.some((consumerId) => nodeIds.has(consumerId)),
-      );
-      if (!linkedToVisibleSystem) {
-        continue;
-      }
-      const lifecycle = getLifecycle(service.system ?? service, state.showFutureState ? state.timelineYear : 2026);
-      const serviceId = `service-${service.id}`;
-      if (!nodeIds.has(serviceId)) {
-        nodes.push({
-          id: serviceId,
-          raw: service,
-          kindLabel: 'Service',
-          title: entityTitle(service),
-          meta: `${String(service.protocol ?? 'Service')}${state.showFutureState ? ` / ${state.timelineYear}` : ''}`,
-          style: {
-            border: `2px solid ${state.showFutureState || state.showLifecycle ? lifecycle.color : '#38bdf8'}`,
-            background: 'rgba(8,47,73,.62)',
-            opacity: lifecycle.opacity,
-          },
-        });
-        nodeIds.add(serviceId);
-      }
+  if (state.detailLevel === 1 || state.detailLevel >= 3) {
+    for (const project of model.projects) {
+      const linkedSystems = new Set([
+        ...(project.systems ?? []).map((system) => system?.id),
+        ...model.systems
+          .filter((system) => (system.capability_ids ?? []).some((id) => (project.capability_ids ?? []).includes(id)))
+          .map((system) => system.id),
+      ].filter(Boolean));
+      if (![...linkedSystems].some((id) => nodeIds.has(`system-${id}`))) continue;
+      const lifecycle = resolveTimelineState(project, year);
+      if (state.showFutureState && !lifecycle.active && lifecycle.status === 'Retired') continue;
+      nodeTimelines.set(`project-${project.id}`, lifecycle);
+      addNode({
+        id: `project-${project.id}`,
+        raw: project,
+        kindLabel: 'Project',
+        title: entityTitle(project),
+        meta: `${lifecycle.status} / ${project.completion_percentage ?? 0}%${state.showFutureState ? ` / ${year}` : ''}`,
+        style: {
+          border: `2px solid ${state.showFutureState || state.showLifecycle ? lifecycle.color : '#a855f7'}`,
+          background: 'rgba(88,28,135,.36)',
+          opacity: lifecycle.opacity,
+        },
+      });
     }
   }
 
   const edges = [];
+  const pushEdge = (edge, sourceTimeline, targetTimeline) => {
+    const sourceActive = sourceTimeline?.active !== false;
+    const targetActive = targetTimeline?.active !== false;
+    edges.push({
+      ...edge,
+      style: {
+        ...edge.style,
+        opacity: sourceActive && targetActive ? (edge.style?.opacity ?? 1) : 0.08,
+      },
+    });
+  };
+
   for (const service of model.services) {
     const providerNodeId = service.system?.id ? `system-${service.system.id}` : undefined;
-    const serviceNodeId = `service-${service.id}`;
-    const lifecycle = getLifecycle(service.system ?? service, state.showFutureState ? state.timelineYear : 2026);
-    const color = state.showDataFlow ? '#22d3ee' : state.showFutureState || state.showLifecycle ? lifecycle.color : '#38bdf8';
-    const labelSuffix = state.showFutureState ? ` @ ${state.timelineYear}` : '';
-    if (nodeIds.has(serviceNodeId)) {
-      if (providerNodeId && nodeIds.has(providerNodeId)) {
-        edges.push({
-          id: `service-${service.id}-provider`,
-          source: providerNodeId,
-          target: serviceNodeId,
-          type: 'smoothstep',
-          animated: state.showDataFlow,
-          label: state.detailLevel >= 2 ? `offers${labelSuffix}` : undefined,
-          markerEnd: edgeMarker(color),
-          style: edgeStyle(color, state, lifecycle),
-        });
-      }
-      for (const consumer of service.consumed_by ?? []) {
-        const consumerNodeId = consumer?.id ? `system-${consumer.id}` : undefined;
-        if (!consumerNodeId || !nodeIds.has(consumerNodeId)) {
-          continue;
-        }
-        edges.push({
-          id: `service-${service.id}-${consumer.id}`,
-          source: serviceNodeId,
-          target: consumerNodeId,
-          type: 'smoothstep',
-          animated: state.showDataFlow,
-          label: state.detailLevel >= 2 ? `${String(service.protocol ?? service.name ?? 'uses')}${labelSuffix}` : undefined,
-          markerEnd: edgeMarker(color),
-          style: edgeStyle(color, state, lifecycle),
-        });
-      }
-      continue;
-    }
+    if (!providerNodeId || !nodeIds.has(providerNodeId) || displayLevelForService(service) > state.detailLevel) continue;
+    const providerTimeline = nodeTimelines.get(providerNodeId);
+    const lifecycle = resolveTimelineState(service.system ?? service, year);
+    const baseColor = state.showFutureState || state.showLifecycle ? lifecycle.color : '#475569';
+    const serviceLabel = String(service.name ?? service.protocol ?? 'service');
 
     for (const consumer of service.consumed_by ?? []) {
       const consumerNodeId = consumer?.id ? `system-${consumer.id}` : undefined;
-      if (providerNodeId && consumerNodeId && providerNodeId !== consumerNodeId && nodeIds.has(providerNodeId) && nodeIds.has(consumerNodeId)) {
-        edges.push({
+      if (!consumerNodeId || !nodeIds.has(consumerNodeId)) continue;
+      const consumerTimeline = nodeTimelines.get(consumerNodeId);
+
+      if (providerNodeId === consumerNodeId) {
+        const serviceNodeId = `service-${service.id}`;
+        if (!nodeIds.has(serviceNodeId)) {
+          nodeTimelines.set(serviceNodeId, lifecycle);
+          addNode({
+            id: serviceNodeId,
+            raw: service,
+            kindLabel: 'Service',
+            title: entityTitle(service),
+            meta: `${String(service.protocol ?? 'Service')}${state.showFutureState ? ` / ${year}` : ''}`,
+            style: {
+              border: `2px solid ${state.showFutureState || state.showLifecycle ? lifecycle.color : '#38bdf8'}`,
+              background: 'rgba(8,47,73,.62)',
+              opacity: lifecycle.opacity,
+            },
+          });
+        }
+        pushEdge({
+          id: `service-${service.id}-provider`,
+          source: providerNodeId,
+          target: serviceNodeId,
+          label: state.detailLevel >= 2 ? `offers${state.showFutureState ? ` @ ${year}` : ''}` : undefined,
+          markerEnd: edgeMarker(baseColor),
+          style: edgeStyle(baseColor, state, lifecycle),
+        }, providerTimeline, lifecycle);
+        pushEdge({
           id: `service-${service.id}-${consumer.id}`,
-          source: consumerNodeId,
-          target: providerNodeId,
-          type: 'smoothstep',
-          animated: state.showDataFlow,
-          label: state.detailLevel >= 2 ? `${String(service.protocol ?? service.name ?? 'uses')}${labelSuffix}` : undefined,
-          markerEnd: edgeMarker(color),
-          style: edgeStyle(color, state, lifecycle),
-        });
+          source: serviceNodeId,
+          target: consumerNodeId,
+          label: state.detailLevel >= 2 ? `${String(service.protocol ?? service.name ?? 'uses')}${state.showFutureState ? ` @ ${year}` : ''}` : undefined,
+          markerEnd: edgeMarker(baseColor),
+          style: edgeStyle(baseColor, state, lifecycle),
+        }, lifecycle, consumerTimeline);
+        continue;
       }
-    }
-  }
-  for (const project of model.projects) {
-    for (const system of project.systems ?? []) {
-      if (state.detailLevel === 1) {
-        edges.push({
-          id: `project-${project.id}-system-${system.id}`,
-          source: `project-${project.id}`,
-          target: `system-${system.id}`,
-          type: 'smoothstep',
+
+      pushEdge({
+        id: `service-${service.id}-${consumer.id}-base`,
+        source: providerNodeId,
+        target: consumerNodeId,
+        label: state.detailLevel >= 3 ? String(service.protocol ?? service.name ?? 'uses') : undefined,
+        markerEnd: edgeMarker(baseColor),
+        labelStyle: edgeLabelStyle('#cbd5e1'),
+        labelBgStyle: edgeLabelBgStyle(),
+        style: edgeStyle(baseColor, state, lifecycle),
+      }, providerTimeline, consumerTimeline);
+
+      if (state.showDataFlow) {
+        pushEdge({
+          id: `service-${service.id}-${consumer.id}-dataflow`,
+          source: providerNodeId,
+          target: consumerNodeId,
           animated: true,
-          label: 'delivers',
-          style: { stroke: '#f59e0b', strokeDasharray: '5 5', strokeWidth: 1.5 },
-        });
+          label: `${serviceLabel}${state.showFutureState ? ` @ ${year}` : ''}`,
+          markerEnd: edgeMarker('#3b82f6'),
+          labelStyle: edgeLabelStyle('#60a5fa'),
+          labelBgStyle: edgeLabelBgStyle(),
+          style: edgeStyle('#3b82f6', state, lifecycle),
+        }, providerTimeline, consumerTimeline);
+      }
+
+      if (state.showSecurity) {
+        const encrypted = isEncryptedService(service);
+        const securityColor = encrypted ? '#10b981' : '#ef4444';
+        pushEdge({
+          id: `service-${service.id}-${consumer.id}-security`,
+          source: providerNodeId,
+          target: consumerNodeId,
+          animated: !encrypted,
+          label: encrypted ? `[${service.protocol ?? 'encrypted'}] ${serviceLabel}` : `[CLEAR TEXT] ${serviceLabel}`,
+          markerEnd: edgeMarker(securityColor),
+          labelStyle: edgeLabelStyle(securityColor),
+          labelBgStyle: edgeLabelBgStyle(),
+          style: {
+            ...edgeStyle(securityColor, state, lifecycle),
+            strokeDasharray: encrypted ? undefined : '4 4',
+          },
+        }, providerTimeline, consumerTimeline);
       }
     }
   }
 
+  if (state.detailLevel >= 3) {
+    for (const database of model.databases) {
+      const systemNodeId = database.system?.id ? `system-${database.system.id}` : undefined;
+      const databaseNodeId = `database-${database.id}`;
+      if (systemNodeId && nodeIds.has(systemNodeId) && nodeIds.has(databaseNodeId)) {
+        pushEdge({
+          id: `database-${database.id}-system-${database.system.id}`,
+          source: systemNodeId,
+          target: databaseNodeId,
+          label: 'queries',
+          markerEnd: edgeMarker('#06b6d4'),
+          labelStyle: edgeLabelStyle('#67e8f9'),
+          labelBgStyle: edgeLabelBgStyle(),
+          style: edgeStyle('#06b6d4', state, nodeTimelines.get(databaseNodeId)),
+        }, nodeTimelines.get(systemNodeId), nodeTimelines.get(databaseNodeId));
+      }
+    }
+
+    for (const cloud of model.cloudResources) {
+      const cloudNodeId = `cloud-${cloud.id}`;
+      for (const system of cloud.systems ?? []) {
+        const systemNodeId = `system-${system.id}`;
+        if (nodeIds.has(systemNodeId) && nodeIds.has(cloudNodeId)) {
+          pushEdge({
+            id: `cloud-${cloud.id}-system-${system.id}`,
+            source: systemNodeId,
+            target: cloudNodeId,
+            label: cloud.resource_type ?? 'hosts',
+            markerEnd: edgeMarker('#60a5fa'),
+            labelStyle: edgeLabelStyle('#bfdbfe'),
+            labelBgStyle: edgeLabelBgStyle(),
+            style: edgeStyle('#60a5fa', state, nodeTimelines.get(cloudNodeId)),
+          }, nodeTimelines.get(systemNodeId), nodeTimelines.get(cloudNodeId));
+        }
+      }
+    }
+  }
+
+  if (state.detailLevel === 1 || state.detailLevel >= 3) {
+    for (const project of model.projects) {
+      const projectNodeId = `project-${project.id}`;
+      if (!nodeIds.has(projectNodeId)) continue;
+      const linkedSystems = new Set([
+        ...(project.systems ?? []).map((system) => system?.id),
+        ...model.systems
+          .filter((system) => (system.capability_ids ?? []).some((id) => (project.capability_ids ?? []).includes(id)))
+          .map((system) => system.id),
+      ].filter(Boolean));
+      for (const systemId of linkedSystems) {
+        const systemNodeId = `system-${systemId}`;
+        if (!nodeIds.has(systemNodeId)) continue;
+        pushEdge({
+          id: `project-${project.id}-system-${systemId}`,
+          source: projectNodeId,
+          target: systemNodeId,
+          animated: true,
+          label: 'delivers',
+          markerEnd: edgeMarker('#a855f7'),
+          labelStyle: edgeLabelStyle('#d8b4fe'),
+          labelBgStyle: edgeLabelBgStyle(),
+          style: {
+            ...edgeStyle('#a855f7', state, nodeTimelines.get(projectNodeId)),
+            strokeDasharray: '5 5',
+            strokeWidth: 2,
+          },
+        }, nodeTimelines.get(projectNodeId), nodeTimelines.get(systemNodeId));
+      }
+    }
+  }
+
+  const layoutEdges = deconflictEdges(edges);
   const direction = state.view === 'dependency' ? 'TB' : 'LR';
-  const layouted = layoutWithDagre(dagre, nodes, edges, direction).map((node) => ({
+  const layouted = layoutWithDagre(dagre, nodes, layoutEdges, direction).map((node) => ({
     ...node,
     data: { label: createNodeLabel(ReactRef, node), raw: node.raw },
   }));
 
-  return { nodes: layouted, edges };
+  return { nodes: layouted, edges: layoutEdges };
 }
 
 function buildBusinessGraph(ReactRef, dagre, model) {
@@ -940,6 +1188,79 @@ function buildBusinessGraph(ReactRef, dagre, model) {
     })),
     edges,
   };
+}
+
+function createOffsetEdgeTypes(ReactRef, modules) {
+  const getBezierPath = modules.getBezierPath;
+  const EdgeLabelRenderer = modules.EdgeLabelRenderer;
+  if (typeof getBezierPath !== 'function' || !EdgeLabelRenderer) {
+    return undefined;
+  }
+
+  const OffsetConnectionEdge = ({
+    id,
+    sourceX,
+    sourceY,
+    targetX,
+    targetY,
+    sourcePosition,
+    targetPosition,
+    style = {},
+    markerEnd,
+    label,
+    labelStyle,
+    labelBgStyle,
+    data = {},
+  }) => {
+    const offset = Number(data.offset ?? 0);
+    const isHorizontal = sourcePosition === 'left' || sourcePosition === 'right';
+    const shiftedSourceX = isHorizontal ? sourceX : sourceX + offset;
+    const shiftedSourceY = isHorizontal ? sourceY + offset : sourceY;
+    const shiftedTargetX = isHorizontal ? targetX : targetX + offset;
+    const shiftedTargetY = isHorizontal ? targetY + offset : targetY;
+    const [edgePath, labelX, labelY] = getBezierPath({
+      sourceX: shiftedSourceX,
+      sourceY: shiftedSourceY,
+      sourcePosition,
+      targetX: shiftedTargetX,
+      targetY: shiftedTargetY,
+      targetPosition,
+    });
+
+    return ReactRef.createElement(
+      ReactRef.Fragment,
+      null,
+      ReactRef.createElement('path', {
+        id,
+        className: 'react-flow__edge-path',
+        d: edgePath,
+        markerEnd,
+        style,
+      }),
+      label
+        ? ReactRef.createElement(
+          EdgeLabelRenderer,
+          null,
+          ReactRef.createElement(
+            'div',
+            {
+              className: 'tf-ea-edge-label',
+              style: {
+                transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+                background: labelBgStyle?.fill ?? 'rgba(8,23,44,.94)',
+                color: labelStyle?.fill ?? '#e0f2fe',
+                borderColor: style.stroke ?? '#38bdf8',
+                opacity: style.opacity ?? 1,
+              },
+            },
+            label,
+          ),
+        )
+        : null,
+    );
+  };
+
+  return { offset: OffsetConnectionEdge };
 }
 
 function DetailPanel({ selected }) {
@@ -1025,6 +1346,7 @@ function ViewerApp({ title, model, diagnostics, modules }) {
   const applyNodeChanges = modules.applyNodeChanges;
   const applyEdgeChanges = modules.applyEdgeChanges;
   const dagre = modules.dagre;
+  const edgeTypes = React.useMemo(() => createOffsetEdgeTypes(React, modules), [modules]);
 
   const groupNames = React.useMemo(() => {
     const groups = new Set(model.systems.map(groupForSystem));
@@ -1138,6 +1460,7 @@ function ViewerApp({ title, model, diagnostics, modules }) {
               fitView: true,
               minZoom: 0.2,
               maxZoom: 1.6,
+              edgeTypes,
             },
             React.createElement(Background, { color: '#1e293b', gap: 20, size: 1 }),
             React.createElement(Controls, { style: { background: 'rgba(15,23,42,.85)', border: '1px solid rgba(59,130,246,.35)', color: '#fff' } }),
@@ -1266,6 +1589,8 @@ async function mountEaViewerRuntime(container, model) {
         Controls: reactFlowModule.Controls,
         applyNodeChanges: reactFlowModule.applyNodeChanges,
         applyEdgeChanges: reactFlowModule.applyEdgeChanges,
+        getBezierPath: reactFlowModule.getBezierPath,
+        EdgeLabelRenderer: reactFlowModule.EdgeLabelRenderer,
         dagre,
       },
     }));

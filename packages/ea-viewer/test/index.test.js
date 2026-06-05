@@ -112,6 +112,35 @@ test('timeline state changes graph labels and lifecycle styling', async () => {
   assert.equal(future.edges.some((edge) => String(edge.label).includes('@ 2042')), true);
 });
 
+test('renders normal service relations as deconflicted direct offset edges', async () => {
+  const [dagreModule, graphlibModule] = await Promise.all([
+    import('dagre-d3-es/src/dagre/index.js'),
+    import('dagre-d3-es/src/graphlib/index.js'),
+  ]);
+  const dagre = createDagreLayoutEngine(dagreModule, graphlibModule);
+  const fixture = JSON.stringify([
+    { model: 'architecture.securitydomain', pk: 1, fields: { name: 'NATO SECRET', abbreviation: 'NS', level: 3 } },
+    { model: 'architecture.capability', pk: 10, fields: { name: 'Wide Area Connectivity', security_domain: 1 } },
+    { model: 'architecture.system', pk: 20, fields: { name: 'Provider Core', security_domain: 1, capabilities: [10] } },
+    { model: 'architecture.system', pk: 21, fields: { name: 'Consumer Edge', security_domain: 1, capabilities: [10] } },
+    { model: 'architecture.service', pk: 30, fields: { name: 'Routing Feed', system: 20, security_domain: 1, protocol: 'HTTPS', port: 443, consumed_by: [21] } },
+  ]);
+  const result = normalizeEaDashboardFixture(fixture);
+  const graph = buildGlobalGraph({ createElement: () => null }, dagre, result.model, {
+    view: 'network',
+    detailLevel: 2,
+    showDataFlow: true,
+    showSecurity: true,
+  });
+
+  assert.equal(graph.nodes.some((node) => node.id === 'service-30'), false);
+  assert.equal(graph.edges.length, 3);
+  assert.equal(graph.edges.every((edge) => edge.type === 'offset'), true);
+  assert.deepEqual(graph.edges.map((edge) => edge.source), ['system-20', 'system-20', 'system-20']);
+  assert.deepEqual(graph.edges.map((edge) => edge.target), ['system-21', 'system-21', 'system-21']);
+  assert.deepEqual(graph.edges.map((edge) => edge.data.offset), [0, -18, 18]);
+});
+
 test('accepts diagrams-only fixtures while reporting partial deployment coverage', () => {
   const diagramsOnly = JSON.stringify([
     {
