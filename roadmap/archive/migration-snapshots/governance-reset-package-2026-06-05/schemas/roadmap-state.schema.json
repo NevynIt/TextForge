@@ -1,0 +1,226 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://textforge.local/schemas/roadmap-state.schema.json",
+  "title": "TextForge Roadmap State",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "modules",
+    "workpackages",
+    "releases",
+    "adrs"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "status_values": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "modules": {
+      "type": "object",
+      "patternProperties": {
+        "^MOD-[A-Z0-9-]+$": {
+          "type": "object",
+          "required": [
+            "title",
+            "path",
+            "status"
+          ],
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "owns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "depends_on": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^MOD-[A-Z0-9-]+$"
+              }
+            },
+            "enables": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "workpackages": {
+      "type": "object",
+      "patternProperties": {
+        "^WP-[A-Z0-9-]+$": {
+          "type": "object",
+          "required": [
+            "title",
+            "path",
+            "module",
+            "status"
+          ],
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "path": {
+              "type": "string"
+            },
+            "module": {
+              "type": "string",
+              "pattern": "^MOD-[A-Z0-9-]+$"
+            },
+            "status": {
+              "enum": [
+                "candidate",
+                "defined",
+                "ready",
+                "in-progress",
+                "implemented",
+                "validated",
+                "blocked",
+                "deferred",
+                "archived"
+              ]
+            },
+            "type": {
+              "type": "string"
+            },
+            "depends_on": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^WP-[A-Z0-9-]+$"
+              }
+            },
+            "enables": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^WP-[A-Z0-9-]+$"
+              }
+            },
+            "release_candidates": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^R-[A-Z0-9-]+$"
+              }
+            },
+            "production_required": {
+              "type": "boolean"
+            },
+            "deferrable": {
+              "type": "boolean"
+            },
+            "key_adrs": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^ADR-[0-9]{4}$"
+              }
+            },
+            "archive_trace": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "releases": {
+      "type": "object",
+      "patternProperties": {
+        "^R-[A-Z0-9-]+$": {
+          "type": "object",
+          "required": [
+            "title",
+            "status",
+            "workpackages"
+          ],
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "workpackages": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^WP-[A-Z0-9-]+$"
+              }
+            },
+            "target_outcome": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    },
+    "adrs": {
+      "type": "object",
+      "patternProperties": {
+        "^ADR-[0-9]{4}$": {
+          "type": "object",
+          "required": [
+            "title",
+            "status",
+            "path"
+          ],
+          "properties": {
+            "title": {
+              "type": "string"
+            },
+            "status": {
+              "enum": [
+                "proposed",
+                "accepted",
+                "superseded",
+                "rejected"
+              ]
+            },
+            "path": {
+              "type": "string"
+            },
+            "supersedes": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "pattern": "^ADR-[0-9]{4}$"
+              }
+            }
+          },
+          "additionalProperties": true
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": true
+}
