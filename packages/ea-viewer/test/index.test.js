@@ -16,6 +16,7 @@ import {
 
 const workspaceRoot = resolve(import.meta.dirname, '..', '..', '..');
 const samplePath = resolve(workspaceRoot, 'docs/examples/ea/ea-dashboard-sample.json');
+const retailSamplePath = resolve(workspaceRoot, 'docs/examples/ea/ea-dashboard-retail-architecture.json');
 
 test('contribution manifest exposes the EA dashboard viewer surface', () => {
   assert.equal(contributions.packageId, '@textforge/ea-viewer');
@@ -27,6 +28,17 @@ test('recognizes the bundled EA Dashboard Django fixture sample', () => {
   const sample = JSON.parse(readFileSync(samplePath, 'utf8'));
 
   assert.equal(isEaDashboardFixture(sample), true);
+});
+
+test('recognizes the bundled retail architecture fixture and preserves expected scale', () => {
+  const sample = JSON.parse(readFileSync(retailSamplePath, 'utf8'));
+  const result = normalizeEaDashboardFixture(readFileSync(retailSamplePath, 'utf8'));
+
+  assert.equal(isEaDashboardFixture(sample), true);
+  assert.equal(result.recognized, true);
+  assert.equal(result.model.recordCount, 2815);
+  assert.equal(result.model.servers.length, 2400);
+  assert.equal(result.model.systems.length, 16);
 });
 
 test('normalizes fixture records into viewer collections and resolved relationships', () => {

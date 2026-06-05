@@ -271,6 +271,11 @@ const workbenchTestProfiles = {
     preferredSurfaceId: '@textforge/ea-viewer/dashboard',
     openPlacement: 'main',
   },
+  'ea-dashboard-retail': {
+    openResourcePath: '/.textforge/resources/docs/examples/ea/ea-dashboard-retail-architecture.json',
+    preferredSurfaceId: '@textforge/ea-viewer/dashboard',
+    openPlacement: 'main',
+  },
 };
 
 const workspaceFolderContextCommandIds = [
