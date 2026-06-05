@@ -627,39 +627,48 @@ function createNodeLabel(ReactRef, node) {
   );
 }
 
+function layoutWithFallback(nodes) {
+  return nodes.map((node, index) => ({
+    ...node,
+    position: { x: 100 + (index % 4) * 280, y: 140 + Math.floor(index / 4) * 170 },
+  }));
+}
+
 function layoutWithDagre(dagre, nodes, edges, direction) {
   if (!dagre?.graphlib?.Graph || typeof dagre.layout !== 'function') {
-    return nodes.map((node, index) => ({
-      ...node,
-      position: { x: 100 + (index % 4) * 280, y: 140 + Math.floor(index / 4) * 170 },
-    }));
+    return layoutWithFallback(nodes);
   }
-  const graph = new dagre.graphlib.Graph();
-  graph.setDefaultEdgeLabel(() => ({}));
-  graph.setGraph({ rankdir: direction, nodesep: 110, ranksep: 150 });
-  for (const node of nodes) {
-    graph.setNode(node.id, { width: 220, height: 96 });
-  }
-  for (const edge of edges) {
-    graph.setEdge(edge.source, edge.target);
-  }
-  dagre.layout(graph);
-  return nodes.map((node, index) => {
-    const position = graph.node(node.id);
-    if (!position) {
+
+  try {
+    const graph = new dagre.graphlib.Graph();
+    graph.setDefaultEdgeLabel(() => ({}));
+    graph.setGraph({ rankdir: direction, nodesep: 110, ranksep: 150 });
+    for (const node of nodes) {
+      graph.setNode(node.id, { width: 220, height: 96 });
+    }
+    for (const edge of edges) {
+      graph.setEdge(edge.source, edge.target);
+    }
+    dagre.layout(graph);
+    return nodes.map((node, index) => {
+      const position = graph.node(node.id);
+      if (!position) {
+        return {
+          ...node,
+          position: { x: 100 + index * 240, y: 160 },
+        };
+      }
       return {
         ...node,
-        position: { x: 100 + index * 240, y: 160 },
+        position: {
+          x: position.x - 110,
+          y: position.y - 48,
+        },
       };
-    }
-    return {
-      ...node,
-      position: {
-        x: position.x - 110,
-        y: position.y - 48,
-      },
-    };
-  });
+    });
+  } catch {
+    return layoutWithFallback(nodes);
+  }
 }
 
 function resolveDagreModule(moduleRef) {

@@ -16,5 +16,10 @@ assert.equal(
   false,
   'EA viewer must keep React Flow CSS in the CSP-nonced package style block.',
 );
+assert.match(
+  source,
+  /try\s*\{[\s\S]*dagre\.layout\(graph\);[\s\S]*\}\s*catch\s*\{[\s\S]*layoutWithFallback\(nodes\)/u,
+  'EA viewer must fall back when browser-bundled Dagre layout fails.',
+);
 
 console.info('ea-viewer package checks passed');
