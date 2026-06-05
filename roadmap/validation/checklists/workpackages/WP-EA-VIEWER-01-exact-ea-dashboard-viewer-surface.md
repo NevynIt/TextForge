@@ -25,3 +25,4 @@ Embedded TextForge surface port of the EA Dashboard React viewer for local JSON 
 - Bundled profile/translators: `docs/examples/ea/ea-dashboard-profile.itm`, `docs/examples/ea/ea-dashboard-json-to-itm.lua`, `docs/examples/ea/ea-dashboard-itm-to-json.lua`.
 - Representative fixture: `docs/examples/ea/ea-dashboard-sample.json`.
 - Focused checks: `corepack pnpm --filter @textforge/lua test`, `corepack pnpm --filter @textforge/itm test`.
+- Evidence guidance and checklist mapping: `roadmap/validation/evidence/WP-EA-VIEWER-01-evidence-guidance.md`.
