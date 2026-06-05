@@ -60,6 +60,9 @@ import {
   renderBpmnPublicationSvg,
 } from '@textforge/bpmn';
 import {
+  contributions as eaViewerContributionPack,
+} from '@textforge/ea-viewer';
+import {
   contributions as pipelineContributionPack,
 } from '@textforge/pipeline';
 import {
@@ -866,6 +869,7 @@ function createTextForgeWorkbenchController() {
     editorContributionPack,
     assetContributionPack,
     bpmnContributionPack,
+    eaViewerContributionPack,
     pipelineContributionPack,
     diagramContributionPack,
     markdownContributionPack,

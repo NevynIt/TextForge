@@ -22,6 +22,9 @@ importers:
       '@textforge/diagrams':
         specifier: workspace:^
         version: link:../../packages/diagrams
+      '@textforge/ea-viewer':
+        specifier: workspace:*
+        version: link:../../packages/ea-viewer
       '@textforge/editors':
         specifier: workspace:*
         version: link:../../packages/editors

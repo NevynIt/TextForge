@@ -24,6 +24,7 @@
     "@textforge/bpmn": "workspace:*",
     "@textforge/core": "workspace:*",
     "@textforge/diagrams": "workspace:^",
+    "@textforge/ea-viewer": "workspace:*",
     "@textforge/editors": "workspace:*",
     "@textforge/itm": "workspace:*",
     "@textforge/lua": "workspace:^",
