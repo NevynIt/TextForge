@@ -627,61 +627,69 @@ function createNodeLabel(ReactRef, node) {
   );
 }
 
-function layoutWithFallback(nodes) {
-  return nodes.map((node, index) => ({
-    ...node,
-    position: { x: 100 + (index % 4) * 280, y: 140 + Math.floor(index / 4) * 170 },
-  }));
-}
-
 function layoutWithDagre(dagre, nodes, edges, direction) {
   if (!dagre?.graphlib?.Graph || typeof dagre.layout !== 'function') {
-    return layoutWithFallback(nodes);
+    throw new Error('Dagre layout engine did not initialize with graphlib.Graph.');
   }
 
-  try {
-    const graph = new dagre.graphlib.Graph();
-    graph.setDefaultEdgeLabel(() => ({}));
-    graph.setGraph({ rankdir: direction, nodesep: 110, ranksep: 150 });
-    for (const node of nodes) {
-      graph.setNode(node.id, { width: 220, height: 96 });
-    }
-    for (const edge of edges) {
-      graph.setEdge(edge.source, edge.target);
-    }
-    dagre.layout(graph);
-    return nodes.map((node, index) => {
-      const position = graph.node(node.id);
-      if (!position) {
-        return {
-          ...node,
-          position: { x: 100 + index * 240, y: 160 },
-        };
-      }
-      return {
-        ...node,
-        position: {
-          x: position.x - 110,
-          y: position.y - 48,
-        },
-      };
-    });
-  } catch {
-    return layoutWithFallback(nodes);
+  const graph = new dagre.graphlib.Graph();
+  graph.setDefaultEdgeLabel(() => ({}));
+  graph.setGraph({ rankdir: direction, nodesep: 110, ranksep: 150 });
+  for (const node of nodes) {
+    graph.setNode(node.id, { width: 220, height: 96 });
   }
+  for (const edge of edges) {
+    graph.setEdge(edge.source, edge.target);
+  }
+  dagre.layout(graph);
+  return nodes.map((node) => {
+    const position = graph.node(node.id);
+    if (!position) {
+      throw new Error(`Dagre layout did not return a position for node ${node.id}.`);
+    }
+    return {
+      ...node,
+      position: {
+        x: position.x - 110,
+        y: position.y - 48,
+      },
+    };
+  });
 }
 
-function resolveDagreModule(moduleRef) {
-  const candidates = [
-    moduleRef,
-    moduleRef?.default,
-    moduleRef?.['module.exports'],
-    moduleRef?.default?.default,
-  ];
-  return candidates.find((candidate) => (
-    candidate?.graphlib?.Graph
-    && typeof candidate.layout === 'function'
-  ));
+export function createDagreLayoutEngine(dagreModule, graphlibModule) {
+  const layout = dagreModule?.layout;
+  const Graph = graphlibModule?.Graph;
+  if (typeof layout !== 'function' || typeof Graph !== 'function') {
+    return undefined;
+  }
+  return {
+    layout,
+    graphlib: {
+      Graph,
+    },
+  };
+}
+
+export function verifyDagreLayoutEngine(dagre) {
+  if (!dagre?.graphlib?.Graph || typeof dagre.layout !== 'function') {
+    throw new Error('Dagre layout engine did not expose graphlib.Graph.');
+  }
+
+  const graph = new dagre.graphlib.Graph();
+  graph.setDefaultEdgeLabel(() => ({}));
+  graph.setGraph({ rankdir: 'LR' });
+  graph.setNode('source', { width: 100, height: 50 });
+  graph.setNode('target', { width: 100, height: 50 });
+  graph.setEdge('source', 'target');
+  dagre.layout(graph);
+
+  for (const id of ['source', 'target']) {
+    const node = graph.node(id);
+    if (!Number.isFinite(node?.x) || !Number.isFinite(node?.y)) {
+      throw new Error(`Dagre layout engine did not produce coordinates for ${id}.`);
+    }
+  }
 }
 
 function buildGlobalGraph(ReactRef, dagre, model, state) {
@@ -1107,14 +1115,16 @@ async function mountEaViewerRuntime(container, model) {
 
   const root = createRoot(container);
   try {
-    const [reactFlowModule, dagreModule] = await Promise.all([
+    const [reactFlowModule, dagreModule, graphlibModule] = await Promise.all([
       import('@xyflow/react'),
-      import('dagre'),
+      import('dagre-d3-es/src/dagre/index.js'),
+      import('dagre-d3-es/src/graphlib/index.js'),
     ]);
-    const dagre = resolveDagreModule(dagreModule);
+    const dagre = createDagreLayoutEngine(dagreModule, graphlibModule);
     if (!dagre) {
-      throw new Error('Dagre graph layout module did not expose graphlib.Graph.');
+      throw new Error('Dagre ESM layout module did not expose graphlib.Graph.');
     }
+    verifyDagreLayoutEngine(dagre);
     root.render(React.createElement(ViewerApp, {
       title: model.title,
       model: model.model,

@@ -5,10 +5,12 @@ import { resolve } from 'node:path';
 
 import {
   contributions,
+  createDagreLayoutEngine,
   createEaViewerModel,
   eaViewerSurfaceContribution,
   isEaDashboardFixture,
   normalizeEaDashboardFixture,
+  verifyDagreLayoutEngine,
 } from '../src/index.js';
 
 const workspaceRoot = resolve(import.meta.dirname, '..', '..', '..');
@@ -47,6 +49,18 @@ test('normalizes fixture records into viewer collections and resolved relationsh
   assert.equal(result.model.projects[0].systems[0].id, 30);
   assert.equal(result.model.strategicGoals[0].value_streams[0].id, 130);
   assert.equal(result.model.businessProcesses[0].systems[0].id, 30);
+});
+
+test('initializes the ESM Dagre layout engine with graphlib coordinates', async () => {
+  const [dagreModule, graphlibModule] = await Promise.all([
+    import('dagre-d3-es/src/dagre/index.js'),
+    import('dagre-d3-es/src/graphlib/index.js'),
+  ]);
+  const dagre = createDagreLayoutEngine(dagreModule, graphlibModule);
+
+  assert.equal(typeof dagre?.layout, 'function');
+  assert.equal(typeof dagre?.graphlib?.Graph, 'function');
+  assert.doesNotThrow(() => verifyDagreLayoutEngine(dagre));
 });
 
 test('accepts diagrams-only fixtures while reporting partial deployment coverage', () => {
