@@ -454,9 +454,23 @@ function createFailureHtml(title, diagnostics) {
   `;
 }
 
+function readCspNonce(documentRef) {
+  if (!documentRef?.querySelector) {
+    return undefined;
+  }
+
+  const meta = documentRef.querySelector('meta[name="textforge-csp-nonce"]');
+  const nonce = meta?.getAttribute('content')?.trim();
+  return nonce || undefined;
+}
+
 function createStyleElement(documentRef) {
   const style = documentRef.createElement('style');
   style.dataset.textforgeEaViewerStyle = 'true';
+  const cspNonce = readCspNonce(documentRef);
+  if (cspNonce) {
+    style.setAttribute('nonce', cspNonce);
+  }
   style.textContent = `
     .tf-ea-viewer{--ea-bg:#040a16;--ea-panel:rgba(8,23,44,.9);--ea-border:rgba(59,130,246,.35);--ea-text:#f8fafc;--ea-muted:#94a3b8;--ea-blue:#3b82f6;--ea-green:#10b981;--ea-amber:#f59e0b;--ea-red:#ef4444;display:flex;flex-direction:column;width:100%;height:100%;min-height:520px;background:#040a16;color:var(--ea-text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}
     .tf-ea-viewer *{box-sizing:border-box}
@@ -504,6 +518,21 @@ function createStyleElement(documentRef) {
     .tf-ea-list-card{border:1px solid var(--ea-border);border-radius:8px;background:rgba(15,23,42,.86);padding:14px;cursor:pointer}
     .tf-ea-list-card:hover{border-color:#60a5fa;background:rgba(30,41,59,.92)}
     .tf-ea-eyebrow{margin:0;color:#60a5fa;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+    .tf-ea-flow .react-flow{direction:ltr;width:100%;height:100%;position:relative;overflow:hidden;z-index:0;background:#040a16}
+    .tf-ea-flow .react-flow__renderer,.tf-ea-flow .react-flow__zoompane,.tf-ea-flow .react-flow__selectionpane{width:100%;height:100%;position:absolute;inset:0}
+    .tf-ea-flow .react-flow__pane{z-index:1;cursor:grab}
+    .tf-ea-flow .react-flow__viewport{transform-origin:0 0;z-index:2;pointer-events:none}
+    .tf-ea-flow .react-flow__container{position:absolute;width:100%;height:100%;top:0;left:0}
+    .tf-ea-flow .react-flow__nodes{position:absolute;width:100%;height:100%;transform-origin:0 0;pointer-events:none}
+    .tf-ea-flow .react-flow__node{position:absolute;user-select:none;pointer-events:all;transform-origin:0 0}
+    .tf-ea-flow .react-flow__edges{position:absolute;width:100%;height:100%;overflow:visible;pointer-events:none}
+    .tf-ea-flow .react-flow__edge{pointer-events:visibleStroke}
+    .tf-ea-flow .react-flow__edge-path{fill:none;stroke:#3b82f6;stroke-width:2}
+    .tf-ea-flow .react-flow__edge-text{font-size:11px;fill:#dbeafe}
+    .tf-ea-flow .react-flow__background{position:absolute;width:100%;height:100%;top:0;left:0}
+    .tf-ea-flow .react-flow__controls{position:absolute;z-index:5;left:12px;bottom:12px;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+    .tf-ea-flow .react-flow__controls button{width:28px;height:28px;border:0;border-bottom:1px solid rgba(255,255,255,.12);background:rgba(15,23,42,.9);color:#fff;display:grid;place-items:center;cursor:pointer}
+    .tf-ea-flow .react-flow__controls button:hover{background:rgba(59,130,246,.35)}
     @media (max-width:1100px){.tf-ea-shell{grid-template-columns:190px minmax(0,1fr)}.tf-ea-controls{position:absolute;right:12px;top:80px;bottom:12px;width:min(320px,calc(100% - 24px));z-index:12;border:1px solid var(--ea-border);border-radius:8px}.tf-ea-sidebar{font-size:.85rem}}
   `;
   return style;
@@ -599,7 +628,7 @@ function createNodeLabel(ReactRef, node) {
 }
 
 function layoutWithDagre(dagre, nodes, edges, direction) {
-  if (!dagre?.graphlib?.Graph) {
+  if (!dagre?.graphlib?.Graph || typeof dagre.layout !== 'function') {
     return nodes.map((node, index) => ({
       ...node,
       position: { x: 100 + (index % 4) * 280, y: 140 + Math.floor(index / 4) * 170 },
@@ -631,6 +660,19 @@ function layoutWithDagre(dagre, nodes, edges, direction) {
       },
     };
   });
+}
+
+function resolveDagreModule(moduleRef) {
+  const candidates = [
+    moduleRef,
+    moduleRef?.default,
+    moduleRef?.['module.exports'],
+    moduleRef?.default?.default,
+  ];
+  return candidates.find((candidate) => (
+    candidate?.graphlib?.Graph
+    && typeof candidate.layout === 'function'
+  ));
 }
 
 function buildGlobalGraph(ReactRef, dagre, model, state) {
@@ -1056,11 +1098,14 @@ async function mountEaViewerRuntime(container, model) {
 
   const root = createRoot(container);
   try {
-    await import('@xyflow/react/dist/style.css');
     const [reactFlowModule, dagreModule] = await Promise.all([
       import('@xyflow/react'),
       import('dagre'),
     ]);
+    const dagre = resolveDagreModule(dagreModule);
+    if (!dagre) {
+      throw new Error('Dagre graph layout module did not expose graphlib.Graph.');
+    }
     root.render(React.createElement(ViewerApp, {
       title: model.title,
       model: model.model,
@@ -1071,7 +1116,7 @@ async function mountEaViewerRuntime(container, model) {
         Controls: reactFlowModule.Controls,
         applyNodeChanges: reactFlowModule.applyNodeChanges,
         applyEdgeChanges: reactFlowModule.applyEdgeChanges,
-        dagre: dagreModule.default ?? dagreModule,
+        dagre,
       },
     }));
   } catch (error) {

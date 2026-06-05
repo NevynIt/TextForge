@@ -352,7 +352,9 @@ function readLuaBootstrapRecoveryState() {
   const skipLuaPreloadOnce = url.searchParams.get(luaRecoveryQueryParam) === '1';
   if (skipLuaPreloadOnce) {
     url.searchParams.delete(luaRecoveryQueryParam);
-    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    if (window.location.protocol !== 'file:') {
+      window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+    }
   }
   return {
     skipLuaPreloadOnce,
