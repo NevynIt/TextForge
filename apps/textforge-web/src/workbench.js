@@ -324,6 +324,7 @@ const popupSessionContextCommandIds = [
 ];
 
 const luaRecoveryQueryParam = 'luaSkipPreload';
+const workbenchRecoveryQueryParam = 'recovery';
 
 function readPhase35ScreenshotPreset() {
   if (typeof window === 'undefined') {
@@ -369,6 +370,34 @@ function readLuaBootstrapRecoveryState() {
   return {
     skipLuaPreloadOnce,
   };
+}
+
+function readWorkbenchRecoveryMode() {
+  if (typeof window === 'undefined') {
+    return {
+      active: false,
+    };
+  }
+
+  return {
+    active: new URL(window.location.href).searchParams.has(workbenchRecoveryQueryParam),
+  };
+}
+
+function clearWorkbenchRecoveryMode() {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  const url = new URL(window.location.href);
+  if (!url.searchParams.has(workbenchRecoveryQueryParam)) {
+    return;
+  }
+
+  url.searchParams.delete(workbenchRecoveryQueryParam);
+  if (window.location.protocol !== 'file:') {
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  }
 }
 
 function isLuaBootstrapCommandId(commandId) {
@@ -865,6 +894,7 @@ function createTextForgeWorkbenchController() {
   const hasExplicitBootstrapProfile = typeof window !== 'undefined'
     && new URL(window.location.href).searchParams.has('phase35');
   const luaBootstrapRecovery = readLuaBootstrapRecoveryState();
+  const workbenchRecoveryMode = readWorkbenchRecoveryMode();
   const bootstrapOptions = readWorkbenchBootstrapOptions();
   const tracePreview = createTraceLogger(readPreviewTraceEnabled());
   let workspace = createWorkspaceService({
@@ -942,7 +972,8 @@ function createTextForgeWorkbenchController() {
     visualTargetPicker: undefined,
   };
   const runtime = {
-    status: 'loading',
+    status: workbenchRecoveryMode.active ? 'recovery' : 'loading',
+    recoveryPromptActive: workbenchRecoveryMode.active,
     skipLuaPreloadOnce: luaBootstrapRecovery.skipLuaPreloadOnce,
   };
   const commandDispatcher = createCommandDispatcher({
@@ -4418,7 +4449,10 @@ function createTextForgeWorkbenchController() {
   async function hydrateWorkspace(options = {}) {
     tracePreview('hydrateWorkspace:start', {
       resetStorage: options.resetStorage === true,
+      suppressInitialOpen: options.suppressInitialOpen === true,
+      suppressSessionRestore: options.suppressSessionRestore === true,
     });
+    runtime.recoveryPromptActive = false;
     runtime.status = 'loading';
     storageFailure = undefined;
     suspendWorkbenchUiStatePersistence = true;
@@ -4468,9 +4502,13 @@ function createTextForgeWorkbenchController() {
       const selectedEntry = getEntry(workspace.getManifest().selectedResourceId) ?? getDefaultSelection();
       rememberSelection(selectedEntry?.id, { expandAncestors: false });
       normalizeActiveSessions();
-      const restoredSessions = restoreWorkbenchUiSessions();
+      const restoredSessions = options.suppressSessionRestore
+        ? false
+        : restoreWorkbenchUiSessions();
 
-      const initialOpenProfile = workbenchTestProfile ?? screenshotPreset;
+      const initialOpenProfile = options.suppressInitialOpen
+        ? undefined
+        : (workbenchTestProfile ?? screenshotPreset);
       const presetEntry = initialOpenProfile?.openResourcePath
         ? workspace.getEntryByPath(initialOpenProfile.openResourcePath)
         : undefined;
@@ -4531,6 +4569,23 @@ function createTextForgeWorkbenchController() {
     await hydrateWorkspace();
   }
 
+  async function openRecoveryWorkspaceWithoutFiles() {
+    clearWorkbenchRecoveryMode();
+    await hydrateWorkspace({
+      suppressInitialOpen: true,
+      suppressSessionRestore: true,
+    });
+  }
+
+  async function resetRecoveryWorkspace() {
+    clearWorkbenchRecoveryMode();
+    await hydrateWorkspace({
+      resetStorage: true,
+      suppressInitialOpen: true,
+      suppressSessionRestore: true,
+    });
+  }
+
   function buildSnapshot() {
     normalizeActiveSessions();
     const treeItems = runtime.status === 'ready'
@@ -4541,13 +4596,21 @@ function createTextForgeWorkbenchController() {
     const persistenceStatus = runtime.status === 'ready'
       ? workspace.getPersistenceStatus()
       : {
-        state: runtime.status === 'loading' ? 'persisting' : 'error',
+        state: runtime.status === 'loading'
+          ? 'persisting'
+          : runtime.status === 'error'
+            ? 'error'
+            : 'idle',
         driver: 'dexie',
         databaseName: workspaceDatabaseName,
         schemaVersion: 1,
         browserManaged: true,
         lastSavedAt: undefined,
-        pendingReason: runtime.status === 'loading' ? 'hydrate' : 'recovery-required',
+        pendingReason: runtime.status === 'loading'
+          ? 'hydrate'
+          : runtime.status === 'error'
+            ? 'recovery-required'
+            : 'recovery-startup',
         error: storageFailure ? { code: storageFailure.code, message: storageFailure.detail } : undefined,
       };
     const commandContext = buildCommandContext();
@@ -4700,6 +4763,7 @@ function createTextForgeWorkbenchController() {
       runtime: {
         status: runtime.status,
         hydrationSource,
+        recoveryPromptActive: runtime.recoveryPromptActive,
         skipLuaPreloadOnce: runtime.skipLuaPreloadOnce,
         storageFailure,
       },
@@ -4751,7 +4815,9 @@ function createTextForgeWorkbenchController() {
   }
 
   registerCommandHandlers();
-  void hydrateWorkspace();
+  if (!runtime.recoveryPromptActive) {
+    void hydrateWorkspace();
+  }
 
   return {
     subscribe,
@@ -4776,10 +4842,12 @@ function createTextForgeWorkbenchController() {
       focusPopupSession,
       openMainTabContextMenu,
       openPopupSessionContextMenu,
+      openRecoveryWorkspaceWithoutFiles,
       openSelectedVisualTargets,
       openWorkspaceItemContextMenu,
       moveWorkspaceItem,
       requestStorageReset,
+      resetRecoveryWorkspace,
       retryStorageInitialization,
       selectWorkspaceItem,
       setUtilityPaneCollapsed,
@@ -5087,6 +5155,33 @@ function LoadingState() {
       null,
       element('p', null, 'TextForge is opening the browser-managed Dexie workspace before command routes and surface sessions are rebuilt.'),
       element('p', null, 'Open tabs, popup sessions, and side-panel layout remain ordinary local UI state; the workspace content and badge assignments persist.'),
+    ),
+  });
+}
+
+function StartupRecoveryState({ controller }) {
+  return element(TextForgeCallout, {
+    tone: 'warning',
+    title: 'Recovery mode',
+    actions: [
+      element(TextForgeToolbarButton, {
+        key: 'recovery-open-without-files',
+        kind: 'secondary',
+        label: 'Open Without Files',
+        onPress: controller.actions.openRecoveryWorkspaceWithoutFiles,
+      }),
+      element(TextForgeToolbarButton, {
+        key: 'recovery-reset-workspace',
+        kind: 'primary',
+        label: 'Reset Workspace',
+        onPress: controller.actions.resetRecoveryWorkspace,
+      }),
+    ],
+    children: element(
+      React.Fragment,
+      null,
+      element('p', null, 'Recovery mode bypasses restored tabs and the default startup document so the app can reopen into a clean shell.'),
+      element('p', null, 'Open without files keeps the current workspace data. Reset workspace clears the persisted browser workspace and rebuilds the starter seed.'),
     ),
   });
 }
@@ -5902,7 +5997,9 @@ function TextForgeWorkbenchApp({ controller }) {
     };
   }, [controller]);
 
-  const mainViewportContent = snapshot.runtime.status === 'loading'
+  const mainViewportContent = snapshot.runtime.recoveryPromptActive
+    ? element(StartupRecoveryState, { controller })
+    : snapshot.runtime.status === 'loading'
     ? element(LoadingState)
     : snapshot.runtime.status === 'error'
       ? element(RecoveryState, { controller, snapshot })
