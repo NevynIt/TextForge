@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
+  buildGlobalGraph,
   contributions,
   createDagreLayoutEngine,
   createEaViewerModel,
@@ -61,6 +62,54 @@ test('initializes the ESM Dagre layout engine with graphlib coordinates', async 
   assert.equal(typeof dagre?.layout, 'function');
   assert.equal(typeof dagre?.graphlib?.Graph, 'function');
   assert.doesNotThrow(() => verifyDagreLayoutEngine(dagre));
+});
+
+test('builds visible service graph edges for the bundled sample self-service relation', async () => {
+  const [dagreModule, graphlibModule] = await Promise.all([
+    import('dagre-d3-es/src/dagre/index.js'),
+    import('dagre-d3-es/src/graphlib/index.js'),
+  ]);
+  const dagre = createDagreLayoutEngine(dagreModule, graphlibModule);
+  const result = normalizeEaDashboardFixture(readFileSync(samplePath, 'utf8'));
+  const graph = buildGlobalGraph({ createElement: () => null }, dagre, result.model, {
+    view: 'network',
+    detailLevel: 2,
+  });
+
+  assert.equal(graph.nodes.some((node) => node.id === 'service-40'), true);
+  assert.equal(graph.edges.some((edge) => edge.id === 'service-40-provider'), true);
+  assert.equal(graph.edges.some((edge) => edge.id === 'service-40-30'), true);
+  assert.equal(graph.edges.every((edge) => graph.nodes.some((node) => node.id === edge.source)), true);
+  assert.equal(graph.edges.every((edge) => graph.nodes.some((node) => node.id === edge.target)), true);
+});
+
+test('timeline state changes graph labels and lifecycle styling', async () => {
+  const [dagreModule, graphlibModule] = await Promise.all([
+    import('dagre-d3-es/src/dagre/index.js'),
+    import('dagre-d3-es/src/graphlib/index.js'),
+  ]);
+  const dagre = createDagreLayoutEngine(dagreModule, graphlibModule);
+  const result = normalizeEaDashboardFixture(readFileSync(samplePath, 'utf8'));
+  const past = buildGlobalGraph({ createElement: () => null }, dagre, result.model, {
+    view: 'network',
+    detailLevel: 2,
+    showFutureState: true,
+    timelineYear: 2012,
+  });
+  const future = buildGlobalGraph({ createElement: () => null }, dagre, result.model, {
+    view: 'network',
+    detailLevel: 2,
+    showFutureState: true,
+    timelineYear: 2042,
+  });
+  const pastSystem = past.nodes.find((node) => node.id === 'system-30');
+  const futureSystem = future.nodes.find((node) => node.id === 'system-30');
+
+  assert.match(pastSystem.meta, /2012/u);
+  assert.match(futureSystem.meta, /2042/u);
+  assert.notEqual(pastSystem.meta, futureSystem.meta);
+  assert.notEqual(pastSystem.style.border, futureSystem.style.border);
+  assert.equal(future.edges.some((edge) => String(edge.label).includes('@ 2042')), true);
 });
 
 test('accepts diagrams-only fixtures while reporting partial deployment coverage', () => {

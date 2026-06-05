@@ -520,19 +520,31 @@ function createStyleElement(documentRef) {
     .tf-ea-eyebrow{margin:0;color:#60a5fa;font-size:.72rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
     .tf-ea-flow .react-flow{direction:ltr;width:100%;height:100%;position:relative;overflow:hidden;z-index:0;background:#040a16}
     .tf-ea-flow .react-flow__renderer,.tf-ea-flow .react-flow__zoompane,.tf-ea-flow .react-flow__selectionpane{width:100%;height:100%;position:absolute;inset:0}
+    .tf-ea-flow .react-flow__renderer{z-index:4}
     .tf-ea-flow .react-flow__pane{z-index:1;cursor:grab}
     .tf-ea-flow .react-flow__viewport{transform-origin:0 0;z-index:2;pointer-events:none}
     .tf-ea-flow .react-flow__container{position:absolute;width:100%;height:100%;top:0;left:0}
     .tf-ea-flow .react-flow__nodes{position:absolute;width:100%;height:100%;transform-origin:0 0;pointer-events:none}
     .tf-ea-flow .react-flow__node{position:absolute;user-select:none;pointer-events:all;transform-origin:0 0}
     .tf-ea-flow .react-flow__edges{position:absolute;width:100%;height:100%;overflow:visible;pointer-events:none}
+    .tf-ea-flow .react-flow__edges svg{position:absolute;overflow:visible;pointer-events:none}
     .tf-ea-flow .react-flow__edge{pointer-events:visibleStroke}
-    .tf-ea-flow .react-flow__edge-path{fill:none;stroke:#3b82f6;stroke-width:2}
-    .tf-ea-flow .react-flow__edge-text{font-size:11px;fill:#dbeafe}
+    .tf-ea-flow .react-flow__edge-path{fill:none;stroke:#38bdf8;stroke-width:2.4;filter:drop-shadow(0 0 5px rgba(56,189,248,.45))}
+    .tf-ea-flow .react-flow__edge.animated path{stroke-dasharray:5;animation:tfEaDashdraw .5s linear infinite}
+    .tf-ea-flow .react-flow__edge.animated path.react-flow__edge-interaction{stroke-dasharray:none;animation:none}
+    .tf-ea-flow .react-flow__edge-textwrapper{pointer-events:all}
+    .tf-ea-flow .react-flow__edge-text{font-size:11px;fill:#e0f2fe;font-weight:700;pointer-events:none;user-select:none}
+    .tf-ea-flow .react-flow__edge-textbg{fill:rgba(8,23,44,.9)}
+    .tf-ea-flow .react-flow__handle{position:absolute;pointer-events:none;min-width:5px;min-height:5px;background-color:#60a5fa}
+    .tf-ea-flow .react-flow__handle-bottom{top:auto;left:50%;bottom:0;transform:translate(-50%,50%)}
+    .tf-ea-flow .react-flow__handle-top{top:0;left:50%;transform:translate(-50%,-50%)}
+    .tf-ea-flow .react-flow__handle-left{top:50%;left:0;transform:translate(-50%,-50%)}
+    .tf-ea-flow .react-flow__handle-right{top:50%;right:0;transform:translate(50%,-50%)}
     .tf-ea-flow .react-flow__background{position:absolute;width:100%;height:100%;top:0;left:0}
     .tf-ea-flow .react-flow__controls{position:absolute;z-index:5;left:12px;bottom:12px;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,.3)}
     .tf-ea-flow .react-flow__controls button{width:28px;height:28px;border:0;border-bottom:1px solid rgba(255,255,255,.12);background:rgba(15,23,42,.9);color:#fff;display:grid;place-items:center;cursor:pointer}
     .tf-ea-flow .react-flow__controls button:hover{background:rgba(59,130,246,.35)}
+    @keyframes tfEaDashdraw{from{stroke-dashoffset:10}}
     @media (max-width:1100px){.tf-ea-shell{grid-template-columns:190px minmax(0,1fr)}.tf-ea-controls{position:absolute;right:12px;top:80px;bottom:12px;width:min(320px,calc(100% - 24px));z-index:12;border:1px solid var(--ea-border);border-radius:8px}.tf-ea-sidebar{font-size:.85rem}}
   `;
   return style;
@@ -589,6 +601,11 @@ function getLifecycle(entity, year) {
   return { status: entity?.status ?? 'Operational', opacity: 1, color: '#10b981' };
 }
 
+function formatLifecycleMeta(entity, lifecycle, state) {
+  const yearSuffix = state.showFutureState ? ` / ${state.timelineYear}` : '';
+  return `${formatSecurity(entity)} / ${lifecycle.status}${yearSuffix}`;
+}
+
 function groupForSystem(system) {
   const capabilities = coerceArray(system?.capabilities).map((capability) => entityTitle(capability).toLowerCase());
   const name = entityTitle(system).toLowerCase();
@@ -627,6 +644,27 @@ function createNodeLabel(ReactRef, node) {
   );
 }
 
+function shouldShowServiceNodes(state) {
+  return state.detailLevel >= 2 || state.view === 'dependency' || state.showDataFlow;
+}
+
+function edgeStyle(color, state, lifecycle) {
+  return {
+    stroke: color,
+    strokeWidth: state.showDataFlow ? 3 : 2.4,
+    opacity: lifecycle?.opacity ?? 1,
+  };
+}
+
+function edgeMarker(color) {
+  return {
+    type: 'arrowclosed',
+    color,
+    width: 16,
+    height: 16,
+  };
+}
+
 function layoutWithDagre(dagre, nodes, edges, direction) {
   if (!dagre?.graphlib?.Graph || typeof dagre.layout !== 'function') {
     throw new Error('Dagre layout engine did not initialize with graphlib.Graph.');
@@ -647,8 +685,12 @@ function layoutWithDagre(dagre, nodes, edges, direction) {
     if (!position) {
       throw new Error(`Dagre layout did not return a position for node ${node.id}.`);
     }
+    const sourcePosition = direction === 'TB' ? 'bottom' : 'right';
+    const targetPosition = direction === 'TB' ? 'top' : 'left';
     return {
       ...node,
+      sourcePosition,
+      targetPosition,
       position: {
         x: position.x - 110,
         y: position.y - 48,
@@ -692,7 +734,23 @@ export function verifyDagreLayoutEngine(dagre) {
   }
 }
 
-function buildGlobalGraph(ReactRef, dagre, model, state) {
+function createDefaultGraphState(overrides = {}) {
+  return {
+    view: 'network',
+    detailLevel: 2,
+    showFutureState: false,
+    timelineYear: 2026,
+    showDataFlow: false,
+    showSecurity: false,
+    showLifecycle: false,
+    showDeployment: false,
+    enabledGroups: {},
+    ...overrides,
+  };
+}
+
+export function buildGlobalGraph(ReactRef, dagre, model, incomingState = {}) {
+  const state = createDefaultGraphState(incomingState);
   const visibleSystems = model.systems.filter((system) => {
     if (state.detailLevel <= 1 && securityLevel(system) > 4) {
       return false;
@@ -702,14 +760,15 @@ function buildGlobalGraph(ReactRef, dagre, model, state) {
   const nodes = visibleSystems.map((system) => {
     const lifecycle = getLifecycle(system, state.showFutureState ? state.timelineYear : 2026);
     const group = groupForSystem(system);
+    const borderColor = state.showFutureState || state.showLifecycle ? lifecycle.color : groupColor(group);
     return {
       id: `system-${system.id}`,
       raw: system,
       kindLabel: group,
       title: entityTitle(system),
-      meta: `${formatSecurity(system)} / ${lifecycle.status}`,
+      meta: formatLifecycleMeta(system, lifecycle, state),
       style: {
-        border: `2px solid ${groupColor(group)}`,
+        border: `2px solid ${borderColor}`,
         background: 'transparent',
         opacity: lifecycle.opacity,
       },
@@ -729,19 +788,91 @@ function buildGlobalGraph(ReactRef, dagre, model, state) {
     }
   }
 
+  const nodeIds = new Set(nodes.map((node) => node.id));
+  if (shouldShowServiceNodes(state)) {
+    for (const service of model.services) {
+      const providerId = service.system?.id ? `system-${service.system.id}` : undefined;
+      const consumerIds = (service.consumed_by ?? [])
+        .map((consumer) => consumer?.id ? `system-${consumer.id}` : undefined)
+        .filter(Boolean);
+      const linkedToVisibleSystem = Boolean(
+        (providerId && nodeIds.has(providerId))
+        || consumerIds.some((consumerId) => nodeIds.has(consumerId)),
+      );
+      if (!linkedToVisibleSystem) {
+        continue;
+      }
+      const lifecycle = getLifecycle(service.system ?? service, state.showFutureState ? state.timelineYear : 2026);
+      const serviceId = `service-${service.id}`;
+      if (!nodeIds.has(serviceId)) {
+        nodes.push({
+          id: serviceId,
+          raw: service,
+          kindLabel: 'Service',
+          title: entityTitle(service),
+          meta: `${String(service.protocol ?? 'Service')}${state.showFutureState ? ` / ${state.timelineYear}` : ''}`,
+          style: {
+            border: `2px solid ${state.showFutureState || state.showLifecycle ? lifecycle.color : '#38bdf8'}`,
+            background: 'rgba(8,47,73,.62)',
+            opacity: lifecycle.opacity,
+          },
+        });
+        nodeIds.add(serviceId);
+      }
+    }
+  }
+
   const edges = [];
   for (const service of model.services) {
-    const source = service.system?.id;
-    for (const consumer of service.consumed_by ?? []) {
-      if (source && consumer?.id && source !== consumer.id) {
+    const providerNodeId = service.system?.id ? `system-${service.system.id}` : undefined;
+    const serviceNodeId = `service-${service.id}`;
+    const lifecycle = getLifecycle(service.system ?? service, state.showFutureState ? state.timelineYear : 2026);
+    const color = state.showDataFlow ? '#22d3ee' : state.showFutureState || state.showLifecycle ? lifecycle.color : '#38bdf8';
+    const labelSuffix = state.showFutureState ? ` @ ${state.timelineYear}` : '';
+    if (nodeIds.has(serviceNodeId)) {
+      if (providerNodeId && nodeIds.has(providerNodeId)) {
         edges.push({
-          id: `service-${service.id}-${consumer.id}`,
-          source: `system-${consumer.id}`,
-          target: `system-${source}`,
+          id: `service-${service.id}-provider`,
+          source: providerNodeId,
+          target: serviceNodeId,
           type: 'smoothstep',
           animated: state.showDataFlow,
-          label: state.detailLevel >= 2 ? String(service.protocol ?? service.name ?? 'uses') : undefined,
-          style: { stroke: state.showDataFlow ? '#06b6d4' : '#3b82f6', strokeWidth: 2 },
+          label: state.detailLevel >= 2 ? `offers${labelSuffix}` : undefined,
+          markerEnd: edgeMarker(color),
+          style: edgeStyle(color, state, lifecycle),
+        });
+      }
+      for (const consumer of service.consumed_by ?? []) {
+        const consumerNodeId = consumer?.id ? `system-${consumer.id}` : undefined;
+        if (!consumerNodeId || !nodeIds.has(consumerNodeId)) {
+          continue;
+        }
+        edges.push({
+          id: `service-${service.id}-${consumer.id}`,
+          source: serviceNodeId,
+          target: consumerNodeId,
+          type: 'smoothstep',
+          animated: state.showDataFlow,
+          label: state.detailLevel >= 2 ? `${String(service.protocol ?? service.name ?? 'uses')}${labelSuffix}` : undefined,
+          markerEnd: edgeMarker(color),
+          style: edgeStyle(color, state, lifecycle),
+        });
+      }
+      continue;
+    }
+
+    for (const consumer of service.consumed_by ?? []) {
+      const consumerNodeId = consumer?.id ? `system-${consumer.id}` : undefined;
+      if (providerNodeId && consumerNodeId && providerNodeId !== consumerNodeId && nodeIds.has(providerNodeId) && nodeIds.has(consumerNodeId)) {
+        edges.push({
+          id: `service-${service.id}-${consumer.id}`,
+          source: consumerNodeId,
+          target: providerNodeId,
+          type: 'smoothstep',
+          animated: state.showDataFlow,
+          label: state.detailLevel >= 2 ? `${String(service.protocol ?? service.name ?? 'uses')}${labelSuffix}` : undefined,
+          markerEnd: edgeMarker(color),
+          style: edgeStyle(color, state, lifecycle),
         });
       }
     }
