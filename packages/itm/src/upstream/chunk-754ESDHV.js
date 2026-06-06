@@ -287,7 +287,11 @@ var KNOWN_DIRECTIVES = /* @__PURE__ */ new Set([
   "using",
   "repository",
   "require",
-  "rule"
+  "rule",
+  "idmap",
+  "context",
+  "begin",
+  "end"
 ]);
 var PIPELINE_OPERATIONS = /* @__PURE__ */ new Set([
   "select",
@@ -324,6 +328,79 @@ function toSourceRangeSpan(startLine, startColumn, endLine, endColumn) {
     startColumn,
     endLine,
     endColumn
+  };
+}
+function findItmCommentStart(input) {
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let escaped = false;
+  let braceDepth = 0;
+  for (let index = 0; index < input.length - 1; index += 1) {
+    const current = input[index];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (inDoubleQuote) {
+      if (current === "\\") {
+        escaped = true;
+      } else if (current === '"') {
+        inDoubleQuote = false;
+      }
+      continue;
+    }
+    if (inSingleQuote) {
+      if (current === "'") {
+        inSingleQuote = false;
+      }
+      continue;
+    }
+    if (current === '"') {
+      inDoubleQuote = true;
+      continue;
+    }
+    if (current === "'") {
+      inSingleQuote = true;
+      continue;
+    }
+    if (current === "{") {
+      braceDepth += 1;
+      continue;
+    }
+    if (current === "}") {
+      braceDepth = Math.max(0, braceDepth - 1);
+      continue;
+    }
+    if (braceDepth > 0 || current !== "/" || input[index + 1] !== "/") {
+      continue;
+    }
+    const previous = input[index - 1];
+    if (index === 0 || /\s/u.test(previous ?? "")) {
+      return index;
+    }
+  }
+  return -1;
+}
+function splitItmComment(raw, lineNumber) {
+  if (raw.trimStart().startsWith("|")) {
+    return { content: raw };
+  }
+  const commentStart = findItmCommentStart(raw);
+  if (commentStart < 0) {
+    return { content: raw };
+  }
+  const rawText = raw.slice(commentStart);
+  const text = rawText.slice(2).replace(/^ /u, "");
+  const placement = raw.slice(0, commentStart).trim().length === 0 ? "line" : "trailing";
+  return {
+    content: placement === "line" ? "" : raw.slice(0, commentStart).trimEnd(),
+    comment: {
+      kind: "comment",
+      placement,
+      text,
+      rawText,
+      source: toSourceRangeSpan(lineNumber, commentStart + 1, lineNumber, raw.length + 1)
+    }
   };
 }
 function sanitizeUidSegment(value) {
@@ -1428,15 +1505,170 @@ function createPipeline(stepsValue, uidPrefix) {
 function createRelationshipUid(sourceUid, typeRef, targetRef, index) {
   return `relationship:${sanitizeUidSegment(sourceUid)}:${sanitizeUidSegment(typeRef)}:${sanitizeUidSegment(targetRef)}:${index}`;
 }
-function pushDiagnostic(document, severity, message, lineNumber, raw, range) {
+function pushDiagnostic(document, severity, message, lineNumber, raw, range, extras = {}) {
+  document.diagnostics = document.diagnostics ?? [];
   const diagnostic = {
     uid: `diagnostic:${document.diagnostics?.length ?? 0}:${lineNumber}`,
     source: "itm.parser",
     severity,
     message,
-    range: range ?? toSourceRange(lineNumber, raw)
+    range: range ?? toSourceRange(lineNumber, raw),
+    ...extras
   };
   document.diagnostics?.push(diagnostic);
+}
+function collectDuplicateMappingKeys(rawText) {
+  const counts = /* @__PURE__ */ new Map();
+  for (const line of rawText.split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed === "{" || trimmed === "}" || trimmed.startsWith("#")) {
+      continue;
+    }
+    const match = trimmed.match(/^([^:#][^:]*):(?:\s|$)/u);
+    if (!match) {
+      continue;
+    }
+    const key = match[1]?.trim();
+    if (!key) {
+      continue;
+    }
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return [...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key);
+}
+function isRangeWithinActivation(range, activation) {
+  const start = activation.source;
+  const end = activation.endSource ?? activation.range;
+  if (!range || !start || !end) {
+    return false;
+  }
+  if (start.file && range.file && start.file !== range.file) {
+    return false;
+  }
+  if (range.startLine < start.startLine) {
+    return false;
+  }
+  if (range.startLine === start.startLine && range.startColumn < start.startColumn) {
+    return false;
+  }
+  if (range.startLine > end.endLine) {
+    return false;
+  }
+  if (range.startLine === end.endLine && range.startColumn > end.endColumn) {
+    return false;
+  }
+  return true;
+}
+function resolveContextMappedValue(context, identityMaps, key) {
+  const rawValue = parseScalarString(context.values?.[key]);
+  if (!rawValue) {
+    return void 0;
+  }
+  const idmapName = parseScalarString(context.values?.idmap);
+  const identityMap = idmapName ? identityMaps.get(idmapName) : void 0;
+  return parseScalarString(identityMap?.entries?.[rawValue]) ?? rawValue;
+}
+function isContextAvailableForActivation(context, activation, document) {
+  const packageRef = parseScalarString(context.values?.package);
+  if (!packageRef) {
+    return true;
+  }
+  const contextFile = context.source?.file;
+  const activationFile = activation.source?.file;
+  if ((!contextFile && !activationFile) || contextFile && activationFile && contextFile === activationFile) {
+    return true;
+  }
+  const activationLine = activation.source?.startLine ?? Number.MAX_SAFE_INTEGER;
+  return (document.packageUsages ?? []).some((usage) => {
+    if (usage.packageRef !== `${packageRef}.contexts`) {
+      return false;
+    }
+    if (usage.source?.file && activation.source?.file && usage.source.file !== activation.source.file) {
+      return false;
+    }
+    return (usage.source?.startLine ?? Number.MAX_SAFE_INTEGER) <= activationLine;
+  });
+}
+function applyContextInference(document) {
+  const identityMaps = new Map((document.identityMaps ?? []).map((identityMap) => [identityMap.name, identityMap]).filter(([name]) => Boolean(name)));
+  const contexts = new Map((document.contexts ?? []).map((context) => [context.name, context]));
+  for (const context of document.contexts ?? []) {
+    const idmapName = parseScalarString(context.values?.idmap);
+    if (idmapName && !identityMaps.has(idmapName)) {
+      pushDiagnostic(
+        document,
+        "error",
+        `Context '${context.name}' references missing idmap '${idmapName}'.`,
+        context.source?.startLine ?? 1,
+        "",
+        context.source,
+        { code: "itm.context.idmap-unresolved" }
+      );
+    }
+  }
+  for (const activation of document.scopedActivations ?? []) {
+    if (activation.status === "unmatched-end") {
+      continue;
+    }
+    const context = contexts.get(activation.name);
+    if (!context || !isContextAvailableForActivation(context, activation, document)) {
+      if (!context && (document.includes?.length ?? 0) > 0) {
+        continue;
+      }
+      pushDiagnostic(
+        document,
+        "error",
+        `Scoped context '${activation.name}' is not defined or active.`,
+        activation.source?.startLine ?? 1,
+        "",
+        activation.source,
+        { code: "itm.context.unresolved" }
+      );
+      continue;
+    }
+    const rootType = resolveContextMappedValue(context, identityMaps, "root");
+    const childType = resolveContextMappedValue(context, identityMaps, "child");
+    const relationshipType = resolveContextMappedValue(context, identityMaps, "relationship");
+    const contextPackageRef = parseScalarString(context.values?.package);
+    const packageLocalContext = Boolean(
+      contextPackageRef && ((!context.source?.file && !activation.source?.file) || context.source?.file && activation.source?.file && context.source.file === activation.source.file)
+    );
+    const packageIndependentFile = packageLocalContext ? `__itm_context__:${contextPackageRef}:${context.name}` : void 0;
+    if (rootType || childType) {
+      for (const entity of document.entities) {
+        if (entity.typeRef || !isRangeWithinActivation(entity.sourceRange, activation)) {
+          continue;
+        }
+        const parent = entity.parentId ? document.entities.find((candidate) => candidate.uid === entity.parentId) : void 0;
+        const parentRange = parent?.sourceRange ? { ...parent.sourceRange, file: activation.source?.file } : void 0;
+        const parentInScope = parent ? isRangeWithinActivation(parentRange, activation) : false;
+        const inferredType = parentInScope ? childType : rootType;
+        if (inferredType) {
+          entity.typeRef = inferredType;
+          if (packageIndependentFile && entity.sourceRange) {
+            entity.sourceRange = {
+              ...entity.sourceRange,
+              file: packageIndependentFile
+            };
+          }
+        }
+      }
+    }
+    if (relationshipType) {
+      for (const relationship of document.relationships) {
+        if (relationship.typeRef !== "related_to" || !isRangeWithinActivation(relationship.sourceRange, activation)) {
+          continue;
+        }
+        relationship.typeRef = relationshipType;
+        if (packageIndependentFile && relationship.sourceRange) {
+          relationship.sourceRange = {
+            ...relationship.sourceRange,
+            file: packageIndependentFile
+          };
+        }
+      }
+    }
+  }
 }
 function pruneEmptyCollections(document) {
   const result = { ...document };
@@ -1455,6 +1687,11 @@ function pruneEmptyCollections(document) {
     "packageUsages",
     "repositories",
     "overlays",
+    "comments",
+    "trivia",
+    "identityMaps",
+    "contexts",
+    "scopedActivations",
     "directives",
     "diagnostics"
   ]) {
@@ -1609,6 +1846,52 @@ function annotateDocumentWithUri(document, uri) {
       }
     }
   }
+  for (const comment of document.comments ?? []) {
+    const commentSource = withRangeFile(comment.source, uri);
+    if (commentSource) {
+      comment.source = commentSource;
+    }
+  }
+  for (const trivia of document.trivia ?? []) {
+    const triviaSource = withRangeFile(trivia.source, uri);
+    if (triviaSource) {
+      trivia.source = triviaSource;
+    }
+  }
+  for (const identityMap of document.identityMaps ?? []) {
+    const identityMapSource = withRangeFile(identityMap.source, uri);
+    if (identityMapSource) {
+      identityMap.source = identityMapSource;
+    }
+    const identityMapBodySource = withRangeFile(identityMap.bodySource, uri);
+    if (identityMapBodySource) {
+      identityMap.bodySource = identityMapBodySource;
+    }
+  }
+  for (const context of document.contexts ?? []) {
+    const contextSource = withRangeFile(context.source, uri);
+    if (contextSource) {
+      context.source = contextSource;
+    }
+    const contextBodySource = withRangeFile(context.bodySource, uri);
+    if (contextBodySource) {
+      context.bodySource = contextBodySource;
+    }
+  }
+  for (const activation of document.scopedActivations ?? []) {
+    const activationSource = withRangeFile(activation.source, uri);
+    if (activationSource) {
+      activation.source = activationSource;
+    }
+    const activationEndSource = withRangeFile(activation.endSource, uri);
+    if (activationEndSource) {
+      activation.endSource = activationEndSource;
+    }
+    const activationRange = withRangeFile(activation.range, uri);
+    if (activationRange) {
+      activation.range = activationRange;
+    }
+  }
   for (const directive of document.directives ?? []) {
     const directiveSource = withRangeFile(directive.source, uri);
     if (directiveSource) {
@@ -1654,17 +1937,30 @@ function parseItmResult(text, options = {}) {
     packageUsages: [],
     repositories: [],
     overlays: [],
+    comments: [],
+    trivia: [],
+    identityMaps: [],
+    contexts: [],
+    scopedActivations: [],
     directives: [],
     diagnostics: []
   };
   const entityStack = [];
+  const scopeStack = [];
   let currentEntity;
   let currentOverlay;
   let defaultNamespace = options.defaultNamespace;
   let entityCounter = 0;
   let relationshipCounter = 0;
+  let scopedActivationCounter = 0;
   const addDirective = (directive) => {
     document.directives?.push(directive);
+  };
+  const addTrivia = (trivia) => {
+    document.trivia?.push(trivia);
+    if (trivia.kind === "comment") {
+      document.comments?.push(trivia);
+    }
   };
   const createRelationship2 = (sourceEntity, reference, lineNumber, raw, attributes) => {
     relationshipCounter += 1;
@@ -1691,11 +1987,23 @@ function parseItmResult(text, options = {}) {
     return relationship;
   };
   for (let index = 0; index < lines.length; index += 1) {
-    const raw = lines[index] ?? "";
+    const originalRaw = lines[index] ?? "";
+    const lineNumber = index + 1;
+    const splitComment = splitItmComment(originalRaw, lineNumber);
+    if (splitComment.comment) {
+      addTrivia(splitComment.comment);
+    }
+    const raw = splitComment.content;
     const { normalized, indent } = normalizeLeadingWhitespace(raw);
     const trimmed = normalized.trim();
-    const lineNumber = index + 1;
     if (trimmed.length === 0) {
+      if (!splitComment.comment) {
+        addTrivia({
+          kind: "blank-line",
+          rawText: originalRaw,
+          source: toSourceRange(lineNumber, originalRaw)
+        });
+      }
       continue;
     }
     if (indent % 2 !== 0) {
@@ -1795,6 +2103,8 @@ ${block.rawText}`;
       }
       let body;
       let rawText = raw;
+      let bodySource;
+      let directiveSource = toSourceRange(lineNumber, raw);
       if (lines[index + 1]?.trim() === "{") {
         const block = collectBlock(lines, index + 1);
         rawText = `${raw}
@@ -1805,19 +2115,35 @@ ${block.rawText}`;
           continue;
         }
         if (block.parseError) {
+          if (name === "idmap") {
+            for (const duplicateKey of collectDuplicateMappingKeys(rawText)) {
+              pushDiagnostic(
+                document,
+                "error",
+                `Duplicate idmap entry '${duplicateKey}'.`,
+                lineNumber,
+                raw,
+                toSourceRangeSpan(lineNumber + 1, 1, block.endIndex + 1, (lines[block.endIndex] ?? "").length + 1),
+                { code: "itm.idmap.duplicate-entry" }
+              );
+            }
+          }
           pushDiagnostic(document, "error", `${name} block is not valid YAML: ${block.parseError}`, lineNumber, raw);
           continue;
         }
         body = block.value;
+        bodySource = toSourceRangeSpan(lineNumber + 1, 1, block.endIndex + 1, (lines[block.endIndex] ?? "").length + 1);
+        directiveSource = toSourceRangeSpan(lineNumber, 1, bodySource.endLine, bodySource.endColumn);
       }
       const directive = {
         name,
         ...argumentText ? { argumentText } : {},
         ...body !== void 0 ? { body } : {},
+        ...bodySource ? { bodySource } : {},
         rawText,
         known: KNOWN_DIRECTIVES.has(name),
         handled: KNOWN_DIRECTIVES.has(name),
-        source: toSourceRange(lineNumber, raw)
+        source: directiveSource
       };
       addDirective(directive);
       if (name === "metadata") {
@@ -2010,6 +2336,100 @@ ${block.rawText}`;
           scope: "all",
           source: toSourceRange(lineNumber, raw)
         });
+      } else if (name === "idmap") {
+        const entries = asRecord(body);
+        if (!entries) {
+          pushDiagnostic(document, "error", "%idmap requires a YAML mapping body.", lineNumber, raw, directiveSource);
+        }
+        for (const duplicateKey of collectDuplicateMappingKeys(rawText)) {
+          pushDiagnostic(
+            document,
+            "error",
+            `Duplicate idmap entry '${duplicateKey}'.`,
+            lineNumber,
+            raw,
+            bodySource ?? directiveSource,
+            { code: "itm.idmap.duplicate-entry" }
+          );
+        }
+        const identityMapName = argumentText?.trim();
+        document.identityMaps?.push({
+          uid: `idmap:${sanitizeUidSegment(identityMapName || String(document.identityMaps.length + 1))}`,
+          kind: "identity-map",
+          ...identityMapName ? { name: identityMapName } : {},
+          entries: entries ?? {},
+          rawText,
+          source: directiveSource,
+          ...bodySource ? { bodySource } : {}
+        });
+      } else if (name === "context") {
+        const contextName = argumentText?.trim();
+        if (!contextName) {
+          pushDiagnostic(document, "error", "%context requires a name.", lineNumber, raw, directiveSource);
+        }
+        const values = asRecord(body);
+        if (!values) {
+          pushDiagnostic(document, "error", "%context requires a YAML mapping body.", lineNumber, raw, directiveSource);
+        }
+        document.contexts?.push({
+          uid: `context:${sanitizeUidSegment(contextName || String(document.contexts.length + 1))}`,
+          kind: "context",
+          name: contextName || "",
+          values: values ?? {},
+          rawText,
+          source: directiveSource,
+          ...bodySource ? { bodySource } : {}
+        });
+      } else if (name === "begin") {
+        const scopeName = argumentText?.trim();
+        if (!scopeName) {
+          pushDiagnostic(document, "error", "%begin requires a scope name.", lineNumber, raw, directiveSource);
+        }
+        scopedActivationCounter += 1;
+        const activation = {
+          uid: `scope:${scopedActivationCounter}:${sanitizeUidSegment(scopeName || "anonymous")}`,
+          kind: "scoped-activation",
+          name: scopeName || "",
+          status: "open",
+          source: directiveSource,
+          range: directiveSource
+        };
+        document.scopedActivations?.push(activation);
+        scopeStack.push(activation);
+      } else if (name === "end") {
+        const scopeName = argumentText?.trim();
+        if (!scopeName) {
+          pushDiagnostic(document, "error", "%end requires a scope name.", lineNumber, raw, directiveSource);
+        }
+        if (scopeStack.length === 0) {
+          pushDiagnostic(document, "error", `Unmatched %end '${scopeName || ""}'.`, lineNumber, raw, directiveSource, { code: "itm.context.unmatched-end" });
+          scopedActivationCounter += 1;
+          document.scopedActivations?.push({
+            uid: `scope:${scopedActivationCounter}:unmatched-end:${sanitizeUidSegment(scopeName || "anonymous")}`,
+            kind: "scoped-activation",
+            name: scopeName || "",
+            status: "unmatched-end",
+            source: directiveSource,
+            endSource: directiveSource,
+            range: directiveSource
+          });
+        } else {
+          const activation = scopeStack.pop();
+          activation.endName = scopeName || "";
+          activation.endSource = directiveSource;
+          activation.range = toSourceRangeSpan(
+            activation.source?.startLine ?? lineNumber,
+            activation.source?.startColumn ?? 1,
+            directiveSource.endLine,
+            directiveSource.endColumn
+          );
+          if (activation.name !== scopeName) {
+            activation.status = "mismatched";
+            pushDiagnostic(document, "error", `Mismatched scope end '${scopeName || ""}' for active scope '${activation.name}'.`, lineNumber, raw, directiveSource, { code: "itm.context.mismatched-end" });
+          } else {
+            activation.status = "closed";
+          }
+        }
       }
       currentEntity = void 0;
       currentOverlay = void 0;
@@ -2304,6 +2724,19 @@ ${block.rawText}`;
       entity.outgoingRelationshipIds?.push(relationship.uid);
     }
   }
+  for (const activation of scopeStack.reverse()) {
+    activation.status = "unclosed";
+    pushDiagnostic(
+      document,
+      "error",
+      `Unclosed scope '${activation.name}'.`,
+      activation.source?.startLine ?? 1,
+      "",
+      activation.source,
+      { code: "itm.context.unclosed" }
+    );
+  }
+  applyContextInference(document);
   const entityByQualifiedId = /* @__PURE__ */ new Map();
   const entityByUnqualifiedId = /* @__PURE__ */ new Map();
   for (const entity of document.entities) {
@@ -2517,9 +2950,14 @@ function mergeDocuments(root, included) {
   const packageUsages = mergeCollections(base.packageUsages, ...rest.map((document) => document.packageUsages));
   const repositories = mergeCollections(base.repositories, ...rest.map((document) => document.repositories));
   const overlays = mergeCollections(base.overlays, ...rest.map((document) => document.overlays));
+  const comments = mergeCollections(base.comments, ...rest.map((document) => document.comments));
+  const trivia = mergeCollections(base.trivia, ...rest.map((document) => document.trivia));
+  const identityMaps = mergeCollections(base.identityMaps, ...rest.map((document) => document.identityMaps));
+  const contexts = mergeCollections(base.contexts, ...rest.map((document) => document.contexts));
+  const scopedActivations = mergeCollections(base.scopedActivations, ...rest.map((document) => document.scopedActivations));
   const directives = mergeCollections(base.directives, ...rest.map((document) => document.directives));
   const diagnostics = mergeCollections(base.diagnostics, ...rest.map((document) => document.diagnostics));
-  return {
+  const mergedDocument = {
     ...base,
     entities: clones.flatMap((document) => document.entities),
     relationships: clones.flatMap((document) => document.relationships),
@@ -2537,9 +2975,16 @@ function mergeDocuments(root, included) {
     ...packageUsages ? { packageUsages } : {},
     ...repositories ? { repositories } : {},
     ...overlays ? { overlays } : {},
+    ...comments ? { comments } : {},
+    ...trivia ? { trivia } : {},
+    ...identityMaps ? { identityMaps } : {},
+    ...contexts ? { contexts } : {},
+    ...scopedActivations ? { scopedActivations } : {},
     ...directives ? { directives } : {},
     ...diagnostics ? { diagnostics } : {}
   };
+  applyContextInference(mergedDocument);
+  return mergedDocument;
 }
 function asRecord2(value) {
   if (!value || Array.isArray(value) || typeof value !== "object") {
@@ -4635,13 +5080,63 @@ function serializeOverlays(document, diagnostics) {
   }
   return lines;
 }
+function serializeTrivia(document) {
+  const trivia = document.trivia ?? document.comments ?? [];
+  const lines = [];
+  const seen = /* @__PURE__ */ new Set();
+  for (const entry of sortBySource(trivia)) {
+    const key = `${entry.kind}:${entry.source?.startLine ?? lines.length}:${entry.source?.startColumn ?? 0}:${entry.rawText ?? ""}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    if (entry.kind === "comment") {
+      lines.push(entry.rawText?.startsWith("//") ? entry.rawText : `// ${entry.text ?? ""}`.trimEnd());
+    } else if (entry.kind === "blank-line") {
+      lines.push("");
+    }
+  }
+  return lines;
+}
+function identityMapEntries(identityMap) {
+  return identityMap.entries ?? identityMap.values ?? {};
+}
+function contextValues(context) {
+  return context.values ?? context.body ?? {};
+}
+function serializeScopedActivation(activation) {
+  const name = activation.name || activation.endName || "";
+  if (activation.status === "unmatched-end") {
+    return `%end ${name}`.trimEnd();
+  }
+  const lines = [`%begin ${name}`.trimEnd()];
+  if (activation.status === "closed" || activation.status === "mismatched" || activation.endName) {
+    lines.push(`%end ${activation.endName ?? name}`.trimEnd());
+  }
+  return lines.join("\n");
+}
 function serializeDocumentResult(document, options = {}) {
   const diagnostics = [];
   validateDocumentForSerialization(document, diagnostics);
   const sections = [];
+  const triviaLines = serializeTrivia(document);
+  if (triviaLines.length > 0) {
+    sections.push(triviaLines.join("\n"));
+  }
   if (document.metadata) {
     sections.push(`%metadata
 ${formatBlock(metadataToRecord(document.metadata))}`);
+  }
+  for (const identityMap of sortBySource(document.identityMaps ?? [])) {
+    sections.push(`%idmap${identityMap.name ? ` ${identityMap.name}` : ""}
+${formatBlock(toYamlValue(identityMapEntries(identityMap)))}`);
+  }
+  for (const context of sortBySource(document.contexts ?? [])) {
+    sections.push(`%context ${context.name}
+${formatBlock(toYamlValue(contextValues(context)))}`);
+  }
+  for (const activation of sortBySource(document.scopedActivations ?? [])) {
+    sections.push(serializeScopedActivation(activation));
   }
   for (const namespace of sortBySource(document.namespaces ?? [])) {
     sections.push(`%namespace ${namespace.prefix} ${namespace.uri}`);
