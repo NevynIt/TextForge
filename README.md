@@ -23,6 +23,7 @@ The next implementation slice must be selected from current V20 candidates. `WP-
 ## Guides And References
 
 - [User guide](docs/guides/user-guide.md)
+- [Manual user test suite](docs/manual-tests/README.md)
 - [Lua guide](docs/guides/lua-guide.md)
 - [Plugin development guide](docs/guides/plugin-dev.md)
 - [Docs index](docs/README.md)
