@@ -2518,7 +2518,7 @@
       "title": "Web workbench modularization",
       "path": "workpackages/WP-WEB-WORKBENCH-MODULARITY-01.md",
       "module": "MOD-SURFACES-UI",
-      "status": "in-progress",
+      "status": "validated",
       "type": "Refactor / maintainability",
       "depends_on": [],
       "enables": [],

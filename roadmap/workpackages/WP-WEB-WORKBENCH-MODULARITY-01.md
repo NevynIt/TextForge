@@ -4,7 +4,7 @@
 
 - Workpackage ID: `WP-WEB-WORKBENCH-MODULARITY-01`
 - Authoritative state: `roadmap-state.yaml`
-- Status: `in-progress`
+- Status: `validated`
 - Module: `MOD-SURFACES-UI`
 - ADRs: `ADR-0003`
 
