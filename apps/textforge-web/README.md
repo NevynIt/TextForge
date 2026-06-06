@@ -4,7 +4,7 @@ React workbench shell recovery for the TextForge rebuild.
 
 The shell is packaged with Vite so package dependencies such as React, React DOM, and CodeMirror are bundled instead of resolved through browser import-map shims.
 
-The source entry is a dedicated `src/scriptLoader.js` bootstrap. Development still runs through Vite, and the normal build emits the classic loader bundle plus stylesheet under `dist/`. A separate `build:single` target also emits `dist-single/index.html` with the loader and stylesheet inlined for one-file shipping.
+The source entry is a dedicated `src/scriptLoader.js` bootstrap. Development still runs through Vite, and the normal build emits the classic loader bundle, stylesheet, and optional bundled-docs payload under `dist/`. The app boots when `assets/textforge-bundled-docs.js` is omitted, but the read-only bundled documentation tree is empty in that mode. `build:single` emits a full one-file artifact with docs inlined, while `build:single:small` emits a smaller one-file artifact without bundled docs.
 
 Phase 3.1 replaced the earlier imperative shell bootstrap with a React-rendered workbench frame while keeping editor and asset behaviour inside their package-owned surface factories. Phase 3.2 keeps that shell but hydrates it from a browser-managed Dexie workspace, adds explicit storage reset/recovery flow, and preserves the deliberate non-goals of no tab restore and no saved shell layout.
 
@@ -16,6 +16,7 @@ Phase 3.5 finishes the next shell-usability pass: popup sessions render inside a
 
 - `pnpm --filter @textforge/textforge-web build`
 - `pnpm --filter @textforge/textforge-web build:single`
+- `pnpm --filter @textforge/textforge-web build:single:small`
 - `pnpm --filter @textforge/textforge-web dev --port 4173`
 - `pnpm --filter @textforge/textforge-web preview --port 4173`
 - `pnpm --filter @textforge/textforge-web test`
@@ -23,6 +24,7 @@ Phase 3.5 finishes the next shell-usability pass: popup sessions render inside a
 ## Verification
 
 - Build the package and open `dist/index.html` directly when checking the local artifact path.
-- Run `build:single` and ship `dist-single/index.html` when a standalone HTML artifact is required.
+- Run `build:single` and ship `dist-single/index.html` when a standalone HTML artifact with bundled docs is required.
+- Run `build:single:small` and ship `dist-single-small/index.html` when a standalone HTML artifact without bundled docs is required.
 - Run the Vite preview server for the browser-served path.
 - Run `pnpm --filter @textforge/textforge-web test` to catch shell entrypoint regressions and storage-boundary regressions.

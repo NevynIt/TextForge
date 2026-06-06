@@ -3,19 +3,27 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
+const withoutDocs = process.argv.includes('--without-docs');
+const outDirArgIndex = process.argv.indexOf('--out-dir');
+const outputDirectoryName = outDirArgIndex >= 0
+  ? process.argv[outDirArgIndex + 1]
+  : 'dist-single';
 const distDir = resolve(rootDir, 'dist');
-const singleDistDir = resolve(rootDir, 'dist-single');
+const singleDistDir = resolve(rootDir, outputDirectoryName);
 const indexPath = resolve(distDir, 'index.html');
 const scriptPath = resolve(distDir, 'assets/textforge-loader.js');
 const stylePath = resolve(distDir, 'assets/textforge.css');
+const docsPath = resolve(distDir, 'assets/textforge-bundled-docs.js');
 const singleIndexPath = resolve(singleDistDir, 'index.html');
 const styleNonce = 'textforge-codemirror-style';
 const scriptNonce = 'textforge-loader';
+const docsNonce = 'textforge-bundled-docs';
 
-const [indexHtml, scriptJs, styleCss] = await Promise.all([
+const [indexHtml, scriptJs, styleCss, docsJs] = await Promise.all([
   readFile(indexPath, 'utf8'),
   readFile(scriptPath, 'utf8'),
   readFile(stylePath, 'utf8'),
+  withoutDocs ? Promise.resolve('') : readFile(docsPath, 'utf8'),
 ]);
 
 if (!styleCss.trim()) {
@@ -27,6 +35,12 @@ if (!scriptJs.trim()) {
 }
 
 let singleFileHtml = indexHtml
+  .replace(
+    /<script\s+defer\s+src="\.\/assets\/textforge-bundled-docs\.js"><\/script>/i,
+    () => withoutDocs
+      ? ''
+      : `<script nonce="${docsNonce}">\n${escapeScriptText(docsJs)}\n</script>`,
+  )
   .replace(
     /<link\s+rel="stylesheet"\s+href="\.\/assets\/textforge\.css"\s*\/?>/i,
     () => `<style nonce="${styleNonce}">\n${escapeStyleText(styleCss)}\n</style>`,
@@ -50,18 +64,22 @@ await rm(singleDistDir, { recursive: true, force: true });
 await mkdir(singleDistDir, { recursive: true });
 await writeFile(singleIndexPath, singleFileHtml, 'utf8');
 
-console.info('Created TextForge single-file artifact at dist-single/index.html.');
+console.info(`Created TextForge single-file artifact at ${outputDirectoryName}/index.html.`);
 
 function replaceContentSecurityPolicy(html) {
   return html.replace(
     /(<meta[^>]*http-equiv="Content-Security-Policy"[^>]*content=")([^"]*)("[^>]*>)/i,
     (_match, prefix, content, suffix) => {
       const directives = parseCspDirectives(content);
-      directives.set('script-src', [
+      const scriptSrc = [
         "'self'",
         `'nonce-${scriptNonce}'`,
         "'wasm-unsafe-eval'",
-      ]);
+      ];
+      if (!withoutDocs) {
+        scriptSrc.splice(2, 0, `'nonce-${docsNonce}'`);
+      }
+      directives.set('script-src', scriptSrc);
       directives.set('style-src', [
         "'self'",
         `'nonce-${styleNonce}'`,

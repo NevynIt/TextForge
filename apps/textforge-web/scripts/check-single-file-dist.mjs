@@ -3,7 +3,12 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
-const singleDistDir = resolve(rootDir, 'dist-single');
+const withoutDocs = process.argv.includes('--without-docs');
+const distDirArgIndex = process.argv.indexOf('--dist-dir');
+const distDirectoryName = distDirArgIndex >= 0
+  ? process.argv[distDirArgIndex + 1]
+  : 'dist-single';
+const singleDistDir = resolve(rootDir, distDirectoryName);
 const [singleDistEntries, singleIndexHtml] = await Promise.all([
   readdir(singleDistDir, { withFileTypes: true }),
   readFile(resolve(singleDistDir, 'index.html'), 'utf8'),
@@ -34,6 +39,7 @@ for (const forbidden of [
 
 const scriptJs = extractSingleInlineBlock(singleIndexHtml, 'script', 'textforge-loader');
 const styleCss = extractSingleInlineBlock(singleIndexHtml, 'style', 'textforge-codemirror-style');
+const docsJs = extractOptionalInlineBlock(singleIndexHtml, 'script', 'textforge-bundled-docs');
 
 if (!/<script\s+nonce="textforge-loader">/i.test(singleIndexHtml)) {
   throw new Error('dist-single/index.html must inline the dedicated classic loader bundle with a CSP nonce');
@@ -49,6 +55,14 @@ if (hasEsModuleSyntax(scriptJs)) {
 
 if (!styleCss.trim()) {
   throw new Error('dist-single/index.html inline style must not be empty');
+}
+
+if (withoutDocs && docsJs !== undefined) {
+  throw new Error(`${distDirectoryName}/index.html must omit bundled docs for the small single-file artifact`);
+}
+
+if (!withoutDocs && !docsJs?.includes('globalThis.TextForgeBundledDocs')) {
+  throw new Error(`${distDirectoryName}/index.html must inline the bundled docs payload`);
 }
 
 for (const [description, pattern] of [
@@ -89,6 +103,12 @@ if (/unsafe-inline/i.test(cspContent)) {
 if (!cspContent.includes("'nonce-textforge-loader'")) {
   throw new Error('dist-single/index.html Content-Security-Policy must allow the inline loader nonce');
 }
+if (withoutDocs && cspContent.includes("'nonce-textforge-bundled-docs'")) {
+  throw new Error(`${distDirectoryName}/index.html Content-Security-Policy must not allow the omitted docs nonce`);
+}
+if (!withoutDocs && !cspContent.includes("'nonce-textforge-bundled-docs'")) {
+  throw new Error(`${distDirectoryName}/index.html Content-Security-Policy must allow the inline docs nonce`);
+}
 if (!cspContent.includes("'nonce-textforge-codemirror-style'")) {
   throw new Error('dist-single/index.html Content-Security-Policy must allow the inline style nonce');
 }
@@ -102,6 +122,15 @@ function extractSingleInlineBlock(html, tagName, nonce) {
     throw new Error(`dist-single/index.html must include exactly one nonce-bearing inline ${tagName} block, found ${matches.length}`);
   }
   return matches[0][1] ?? '';
+}
+
+function extractOptionalInlineBlock(html, tagName, nonce) {
+  const pattern = new RegExp(`<${tagName}\\b[^>]*nonce=["']${nonce}["'][^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'gi');
+  const matches = [...html.matchAll(pattern)];
+  if (matches.length > 1) {
+    throw new Error(`${distDirectoryName}/index.html must include at most one nonce-bearing inline ${tagName} block for ${nonce}, found ${matches.length}`);
+  }
+  return matches[0]?.[1];
 }
 
 function extractMetaContent(html, httpEquiv) {

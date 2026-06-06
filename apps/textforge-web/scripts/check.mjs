@@ -19,6 +19,7 @@ const mainJs = await readFile(resolve(rootDir, 'src/main.js'), 'utf8');
 const scriptLoaderJs = await readFile(resolve(rootDir, 'src/scriptLoader.js'), 'utf8');
 const workbenchEntrypointJs = await readFile(resolve(rootDir, 'src/workbench.js'), 'utf8');
 const workbenchJs = await readSourceCorpus(resolve(rootDir, 'src'));
+const bundledDocsRuntimeJs = await readFile(resolve(rootDir, 'src', 'workbench', 'bundled-docs.js'), 'utf8');
 const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
 const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
 const uiPackageJson = await readFile(resolve(rootDir, '..', '..', 'packages', 'ui', 'package.json'), 'utf8');
@@ -31,8 +32,16 @@ if (!indexHtml.includes('./src/scriptLoader.js')) {
   throw new Error('index.html must load ./src/scriptLoader.js as the development entrypoint');
 }
 
+if (!indexHtml.includes('./assets/textforge-bundled-docs.js')) {
+  throw new Error('index.html must load the optional bundled docs payload before the development entrypoint');
+}
+
 if (indexHtml.includes('type="module"') && indexHtml.includes('./src/scriptLoader.js') && fileIndexHtml.includes('type="module"')) {
   throw new Error('public/index.html must not use module scripts for the file-launch artifact');
+}
+
+if (!fileIndexHtml.includes('./assets/textforge-bundled-docs.js')) {
+  throw new Error('public/index.html must load the optional bundled docs payload before the classic loader bundle');
 }
 
 if (!fileIndexHtml.includes('./assets/textforge-loader.js')) {
@@ -47,6 +56,10 @@ if (!packageJson.includes('"build:single"') || !packageJson.includes('node scrip
   throw new Error('package.json must expose a separate build:single target for single-file distribution');
 }
 
+if (!packageJson.includes('"build:single:small"') || !packageJson.includes('--without-docs')) {
+  throw new Error('package.json must expose a separate build:single:small target without bundled docs');
+}
+
 // public/index.html must include a Content Security Policy meta tag for file:// distribution
 if (!/http-equiv\s*=\s*["']Content-Security-Policy["']/i.test(fileIndexHtml) && !/Content-Security-Policy/i.test(fileIndexHtml)) {
   throw new Error('public/index.html must include a Content-Security-Policy meta tag for file:// launch');
@@ -54,6 +67,10 @@ if (!/http-equiv\s*=\s*["']Content-Security-Policy["']/i.test(fileIndexHtml) && 
 
 if (!scriptLoaderJs.includes('./styles.css') || !scriptLoaderJs.includes('./main.js') || !scriptLoaderJs.includes('DOMContentLoaded')) {
   throw new Error('scriptLoader.js must own shell styles and defer the main bootstrap until the DOM is ready');
+}
+
+if (!bundledDocsRuntimeJs.includes('globalThis.TextForgeBundledDocs') || !bundledDocsRuntimeJs.includes('emptyBundledDocs')) {
+  throw new Error('bundled-docs.js must read optional docs from the global payload and fall back when it is omitted');
 }
 
 if (!mainJs.includes('./workbench.js') || !mainJs.includes('bootTextForgeShell') || !mainJs.includes('mountTextForgeShell')) {

@@ -13,6 +13,7 @@
     "pretypecheck": "node scripts/sync-bundled-docs.mjs",
     "build": "vite build && node scripts/check-dist.mjs",
     "build:single": "corepack pnpm build && node scripts/create-single-file-dist.mjs && node scripts/check-single-file-dist.mjs",
+    "build:single:small": "corepack pnpm build && node scripts/create-single-file-dist.mjs --without-docs --out-dir dist-single-small && node scripts/check-single-file-dist.mjs --without-docs --dist-dir dist-single-small",
     "build:zip": "corepack pnpm build && node scripts/archive-dist.mjs",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",

@@ -77,7 +77,6 @@ import {
   createWorkbenchChromeModel,
   createWorkspaceTreeFrameModel,
 } from '@textforge/ui';
-import { bundledDocFolders, bundledDocs, bundledDocsGeneratedAt } from '../../generated/bundledDocs.js';
 import { activateMarkdownPreviewLink } from '../../markdownPreviewLinks.js';
 import { createMarkdownPreviewRequestManager } from '../../markdownPreviewState.js';
 import {

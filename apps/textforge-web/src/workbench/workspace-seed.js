@@ -7,7 +7,7 @@ import {
   workspaceProviderIds,
 } from '@textforge/workspace';
 
-import { bundledDocFolders, bundledDocs, bundledDocsGeneratedAt } from '../generated/bundledDocs.js';
+import { bundledDocFolders, bundledDocs, bundledDocsGeneratedAt } from './bundled-docs.js';
 import { createTimestampFactory } from './tracing.js';
 
 export function createBundledWorkspacePath(path) {
