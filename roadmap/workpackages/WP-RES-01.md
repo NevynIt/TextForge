@@ -9,7 +9,7 @@
 
 ## Outcome
 
-Canonical resource facts now carry provider, revision, capability, owner, provenance, and diagnostics data across core/workspace/app flows; bundled docs are exposed as read-only provider-backed resources with validated copy-into-workspace flow.
+Canonical resource facts now carry provider, revision, capability, owner, provenance, and diagnostics data across core/workspace/app flows; bundled docs are exposed as read-only provider-backed resources with live tree counts over the merged snapshot and validated copy-into-workspace flow.
 
 ## Scope
 

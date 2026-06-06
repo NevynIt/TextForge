@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Validated local/offline authoring baseline plus selected next local workspace capabilities.
+Validated local/offline authoring baseline plus selected next local workspace capabilities, including recovery-boot hardening for the browser-managed shell and live overlay-aware workspace tree counts.
 
 ## Included Workpackages
 

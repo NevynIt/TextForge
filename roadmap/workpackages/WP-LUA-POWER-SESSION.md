@@ -9,7 +9,7 @@
 
 ## Outcome
 
-Validated follow-on to `WP-LUA`: session-scoped power-session elevation ships approved `workspace`/`automation`/`surfaces` host objects, visible elevated-state console chrome, no auto-expire, and one-click recovery that restarts with a one-shot Lua-preload skip.
+Validated follow-on to `WP-LUA`: session-scoped power-session elevation ships approved `workspace`/`automation`/`surfaces` host objects, visible elevated-state console chrome, no auto-expire, one-click recovery that restarts with a one-shot Lua-preload skip, and an explicit startup recovery entry that can reopen the shell without restored files or reset the browser-managed workspace.
 
 ## Scope
 
