@@ -1,8 +1,5 @@
 import {
-  contributions as coreContributions,
   createCommandDispatcher,
-  createCommandRegistry,
-  createContributionRegistry,
   createContributionInspectorModel,
   createPipelineValue,
   getLanguageDefinition,
@@ -14,7 +11,6 @@ import {
   createWorkspaceOverlayService,
   createPersistedWorkspaceService,
   createSequentialIdFactory,
-  contributions as workspaceContributionPack,
   createWorkspaceService,
   listWorkspaceBadgeDiagnostics,
   createWorkspaceTreeItems,
@@ -36,65 +32,38 @@ import {
   createOpenWithSelection,
   createPopupSurfaceHost,
   createSequentialSessionIdFactory,
-  createSurfaceContributionManifest,
   getDefaultSurfacePlacement,
-  createSurfaceRegistry,
   createSurfaceSessionTab,
   listOpenSurfaceSessions,
 } from '@textforge/surfaces';
 import {
-  contributions as editorContributionPack,
   createTextEditorDocument,
   listTextEditorLanguageModes,
   sourceRangeToSelection,
 } from '@textforge/editors';
 import {
-  contributions as assetContributionPack,
   createAssetProvenanceLabel,
   createBlobUrlLedger,
 } from '@textforge/assets';
 import {
-  contributions as bpmnContributionPack,
   renderBpmnPublicationSvg,
 } from '@textforge/bpmn';
 import {
-  contributions as eaViewerContributionPack,
-} from '@textforge/ea-viewer';
-import {
-  contributions as pipelineContributionPack,
-} from '@textforge/pipeline';
-import {
-  contributions as diagramContributionPack,
   rasterizeSvgToPngBytes,
 } from '@textforge/diagrams';
 import {
-  contributions as markdownContributionPack,
   createMarkdownSnippet,
   parseMarkdownCapabilityRequirements,
   markdownPreviewSurfaceContribution,
   renderMarkdownDocument,
 } from '@textforge/markdown';
 import {
-  contributions as itmContributionPack,
   createWorkspaceItmIncludeProvider,
   listItmVisualTargets,
   loadItmDocument,
 } from '@textforge/itm';
 import {
-  contributions as cytoscapeRendererContributionPack,
-} from '@textforge/renderer-cytoscape';
-import {
-  contributions as jsmindRendererContributionPack,
-} from '@textforge/renderer-jsmind';
-import {
-  contributions as sigmaRendererContributionPack,
-} from '@textforge/renderer-sigma';
-import {
-  contributions as securityProfileContributionPack,
-} from '@textforge/security-profile';
-import {
   createLuaExecutionService,
-  contributions as luaContributionPack,
   isLuaResource as isLuaPackageResource,
   luaConsoleResourceMimeType,
   luaConsoleResourcePath,
@@ -102,22 +71,6 @@ import {
 } from '@textforge/lua';
 // WP-LUA keeps the interactive xterm.js "Lua Console" and "Reload Lua automation pipelines" flows contribution-driven.
 import {
-  TextForgeAppFrame,
-  TextForgeCallout,
-  TextForgeCommandPalette,
-  TextForgeContextMenu,
-  TextForgeEmptyState,
-  TextForgeInspectorCard,
-  TextForgePopupHost,
-  TextForgeResourceBadge,
-  TextForgeSelectField,
-  TextForgeSessionTabStrip,
-  TextForgeStatusRail,
-  TextForgeToolbarButton,
-  TextForgeTopBar,
-  TextForgeUtilityPane,
-  TextForgeWorkspaceSidebar,
-  contributions as uiContributionPack,
   createStatusBadge,
   createToolbarSlot,
   createWorkbenchChromeModel,
@@ -165,6 +118,13 @@ import {
   createUserSeedWorkspaceState,
   sanitizePersistentWorkspaceState,
 } from '../workspace-seed.js';
+import {
+  mainSessionContextCommandIds,
+  popupSessionContextCommandIds,
+  workspaceFolderContextCommandIds,
+  workspaceResourceContextCommandIds,
+} from './command-groups.js';
+import { createWorkbenchRegistries } from './registries.js';
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
@@ -175,47 +135,6 @@ const utilitySections = [
   { id: 'storage', label: 'Browser Storage', icon: 'status' },
   { id: 'registry', label: 'Contribution Packs', icon: 'command' },
 ];
-
-const workspaceFolderContextCommandIds = [
-  'workspace.new-folder',
-  'workspace.new-resource',
-  'workspace.upload-file',
-  'workspace.import-folder-zip',
-  'workspace.export-selected-folder',
-  'workspace.rename-selected',
-  'workspace.delete-selected',
-];
-
-const workspaceResourceContextCommandIds = [
-  'surface.open-visuals',
-  'workspace.copy-selected-resource',
-  'lua.run-selected-resource',
-  'lua.promote-selected-to-automation',
-  'workspace.download-selected-file',
-  'workspace.rename-selected',
-  'workspace.delete-selected',
-];
-
-const mainSessionContextCommandIds = [
-  'surface.open-visuals',
-  'surface.focus-main-session',
-  'surface.refresh-active',
-  'surface.move-active-to-popup',
-  'surface.close-active',
-  'surface.close-all',
-  'workspace.download-selected-file',
-];
-
-const popupSessionContextCommandIds = [
-  'surface.open-visuals',
-  'surface.focus-popup-session',
-  'surface.refresh-active',
-  'surface.move-active-to-main',
-  'surface.close-active',
-  'surface.close-all',
-  'workspace.download-selected-file',
-];
-
 
 export function createTextForgeWorkbenchController() {
   const screenshotPreset = readPhase35ScreenshotPreset();
@@ -239,31 +158,12 @@ export function createTextForgeWorkbenchController() {
   const blobLedger = createBlobUrlLedger(createBlobUrlDriver());
   const languageModes = listTextEditorLanguageModes();
   const luaExecutionService = createLuaExecutionService();
-  const contributionRegistry = createContributionRegistry([
-    coreContributions,
-    workspaceContributionPack,
-    editorContributionPack,
-    assetContributionPack,
-    bpmnContributionPack,
-    eaViewerContributionPack,
-    pipelineContributionPack,
-    diagramContributionPack,
-    markdownContributionPack,
-    itmContributionPack,
-    cytoscapeRendererContributionPack,
-    jsmindRendererContributionPack,
-    sigmaRendererContributionPack,
-    luaContributionPack,
-    uiContributionPack,
-    securityProfileContributionPack,
-  ]);
-  const resolvedDefaultContributions = contributionRegistry.resolve();
-  const surfaceRegistry = createSurfaceRegistry(
-    resolvedDefaultContributions.surfaces.filter((contribution) =>
-      contribution.status !== 'failed' && contribution.status !== 'disabled'),
-  );
-  contributionRegistry.registerManifest(createSurfaceContributionManifest(surfaceRegistry.list()));
-  const commandRegistry = createCommandRegistry(contributionRegistry.listManifests());
+  const {
+    commandRegistry,
+    contributionRegistry,
+    resolvedDefaultContributions,
+    surfaceRegistry,
+  } = createWorkbenchRegistries();
   const mainHost = createMainSurfaceHost({
     hostId: 'main',
     registry: surfaceRegistry,
