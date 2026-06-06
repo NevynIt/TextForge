@@ -4,10 +4,12 @@ import { fileURLToPath } from 'node:url';
 
 const rootDir = fileURLToPath(new URL('..', import.meta.url));
 const distDir = resolve(rootDir, 'dist');
-const [distIndexHtml, distScriptJs, distStyleCss] = await Promise.all([
+const [distIndexHtml, distScriptJs, distStyleCss, scriptLoaderSource, viteConfigSource] = await Promise.all([
   readFile(resolve(distDir, 'index.html'), 'utf8'),
   readFile(resolve(distDir, 'assets/textforge-loader.js'), 'utf8'),
   readFile(resolve(distDir, 'assets/textforge.css'), 'utf8'),
+  readFile(resolve(rootDir, 'src/scriptLoader.js'), 'utf8'),
+  readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8'),
 ]);
 
 for (const forbidden of ['src="/assets/', 'href="/assets/']) {
@@ -44,6 +46,32 @@ if (hasEsModuleSyntax(distScriptJs)) {
 
 if (!distStyleCss.trim()) {
   throw new Error('dist/assets/textforge.css must not be empty');
+}
+
+if (/node-compat\/process|node-compat\\process/.test(scriptLoaderSource)) {
+  throw new Error('src/scriptLoader.js must not install the process compatibility shim before startup');
+}
+
+if (!viteConfigSource.includes("'process.env.FENGARICONF': 'undefined'")) {
+  throw new Error('vite.config.mjs must compile away Fengari process.env.FENGARICONF access');
+}
+
+if (viteConfigSource.includes('process.versions.node')) {
+  throw new Error('vite.config.mjs must not define process.versions.node for the browser build');
+}
+
+for (const [description, pattern] of [
+  ['install a browser process shim', /globalThis\.process\s*=/],
+  ['install a window process shim', /window\.process\s*=/],
+  ['bundle the TextForge process compatibility shim', /Node process APIs are unavailable in the browser TextForge shell/],
+  ['retain raw Fengari process configuration access', /process\.env\.FENGARICONF/],
+  ['bundle Fengari child_process execution support', /child_process\.(?:exec|execSync|spawn|spawnSync)/],
+  ['bundle Fengari temporary host-file support', /tmpNameSync|tmp\.tmpNameSync/],
+  ['bundle Fengari Node package path resolution', /path(?:lib)?\.resolve\(\s*process\.cwd\(\)/],
+]) {
+  if (pattern.test(distScriptJs)) {
+    throw new Error(`dist/assets/textforge-loader.js must not ${description}`);
+  }
 }
 
 for (const [label, source, pattern] of [

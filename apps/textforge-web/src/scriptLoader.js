@@ -1,6 +1,5 @@
 import '@textforge/vendor/xterm.css';
 import './styles.css';
-import './node-compat/process.js';
 import { mountTextForgeShell } from './main.js';
 
 function loadTextForgeShell() {
