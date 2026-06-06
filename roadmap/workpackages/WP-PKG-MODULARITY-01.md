@@ -4,6 +4,7 @@
 
 - Workpackage ID: `WP-PKG-MODULARITY-01`
 - Authoritative state: `roadmap-state.yaml`
+- Status: `validated`
 - Module: `MOD-ROADMAP-GOVERNANCE`
 - ADRs: `ADR-0002`
 

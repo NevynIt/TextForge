@@ -2500,7 +2500,7 @@
       "title": "Package root modularization",
       "path": "workpackages/WP-PKG-MODULARITY-01.md",
       "module": "MOD-ROADMAP-GOVERNANCE",
-      "status": "in-progress",
+      "status": "validated",
       "type": "Refactor / maintainability",
       "depends_on": [],
       "enables": [],
