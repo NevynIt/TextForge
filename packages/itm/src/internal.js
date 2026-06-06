@@ -132,9 +132,22 @@ export const itmResolverDiagnosticCodes = Object.freeze({
   identityMapConflict: 'itm.identity-map.conflict',
   missingPackageDefaultContext: 'itm.package.default-context-missing',
   duplicateIdentityMapEntry: 'itm.idmap.duplicate-entry',
+  identityMapTypeAlias: 'itm.idmap.type-alias',
   contextIdentityMapUnresolved: 'itm.context.idmap-unresolved',
   contextUnresolved: 'itm.context.unresolved',
   contextUnmatchedEnd: 'itm.context.unmatched-end',
+  typeInheritanceUnknown: 'itm.type.extends-unknown',
+  typeReferenceUnknown: 'itm.type.reference-unknown',
+  typeInheritanceCycle: 'itm.type.extends-cycle',
+  abstractTypeInstantiation: 'itm.type.abstract-instantiated',
+  abstractTypeInferred: 'itm.type.abstract-inferred',
+  contextInheritanceUnknown: 'itm.context.extends-unknown',
+  contextInheritanceCycle: 'itm.context.extends-cycle',
+  contextRuleDuplicate: 'itm.context.rule-duplicate',
+  contextRuleInvalidWhen: 'itm.context.rule-invalid-when',
+  contextRuleInvalidRegex: 'itm.context.rule-invalid-regex',
+  contextTypeUnknown: 'itm.context.type-unknown',
+  relationshipConstraintViolation: 'itm.relationship.constraint-violation',
 });
 
 const itmPackageUsageScopes = new Set([
@@ -1145,57 +1158,63 @@ function createEvaluationDiagnostic(code, message, entry, document, options = {}
 
 function readContextDefaults(record = {}) {
   const source = asItmRecord(record) ?? {};
-  const defaults = asItmRecord(source.defaults) ?? source;
+  const defaults = asItmRecord(source.defaults) ?? {};
   return {
-    rootTypeRef: readFirstString(defaults, [
-      'root',
-      'rootType',
-      'rootTypeRef',
-      'rootNodeType',
-      'defaultRootType',
-    ]),
-    childTypeRef: readFirstString(defaults, [
-      'child',
-      'childType',
-      'childTypeRef',
-      'childrenType',
-      'defaultChildType',
-    ]),
-    entityTypeRef: readFirstString(defaults, [
-      'entityType',
-      'entityTypeRef',
-      'nodeType',
-      'nodeTypeRef',
-      'type',
-      'typeRef',
-      'defaultType',
-      'defaultEntityType',
-      'defaultNodeType',
-    ]),
-    relationshipTypeRef: readFirstString(defaults, [
-      'relationship',
-      'relationshipType',
-      'relationshipTypeRef',
-      'link',
-      'linkType',
-      'linkTypeRef',
-      'edge',
-      'edgeType',
-      'edgeTypeRef',
-      'defaultRelationshipType',
-      'defaultLinkType',
-      'defaultEdgeType',
-    ]),
-    identityMapRefs: [
-      ...readStringList(defaults.idmap),
-      ...readStringList(defaults.idmaps),
-      ...readStringList(defaults.identityMap),
-      ...readStringList(defaults.identityMaps),
-      ...readStringList(defaults.identityMapRef),
-      ...readStringList(defaults.identityMapRefs),
-    ],
+    rootTypeRef: readFirstString(defaults, ['rootType', 'rootTypeRef']),
+    childTypeRef: readFirstString(defaults, ['childType', 'childTypeRef']),
+    relationshipTypeRef: readFirstString(defaults, ['relationshipType', 'relationshipTypeRef']),
     appliesTo: readStringList(source.appliesTo ?? source.scope ?? source.scopes),
   };
+}
+
+function readContextInferenceRule(entry, kind, index) {
+  const record = asItmRecord(entry);
+  if (!record) {
+    return undefined;
+  }
+  const typeRef = readFirstString(record, ['type', 'typeRef']);
+  return {
+    id: readStringValue(record.id) ?? `${kind}:${index + 1}`,
+    kind,
+    when: asItmRecord(record.when) ?? {},
+    typeRef,
+    source: record.source,
+    raw: record,
+  };
+}
+
+function readContextInferenceRules(value, kind) {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+  return value
+    .map((entry, index) => readContextInferenceRule(entry, kind, index))
+    .filter(Boolean);
+}
+
+function readContextInference(record = {}) {
+  const source = asItmRecord(record) ?? {};
+  const infer = asItmRecord(source.infer) ?? {};
+  return {
+    nodes: readContextInferenceRules(infer.nodes, 'node'),
+    relationships: readContextInferenceRules(infer.relationships, 'relationship'),
+  };
+}
+
+function readContextActivate(record = {}) {
+  const source = asItmRecord(record) ?? {};
+  const activate = asItmRecord(source.activate) ?? {};
+  return {
+    rules: readStringList(activate.rules),
+    styles: readStringList(activate.styles),
+    viewpoints: readStringList(activate.viewpoints),
+  };
+}
+
+function listLegacyContextTypeKeys(values = {}) {
+  const source = asItmRecord(values) ?? {};
+  return ['root', 'child', 'relationship', 'idmap', 'idmaps']
+    .filter((key) => Object.prototype.hasOwnProperty.call(source, key));
 }
 
 function readPackageBody(document, pkg) {
@@ -1234,6 +1253,31 @@ function readPackageExportConfig(document, pkg) {
   };
 }
 
+function createPackageIndexes(document, packageContentByUid = new Map()) {
+  const packagesByName = new Map();
+  const exportConfigByUid = new Map();
+  for (const pkg of document.packages ?? []) {
+    packagesByName.set(pkg.name, [
+      ...(packagesByName.get(pkg.name) ?? []),
+      pkg,
+    ]);
+    exportConfigByUid.set(pkg.uid, readPackageExportConfig(document, pkg));
+  }
+  return { packagesByName, packageContentByUid, exportConfigByUid };
+}
+
+function packageDefaultContextRefs(pkg, packageContent, exportConfig) {
+  if ((exportConfig?.defaultContexts?.length ?? 0) > 0) {
+    return exportConfig.defaultContexts;
+  }
+  return (packageContent?.contexts ?? [])
+    .filter((context) =>
+      context.default === true
+      || context.attributes?.values?.default === true
+      || context.body?.default === true)
+    .map((context) => context.name);
+}
+
 function collectContextDefinitions(document, ownershipIndex) {
   const contexts = [];
   for (const context of document.contexts ?? []) {
@@ -1248,7 +1292,12 @@ function collectContextDefinitions(document, ownershipIndex) {
       sourceRange: getEntrySourceRange(context) ?? context.source,
       sourceFile: getEntrySourceFile(context, document.uri),
       packageUid: findOwningPackage(context, ownershipIndex, document)?.uid,
+      superContextRefs: context.superContextRefs ?? readStringList(values.extends),
+      defaultNamespace: readStringValue(context.defaultNamespace) ?? readStringValue(values.defaultNamespace),
       defaults: readContextDefaults(values),
+      infer: context.infer ?? readContextInference(values),
+      activate: context.activate ?? readContextActivate(values),
+      legacyTypeKeys: listLegacyContextTypeKeys(values),
     });
   }
 
@@ -1276,7 +1325,12 @@ function collectContextDefinitions(document, ownershipIndex) {
     contexts.push({
       ...synthetic,
       packageUid: findOwningPackage(synthetic, ownershipIndex, document)?.uid,
+      superContextRefs: readStringList(asItmRecord(directive.body)?.extends),
+      defaultNamespace: readStringValue(asItmRecord(directive.body)?.defaultNamespace),
       defaults: readContextDefaults(directive.body),
+      infer: readContextInference(directive.body),
+      activate: readContextActivate(directive.body),
+      legacyTypeKeys: listLegacyContextTypeKeys(directive.body),
     });
   }
   return contexts.sort(compareSourcePositions);
@@ -1284,7 +1338,7 @@ function collectContextDefinitions(document, ownershipIndex) {
 
 function normalizeIdentityMapEntry(value) {
   if (typeof value === 'string') {
-    return { id: value, typeRef: value, qualifiedId: value };
+    return { qualifiedId: value };
   }
   const record = asItmRecord(value);
   if (!record) {
@@ -1292,8 +1346,7 @@ function normalizeIdentityMapEntry(value) {
   }
   return {
     id: readFirstString(record, ['id', 'canonicalId', 'localId']),
-    qualifiedId: readFirstString(record, ['qualifiedId', 'canonicalQualifiedId']),
-    typeRef: readFirstString(record, ['type', 'typeRef', 'entityType', 'relationshipType']),
+    qualifiedId: readFirstString(record, ['qualifiedId', 'canonicalQualifiedId', 'canonical']),
     source: readFirstString(record, ['source', 'origin']),
   };
 }
@@ -1524,6 +1577,7 @@ function buildEffectiveItmDocument(document) {
   const contexts = collectContextDefinitions(document, ownershipIndex);
   const identityMaps = collectIdentityMapDefinitions(document, ownershipIndex);
   const packageContentByUid = materializePackageContent(document, ownershipIndex);
+  const packageIndexes = createPackageIndexes(document, packageContentByUid);
   const packageDiagnostics = [];
   const activePackageScopes = new Map();
   const activePackageContextRefs = new Map();
@@ -1631,12 +1685,7 @@ function buildEffectiveItmDocument(document) {
     }
 
     if (requestedScope === 'all') {
-      const defaultContextRefs = exportConfig.defaultContexts.length > 0
-        ? exportConfig.defaultContexts
-        : packageContent.contexts.filter((context) =>
-          context.default === true
-          || context.attributes?.values?.default === true
-          || context.body?.default === true).map((context) => context.name);
+      const defaultContextRefs = packageDefaultContextRefs(pkg, packageContent, exportConfig);
       const defaultIdentityMapRefs = exportConfig.defaultIdentityMaps.length > 0
         ? exportConfig.defaultIdentityMaps
         : packageContent.identityMaps.filter((identityMap) =>
@@ -1720,6 +1769,12 @@ function buildEffectiveItmDocument(document) {
       ) {
         return true;
       }
+      if (
+        (category === 'entityTypes' || category === 'relationshipTypes')
+        && (packageContentByUid.get(owner.uid)?.contexts?.length ?? 0) > 0
+      ) {
+        return true;
+      }
       return scopeActivatesPackageCategory(activePackageScopes.get(owner.uid), category);
     });
   }
@@ -1749,6 +1804,7 @@ function buildEffectiveItmDocument(document) {
     activePackageIdentityMapRefs,
     activePackageContextRefsByFile,
     activePackageIdentityMapRefsByFile,
+    packageIndexes,
   };
 }
 
@@ -1817,9 +1873,52 @@ function contextAllowsScope(context, requestedScope) {
   return scopes.map((scope) => String(scope).trim()).includes(requestedScope);
 }
 
+function findPackageContext(packageRef, contextRef, context) {
+  const packages = context.packageIndexes?.packagesByName?.get(packageRef) ?? [];
+  if (packages.length !== 1) {
+    return packages.length > 1 ? { ambiguous: packages } : { unresolved: true };
+  }
+  const pkg = packages[0];
+  const matches = context.contexts.filter((candidate) =>
+    candidate.packageUid === pkg.uid && candidate.name === contextRef);
+  if (matches.length === 1) {
+    return { context: matches[0], package: pkg };
+  }
+  return matches.length > 1 ? { ambiguous: matches } : { unresolved: true, package: pkg };
+}
+
+function findPackageDefaultContext(packageRef, context) {
+  const packages = context.packageIndexes?.packagesByName?.get(packageRef) ?? [];
+  if (packages.length !== 1) {
+    return packages.length > 1 ? { ambiguous: packages } : { unresolved: true };
+  }
+  const pkg = packages[0];
+  const packageContent = context.packageIndexes?.packageContentByUid?.get(pkg.uid) ?? {};
+  const exportConfig = context.packageIndexes?.exportConfigByUid?.get(pkg.uid) ?? readPackageExportConfig(context.document, pkg);
+  const defaultContextRefs = packageDefaultContextRefs(pkg, packageContent, exportConfig);
+  if (defaultContextRefs.length === 0) {
+    return { missingDefault: true, package: pkg };
+  }
+  const matches = context.contexts.filter((candidate) =>
+    candidate.packageUid === pkg.uid && defaultContextRefs.includes(candidate.name));
+  if (matches.length === 1) {
+    return { context: matches[0], package: pkg };
+  }
+  return matches.length > 1 ? { ambiguous: matches } : { unresolved: true, package: pkg };
+}
+
 function resolveContextReference(name, activation, context) {
   const normalizedName = String(name ?? '').trim();
   const activationFile = getEntrySourceFile(activation, context.document.uri) ?? context.document.uri ?? '__root__';
+  const qualifiedSeparator = normalizedName.lastIndexOf('.');
+  if (qualifiedSeparator > 0) {
+    const packageRef = normalizedName.slice(0, qualifiedSeparator);
+    const contextRef = normalizedName.slice(qualifiedSeparator + 1);
+    const packageContext = findPackageContext(packageRef, contextRef, context);
+    if (packageContext.context || packageContext.ambiguous) {
+      return packageContext;
+    }
+  }
   const sameFileMatches = context.contexts.filter((candidate) =>
     candidate.name === normalizedName
     && (candidate.sourceFile ?? context.document.uri ?? '__root__') === activationFile);
@@ -1850,6 +1949,11 @@ function resolveContextReference(name, activation, context) {
   }
   if (globalMatches.length > 1) {
     return { ambiguous: globalMatches };
+  }
+
+  const packageDefault = findPackageDefaultContext(normalizedName, context);
+  if (packageDefault.context || packageDefault.ambiguous || packageDefault.missingDefault) {
+    return packageDefault;
   }
 
   return { unresolved: true };
@@ -1883,41 +1987,41 @@ function resolveIdentityMapReference(name, entry, context) {
   return { unresolved: true };
 }
 
-function resolveIdentityMapAlias(value, identityMap) {
-  const normalizedValue = String(value ?? '').trim();
-  if (!normalizedValue) {
-    return undefined;
-  }
-  const aliasEntry = identityMap?.aliases?.get(normalizedValue)
-    ?? identityMap?.aliases?.get(normalizedValue.toLowerCase())
-    ?? identityMap?.entities?.get(normalizedValue)
-    ?? identityMap?.entities?.get(normalizedValue.toLowerCase())
-    ?? identityMap?.relationships?.get(normalizedValue)
-    ?? identityMap?.relationships?.get(normalizedValue.toLowerCase());
-  return aliasEntry?.typeRef
-    ?? aliasEntry?.qualifiedId
-    ?? aliasEntry?.id
-    ?? normalizedValue;
-}
-
-function resolveContextDefaultValue(value, identityMaps) {
-  const normalizedValue = String(value ?? '').trim();
-  if (!normalizedValue) {
-    return undefined;
-  }
-  for (const identityMap of identityMaps ?? []) {
-    const resolved = resolveIdentityMapAlias(normalizedValue, identityMap);
-    if (resolved && resolved !== normalizedValue) {
-      return resolved;
+function listPackageUsageContextActivations(document, evaluationContext) {
+  const activations = [];
+  for (const usage of document.packageUsages ?? []) {
+    const scope = normalizePackageScope(usage.scope) ?? usage.scope;
+    if (scope !== 'all') {
+      continue;
+    }
+    const packages = evaluationContext.packageIndexes?.packagesByName?.get(usage.packageRef) ?? [];
+    if (packages.length !== 1) {
+      continue;
+    }
+    const pkg = packages[0];
+    const packageContent = evaluationContext.packageIndexes?.packageContentByUid?.get(pkg.uid) ?? {};
+    const exportConfig = evaluationContext.packageIndexes?.exportConfigByUid?.get(pkg.uid) ?? readPackageExportConfig(document, pkg);
+    for (const contextRef of packageDefaultContextRefs(pkg, packageContent, exportConfig)) {
+      activations.push({
+        uid: `context-activation:using:${pkg.uid}:${contextRef}:${usage.source?.startLine ?? 0}`,
+        name: `${pkg.name}.${contextRef}`,
+        sourceRange: usage.source,
+        source: usage.source,
+        packageUid: pkg.uid,
+        usingScope: usage.scope,
+      });
     }
   }
-  return normalizedValue;
+  return activations;
 }
 
 function createContextActivationIndex(document, evaluationContext) {
   const diagnostics = [];
   const activeByFile = new Map();
-  for (const activation of listContextActivations(document)) {
+  for (const activation of [
+    ...listPackageUsageContextActivations(document, evaluationContext),
+    ...listContextActivations(document),
+  ].sort(compareSourcePositions)) {
     const file = getEntrySourceFile(activation, document.uri) ?? document.uri ?? '__root__';
     if (activation.reset) {
       activeByFile.set(file, [
@@ -1931,6 +2035,16 @@ function createContextActivationIndex(document, evaluationContext) {
       continue;
     }
     const resolved = resolveContextReference(activation.name, activation, evaluationContext);
+    if (resolved.missingDefault) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.missingPackageDefaultContext,
+        `Package '${activation.name}' does not declare a default context for scoped activation.`,
+        activation,
+        document,
+        { packageRef: activation.name, origin: { directive: 'begin' } },
+      ));
+      continue;
+    }
     if (resolved.unresolved) {
       diagnostics.push(createEvaluationDiagnostic(
         itmResolverDiagnosticCodes.contextUnresolved,
@@ -1990,7 +2104,6 @@ function identityEntryConflicts(left = {}, right = {}) {
   return Boolean(
     (left.id && right.id && left.id !== right.id)
     || (left.qualifiedId && right.qualifiedId && left.qualifiedId !== right.qualifiedId)
-    || (left.typeRef && right.typeRef && left.typeRef !== right.typeRef)
   );
 }
 
@@ -2020,9 +2133,6 @@ function mergeIdentityEntries(entries, owner, document, diagnostics) {
     }
     if (entry.qualifiedId && !merged.qualifiedId) {
       merged.qualifiedId = entry.qualifiedId;
-    }
-    if (entry.typeRef && !merged.typeRef) {
-      merged.typeRef = entry.typeRef;
     }
     if (entry.source) {
       sources.push(entry.source);
@@ -2136,13 +2246,36 @@ function resolveActiveIdentityMaps(entry, activeContext, evaluationContext, diag
   const document = evaluationContext.document;
   const file = getEntrySourceFile(entry, document.uri) ?? document.uri ?? '__root__';
   const refs = new Set(activeContext?.defaults?.identityMapRefs ?? []);
+  const maps = [];
+  for (const identityMap of evaluationContext.identityMaps) {
+    const mapFile = identityMap.sourceFile ?? document.uri ?? '__root__';
+    if (!identityMap.packageUid && mapFile === file) {
+      maps.push(identityMap);
+    }
+  }
+  if (activeContext?.packageUid) {
+    const pkg = [...(evaluationContext.packageIndexes?.packagesByName?.values?.() ?? [])]
+      .flat()
+      .find((candidate) => candidate.uid === activeContext.packageUid);
+    const packageContent = evaluationContext.packageIndexes?.packageContentByUid?.get(activeContext.packageUid) ?? {};
+    const exportConfig = pkg
+      ? evaluationContext.packageIndexes?.exportConfigByUid?.get(pkg.uid) ?? readPackageExportConfig(document, pkg)
+      : {};
+    for (const ref of exportConfig.defaultIdentityMaps ?? []) {
+      refs.add(ref);
+    }
+    for (const identityMap of packageContent.identityMaps ?? []) {
+      if (identityMap.default === true || identityMap.attributes?.values?.default === true || identityMap.body?.default === true) {
+        refs.add(identityMap.name);
+      }
+    }
+  }
   const filePackageRefs = evaluationContext.activePackageIdentityMapRefsByFile.get(file) ?? new Map();
   for (const packageRefs of filePackageRefs.values()) {
     for (const ref of packageRefs) {
       refs.add(ref);
     }
   }
-  const maps = [];
   for (const ref of refs) {
     const resolved = resolveIdentityMapReference(ref, entry, evaluationContext);
     if (resolved.identityMap) {
@@ -2180,16 +2313,574 @@ function isUntypedRelationship(relationship, document) {
   return !relationship.typeRef || relationship.typeRef === 'related_to' || relationship.typeRef === legacyDefault;
 }
 
+function createNamedTypeIndex(types = [], document, diagnostics, code) {
+  const byName = new Map((types ?? []).map((type) => [type.name, type]));
+  const ancestorsByName = new Map();
+  const visiting = new Set();
+  const visited = new Set();
+
+  function visit(type, path = []) {
+    if (!type?.name) {
+      return new Set();
+    }
+    if (ancestorsByName.has(type.name)) {
+      return ancestorsByName.get(type.name);
+    }
+    if (visiting.has(type.name)) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.typeInheritanceCycle,
+        `Type inheritance for '${type.name}' contains a cycle.`,
+        type,
+        document,
+        { severity: 'error', origin: { path: [...path, type.name] } },
+      ));
+      return new Set();
+    }
+    visiting.add(type.name);
+    const ancestors = new Set();
+    for (const parentRef of type.superTypeRefs ?? []) {
+      const parent = byName.get(parentRef);
+      if (!parent) {
+        diagnostics.push(createEvaluationDiagnostic(
+          code,
+          `Type '${type.name}' extends unknown type '${parentRef}'.`,
+          type,
+          document,
+          { severity: 'error', origin: { parentRef } },
+        ));
+        continue;
+      }
+      ancestors.add(parentRef);
+      for (const ancestor of visit(parent, [...path, type.name])) {
+        ancestors.add(ancestor);
+      }
+    }
+    visiting.delete(type.name);
+    visited.add(type.name);
+    ancestorsByName.set(type.name, ancestors);
+    return ancestors;
+  }
+
+  for (const type of types ?? []) {
+    if (!visited.has(type.name)) {
+      visit(type);
+    }
+  }
+
+  return {
+    byName,
+    ancestorsByName,
+    isSubtype(candidateRef, expectedRef) {
+      if (!candidateRef || !expectedRef) {
+        return false;
+      }
+      return candidateRef === expectedRef || Boolean(ancestorsByName.get(candidateRef)?.has(expectedRef));
+    },
+  };
+}
+
+function createTypeEvaluationIndex(document, diagnostics) {
+  const index = {
+    entity: createNamedTypeIndex(
+      document.entityTypes ?? [],
+      document,
+      diagnostics,
+      itmResolverDiagnosticCodes.typeInheritanceUnknown,
+    ),
+    relationship: createNamedTypeIndex(
+      document.relationshipTypes ?? [],
+      document,
+      diagnostics,
+      itmResolverDiagnosticCodes.typeInheritanceUnknown,
+    ),
+  };
+  for (const relationshipType of document.relationshipTypes ?? []) {
+    for (const sourceTypeRef of relationshipType.sourceTypeRefs ?? []) {
+      if (!index.entity.byName.has(sourceTypeRef)) {
+        diagnostics.push(createEvaluationDiagnostic(
+          itmResolverDiagnosticCodes.typeReferenceUnknown,
+          `Relationship type '${relationshipType.name}' references unknown source type '${sourceTypeRef}'.`,
+          relationshipType,
+          document,
+          { severity: 'error', origin: { sourceTypeRef } },
+        ));
+      }
+    }
+    for (const targetTypeRef of relationshipType.targetTypeRefs ?? []) {
+      if (!index.entity.byName.has(targetTypeRef)) {
+        diagnostics.push(createEvaluationDiagnostic(
+          itmResolverDiagnosticCodes.typeReferenceUnknown,
+          `Relationship type '${relationshipType.name}' references unknown target type '${targetTypeRef}'.`,
+          relationshipType,
+          document,
+          { severity: 'error', origin: { targetTypeRef } },
+        ));
+      }
+    }
+  }
+  return index;
+}
+
+function resolveContextParentRef(context, parentRef, contexts) {
+  const samePackage = contexts.filter((candidate) =>
+    candidate.name === parentRef && candidate.packageUid === context.packageUid);
+  if (samePackage.length === 1) {
+    return samePackage[0];
+  }
+  if (samePackage.length > 1) {
+    return { ambiguous: samePackage };
+  }
+  const globalMatches = contexts.filter((candidate) =>
+    candidate.name === parentRef && !candidate.packageUid);
+  if (globalMatches.length === 1) {
+    return globalMatches[0];
+  }
+  return globalMatches.length > 1 ? { ambiguous: globalMatches } : undefined;
+}
+
+function mergeContextRules(localRules = [], inheritedRules = []) {
+  const localIds = new Set(localRules.map((rule) => rule.id).filter(Boolean));
+  return [
+    ...localRules,
+    ...inheritedRules.filter((rule) => !rule.id || !localIds.has(rule.id)),
+  ];
+}
+
+function compactDefinedDefaults(defaults = {}) {
+  return Object.fromEntries(
+    Object.entries(defaults)
+      .filter(([, value]) => value !== undefined && (!Array.isArray(value) || value.length > 0)),
+  );
+}
+
+function resolveContextInheritance(contexts, document, diagnostics) {
+  const resolvedByUid = new Map();
+  const visiting = new Set();
+
+  function resolve(context, path = []) {
+    if (!context?.uid) {
+      return context;
+    }
+    if (resolvedByUid.has(context.uid)) {
+      return resolvedByUid.get(context.uid);
+    }
+    if (visiting.has(context.uid)) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.contextInheritanceCycle,
+        `Context inheritance for '${context.name}' contains a cycle.`,
+        context,
+        document,
+        { severity: 'error', origin: { path: [...path, context.name] } },
+      ));
+      return context;
+    }
+    visiting.add(context.uid);
+    const localNodeRuleIds = new Set();
+    const localRelationshipRuleIds = new Set();
+    for (const rule of context.infer?.nodes ?? []) {
+      if (rule.id && localNodeRuleIds.has(rule.id)) {
+        diagnostics.push(createEvaluationDiagnostic(
+          itmResolverDiagnosticCodes.contextRuleDuplicate,
+          `Context '${context.name}' declares duplicate node inference rule '${rule.id}'.`,
+          context,
+          document,
+          { severity: 'error', origin: { ruleId: rule.id } },
+        ));
+      }
+      if (rule.id) {
+        localNodeRuleIds.add(rule.id);
+      }
+    }
+    for (const rule of context.infer?.relationships ?? []) {
+      if (rule.id && localRelationshipRuleIds.has(rule.id)) {
+        diagnostics.push(createEvaluationDiagnostic(
+          itmResolverDiagnosticCodes.contextRuleDuplicate,
+          `Context '${context.name}' declares duplicate relationship inference rule '${rule.id}'.`,
+          context,
+          document,
+          { severity: 'error', origin: { ruleId: rule.id } },
+        ));
+      }
+      if (rule.id) {
+        localRelationshipRuleIds.add(rule.id);
+      }
+    }
+    const inherited = [];
+    for (const parentRef of context.superContextRefs ?? []) {
+      const parent = resolveContextParentRef(context, parentRef, contexts);
+      if (!parent || parent.ambiguous) {
+        diagnostics.push(createEvaluationDiagnostic(
+          itmResolverDiagnosticCodes.contextInheritanceUnknown,
+          parent?.ambiguous
+            ? `Context '${context.name}' extends ambiguous context '${parentRef}'.`
+            : `Context '${context.name}' extends unknown context '${parentRef}'.`,
+          context,
+          document,
+          { severity: 'error', origin: { parentRef } },
+        ));
+        continue;
+      }
+      inherited.push(resolve(parent, [...path, context.name]));
+    }
+    const inheritedDefaults = inherited.reduce((defaults, parent) => ({
+      ...defaults,
+      ...compactDefinedDefaults(parent.defaults ?? {}),
+    }), {});
+    const inheritedNodeRules = inherited.flatMap((parent) => parent.infer?.nodes ?? []);
+    const inheritedRelationshipRules = inherited.flatMap((parent) => parent.infer?.relationships ?? []);
+    const resolved = {
+      ...context,
+      defaultNamespace: context.defaultNamespace ?? inherited.find((parent) => parent.defaultNamespace)?.defaultNamespace,
+      defaults: {
+        ...inheritedDefaults,
+        ...compactDefinedDefaults(context.defaults ?? {}),
+      },
+      infer: {
+        nodes: mergeContextRules(context.infer?.nodes ?? [], inheritedNodeRules),
+        relationships: mergeContextRules(context.infer?.relationships ?? [], inheritedRelationshipRules),
+      },
+      activate: {
+        rules: [...new Set([
+          ...inherited.flatMap((parent) => parent.activate?.rules ?? []),
+          ...(context.activate?.rules ?? []),
+        ])],
+        styles: [...new Set([
+          ...inherited.flatMap((parent) => parent.activate?.styles ?? []),
+          ...(context.activate?.styles ?? []),
+        ])],
+        viewpoints: [...new Set([
+          ...inherited.flatMap((parent) => parent.activate?.viewpoints ?? []),
+          ...(context.activate?.viewpoints ?? []),
+        ])],
+      },
+    };
+    visiting.delete(context.uid);
+    resolvedByUid.set(context.uid, resolved);
+    return resolved;
+  }
+
+  return contexts.map((context) => resolve(context));
+}
+
+const nodeInferenceWhenFields = new Set([
+  'untyped',
+  'position',
+  'depth',
+  'parentType',
+  'labelMatches',
+  'hasTag',
+  'hasAttribute',
+  'attributeEquals',
+]);
+const relationshipInferenceWhenFields = new Set([
+  'untyped',
+  'sourceType',
+  'targetType',
+  'labelMatches',
+  'hasTag',
+  'hasAttribute',
+  'attributeEquals',
+]);
+
+function validateInferenceRules(contexts, document, typeIndex, diagnostics) {
+  for (const context of contexts) {
+    for (const legacyKey of context.legacyTypeKeys ?? []) {
+      diagnostics.push(createEvaluationDiagnostic(
+        legacyKey === 'idmap' || legacyKey === 'idmaps'
+          ? itmResolverDiagnosticCodes.contextIdentityMapUnresolved
+          : itmResolverDiagnosticCodes.contextTypeUnknown,
+        `Context '${context.name}' uses legacy field '${legacyKey}'; use canonical defaults or infer rules instead.`,
+        context,
+        document,
+        { severity: 'error', origin: { legacyKey } },
+      ));
+    }
+    for (const [kind, rules, allowedFields] of [
+      ['node', context.infer?.nodes ?? [], nodeInferenceWhenFields],
+      ['relationship', context.infer?.relationships ?? [], relationshipInferenceWhenFields],
+    ]) {
+      for (const rule of rules) {
+        for (const field of Object.keys(rule.when ?? {})) {
+          if (!allowedFields.has(field)) {
+            diagnostics.push(createEvaluationDiagnostic(
+              itmResolverDiagnosticCodes.contextRuleInvalidWhen,
+              `Context '${context.name}' ${kind} rule '${rule.id}' uses unknown when field '${field}'.`,
+              context,
+              document,
+              { severity: 'error', origin: { ruleId: rule.id, field } },
+            ));
+          }
+        }
+        if (rule.when?.labelMatches) {
+          try {
+            new RegExp(String(rule.when.labelMatches), 'u');
+          } catch {
+            diagnostics.push(createEvaluationDiagnostic(
+              itmResolverDiagnosticCodes.contextRuleInvalidRegex,
+              `Context '${context.name}' ${kind} rule '${rule.id}' has an invalid labelMatches regular expression.`,
+              context,
+              document,
+              { severity: 'error', origin: { ruleId: rule.id } },
+            ));
+          }
+        }
+        const typeMap = kind === 'node' ? typeIndex.entity.byName : typeIndex.relationship.byName;
+        if (rule.typeRef && !typeMap.has(rule.typeRef)) {
+          diagnostics.push(createEvaluationDiagnostic(
+            itmResolverDiagnosticCodes.contextTypeUnknown,
+            `Context '${context.name}' ${kind} rule '${rule.id}' references unknown type '${rule.typeRef}'.`,
+            context,
+            document,
+            { severity: 'error', origin: { ruleId: rule.id, typeRef: rule.typeRef } },
+          ));
+        }
+      }
+    }
+    for (const [field, typeRef, typeMap] of [
+      ['rootType', context.defaults?.rootTypeRef, typeIndex.entity.byName],
+      ['childType', context.defaults?.childTypeRef, typeIndex.entity.byName],
+      ['relationshipType', context.defaults?.relationshipTypeRef, typeIndex.relationship.byName],
+    ]) {
+      if (typeRef && !typeMap.has(typeRef)) {
+        diagnostics.push(createEvaluationDiagnostic(
+          itmResolverDiagnosticCodes.contextTypeUnknown,
+          `Context '${context.name}' default '${field}' references unknown type '${typeRef}'.`,
+          context,
+          document,
+          { severity: 'error', origin: { field, typeRef } },
+        ));
+      }
+    }
+  }
+}
+
+function entryHasAttribute(entry, key) {
+  return Object.prototype.hasOwnProperty.call(entry.attributes?.values ?? {}, key);
+}
+
+function attributeEquals(entry, expected = {}) {
+  const values = entry.attributes?.values ?? {};
+  return Object.entries(asItmRecord(expected) ?? {})
+    .every(([key, value]) => values[key] === value);
+}
+
+function labelMatches(label, pattern) {
+  if (!pattern) {
+    return true;
+  }
+  try {
+    return new RegExp(String(pattern), 'u').test(String(label ?? ''));
+  } catch {
+    return false;
+  }
+}
+
+function matchesNodeRule(rule, entity, entityByUid, typeIndex) {
+  const when = rule.when ?? {};
+  if (when.untyped === true && entity.typeRef) {
+    return false;
+  }
+  if (when.position) {
+    const position = !entity.parentId ? 'root' : (entity.childIds?.length ?? 0) === 0 ? 'leaf' : 'child';
+    if (position !== when.position) {
+      return false;
+    }
+  }
+  if (when.depth !== undefined && Number(when.depth) !== Number(entity.depth ?? 0)) {
+    return false;
+  }
+  if (when.parentType) {
+    const parent = entity.parentId ? entityByUid.get(entity.parentId) : undefined;
+    if (!parent?.typeRef || !typeIndex.entity.isSubtype(parent.typeRef, String(when.parentType))) {
+      return false;
+    }
+  }
+  if (!labelMatches(entity.label, when.labelMatches)) {
+    return false;
+  }
+  if (when.hasTag && !(entity.tags ?? []).includes(String(when.hasTag))) {
+    return false;
+  }
+  if (when.hasAttribute && !entryHasAttribute(entity, String(when.hasAttribute))) {
+    return false;
+  }
+  return attributeEquals(entity, when.attributeEquals);
+}
+
+function matchesRelationshipRule(rule, relationship, entityByUid, typeIndex) {
+  const when = rule.when ?? {};
+  if (when.untyped === true && !isUntypedRelationship(relationship, { metadata: {} })) {
+    return false;
+  }
+  const source = entityByUid.get(relationship.sourceId);
+  const target = relationship.targetId ? entityByUid.get(relationship.targetId) : undefined;
+  if (when.sourceType && (!source?.typeRef || !typeIndex.entity.isSubtype(source.typeRef, String(when.sourceType)))) {
+    return false;
+  }
+  if (when.targetType && (!target?.typeRef || !typeIndex.entity.isSubtype(target.typeRef, String(when.targetType)))) {
+    return false;
+  }
+  if (!labelMatches(relationship.label ?? relationship.id ?? relationship.targetRef, when.labelMatches)) {
+    return false;
+  }
+  if (when.hasTag && !(relationship.tags ?? []).includes(String(when.hasTag))) {
+    return false;
+  }
+  if (when.hasAttribute && !entryHasAttribute(relationship, String(when.hasAttribute))) {
+    return false;
+  }
+  return attributeEquals(relationship, when.attributeEquals);
+}
+
+function validateConcreteType(typeRef, typeKind, owner, document, typeIndex, diagnostics, inferred = false) {
+  if (!typeRef) {
+    return true;
+  }
+  const type = typeKind === 'relationship'
+    ? typeIndex.relationship.byName.get(typeRef)
+    : typeIndex.entity.byName.get(typeRef);
+  if (!type) {
+    return false;
+  }
+  if (type.abstract === true) {
+    diagnostics.push(createEvaluationDiagnostic(
+      inferred ? itmResolverDiagnosticCodes.abstractTypeInferred : itmResolverDiagnosticCodes.abstractTypeInstantiation,
+      inferred
+        ? `Inference produced abstract ${typeKind} type '${typeRef}'.`
+        : `Abstract ${typeKind} type '${typeRef}' is directly instantiated.`,
+      owner,
+      document,
+      {
+        severity: 'error',
+        entityUid: owner.kind === 'entity' ? owner.uid : undefined,
+        relationshipUid: owner.kind === 'relationship' ? owner.uid : undefined,
+        origin: { typeRef, inferred },
+      },
+    ));
+    return false;
+  }
+  return true;
+}
+
+function inferEntityType(entity, activeContext, entityByUid, document, typeIndex, diagnostics) {
+  if (entity.typeRef) {
+    validateConcreteType(entity.typeRef, 'entity', entity, document, typeIndex, diagnostics, false);
+    return undefined;
+  }
+  for (const rule of activeContext?.infer?.nodes ?? []) {
+    if (rule.typeRef && matchesNodeRule(rule, entity, entityByUid, typeIndex)) {
+      if (!validateConcreteType(rule.typeRef, 'entity', entity, document, typeIndex, diagnostics, true)) {
+        return undefined;
+      }
+      return {
+        typeRef: rule.typeRef,
+        provenance: {
+          source: `context:${activeContext.name}`,
+          context: activeContext.name,
+          rule: rule.id,
+          reason: 'first matching node inference rule',
+        },
+      };
+    }
+  }
+  const defaultTypeRef = entity.parentId
+    ? activeContext?.defaults?.childTypeRef
+    : activeContext?.defaults?.rootTypeRef;
+  if (defaultTypeRef && validateConcreteType(defaultTypeRef, 'entity', entity, document, typeIndex, diagnostics, true)) {
+    return {
+      typeRef: defaultTypeRef,
+      provenance: {
+        source: `context:${activeContext.name}`,
+        context: activeContext.name,
+        reason: entity.parentId ? 'defaults.childType' : 'defaults.rootType',
+      },
+    };
+  }
+  return undefined;
+}
+
+function inferRelationshipType(relationship, activeContext, entityByUid, document, typeIndex, diagnostics) {
+  if (!isUntypedRelationship(relationship, document)) {
+    validateConcreteType(relationship.typeRef, 'relationship', relationship, document, typeIndex, diagnostics, false);
+    return undefined;
+  }
+  for (const rule of activeContext?.infer?.relationships ?? []) {
+    if (rule.typeRef && matchesRelationshipRule(rule, relationship, entityByUid, typeIndex)) {
+      if (!validateConcreteType(rule.typeRef, 'relationship', relationship, document, typeIndex, diagnostics, true)) {
+        return undefined;
+      }
+      return {
+        typeRef: rule.typeRef,
+        provenance: {
+          source: `context:${activeContext.name}`,
+          context: activeContext.name,
+          rule: rule.id,
+          reason: 'first matching relationship inference rule',
+        },
+      };
+    }
+  }
+  const defaultTypeRef = activeContext?.defaults?.relationshipTypeRef;
+  if (defaultTypeRef && validateConcreteType(defaultTypeRef, 'relationship', relationship, document, typeIndex, diagnostics, true)) {
+    return {
+      typeRef: defaultTypeRef,
+      provenance: {
+        source: `context:${activeContext.name}`,
+        context: activeContext.name,
+        reason: 'defaults.relationshipType',
+      },
+    };
+  }
+  return undefined;
+}
+
+function validateRelationshipConstraints(relationships, entityByUid, document, typeIndex, diagnostics) {
+  for (const relationship of relationships) {
+    const relationshipType = typeIndex.relationship.byName.get(relationship.typeRef);
+    if (!relationshipType) {
+      continue;
+    }
+    const source = entityByUid.get(relationship.sourceId);
+    const target = relationship.targetId ? entityByUid.get(relationship.targetId) : undefined;
+    const sourceAllowed = (relationshipType.sourceTypeRefs ?? []).length === 0
+      || (source?.typeRef && relationshipType.sourceTypeRefs.some((typeRef) => typeIndex.entity.isSubtype(source.typeRef, typeRef)));
+    const targetAllowed = (relationshipType.targetTypeRefs ?? []).length === 0
+      || !target
+      || (target.typeRef && relationshipType.targetTypeRefs.some((typeRef) => typeIndex.entity.isSubtype(target.typeRef, typeRef)));
+    if (!sourceAllowed || !targetAllowed) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.relationshipConstraintViolation,
+        `Relationship '${relationship.id ?? relationship.uid}' violates source or target type constraints for '${relationship.typeRef}'.`,
+        relationship,
+        document,
+        {
+          severity: 'error',
+          relationshipUid: relationship.uid,
+          origin: {
+            typeRef: relationship.typeRef,
+            sourceTypeRef: source?.typeRef,
+            targetTypeRef: target?.typeRef,
+          },
+        },
+      ));
+    }
+  }
+}
+
 function applyContextualEvaluation(document, effective) {
   const diagnostics = [];
+  const typeIndex = createTypeEvaluationIndex(document, diagnostics);
+  const resolvedContexts = resolveContextInheritance(document.contexts ?? [], document, diagnostics);
   const evaluationContext = {
     document,
-    contexts: document.contexts ?? [],
+    contexts: resolvedContexts,
     identityMaps: document.identityMaps ?? [],
     activePackageContextRefsByFile: effective.activePackageContextRefsByFile ?? new Map(),
     activePackageIdentityMapRefsByFile: effective.activePackageIdentityMapRefsByFile ?? new Map(),
+    packageIndexes: effective.packageIndexes,
   };
   diagnostics.push(...createScopedActivationDiagnostics(document));
+  validateInferenceRules(resolvedContexts, document, typeIndex, diagnostics);
   for (const identityMap of evaluationContext.identityMaps) {
     for (const key of listDuplicateIdentityMapKeys(identityMap)) {
       diagnostics.push(createEvaluationDiagnostic(
@@ -2203,47 +2894,67 @@ function applyContextualEvaluation(document, effective) {
         },
       ));
     }
+    const entries = asItmRecord(identityMap.entries) ?? asItmRecord(identityMap.values) ?? {};
+    const typeAliasKeys = ['root', 'child', 'relationship']
+      .filter((key) => Object.prototype.hasOwnProperty.call(entries, key));
+    for (const key of typeAliasKeys) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.identityMapTypeAlias,
+        `Identity map '${identityMap.name ?? identityMap.uid}' uses '${key}' as a type alias; use %context defaults instead.`,
+        identityMap,
+        document,
+        {
+          severity: 'error',
+          subsystem: 'itm-identity-map',
+          origin: { identityMapRef: identityMap.name, key },
+        },
+      ));
+    }
   }
   const activationIndex = createContextActivationIndex(document, evaluationContext);
   diagnostics.push(...activationIndex.diagnostics);
-  const entityByUid = new Map((document.entities ?? []).map((entity) => [entity.uid, entity]));
+  const originalEntityByUid = new Map((document.entities ?? []).map((entity) => [entity.uid, entity]));
 
   const entities = (document.entities ?? []).map((entity) => {
     const activeContext = findActiveContextForEntry(entity, activationIndex, document);
     const identityMaps = resolveActiveIdentityMaps(entity, activeContext, evaluationContext, diagnostics);
-    const contextTypeRef = entity.parentId
-      ? activeContext?.defaults?.childTypeRef ?? activeContext?.defaults?.entityTypeRef
-      : activeContext?.defaults?.rootTypeRef ?? activeContext?.defaults?.entityTypeRef;
     const identity = mergeIdentityEntries(
       readIdentityEntriesFromMaps(identityMaps, entityIdentityKeys(entity), 'entity'),
       entity,
       document,
       diagnostics,
     );
-    const inferredTypeRef = !entity.typeRef
-      ? identity?.typeRef ?? resolveContextDefaultValue(contextTypeRef, identityMaps)
-      : undefined;
     const inferredId = !entity.id
       ? identity?.id
       : undefined;
     const inferredQualifiedId = !entity.qualifiedId
       ? identity?.qualifiedId
       : undefined;
-    const canonicalId = entity.qualifiedId ?? inferredQualifiedId ?? entity.id ?? inferredId ?? entity.uid;
-    return {
+    const entityWithIdentity = {
       ...entity,
       ...inferredId ? { id: inferredId, localId: inferredId } : {},
       ...inferredQualifiedId ? { qualifiedId: inferredQualifiedId } : {},
-      ...inferredTypeRef ? { typeRef: inferredTypeRef } : {},
+    };
+    const inference = inferEntityType(entityWithIdentity, activeContext, originalEntityByUid, document, typeIndex, diagnostics);
+    const canonicalId = entity.qualifiedId ?? inferredQualifiedId ?? entity.id ?? inferredId ?? entity.uid;
+    const updatedEntity = {
+      ...entityWithIdentity,
+      ...inference?.typeRef ? { typeRef: inference.typeRef } : {},
       attributes: cloneAttributeBagWithValues(entity, {
         canonicalIdentity: {
           id: canonicalId,
           source: entity.id || entity.qualifiedId ? 'authored' : inferredId || inferredQualifiedId ? 'identity-map' : 'derived',
           ...activeContext ? { context: activeContext.name } : {},
-          ...inferredTypeRef ? { inferredTypeRef } : entity.typeRef ? { typeRef: entity.typeRef } : {},
         },
+        typeProvenance: entity.typeRef
+          ? { source: 'authored', typeRef: entity.typeRef }
+          : inference
+            ? { ...inference.provenance, typeRef: inference.typeRef }
+            : undefined,
       }),
     };
+    originalEntityByUid.set(updatedEntity.uid, updatedEntity);
+    return updatedEntity;
   });
 
   const updatedEntityByUid = new Map(entities.map((entity) => [entity.uid, entity]));
@@ -2256,30 +2967,36 @@ function applyContextualEvaluation(document, effective) {
       document,
       diagnostics,
     );
-    const inferredTypeRef = isUntypedRelationship(relationship, document)
-      ? identity?.typeRef ?? resolveContextDefaultValue(activeContext?.defaults?.relationshipTypeRef, identityMaps)
-      : undefined;
     const inferredId = !relationship.id
       ? identity?.id
       : undefined;
-    const typeRef = inferredTypeRef ?? relationship.typeRef;
+    const relationshipWithIdentity = {
+      ...relationship,
+      ...inferredId ? { id: inferredId } : {},
+    };
+    const inference = inferRelationshipType(relationshipWithIdentity, activeContext, updatedEntityByUid, document, typeIndex, diagnostics);
+    const typeRef = inference?.typeRef ?? relationship.typeRef;
     const canonicalId = relationship.id
       ?? inferredId
       ?? getStableRelationshipId({ ...relationship, typeRef });
     return {
-      ...relationship,
-      ...inferredId ? { id: inferredId } : {},
-      ...inferredTypeRef ? { typeRef: inferredTypeRef } : {},
+      ...relationshipWithIdentity,
+      ...inference?.typeRef ? { typeRef: inference.typeRef } : {},
       attributes: cloneAttributeBagWithValues(relationship, {
         canonicalIdentity: {
           id: canonicalId,
           source: relationship.id ? 'authored' : inferredId ? 'identity-map' : 'derived',
           ...activeContext ? { context: activeContext.name } : {},
-          ...inferredTypeRef ? { inferredTypeRef } : { typeRef },
         },
+        typeProvenance: !isUntypedRelationship(relationship, document)
+          ? { source: 'authored', typeRef: relationship.typeRef }
+          : inference
+            ? { ...inference.provenance, typeRef: inference.typeRef }
+            : undefined,
       }),
     };
   });
+  validateRelationshipConstraints(relationships, updatedEntityByUid, document, typeIndex, diagnostics);
 
   const metadataValues = {
     ...(document.metadata?.values ?? {}),

@@ -7,6 +7,7 @@
 
 %package bpmn_context_profile
 {
+  defaultContext: package_process
   activation:
     - bpmn_context_profile.contexts
 }
@@ -15,31 +16,36 @@
 
 %entitytype bpmn::Process
 %entitytype bpmn::Task
-%relationshiptype bpmn::sequenceFlow
-
-%idmap bpmn_basic
 {
-  root: bpmn::Process
-  child: bpmn::Task
-  relationship: bpmn::sequenceFlow
+  extends:
+    - bpmn::Process
+}
+%relationshiptype bpmn::sequenceFlow
+{
+  sourceTypes:
+    - bpmn::Process
+  targetTypes:
+    - bpmn::Process
+}
+
+%idmap
+{
+  order_process: enterprise::order-process-001
 }
 
 %context package_process
 {
-  package: bpmn_context_profile
-  idmap: bpmn_basic
-  root: root
-  child: child
-  relationship: relationship
+  defaults:
+    rootType: bpmn::Process
+    childType: bpmn::Task
+    relationshipType: bpmn::sequenceFlow
 }
 
-%using bpmn_context_profile.contexts
-
-%begin package_process
+%begin bpmn_context_profile
 &order_process Order process
   // This child should infer bpmn::Task from the active context.
   &receive Receive order @validate
   &validate Validate order
-%end package_process
+%end bpmn_context_profile
 
 &after_scope Plain item outside the scoped context

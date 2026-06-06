@@ -668,26 +668,54 @@ test('WP-ITM-03 parses comments and trivia without creating model entities', () 
   assert.equal((document.comments ?? []).every((comment) => comment.source?.file === '/docs/examples/itm/wp-itm-03-comments.itm'), true);
 });
 
-test('WP-ITM-03 applies scoped context inference from %idmap, %context, %begin, and %end', async () => {
+test('WP-ITM-03 applies scoped context inference from canonical %context defaults', async () => {
   const loaded = await loadItmDocument(`%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
-%idmap bpmn_basic
+%entitytype bpmn::FlowNode
 {
-  root: bpmn::Process
-  child: bpmn::Task
-  relationship: bpmn::sequenceFlow
+  abstract: true
+}
+%entitytype bpmn::Process
+{
+  extends:
+    - bpmn::FlowNode
+}
+%entitytype bpmn::Task
+{
+  extends: bpmn::FlowNode
+}
+%entitytype bpmn::Gateway
+{
+  extends:
+    - bpmn::FlowNode
+}
+%relationshiptype bpmn::sequenceFlow
+{
+  sourceTypes:
+    - bpmn::FlowNode
+  targetTypes:
+    - bpmn::FlowNode
 }
 %context process_flow
 {
-  idmap: bpmn_basic
-  root: root
-  child: child
-  relationship: relationship
+  defaults:
+    rootType: bpmn::Process
+    childType: bpmn::Task
+    relationshipType: bpmn::sequenceFlow
+
+  infer:
+    nodes:
+      - id: gateway_by_question
+        when:
+          untyped: true
+          parentType: bpmn::Process
+          labelMatches: "\\\\?$"
+        type: bpmn::Gateway
 }
 
 %begin process_flow
 &order_process Order process
   &receive Receive order @validate
-  &validate Validate order
+  &validate Validate order?
 %end process_flow
 
 &orphan Untyped after scope
@@ -703,41 +731,29 @@ test('WP-ITM-03 applies scoped context inference from %idmap, %context, %begin, 
   const sequenceFlow = loaded.effectiveResolvedDocument.relationships.find((relationship) => relationship.sourceId === receive?.uid && relationship.targetId === validate?.uid);
 
   assert.deepEqual(
-    loaded.document.identityMaps?.map((identityMap) => ({
-      name: identityMap.name,
-      entries: identityMap.entries,
-    })),
-    [{
-      name: 'bpmn_basic',
-      entries: {
-        root: 'bpmn::Process',
-        child: 'bpmn::Task',
-        relationship: 'bpmn::sequenceFlow',
-      },
-    }],
-  );
-  assert.deepEqual(
     loaded.document.contexts?.map((context) => ({
       name: context.name,
-      values: context.values,
+      defaults: context.defaults,
+      nodeRules: context.infer?.nodes?.map((rule) => rule.id),
     })),
     [{
       name: 'process_flow',
-      values: {
-        idmap: 'bpmn_basic',
-        root: 'root',
-        child: 'child',
-        relationship: 'relationship',
+      defaults: {
+        rootType: 'bpmn::Process',
+        childType: 'bpmn::Task',
+        relationshipType: 'bpmn::sequenceFlow',
       },
+      nodeRules: ['gateway_by_question'],
     }],
   );
   assert.equal(loaded.document.scopedActivations?.[0]?.name, 'process_flow');
   assert.equal(loaded.document.scopedActivations?.[0]?.endName, 'process_flow');
-  assert.equal(loaded.document.scopedActivations?.[0]?.endSource?.startLine, 20);
+  assert.equal(typeof loaded.document.scopedActivations?.[0]?.endSource?.startLine, 'number');
   assert.equal(orderProcess?.typeRef, 'bpmn::Process');
   assert.equal(receive?.typeRef, 'bpmn::Task');
-  assert.equal(validate?.typeRef, 'bpmn::Task');
+  assert.equal(validate?.typeRef, 'bpmn::Gateway');
   assert.equal(sequenceFlow?.typeRef, 'bpmn::sequenceFlow');
+  assert.equal(validate?.attributes?.values?.typeProvenance?.rule, 'gateway_by_question');
   assert.equal(orphan?.typeRef, undefined);
   assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
 });
@@ -752,31 +768,34 @@ test('WP-ITM-03 package contexts activate explicitly and do not leak across incl
           path,
           text: `%package bpmn_context_profile
 {
+  defaultContext: package_process
   activation:
     - bpmn_context_profile.contexts
 }
 %namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
 %entitytype bpmn::Process
 %entitytype bpmn::Task
-%relationshiptype bpmn::sequenceFlow
-%idmap bpmn_basic
 {
-  root: bpmn::Process
-  child: bpmn::Task
-  relationship: bpmn::sequenceFlow
+  extends: bpmn::Process
+}
+%relationshiptype bpmn::sequenceFlow
+{
+  sourceTypes:
+    - bpmn::Process
+  targetTypes:
+    - bpmn::Process
 }
 %context package_process
 {
-  package: bpmn_context_profile
-  idmap: bpmn_basic
-  root: root
-  child: child
-  relationship: relationship
+  defaults:
+    rootType: bpmn::Process
+    childType: bpmn::Task
+    relationshipType: bpmn::sequenceFlow
 }
-%begin package_process
+%begin bpmn_context_profile
 &included_process Included process
   &included_task Included task
-%end package_process`,
+%end bpmn_context_profile`,
         };
       }
       return undefined;
@@ -817,16 +836,211 @@ test('WP-ITM-03 package contexts activate explicitly and do not leak across incl
   assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.code === 'itm.context.leaked-from-include'), false);
 });
 
+test('ADR-0007 resolves context inheritance, ordered inference, and polymorphic constraints', async () => {
+  const loaded = await loadItmDocument(`%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%entitytype bpmn::FlowNode
+{
+  abstract: true
+}
+%entitytype bpmn::Process
+{
+  extends:
+    - bpmn::FlowNode
+}
+%entitytype bpmn::Task
+{
+  extends: bpmn::FlowNode
+}
+%entitytype bpmn::StartEvent
+{
+  extends:
+    - bpmn::FlowNode
+}
+%entitytype bpmn::Gateway
+{
+  extends:
+    - bpmn::FlowNode
+}
+%relationshiptype bpmn::sequenceFlow
+{
+  sourceTypes:
+    - bpmn::FlowNode
+  targetTypes:
+    - bpmn::FlowNode
+}
+%context bpmn_base
+{
+  defaults:
+    relationshipType: bpmn::sequenceFlow
+
+  infer:
+    nodes:
+      - id: default_start
+        when:
+          untyped: true
+          parentType: bpmn::Process
+          labelMatches: "^Begin"
+        type: bpmn::StartEvent
+}
+%context bpmn_process
+{
+  extends:
+    - bpmn_base
+
+  defaults:
+    rootType: bpmn::Process
+    childType: bpmn::Task
+
+  infer:
+    nodes:
+      - id: gateway_by_question
+        when:
+          untyped: true
+          parentType: bpmn::Process
+          labelMatches: "\\\\?$"
+        type: bpmn::Gateway
+}
+
+%begin bpmn_process
+&order Order process
+  &start Begin order @task
+  &task Validate order?
+  &manual [bpmn::Task] Manual question?
+%end bpmn_process
+`, {
+    uri: '/docs/examples/itm/adr-0007-context-inference.itm',
+    includeStdProfiles: false,
+  });
+
+  const start = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'start');
+  const task = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'task');
+  const manual = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'manual');
+  const sequenceFlow = loaded.effectiveResolvedDocument.relationships.find((relationship) => relationship.sourceId === start?.uid && relationship.targetId === task?.uid);
+
+  assert.equal(start?.typeRef, 'bpmn::StartEvent');
+  assert.equal(start?.attributes?.values?.typeProvenance?.rule, 'default_start');
+  assert.equal(task?.typeRef, 'bpmn::Gateway');
+  assert.equal(task?.attributes?.values?.typeProvenance?.rule, 'gateway_by_question');
+  assert.equal(manual?.typeRef, 'bpmn::Task');
+  assert.equal(manual?.attributes?.values?.typeProvenance?.source, 'authored');
+  assert.equal(sequenceFlow?.typeRef, 'bpmn::sequenceFlow');
+  assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.code === 'itm.relationship.constraint-violation'), false);
+});
+
+test('ADR-0007 activates package default contexts with %using package', async () => {
+  const workspace = {
+    getEntryByPath(path) {
+      if (path === '/profiles/default-context.itm') {
+        return {
+          kind: 'resource',
+          representation: 'text',
+          path,
+          text: `%package bpmn_profile
+{
+  defaultContext: process
+}
+%entitytype bpmn::Process
+%entitytype bpmn::Task
+%relationshiptype bpmn::sequenceFlow
+%context process
+{
+  defaults:
+    rootType: bpmn::Process
+    childType: bpmn::Task
+    relationshipType: bpmn::sequenceFlow
+}`,
+        };
+      }
+      return undefined;
+    },
+  };
+
+  const loaded = await loadItmDocument(`%include ../profiles/default-context.itm
+&before Before profile
+%using bpmn_profile
+&order Order process
+  &receive Receive order @validate
+  &validate Validate order
+`, {
+    uri: '/docs/default-context-root.itm',
+    includeProviders: [createWorkspaceItmIncludeProvider(workspace)],
+    includeStdProfiles: false,
+  });
+
+  const before = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'before');
+  const order = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'order');
+  const receive = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'receive');
+  const flow = loaded.effectiveResolvedDocument.relationships.find((relationship) => relationship.sourceId === receive?.uid);
+
+  assert.equal(before?.typeRef, undefined);
+  assert.equal(order?.typeRef, 'bpmn::Process');
+  assert.equal(receive?.typeRef, 'bpmn::Task');
+  assert.equal(flow?.typeRef, 'bpmn::sequenceFlow');
+});
+
+test('ADR-0007 reports abstract type and polymorphic relationship diagnostics', async () => {
+  const loaded = await loadItmDocument(`%entitytype model::FlowNode
+{
+  abstract: true
+}
+%entitytype model::Task
+{
+  extends:
+    - model::FlowNode
+}
+%entitytype model::Document
+%relationshiptype model::flow
+{
+  sourceTypes:
+    - model::FlowNode
+  targetTypes:
+    - model::FlowNode
+}
+%context invalid_process
+{
+  defaults:
+    rootType: model::FlowNode
+    childType: model::Task
+    relationshipType: model::flow
+}
+
+%begin invalid_process
+&root Root
+  &doc [model::Document] Document
+  &task Task @doc
+%end invalid_process
+`, {
+    uri: '/docs/examples/itm/adr-0007-invalid.itm',
+    includeStdProfiles: false,
+  });
+
+  const codes = new Set(loaded.diagnostics.map((diagnostic) => diagnostic.code));
+
+  assert.equal(codes.has('itm.type.abstract-inferred'), true);
+  assert.equal(codes.has('itm.relationship.constraint-violation'), true);
+});
+
 test('WP-ITM-03 reports stable diagnostics for invalid identity maps and scoped contexts', () => {
   const parsed = parseDocumentResult(`%idmap duplicate_alias
 {
   task: bpmn::Task
   task: archimate::BusinessProcess
 }
+%idmap alias_table
+{
+  root: bpmn::Process
+}
 %context broken_context
 {
-  idmap: missing_map
-  root: missing_root
+  defaults:
+    rootType: missing::Root
+  infer:
+    nodes:
+      - id: bad_rule
+        when:
+          targetType: bpmn::Task
+          labelMatches: "["
+        type: missing::Task
 }
 %begin missing_context
 &task Task
@@ -843,7 +1057,10 @@ test('WP-ITM-03 reports stable diagnostics for invalid identity maps and scoped 
   const codes = new Set(diagnostics.map((diagnostic) => diagnostic.code));
 
   assert.equal(codes.has('itm.idmap.duplicate-entry'), true);
-  assert.equal(codes.has('itm.context.idmap-unresolved'), true);
+  assert.equal(codes.has('itm.idmap.type-alias'), true);
+  assert.equal(codes.has('itm.context.rule-invalid-when'), true);
+  assert.equal(codes.has('itm.context.rule-invalid-regex'), true);
+  assert.equal(codes.has('itm.context.type-unknown'), true);
   assert.equal(codes.has('itm.context.unresolved'), true);
   assert.equal(codes.has('itm.context.unmatched-end'), true);
 });

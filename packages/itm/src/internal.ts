@@ -313,9 +313,22 @@ export declare const itmResolverDiagnosticCodes: Readonly<{
   readonly identityMapConflict: 'itm.identity-map.conflict';
   readonly missingPackageDefaultContext: 'itm.package.default-context-missing';
   readonly duplicateIdentityMapEntry: 'itm.idmap.duplicate-entry';
+  readonly identityMapTypeAlias: 'itm.idmap.type-alias';
   readonly contextIdentityMapUnresolved: 'itm.context.idmap-unresolved';
   readonly contextUnresolved: 'itm.context.unresolved';
   readonly contextUnmatchedEnd: 'itm.context.unmatched-end';
+  readonly typeInheritanceUnknown: 'itm.type.extends-unknown';
+  readonly typeReferenceUnknown: 'itm.type.reference-unknown';
+  readonly typeInheritanceCycle: 'itm.type.extends-cycle';
+  readonly abstractTypeInstantiation: 'itm.type.abstract-instantiated';
+  readonly abstractTypeInferred: 'itm.type.abstract-inferred';
+  readonly contextInheritanceUnknown: 'itm.context.extends-unknown';
+  readonly contextInheritanceCycle: 'itm.context.extends-cycle';
+  readonly contextRuleDuplicate: 'itm.context.rule-duplicate';
+  readonly contextRuleInvalidWhen: 'itm.context.rule-invalid-when';
+  readonly contextRuleInvalidRegex: 'itm.context.rule-invalid-regex';
+  readonly contextTypeUnknown: 'itm.context.type-unknown';
+  readonly relationshipConstraintViolation: 'itm.relationship.constraint-violation';
 }>;
 export declare function createItmResolverDiagnostic(
   category: ItmResolverDiagnosticCategory,
