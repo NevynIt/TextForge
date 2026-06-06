@@ -1,10 +1,12 @@
 # Indented Text Model Format
 
+> Draft updated with comments, identity maps, named contexts, scoped activation, package context exports, and explicit scope/resolution rules.
+
 ## 1. Purpose and rationale
 
 The Indented Text Model format, or ITM, is a human-readable text format for describing structured models.
 
-It starts from the simplest possible structure: one line of text represents one thing. From there, it grows incrementally into a format that can describe entities, relationships, hierarchy, typed semantic models, validation rules, views, visual layouts, reusable packages, and repositories.
+It starts from the simplest possible structure: one line of text represents one thing. From there, it grows incrementally into a format that can describe comments, entities, relationships, hierarchy, local and canonical identifiers, typed semantic models, validation rules, views, visual layouts, reusable packages, named contexts, scoped activation blocks, and repositories.
 
 The design goal is not to replace specialist formats such as BPMN XML, ArchiMate exchange files, Graphviz DOT, Mermaid, GraphML, JSON, YAML, or SVG. Instead, ITM is intended to act as a resilient authoring and interchange layer between them.
 
@@ -12,11 +14,13 @@ ITM is designed around a few principles:
 
 - **Human readability**: a person should be able to open the file in any text editor and understand most of it.
 - **Progressive complexity**: a simple list is already a valid model; advanced constructs are added only when needed.
-- **Model-first semantics**: the primary content is the model: entities, relationships, metadata, constraints, and views.
+- **Model-first semantics**: the primary content is the model: entities, relationships, metadata, constraints, views, package definitions, and scoped context activations.
 - **Plain-text resilience**: the format remains inspectable, diffable, mergeable, searchable, and recoverable even without the original tool.
 - **Collaboration readiness**: ITM files fit naturally in Git, CI/CD workflows, code review, automated validation, and documentation pipelines.
 - **Tool independence**: renderers such as Mermaid, Graphviz, Cytoscape, jsMind, Sigma, SVG viewers, or BPMN tools are presentation engines, not the canonical source.
-- **Composable models**: models can include other files, use namespaces, import packages, and resolve reusable content from repositories.
+- **Composable models**: models can include other files, use namespaces, import packages, activate contexts, and resolve reusable content from repositories.
+- **Authoring-friendly identity**: files may use short local ids while processors map them to globally unique canonical ids for large repositories.
+- **Explicit activation**: reusable package/profile content is not active merely because it exists; it is activated by `%using` or by scoped `%begin` / `%end` blocks.
 - **Extensible automation**: pipelines, rules, transformations, and views can be backed by built-in logic, plugins, or scripting engines.
 
 ITM can therefore be used as:
@@ -27,7 +31,9 @@ ITM can therefore be used as:
 - a collaboration format for shared semantic models;
 - a diagram generation source;
 - a validation and diagnostics source;
-- a human-readable fallback representation for richer models.
+- a human-readable fallback representation for richer models;
+- a profile-driven authoring format where types and relationships can be inferred from named contexts;
+- a large-repository format where local ids can be mapped to canonical identities.
 
 The same file can begin life as a simple list and later evolve into a typed, validated, styled, multi-view model.
 
@@ -44,29 +50,35 @@ Recommended conceptual levels:
 | Level | Feature | Purpose |
 |---|---|---|
 | 1 | Simple list | One line equals one entity |
-| 2 | Tags | Lightweight classification |
-| 3 | Indentation | Hierarchy and containment |
-| 4 | Automatic relationships | Generated containment and ordering links |
-| 5 | Node ids | Stable references to entities |
-| 6 | Links | Explicit relationships between entities |
-| 7 | Typed links | Named relationship semantics |
-| 8 | Markdown descriptions | Rich textual explanation attached to entities |
-| 9 | Attributes | Structured data attached to nodes and edges |
-| 10 | Directives | File-level instructions and declarations |
-| 11 | Metadata | Document-level structured metadata |
-| 12 | Includes | Composition from multiple files |
-| 13 | Namespaces | Qualified names and conflict management |
-| 14 | Types | Entity and relationship type definitions |
-| 15 | Selectors | Shared query mechanism for styles, rules, and views |
-| 16 | Validation rules | Model constraints and diagnostics |
-| 17 | Plugins | External pipeline steps and rule engines |
-| 18 | Cascading styles | Presentation guidance independent from semantics |
-| 19 | Viewpoints | Reusable pipelines for model projections |
-| 20 | Views | Specific viewpoint instances with deltas |
-| 21 | Visual editing | Controlled write-back from rendered views |
-| 22 | Explicit overlays | Controlled redefinition and patching |
-| 23 | Packages | Reusable bundled definitions |
-| 24 | Repositories | Remote or shared package/document sources |
+| 2 | Comments and trivia | Authoring notes that do not affect the model |
+| 3 | Tags | Lightweight classification |
+| 4 | Indentation | Hierarchy and containment |
+| 5 | Automatic relationships | Generated containment and ordering links |
+| 6 | Node ids | Stable local references to entities |
+| 7 | Identity maps | Mapping local ids to canonical/global ids and aliases |
+| 8 | Links | Explicit relationships between entities |
+| 9 | Typed links | Named relationship semantics |
+| 10 | Markdown descriptions | Rich textual explanation attached to entities |
+| 11 | Attributes | Structured data attached to nodes and edges |
+| 12 | Directives | File-level instructions and declarations |
+| 13 | Metadata | Document-level structured metadata |
+| 14 | Includes | Composition from multiple files |
+| 15 | Namespaces | Qualified names and conflict management |
+| 16 | Types | Entity and relationship type definitions |
+| 17 | Named contexts | Reusable inference/default rules, always named |
+| 18 | Scoped activation | `%begin` / `%end` activation of contexts, packages, or profiles |
+| 19 | Selectors | Shared query mechanism for styles, rules, and views |
+| 20 | Validation rules | Model constraints and diagnostics |
+| 21 | Plugins | External pipeline steps and rule engines |
+| 22 | Cascading styles | Presentation guidance independent from semantics |
+| 23 | Viewpoints | Reusable pipelines for model projections |
+| 24 | Views | Specific viewpoint instances with deltas |
+| 25 | Visual editing | Controlled write-back from rendered views |
+| 26 | Explicit overlays | Controlled redefinition and patching |
+| 27 | Packages | Reusable bundled definitions and named contexts |
+| 28 | Repositories | Remote or shared package/document sources |
+
+Named contexts are not a temporary compatibility feature. They are the permanent mechanism for profile-driven defaults, type inference, relationship inference, and scoped package/profile activation.
 
 ---
 
@@ -101,7 +113,84 @@ This is the foundation of the format: plain lines of text are already meaningful
 
 ---
 
-## 4. Tags
+## 4. Comments and trivia
+
+Comments are authoring trivia. They are intended for human notes, explanations, temporary reminders, disabled snippets during drafting, and round-tripping in editors.
+
+A whole-line comment starts with `//` after optional indentation.
+
+```itm
+// This comment is ignored by the model processor.
+Customer
+Order
+```
+
+A trailing comment starts with `//` after at least one whitespace character.
+
+```itm
+&order Order  // local authoring note
+```
+
+The `//` marker should not be interpreted as a comment marker inside ordinary text unless it appears either:
+
+- at the start of the line after indentation; or
+- after whitespace in a position where the line parser is outside quoted strings, attribute blocks, and Markdown descriptions.
+
+This prevents ordinary values such as URLs from being truncated accidentally.
+
+```itm
+&api API endpoint https://example.org/orders
+```
+
+Comments are not model content.
+
+They do not create:
+
+- nodes;
+- relationships;
+- tags;
+- attributes;
+- descriptions;
+- rules;
+- diagnostics by themselves.
+
+A parser may preserve comments in a concrete syntax tree so that an editor can save the file without destroying authoring notes.
+
+A semantic model export may ignore comments completely.
+
+### 4.1 Comment interaction with other constructs
+
+Comments are recognized in normal ITM syntax lines before semantic parsing.
+
+They are not recognized inside Markdown description blocks, because text after `|` is Markdown content.
+
+```itm
+&order Order
+| The string // remains part of the Markdown description.
+```
+
+They are not recognized inside YAML-compatible attribute blocks. Attribute blocks may use the comment rules of the YAML parser if supported by the implementation.
+
+```itm
+&order Order
+{
+  status: draft  # YAML-style comment, if supported by the attribute parser
+}
+```
+
+Comment-only lines are ignored for hierarchy, ordering relationships, and attachment of immediately following description or attribute blocks. A comment-only line may appear between a node and its description or attribute block without changing the owner of that block.
+
+```itm
+&order Order
+// explanation for the author, not model content
+| Description still belongs to Order.
+```
+
+The `#` character is not an ITM comment marker because `#tag` is part of the ITM model syntax.
+
+---
+
+## 5. Tags
 
 Tags provide lightweight classification.
 
@@ -150,7 +239,7 @@ Recommended tag syntax:
 
 ---
 
-## 5. Indented list
+## 6. Indented list
 
 Indentation creates hierarchy.
 
@@ -202,11 +291,13 @@ This avoids fragile editor-dependent interpretation while keeping the format com
 
 The result is a tree or forest of entities.
 
-## 6. Automatic relationships
+---
+
+## 7. Automatic relationships
 
 Indentation is not just visual structure. It generates model relationships.
 
-### 6.1 Containment relationship
+### 7.1 Containment relationship
 
 Every parent-child indentation link creates an implicit `contains` relationship.
 
@@ -233,7 +324,7 @@ Internally, implementations may represent hierarchy edges as a reserved relation
 
 The hierarchy edge can be selected, styled, filtered, validated, and transformed like other relationships.
 
-### 6.2 Ordering relationship
+### 7.2 Ordering relationship
 
 The order of sibling nodes also has meaning.
 
@@ -270,7 +361,7 @@ Ordering relationships should be generated deterministically from document order
 
 ---
 
-## 7. Node ids
+## 8. Node ids
 
 An entity may have a stable identifier.
 
@@ -321,11 +412,88 @@ Ids are used for:
 - stable generated outputs;
 - visual editing write-back.
 
-Ids must be unique within their namespace unless an explicit overlay is declared. Duplicate ids in the same namespace are validation errors by default. Namespace and overlay rules are described later.
+Ids must be unique within their namespace unless an explicit overlay is declared. Duplicate ids in the same namespace are validation errors by default. Namespace and overlay rules are described later.### Local ids and canonical identity
+
+The `&id` written on a node is the id used for authoring and local link resolution in the current document or namespace.
+
+It may be short, readable, and hand-written.
+
+For large repositories, integrations, or generated enterprise-scale models, a node may also have a canonical identity that is globally unique and less convenient to write manually. Canonical identity is handled by identity maps rather than by forcing every author to write GUID-like ids on every node.
 
 ---
 
-## 8. Links and relationships
+## 9. Identity maps and canonical ids
+
+Identity maps connect author-friendly local ids to globally unique canonical ids and to external aliases.
+
+They allow a file to use readable ids while still participating in a large repository where global uniqueness matters.
+
+A file declares identity mappings with `%idmap` followed by a YAML-compatible block.
+
+```itm
+%idmap
+{
+  order: "enterprise::550e8400-e29b-41d4-a716-446655440000"
+  customer:
+    canonical: "enterprise::a1e21492-0496-43d1-9b94-b5874f42a66e8"
+    aliases:
+      - "crm::Customer"
+      - "shared:domains/sales.itm#Customer"
+}
+```
+
+A compact form maps a local id directly to a canonical id.
+
+```yaml
+order: "enterprise::550e8400-e29b-41d4-a716-446655440000"
+```
+
+The expanded form may include:
+
+```yaml
+canonical: "enterprise::a1e21492-0496-43d1-9b94-b5874f42a66e8"
+aliases:
+  - "crm::Customer"
+  - "shared:domains/sales.itm#Customer"
+```
+
+The canonical id is the preferred global identity of the model element.
+
+Aliases are additional identifiers that are known to refer to the same model element.
+
+Identity equivalence is not a normal model relationship. It does not create a semantic edge such as `same_as`. It is resolved during identity processing before ordinary relationship validation.
+
+### 9.1 Identity map scope
+
+In a normal model file, `%idmap` applies to the current file only.
+
+In a package file, `%idmap` belongs to the package export boundary. It is not active in a consumer merely because the file is included. It becomes available when the package is activated with `%using` or with scoped `%begin` / `%end` activation.
+
+Unqualified keys in an identity map refer to ids as authored in the file after local namespace rules are applied. Qualified keys are recommended when the same file uses multiple namespaces.
+
+```itm
+%idmap
+{
+  local::order: "enterprise::550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+### 9.2 Identity map validation
+
+A validator should report diagnostics when:
+
+- an identity map key does not resolve to any node in the relevant scope;
+- two different canonical ids are assigned to the same local id;
+- the same canonical id is assigned to multiple local ids without an explicit alias/equivalence policy;
+- an alias conflicts with another canonical id;
+- a required canonical id is missing in strict repository mode;
+- an identity map is imported from a package but not activated.
+
+A full repository processor may use canonical ids to detect cross-file equivalence, duplicate model elements, merge conflicts, and stable export identifiers.
+
+---
+
+## 10. Links and relationships
 
 Explicit relationships are written as references beginning with `@`.
 
@@ -371,7 +539,7 @@ If no relationship type is provided, a default type such as `related_to` may be 
 
 ---
 
-## 9. Typed links
+## 11. Typed links
 
 Typed links add relationship semantics while preserving the simple `@target` form.
 
@@ -442,7 +610,9 @@ Typed links can be used to represent semantic relationships such as:
 - `flows_to`;
 - `owned_by`.
 
-## 10. Relationship attributes and relationship identity
+---
+
+## 12. Relationship attributes and relationship identity
 
 Relationships can have attributes.
 
@@ -504,7 +674,7 @@ Relationship ids are useful when:
 
 ---
 
-## 11. Markdown descriptions
+## 13. Markdown descriptions
 
 An entity may have a rich description block.
 
@@ -572,13 +742,13 @@ The Markdown description is documentation attached to the model element. It is n
 
 ---
 
-## 12. Node and edge attributes
+## 14. Node and edge attributes
 
 Attributes are structured data attached to nodes or relationships.
 
 Attributes are delimited by curly braces and expressed using YAML-compatible syntax.
 
-### 12.1 Inline node attributes
+### 14.1 Inline node attributes
 
 For short attributes, an inline block may be used.
 
@@ -586,7 +756,7 @@ For short attributes, an inline block may be used.
 &invoice Invoice {status: draft, owner: finance}
 ```
 
-### 12.2 Block node attributes
+### 14.2 Block node attributes
 
 For richer attributes, use a block after the entity line and optional description.
 
@@ -605,7 +775,7 @@ For richer attributes, use a block after the entity line and optional descriptio
 }
 ```
 
-### 12.3 Edge attributes
+### 14.3 Edge attributes
 
 Edge attributes can be written after a relationship.
 
@@ -619,7 +789,7 @@ Edge attributes can be written after a relationship.
 }
 ```
 
-### 12.4 Attribute interpretation
+### 14.4 Attribute interpretation
 
 Attributes are semantic data unless interpreted by a renderer, pipeline, rule, or style layer.
 
@@ -647,9 +817,9 @@ To avoid confusion, the recommended approach is:
 
 ---
 
-## 13. Directives
+## 15. Directives
 
-Directives are file-level instructions.
+Directives are instructions, declarations, or structural controls.
 
 A directive starts with `%`.
 
@@ -659,12 +829,13 @@ Examples:
 %metadata
 %include common-types.itm
 %namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%idmap
 %entitytype Task
 %relationshiptype depends_on
-%style [Task]
-{
-  fill: '#e8f1ff'
-}
+%context bpmn_process
+%begin bpmn_process
+%end bpmn_process
+%style [Task] { fill: '#e8f1ff' }
 %viewpoint process_map
 %view current_process_map
 %package bpmn_profile
@@ -673,9 +844,59 @@ Examples:
 %require itm.graphviz ^1.0.0
 ```
 
-Directives do not create normal model entities unless the directive explicitly defines model content such as types, rules, styles, viewpoints, packages, or repositories.
+Directives do not create normal model entities unless the directive explicitly defines model content such as types, rules, styles, viewpoints, packages, contexts, repositories, or reference entities.
 
-Directives have directive-specific signatures. A directive line must not be parsed generically as `%directive` followed by a single optional `{...}` block. For directives that take selectors, such as `%style`, the directive header is parsed according to the selector grammar. Any `{key=value}` encountered as part of that selector is an attribute selector atom. The directive body is the YAML-compatible block that appears after the complete selector expression.
+### 15.1 Directive classes
+
+ITM distinguishes between declaration directives, activation directives, and structural activation directives.
+
+| Directive kind | Examples | Scope behavior |
+|---|---|---|
+| File/package declarations | `%metadata`, `%repository`, `%namespace`, `%require`, `%package`, `%idmap` | Hoisted to the current file or package scope unless the directive defines stricter placement |
+| Model/profile declarations | `%entitytype`, `%relationshiptype`, `%rule`, `%style`, `%viewpoint`, `%view`, `%context` | Define named content in the current file or package; generally hoisted within that scope |
+| File-wide activations | `%using package_name` | Activate package/profile exports for the current file unless used inside an implementation-defined higher-level container |
+| Scoped activations | `%begin NAME` / `%end NAME` | Positional, stack-based activation of a named context, package, profile, or package context |
+
+The default rule is:
+
+```text
+Declarations are hoisted.
+Activations are explicit.
+Only %begin/%end is positional.
+Includes do not leak local active state.
+Packages export; consumers activate.
+```
+
+### 15.2 Placement rules
+
+Non-structural directives may appear anywhere at top level in a file, but processors should treat them as declarations for the whole relevant file/package scope rather than as “from here onwards” effects.
+
+For readability, declarations are recommended near the beginning of a file.
+
+A strict processor may warn when hoisted declarations appear after model content, especially for `%metadata`, `%repository`, `%include`, `%namespace`, `%package`, `%require`, `%using`, and `%idmap`.
+
+The structural directives `%begin` and `%end` are different. They are positional and may appear where model lines may appear. They do not create nodes, but they change the active context stack for the lines between them.
+
+Canonical style places `%begin` and `%end` at the same indentation level as the model lines they scope.
+
+```itm
+%begin risk_profile
+&r1 Supplier delay
+&r2 Approval delay
+%end risk_profile
+```
+
+Inside an existing hierarchy, scoped activation may be placed at the child indentation level.
+
+```itm
+&programme Programme
+  %begin risk_profile
+  &r1 Supplier delay
+  &r2 Approval delay
+  %end risk_profile
+```
+
+The `%begin` and `%end` lines do not consume an indentation level and do not become semantic parents. Entity hierarchy is resolved over entity lines, while context activation is resolved over document order.
 
 Unknown directives may be:
 
@@ -686,7 +907,7 @@ Unknown directives may be:
 
 ---
 
-## 14. Metadata
+## 16. Metadata
 
 Document metadata is written using the `%metadata` directive followed by a YAML block.
 
@@ -716,17 +937,18 @@ It may include:
 - validation mode;
 - repository references.
 
-Metadata is not a model node.
+Metadata is not a model node.Metadata defaults are document-level authoring defaults. They should not be used for complex scoped inference. Profile-driven defaults, type inference, relationship inference, and package-specific authoring behavior should be declared in named `%context` definitions and activated explicitly.
 
 ---
 
-## 15. Include
+## 17. Include
 
-The `%include` directive inserts or references another ITM file.
+The `%include` directive composes a model from another ITM file.
 
 ```itm
 %include common-types.itm
 %include shared/risks.itm
+%include shared:profiles/bpmn.itm
 ```
 
 Includes allow a model to be composed from multiple files.
@@ -739,7 +961,53 @@ Possible uses:
 - validation rules;
 - reference data;
 - model fragments;
-- package manifests.
+- package manifests;
+- named contexts;
+- identity maps.
+
+### 17.1 Include is not textual paste
+
+An ITM include is not a C-preprocessor-style textual insertion.
+
+An included file is parsed as a separate module with its own local directive scope, namespace declarations, `%using` declarations, identity maps, contexts, validation rules, and diagnostics.
+
+The included file may contribute semantic model content, package exports, or both, depending on what it contains and on processor policy.
+
+The included file's active local state does not leak into the including file.
+
+This means:
+
+```itm
+%include shared:profiles/bpmn.itm
+```
+
+does not automatically make every BPMN type, rule, style, context, or namespace active in the including file.
+
+The including file activates package/profile content explicitly:
+
+```itm
+%include shared:profiles/bpmn.itm
+%using bpmn_profile
+```
+
+or in a scoped block:
+
+```itm
+%include shared:profiles/bpmn.itm
+
+%begin bpmn_profile.process
+&order_process Order handling
+  &receive Receive order
+%end bpmn_profile.process
+```
+
+### 17.2 Package includes and fragment includes
+
+If an included file declares a `%package`, its package exports become available to the including file. They are not active until `%using` or `%begin` activates them.
+
+If an included file is a model fragment without a `%package`, an implementation may merge or reference its model content as part of the current model. Even in this case, the included file is processed in its own local scope and source locations should be preserved for diagnostics.
+
+### 17.3 Include validation
 
 An implementation should protect against:
 
@@ -747,14 +1015,18 @@ An implementation should protect against:
 - missing files;
 - unauthorized paths;
 - incompatible namespaces;
-- conflicting ids;
-- duplicate package imports.
+- unresolved package references;
+- conflicting package names;
+- conflicting canonical identities;
+- conflicting ids after merge;
+- duplicate package imports with incompatible versions;
+- attempts by an included file to leak local active state into the including file.
 
 In local-only or security-conscious environments, include paths should be restricted to approved locations.
 
 ---
 
-## 16. Namespaces
+## 18. Namespaces
 
 Namespaces prevent name collisions and allow profiles to coexist.
 
@@ -815,9 +1087,21 @@ Namespace rules:
 - imported packages should not pollute the current namespace unless explicitly used;
 - namespace aliases should be stable within a document;
 - namespace URIs identify semantic ownership, not necessarily fetchable URLs;
-- namespace-qualified names should use `::`, not `:`.
+- namespace-qualified names should use `::`, not `:`.### Namespace scope
 
-## 17. Node and edge types
+A `%namespace` declaration binds a prefix within the current file or package module.
+
+Namespace prefixes do not leak through `%include`.
+
+A package may export namespace bindings as part of its default exports. A consumer activates those exported bindings with `%using package_name` or scoped `%begin package_name` / `%end package_name`.
+
+Contexts may define `defaultNamespace` to control how unqualified ids are interpreted inside an active scope. This is different from declaring a prefix. A namespace declaration makes a prefix known; a context default decides which namespace unqualified authored names belong to while the context is active.
+
+Explicit namespace-qualified ids and types always override context defaults.
+
+---
+
+## 19. Node and edge types
 
 Types add formal semantics.
 
@@ -874,11 +1158,208 @@ Type declarations can support:
 - editor completion;
 - model navigation;
 - transformation to external formats;
-- semantic interoperability.
+- semantic interoperability.### Explicit types and inferred types
+
+A type explicitly written on an entity or relationship always wins over profile/context inference.
+
+```itm
+&task1 [bpmn::Task] Validate order
+```
+
+If no type is written, an active named context may infer the type from rules such as:
+
+- active package/profile;
+- root node position;
+- parent type;
+- child position;
+- relationship source and target types;
+- relationship name;
+- label pattern;
+- configured default type.
+
+Inferred types should be stored in the resolved semantic model and may be reported as information-level diagnostics when the processor is configured to explain inference.
 
 ---
 
-## 18. Selectors
+## 20. Named contexts and scoped activation
+
+A context is a named set of authoring defaults and inference rules.
+
+Contexts are always named.
+
+A context is declared with `%context NAME` followed by a YAML-compatible block.
+
+```itm
+%context bpmn_process
+{
+  defaultNamespace: local
+  rootType: bpmn::Process
+  defaultRelationshipType: bpmn::sequenceFlow
+
+  infer:
+    childrenOf:
+      bpmn::Process: bpmn::Task
+}
+```
+
+A context definition does not activate itself.
+
+It becomes active only through `%using` when part of a package's default activation, or through a scoped `%begin` / `%end` block.
+
+```itm
+%begin bpmn_process
+&order_process Order handling
+  &receive Receive order
+  &validate Validate order
+%end bpmn_process
+```
+
+Contexts may be declared in ordinary model files or inside packages.
+
+### 20.1 Context content
+
+A context may define:
+
+- `defaultNamespace` for unqualified ids created in the active scope;
+- `rootType` for untyped root nodes in the active scope;
+- `childType` or `childTypeRules` for untyped children;
+- `defaultRelationshipType` for untyped links;
+- relationship inference rules based on source type, target type, parent type, or position;
+- default attributes;
+- default tags;
+- default validation mode;
+- package/profile-specific editor hints;
+- references to rules, styles, viewpoints, or pipelines that should be active in the scope.
+
+Example:
+
+```itm
+%context capability_model
+{
+  defaultNamespace: cap
+  rootType: cap::Capability
+
+  infer:
+    childrenOf:
+      cap::Capability:
+        byPosition:
+          1: cap::Outcome
+          2: cap::Activity
+          3: cap::Requirement
+
+    relationships:
+      - source: cap::Activity
+        target: cap::Outcome
+        type: cap::contributes_to
+      - source: cap::Requirement
+        target: cap::Activity
+        type: cap::constrains
+}
+```
+
+Used as:
+
+```itm
+%begin capability_model
+&radar_upgrade Radar upgrade
+  &outcome Detect small drones
+  &activity Improve signal processing @outcome
+  &requirement Evidence must be retained @activity
+%end capability_model
+```
+
+The resolved model may infer:
+
+```yaml
+radar_upgrade:
+  type: cap::Capability
+outcome:
+  type: cap::Outcome
+activity:
+  type: cap::Activity
+  relationships:
+    - type: cap::contributes_to
+      target: outcome
+requirement:
+  type: cap::Requirement
+  relationships:
+    - type: cap::constrains
+      target: activity
+```
+
+### 20.2 Scoped activation blocks
+
+A scoped activation block starts with `%begin NAME` and ends with `%end NAME`.
+
+```itm
+%begin NAME
+...
+%end NAME
+```
+
+The name may refer to:
+
+- a local context;
+- an active package/profile;
+- a context exported by a package/profile;
+- a package/profile default context.
+
+Nested scopes are allowed.
+
+```itm
+%begin capability_profile
+&air_defence Air defence
+  &detect Detect threat
+
+  %begin risk_profile
+  &r1 Radar outage
+  &r2 Supplier delay
+  %end risk_profile
+
+  &engage Engage threat
+%end capability_profile
+```
+
+The active context stack is push/pop based.
+
+When a nested scope is active, the inner scope may override defaults from the outer scope. When the nested scope ends, the previous context is restored.
+
+### 20.3 Context and package name resolution
+
+When resolving `%begin NAME`, processors should use this order:
+
+1. local `%context NAME` in the current file;
+2. a context imported into the active name set by `%using`, if the unqualified name is unambiguous;
+3. a qualified package context such as `bpmn_profile.process`;
+4. a package/profile named `NAME`, using its `defaultContext` if declared;
+5. a package/profile named `NAME` with no default context, activating only its default exports;
+6. error: unknown scoped activation name.
+
+Qualified names should always be accepted when available.
+
+Unqualified names should produce diagnostics if more than one active package exports the same context name.
+
+### 20.4 Context validation
+
+A validator should report diagnostics when:
+
+- `%begin NAME` cannot be resolved;
+- `%end NAME` does not match the active `%begin NAME`;
+- a scope is not closed;
+- an `%end` appears without a matching `%begin`;
+- a context name is declared more than once in the same file/package scope;
+- an unqualified context name is ambiguous;
+- a context refers to unknown types, relationship types, namespaces, rules, styles, or viewpoints;
+- an inference rule conflicts with an explicit type;
+- two active contexts define incompatible defaults with the same precedence;
+- a package default context refers to a missing context;
+- a scoped activation appears in an indentation position that violates the implementation's strict formatting rules.
+
+Explicit authoring wins over inferred context defaults. For example, an explicitly written `[Type]`, namespace-qualified id, typed link, or relationship attribute should override a context default unless a validation rule explicitly forbids that override.
+
+---
+
+## 21. Selectors
 
 Selectors are a shared mechanism for identifying model elements.
 
@@ -916,8 +1397,6 @@ Recommended selector forms:
 | `%view:name` | a named view |
 | `%viewpoint:name` | a named viewpoint |
 
-Attribute selectors use `=` for equality. `{key: value}` is YAML-style block syntax, not a selector atom.
-
 Examples:
 
 ```itm
@@ -934,7 +1413,7 @@ Examples:
 
 Selectors should be expressive enough for common model operations while remaining readable.
 
-### 18.1 Boolean selector operators
+### 21.1 Boolean selector operators
 
 Selectors can be combined with Boolean operators.
 
@@ -975,7 +1454,7 @@ Recommended operator precedence is:
 
 Authors should use parentheses whenever precedence might be unclear.
 
-### 18.2 Selector functions
+### 21.2 Selector functions
 
 The core selector function set is:
 
@@ -1013,7 +1492,9 @@ Advanced implementations may add query clauses such as `WHERE`, but `WHERE` is n
 
 The exact extended expression language may be implementation-defined, but the basic selector syntax, Boolean operators, grouping, and core selector functions should remain stable.
 
-## 19. Validation rules
+---
+
+## 22. Validation rules
 
 Validation rules define constraints over the model.
 
@@ -1075,11 +1556,44 @@ Rules may also check model structure:
 
 A rule pipeline is a sequence of validation steps. Steps may be built into the implementation, supplied by a plugin, or implemented in a scripting engine.
 
-Validation should be able to produce diagnostics without changing the model.
+Validation should be able to produce diagnostics without changing the model.### Scope and resolution validation
+
+Validation also covers the language's composition and activation model.
+
+A validator should check:
+
+- directive placement according to directive class;
+- unknown directives;
+- duplicate package names;
+- package version conflicts;
+- missing required packages or plugins;
+- unresolved `%using` targets;
+- unresolved `%begin` targets;
+- mismatched or unclosed `%begin` / `%end` blocks;
+- ambiguous context or package-context names;
+- namespace prefix conflicts within a file/package scope;
+- attempts by included files to leak local active state;
+- duplicate ids after namespace expansion;
+- identity map conflicts after canonical id resolution;
+- inferred type and relationship consistency;
+- rule activation according to file, package, and scoped context rules.
+
+### 22.1 Inference diagnostics
+
+When contexts infer types, relationship types, namespaces, or defaults, a processor may emit information-level diagnostics explaining the inference.
+
+Example:
+
+```text
+inferred type bpmn::Task for &receive from context bpmn_profile.process, rule infer.childrenOf.bpmn::Process
+inferred relationship bpmn::sequenceFlow for @validate from context bpmn_profile.process, defaultRelationshipType
+```
+
+These diagnostics are useful for authoring and debugging but may be suppressed in normal publishing mode.
 
 ---
 
-## 20. Diagnostics
+## 23. Diagnostics
 
 Diagnostics are messages produced by parsers, validators, pipelines, renderers, exporters, or visual editors.
 
@@ -1118,11 +1632,24 @@ Recommended severities:
 - `information`;
 - `observation`.
 
-Diagnostics should be first-class outputs of ITM processing. They make the format useful in editors, CI/CD pipelines, model governance, and automated conversion workflows.
+Diagnostics should be first-class outputs of ITM processing. They make the format useful in editors, CI/CD pipelines, model governance, and automated conversion workflows.Diagnostics related to context and package resolution should preserve enough information to explain both where the syntax appears and which active scope caused the interpretation.
+
+Recommended additional diagnostic fields:
+
+```yaml
+context: bpmn_profile.process
+activePackages:
+  - bpmn_profile
+canonicalId: enterprise::550e8400-e29b-41d4-a716-446655440000
+inferenceRule: infer.childrenOf.bpmn::Process
+includedFrom: shared:profiles/bpmn.itm
+```
+
+For merged or included content, diagnostics should preserve both the original source file and the including file context when applicable.
 
 ---
 
-## 21. Plugins and `%require`
+## 24. Plugins and `%require`
 
 The `%require` directive declares a dependency on a plugin, library, profile, or pipeline provider.
 
@@ -1193,38 +1720,13 @@ A processor should report diagnostics when a required plugin is missing, disable
 
 ---
 
-## 22. Cascading styles
+## 25. Cascading styles
 
 Styles describe presentation rules separately from the model semantics.
 
-Directives have directive-specific signatures. A style directive uses the selector grammar in its header and the YAML-compatible block after the selector becomes the style body. The first top-level `{...}` after the complete selector expression is the body, not a generic directive attribute block.
-
-```ebnf
-style_directive ::= "%style" selector_expression style_body
-style_body      ::= inline_yaml_block | multiline_yaml_block
-```
-
-Valid examples:
+A style is declared with `%style` followed by a selector and a YAML-compatible block.
 
 ```itm
-%style {status=done}
-{
-  fill: "#eeeeee"
-}
-
-%style {status=done} { fill: "#eeeeee" }
-
-%style ([Task] AND {status=done})
-{
-  fill: "#eeeeee"
-  stroke: "#333333"
-}
-
-%style ALL([Task], {status=done})
-{
-  fill: "#eeeeee"
-}
-
 %style [Task]
 {
   fill: "#e8f1ff"
@@ -1249,32 +1751,6 @@ Valid examples:
   stroke: "#aaaaaa"
 }
 ```
-
-Invalid examples:
-
-```itm
-%style
-{
-  fill: "#eeeeee"
-}
-```
-
-Reason: missing selector.
-
-```itm
-%style {status=done}
-```
-
-Reason: missing style body.
-
-```itm
-%style {status: done}
-{
-  fill: "#eeeeee"
-}
-```
-
-Reason: malformed selector. `{status: done}` is YAML syntax, not a selector atom.
 
 Styles are cascading. Multiple style rules may apply to the same node or relationship.
 
@@ -1307,7 +1783,7 @@ Styles are optional rendering hints. They should not be required to understand t
 
 ---
 
-## 23. Viewpoints
+## 26. Viewpoints
 
 A viewpoint defines a reusable way to derive a presentation or projection from the model.
 
@@ -1371,7 +1847,7 @@ The important design principle is that the ITM model remains canonical. Mermaid,
 
 ---
 
-## 24. Views
+## 27. Views
 
 A view is a specific instance of a viewpoint.
 
@@ -1425,13 +1901,13 @@ This allows the model to evolve while preserving useful manual layout work. When
 
 ---
 
-## 25. Visual editing and write-back
+## 28. Visual editing and write-back
 
 ITM supports the idea that a model can be edited visually, but write-back must be explicit and controlled.
 
 A visual editor may open a view, allow the user to move elements, hide elements, change styles, or create relationships. These changes can be written back in different ways depending on their nature.
 
-### 25.1 View-level write-back
+### 28.1 View-level write-back
 
 Presentation-only changes should be written to the view.
 
@@ -1445,7 +1921,7 @@ Examples:
 
 These changes belong in `%view`, because they are specific to a particular visual representation.
 
-### 25.2 Model-level write-back
+### 28.2 Model-level write-back
 
 Semantic changes should be written to the model.
 
@@ -1461,7 +1937,7 @@ Examples:
 
 These changes alter the ITM source model.
 
-### 25.3 Safe editing mode
+### 28.3 Safe editing mode
 
 A host editor may use a safe visual editing pattern:
 
@@ -1476,7 +1952,7 @@ This preserves the text source as the canonical artifact while still allowing ri
 
 ---
 
-## 26. Overlays and redefinition
+## 29. Overlays and redefinition
 
 ITM supports incremental composition through explicit overlays.
 
@@ -1484,7 +1960,7 @@ By default, ids must be unique within a namespace. If the same id is defined mor
 
 This default protects against accidental copy-paste duplication and unintended namespace collisions.
 
-### 26.1 Explicit overlay marker
+### 29.1 Explicit overlay marker
 
 An overlay must be declared explicitly.
 
@@ -1515,7 +1991,7 @@ Examples:
 &payment_service !overlay [Component] Payment Service
 ```
 
-### 26.2 Overlay example
+### 29.2 Overlay example
 
 Base definition:
 
@@ -1553,7 +2029,7 @@ relationships:
     target: fraud_service
 ```
 
-### 26.3 Overlay rules
+### 29.3 Overlay rules
 
 Recommended overlay rules:
 
@@ -1568,7 +2044,7 @@ Recommended overlay rules:
 - overlays should preserve the original source location and the patch source location for diagnostics;
 - processors should be able to report the final merged value and the origin of each patched field.
 
-### 26.4 Overlay intent
+### 29.4 Overlay intent
 
 This is closer to controlled monkey patching than classical inheritance.
 
@@ -1583,9 +2059,11 @@ It enables:
 
 View-specific visual adjustments should normally be stored in `%view`, not in semantic overlays. An overlay changes the model. A view delta changes one rendered instance of the model.
 
-## 27. Packages and `%using`
+---
 
-Packages group reusable definitions.
+## 30. Packages and `%using`
+
+Packages group reusable definitions, profile content, validation logic, rendering defaults, and named contexts.
 
 A package may contain:
 
@@ -1595,6 +2073,9 @@ A package may contain:
 - validation rules;
 - styles;
 - viewpoints;
+- views;
+- named contexts;
+- identity maps;
 - reference entities;
 - transformation pipelines;
 - plugin requirements;
@@ -1607,41 +2088,144 @@ A package is declared with `%package`.
 {
   version: 0.1.0
   namespace: bpmn
+  defaultContext: process
   description: Basic BPMN semantic profile for ITM.
 }
 ```
 
+A file that declares `%package` defines a package export boundary. Exportable declarations in that file belong to the package unless a future visibility mechanism marks them as private.
+
 A model can include or import package files without automatically bringing all names into the current namespace.
 
-The `%using` directive activates selected package content.
+The `%using` directive activates package content.
 
 ```itm
 %include packages/bpmn-profile.itm
 %using bpmn_profile
 ```
 
-or selectively:
+The default meaning of `%using package_name` is:
+
+```text
+activate all default exports of the package for the current file
+```
+
+Default exports may include visible namespaces, unqualified type names, relationship types, validation rules, styles, viewpoints, named contexts, package-required plugins, identity maps, and other declared package defaults.
+
+Selective usage may exist as an advanced option:
 
 ```itm
 %using bpmn_profile.types
-%using bpmn_profile.styles
 %using bpmn_profile.rules
+%using bpmn_profile.styles
+%using bpmn_profile.contexts
+%using bpmn_profile.minimal
 ```
 
-This distinction allows a file to know about available packages without polluting its working namespace.
+Selective usage is optional. It must not change the meaning of plain `%using bpmn_profile`, which activates the package as a whole according to the package's default export policy.
+
+### 30.1 Named contexts inside packages
+
+Packages may declare named contexts.
+
+```itm
+%package bpmn_profile
+{
+  version: 0.1.0
+  namespace: bpmn
+  defaultContext: process
+}
+
+%context process
+{
+  defaultNamespace: local
+  rootType: bpmn::Process
+  defaultRelationshipType: bpmn::sequenceFlow
+  infer:
+    childrenOf:
+      bpmn::Process: bpmn::Task
+}
+
+%context collaboration
+{
+  defaultNamespace: local
+  rootType: bpmn::Collaboration
+}
+```
+
+A consumer may activate a qualified package context:
+
+```itm
+%include shared:profiles/bpmn.itm
+%using bpmn_profile
+
+%begin bpmn_profile.process
+&order_process Order handling
+  &receive Receive order
+%end bpmn_profile.process
+```
+
+If the package declares `defaultContext`, the package name may be used directly as shorthand:
+
+```itm
+%begin bpmn_profile
+&order_process Order handling
+  &receive Receive order
+%end bpmn_profile
+```
+
+This means:
+
+```text
+activate bpmn_profile default exports and its default context
+```
+
+If a package has no `defaultContext`, `%begin package_name` activates the package's default exports for the block but performs no package-specific context inference unless other activated defaults define it.
+
+### 30.2 Scoped package usage
+
+A package/profile can be activated for a limited block with `%begin` / `%end`.
+
+```itm
+%begin risk_profile
+&r1 Supplier delay
+&r2 Approval delay
+%end risk_profile
+```
+
+This is equivalent to using the package/profile only inside that block.
+
+Nested package scopes are allowed. Inner package or context defaults may override outer defaults. On `%end`, the previous active package/context stack is restored.
+
+### 30.3 Package validation
+
+A validator should report diagnostics when:
+
+- a package name is duplicated in the same dependency graph;
+- a package version constraint cannot be satisfied;
+- a package's `defaultContext` is missing;
+- a package context name is duplicated within the package;
+- an unqualified context exported by multiple active packages is used ambiguously;
+- a package exports a type, rule, style, context, or viewpoint that depends on an unavailable namespace or plugin;
+- selective usage refers to an export group that does not exist;
+- two activated packages provide conflicting unqualified names without qualification.
 
 Package usage should define:
 
 - which namespaces become visible;
 - which types are available unqualified;
+- which relationship types are available unqualified;
 - which rules are active;
 - which styles are active;
+- which contexts are available;
 - which viewpoints are offered;
+- which plugins are required;
+- how canonical ids and aliases are resolved;
 - whether package content can be overridden locally.
 
 ---
 
-## 28. Repositories
+## 31. Repositories
 
 Repositories provide named locations for reusable ITM content.
 
@@ -1687,16 +2271,16 @@ Security-conscious environments should restrict repository protocols, domains, c
 
 ---
 
-## 29. Complete syntax reference
+## 32. Complete syntax reference
 
 This section summarizes the full ITM syntax after all incremental features have been introduced.
 
-### 29.1 Entity line
+### 32.1 Entity line
 
 Recommended entity line structure:
 
 ```text
-[indentation] [&id] [[Type]] label text with optional #tags [inline attributes] [inline links]
+[indentation] [&id] [[Type]] label text with optional #tags [inline attributes] [inline links] [// comment]
 ```
 
 Examples:
@@ -1704,6 +2288,7 @@ Examples:
 ```itm
 &order [BusinessObject] Customer Order #core {status: draft} @created_by:customer
 &invoice [BusinessObject] Invoice #finance @derived_from:order
+&payment Payment  // type may be inferred by context
 ```
 
 Tags may appear anywhere in the label.
@@ -1712,7 +2297,16 @@ Tags may appear anywhere in the label.
 &feedback Capture #customer feedback from support channels
 ```
 
-### 29.2 Entity with description and attributes
+### 32.2 Comments
+
+```itm
+// whole-line comment
+&order Order  // trailing comment
+```
+
+Comments do not create model content.
+
+### 32.3 Entity with description and attributes
 
 ```itm
 &order [BusinessObject] Customer Order #core
@@ -1727,7 +2321,7 @@ Tags may appear anywhere in the label.
 }
 ```
 
-### 29.3 Simple relationship
+### 32.4 Simple relationship
 
 ```itm
 &order Order @invoice
@@ -1740,7 +2334,7 @@ or as a block:
 @invoice
 ```
 
-### 29.4 Typed relationship
+### 32.5 Typed relationship
 
 ```itm
 &order Order @creates:invoice
@@ -1753,7 +2347,7 @@ or as a block:
 @creates:invoice
 ```
 
-### 29.5 Typed relationship with attributes and id
+### 32.6 Typed relationship with attributes and id
 
 ```itm
 &order Order
@@ -1765,7 +2359,7 @@ or as a block:
 }
 ```
 
-### 29.6 Hierarchy
+### 32.7 Hierarchy
 
 ```itm
 &process [Process] Order handling
@@ -1792,7 +2386,7 @@ pick followed_by pack
 pack followed_by dispatch
 ```
 
-### 29.7 Metadata
+### 32.8 Metadata
 
 ```itm
 %metadata
@@ -1803,21 +2397,34 @@ pack followed_by dispatch
 }
 ```
 
-### 29.8 Include
+### 32.9 Include
 
 ```itm
 %include common-types.itm
 %include shared:profiles/bpmn.itm
 ```
 
-### 29.9 Namespace
+### 32.10 Namespace
 
 ```itm
 %namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
 %namespace local https://example.org/local-model
 ```
 
-### 29.10 Type definitions
+### 32.11 Identity map
+
+```itm
+%idmap
+{
+  order: "enterprise::550e8400-e29b-41d4-a716-446655440000"
+  customer:
+    canonical: "enterprise::a1e21492-0496-43d1-9b94-b5874f42a66e8"
+    aliases:
+      - "crm::Customer"
+}
+```
+
+### 32.12 Type definitions
 
 ```itm
 %entitytype Task
@@ -1838,7 +2445,40 @@ pack followed_by dispatch
 }
 ```
 
-### 29.11 Rule
+### 32.13 Context
+
+```itm
+%context bpmn_process
+{
+  defaultNamespace: local
+  rootType: bpmn::Process
+  defaultRelationshipType: bpmn::sequenceFlow
+  infer:
+    childrenOf:
+      bpmn::Process: bpmn::Task
+}
+```
+
+### 32.14 Scoped activation
+
+```itm
+%begin bpmn_process
+&order_process Order process
+  &receive Receive order
+  &validate Validate order
+%end bpmn_process
+```
+
+The scoped activation name may refer to a context, a package/profile, or a package context.
+
+```itm
+%begin bpmn_profile.process
+&order_process Order process
+  &receive Receive order
+%end bpmn_profile.process
+```
+
+### 32.15 Rule
 
 ```itm
 %rule components_need_owner
@@ -1851,7 +2491,7 @@ pack followed_by dispatch
 }
 ```
 
-### 29.12 Require
+### 32.16 Require
 
 ```itm
 %require itm.graphviz ^1.0.0
@@ -1859,14 +2499,7 @@ pack followed_by dispatch
 %require local.architecture-rules ^1.2.0
 ```
 
-### 29.13 Style
-
-```ebnf
-style_directive ::= "%style" selector_expression style_body
-style_body      ::= inline_yaml_block | multiline_yaml_block
-```
-
-Selector expressions follow the selector grammar. The first top-level `{...}` after the complete selector expression is the style body.
+### 32.17 Style
 
 ```itm
 %style [Component]
@@ -1876,41 +2509,14 @@ Selector expressions follow the selector grammar. The first top-level `{...}` af
   shape: rectangle
 }
 
-%style {status=done}
-{
-  fill: "#eeeeee"
-}
-
-%style {status=done} { fill: "#eeeeee" }
-
 %style @depends_on:*
 {
   stroke: "#888888"
   stroke-dasharray: "4 2"
 }
-
-Invalid examples:
-
-```itm
-%style
-{
-  fill: "#eeeeee"
-}
 ```
 
-```itm
-%style {status=done}
-```
-
-```itm
-%style {status: done}
-{
-  fill: "#eeeeee"
-}
-```
-```
-
-### 29.14 Viewpoint
+### 32.18 Viewpoint
 
 ```itm
 %viewpoint dependency_graph
@@ -1924,7 +2530,7 @@ Invalid examples:
 }
 ```
 
-### 29.15 View
+### 32.19 View
 
 ```itm
 %view current_dependency_graph
@@ -1940,7 +2546,7 @@ Invalid examples:
 }
 ```
 
-### 29.16 Explicit overlay
+### 32.20 Explicit overlay
 
 ```itm
 &payment_service [Component] Payment Service
@@ -1959,21 +2565,36 @@ Invalid examples:
 
 Duplicate ids without `!overlay` are validation errors.
 
-### 29.17 Package
+### 32.21 Package
 
 ```itm
 %package architecture_profile
 {
   version: 0.1.0
   namespace: arch
+  defaultContext: capability
 }
 
-%using architecture_profile.types
-%using architecture_profile.rules
-%using architecture_profile.styles
+%context capability
+{
+  defaultNamespace: arch
+  rootType: arch::Capability
+}
 ```
 
-### 29.18 Repository
+Plain package usage activates all package default exports:
+
+```itm
+%using architecture_profile
+```
+
+Selective usage is optional and advanced:
+
+```itm
+%using architecture_profile.minimal
+```
+
+### 32.22 Repository
 
 ```itm
 %repository shared https://example.org/itm
@@ -1982,21 +2603,31 @@ Duplicate ids without `!overlay` are validation errors.
 
 ---
 
-## 30. Example complete ITM file
+## 33. Example complete ITM file
 
 ```itm
 %metadata
 {
   title: Order handling example
-  version: 1.0
+  version: 1.1
   defaultNamespace: example
 }
+
+%repository shared https://example.org/itm
+%include shared:profiles/bpmn.itm
 
 %namespace example https://example.org/order-model
 %namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
 
 %require itm.mermaid ^1.0.0
 %require itm.graphviz ^1.0.0
+
+// Local ids are author-friendly; canonical ids are mapped separately.
+%idmap
+{
+  order_process: "enterprise::550e8400-e29b-41d4-a716-446655440000"
+  validate_order: "enterprise::65f51b2b-6f32-4c8c-88fb-8d6dd98f0861"
+}
 
 %entitytype bpmn::Task
 {
@@ -2010,6 +2641,16 @@ Duplicate ids without `!overlay` are validation errors.
     - bpmn::Task
   targetTypes:
     - bpmn::Task
+}
+
+%context bpmn_process
+{
+  defaultNamespace: example
+  rootType: bpmn::Process
+  defaultRelationshipType: bpmn::sequenceFlow
+  infer:
+    childrenOf:
+      bpmn::Process: bpmn::Task
 }
 
 %rule tasks_need_owner
@@ -2047,7 +2688,8 @@ Duplicate ids without `!overlay` are validation errors.
         dy: 0
 }
 
-&order_process [Process] Order handling #core
+%begin bpmn_process
+&order_process Order handling #core
 | This model describes the high-level order handling process.
 |
 | It can be rendered as a process flow, a dependency graph, or a mind map.
@@ -2055,67 +2697,126 @@ Duplicate ids without `!overlay` are validation errors.
   owner: operations
   status: draft
 }
-  &receive_order [bpmn::Task] Receive order #entry
+  &receive_order Receive order #entry
   {
     owner: sales
   }
-  @bpmn::sequenceFlow:validate_order
+  @validate_order
   {
     id: flow_receive_validate
   }
 
-  &validate_order [bpmn::Task] Validate order #control
+  &validate_order Validate order #control
   | Validation checks completeness, payment terms, and customer status.
   {
     owner: operations
   }
-  @bpmn::sequenceFlow:send_invoice
+  @send_invoice
   {
     id: flow_validate_invoice
   }
 
-  &send_invoice [bpmn::Task] Send invoice #finance
+  &send_invoice Send invoice #finance
   {
     owner: finance
   }
+%end bpmn_process
 ```
+
+In this example:
+
+- `bpmn_process` infers the root and child types;
+- untyped `@validate_order` and `@send_invoice` links inherit the default relationship type `bpmn::sequenceFlow`;
+- `%idmap` maps readable ids to canonical repository identities;
+- `%begin` / `%end` make inference explicit and scoped;
+- comments are ignored by the model processor.
 
 ---
 
-## 31. Processing model
+## 34. Processing model
 
 A full ITM processor should generally work in stages:
 
 1. read raw text;
-2. parse directives;
-3. resolve repositories;
-4. resolve includes;
-5. resolve packages and `%using` declarations;
-6. resolve namespaces;
-7. parse entities, descriptions, attributes, and relationships;
-8. generate implicit containment relationships;
-9. generate implicit ordering relationships;
-10. detect duplicate ids, reject unintended collisions, and apply explicit overlays;
-11. resolve ids and relationship targets;
-12. apply type declarations;
-13. load required plugins;
-14. evaluate validation rules;
-15. collect diagnostics;
-16. evaluate styles;
-17. expose viewpoints;
-18. generate views;
-19. apply view deltas;
-20. support controlled write-back if visual editing is enabled.
+2. identify and preserve comments/trivia if round-tripping is required;
+3. strip comments for semantic parsing where applicable;
+4. parse directives and classify them as declarations, activations, or structural scoped activations;
+5. resolve repositories;
+6. resolve includes as separate modules, not textual paste;
+7. load package exports;
+8. resolve package availability and `%using` declarations;
+9. resolve `%require` dependencies and plugin availability;
+10. resolve namespaces within each file/package module;
+11. parse entities, descriptions, attributes, and relationships;
+12. apply file-wide activations;
+13. process `%begin` / `%end` scopes as a stack of active contexts/packages;
+14. expand local ids to namespace-qualified ids;
+15. apply identity maps and canonical ids;
+16. generate implicit containment relationships;
+17. generate implicit ordering relationships;
+18. detect duplicate ids, reject unintended collisions, and apply explicit overlays;
+19. resolve ids and relationship targets;
+20. apply explicit type declarations;
+21. infer missing node types and relationship types from active contexts/packages;
+22. validate inferred values against explicit declarations and rules;
+23. evaluate validation rules;
+24. collect diagnostics;
+25. evaluate styles;
+26. expose viewpoints;
+27. generate views;
+28. apply view deltas;
+29. support controlled write-back if visual editing is enabled.
 
-Implementations may perform these steps in a different order, but the externally visible behavior should be deterministic.
+Implementations may perform these steps in a different internal order, but the externally visible behavior should be deterministic.
+
+### 34.1 Resolution principles
+
+The core resolution principles are:
+
+```text
+Declarations are hoisted.
+Activations are explicit.
+Only %begin/%end is positional.
+Includes do not leak local active state.
+Packages export; consumers activate.
+Explicit authoring wins over inference.
+Canonical identity does not create semantic relationships.
+```
+
+### 34.2 Scoped activation resolution
+
+For `%begin NAME`, processors should resolve `NAME` in this order:
+
+1. local context in the current file;
+2. unqualified context imported by active package usage, if unambiguous;
+3. qualified package context, such as `package.context`;
+4. package/profile name with `defaultContext`;
+5. package/profile name without `defaultContext`, activating package defaults only;
+6. unresolved name diagnostic.
+
+Nested scopes are resolved with a stack. Ending a scope restores the previous active scope.
+
+### 34.3 Include resolution
+
+Includes are resolved as modules.
+
+An included file may contribute:
+
+- semantic model content;
+- package definitions;
+- reference data;
+- named contexts;
+- rules, styles, viewpoints, and other declarations.
+
+Its local active state stays local. The including file activates exported package/profile content explicitly.
 
 ---
 
-## 32. Compatibility and implementation modes
+## 35. Compatibility and implementation modes
 
 ITM can be implemented at different levels of strictness.
 
-### 32.1 Minimal parser
+### 35.1 Minimal parser
 
 A minimal parser supports:
 
@@ -2123,7 +2824,7 @@ A minimal parser supports:
 - indentation hierarchy;
 - labels.
 
-### 32.2 Practical parser
+### 35.2 Practical parser
 
 A practical parser supports:
 
@@ -2137,7 +2838,7 @@ A practical parser supports:
 - includes;
 - diagnostics.
 
-### 32.3 Full model processor
+### 35.3 Full model processor
 
 A full model processor supports:
 
@@ -2155,7 +2856,7 @@ A full model processor supports:
 - overlays;
 - multiple export and rendering pipelines.
 
-### 32.4 Strict vs tolerant mode
+### 35.4 Strict vs tolerant mode
 
 A strict parser should reject ambiguous or invalid constructs.
 
@@ -2163,11 +2864,29 @@ A tolerant parser may preserve unknown constructs and produce diagnostics instea
 
 Tolerant mode is useful for authoring and migration.
 
-Strict mode is useful for CI/CD, publication, and controlled repositories.
+Strict mode is useful for CI/CD, publication, and controlled repositories.### Context-aware parser
+
+A context-aware parser supports:
+
+- named `%context` definitions;
+- `%begin` / `%end` scoped activation;
+- package/profile context activation;
+- type and relationship inference;
+- validation of scoped activation stacks.
+
+### 35.5 Repository-aware processor
+
+A repository-aware processor supports:
+
+- `%idmap` canonical identity resolution;
+- cross-file identity reconciliation;
+- package dependency graphs;
+- include/module boundaries;
+- validation of canonical ids, aliases, package versions, and scoped imports.
 
 ---
 
-## 33. Design summary
+## 36. Design summary
 
 ITM begins as a plain list and grows into a complete model format.
 
@@ -2176,11 +2895,15 @@ Its central idea is that text remains the canonical and inspectable source, whil
 The format supports:
 
 - simple notes;
+- authoring comments;
 - hierarchical models;
 - graph models;
+- local ids and canonical/global identity maps;
 - semantic relationships;
 - Markdown documentation;
 - typed profiles;
+- named contexts;
+- scoped package/profile activation;
 - validation rules;
 - plugin-backed pipelines;
 - reusable packages;
@@ -2194,4 +2917,15 @@ This makes ITM suitable both for lightweight human authoring and for advanced mo
 
 The core remains simple: one line is one thing.
 
-Everything else is optional, layered, and progressively adoptable.
+Everything else is optional, layered, explicit, and progressively adoptable.
+
+The most important composition rules are:
+
+```text
+Declarations are hoisted.
+Activations are explicit.
+Only %begin/%end is positional.
+Includes do not leak local active state.
+Packages export; consumers activate.
+Contexts are always named.
+```

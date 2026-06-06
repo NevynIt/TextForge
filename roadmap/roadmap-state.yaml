@@ -99,12 +99,14 @@
       ],
       "enables": [
         "WP-ITM-01",
-        "WP-ITM-02"
+        "WP-ITM-02",
+        "WP-ITM-03"
       ],
       "archive_trace": [
         "archive/registers/package-guides/itm.md",
         "archive/registers/specs/legacy-specs/architecture/textforge-rebuild-whitepaper.md",
-        "archive/grilling/legacy-grilling/itm-visuals-grilling.md"
+        "archive/grilling/legacy-grilling/itm-visuals-grilling.md",
+        "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md"
       ]
     },
     "MOD-MARKDOWN-ITM": {
@@ -995,6 +997,38 @@
         "legacy source: Phase 6"
       ],
       "validation_checklist": "validation/checklists/workpackages/WP-ITM-02-directives-packages-validation-diagnostics.md"
+    },
+    "WP-ITM-03": {
+      "title": "ITM scoped contexts, identity maps, and comments",
+      "path": "workpackages/WP-ITM-03.md",
+      "module": "MOD-ITM",
+      "status": "in-progress",
+      "type": "Domain foundation",
+      "depends_on": [
+        "WP-ITM-01",
+        "WP-ITM-02"
+      ],
+      "enables": [
+        "WP-REPO-01",
+        "WP-VITM-01",
+        "WP-ITM-VRESOLVE-01",
+        "WP-BPMN-SEM",
+        "WP-ARCHIMATE-SEM",
+        "WP-MD-REPORT"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0006"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
+        "docs/reference/specs/itm-format.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-03-scoped-contexts-identity-comments.md"
     },
     "WP-REPO-01": {
       "title": "Repository reference and include resolver",
@@ -2651,6 +2685,7 @@
         "WP-LINK-INDEX",
         "WP-ITM-01",
         "WP-ITM-02",
+        "WP-ITM-03",
         "WP-REPO-01",
         "WP-ITM-VISUALS",
         "WP-VITM-01",
@@ -2783,6 +2818,15 @@
       "path": "decisions/ADR-0005-developer-api-documentation-governance.md",
       "supersedes": [],
       "archive_trace": []
+    },
+    "ADR-0006": {
+      "title": "ITM scoped contexts, identity maps, and comments",
+      "status": "accepted",
+      "path": "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
+      "supersedes": [],
+      "archive_trace": [
+        "docs/reference/specs/itm-format.md"
+      ]
     }
   }
 }

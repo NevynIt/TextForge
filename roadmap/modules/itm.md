@@ -17,6 +17,7 @@ ITM defines the stable ownership boundary for the workpackages listed below.
 - ITM parsing and serialization
 - ITM directives and package activation
 - ITM profile validation
+- ITM comments/trivia, identity maps, and scoped context semantics
 - semantic target extraction
 
 ### Does not own
@@ -30,6 +31,7 @@ ITM defines the stable ownership boundary for the workpackages listed below.
 - @textforge/itm public wrapper
 - ITM diagnostics
 - profile and view/viewpoint contracts
+- scoped activation, identity map, and context inference contracts
 
 ## Dependencies
 
@@ -41,6 +43,7 @@ Authoritative dependency data lives in `roadmap-state.yaml`.
 |---|---|---|---|
 | `WP-ITM-01` | ITM parser/model foundation | Registry-owned | Domain foundation |
 | `WP-ITM-02` | ITM directives, packages, validation, diagnostics | Registry-owned | Domain foundation |
+| `WP-ITM-03` | ITM scoped contexts, identity maps, and comments | Registry-owned | Domain foundation |
 
 ## Current State
 
@@ -53,6 +56,7 @@ The module is healthy when its workpackages can move independently through the r
 ## Key Decisions
 
 - `ADR-0001` governs roadmap structure and authority.
+- `ADR-0006` governs ITM scoped contexts, identity maps, comments/trivia, and include/package activation semantics.
 
 ## Validation Approach
 
