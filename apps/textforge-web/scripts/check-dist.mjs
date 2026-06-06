@@ -78,14 +78,6 @@ if (/unsafe-inline/i.test(cspContent)) {
 console.info('TextForge dist file:// checks passed.');
 
 function hasEsModuleSyntax(source) {
-  const sanitized = stripStringsAndComments(source);
-  return /(^|[;\n])\s*import\s+[\w*{]/m.test(sanitized)
-    || /(^|[^\w$.}])import\s*\(/.test(sanitized)
-    || /(^|[;\n])\s*export\s+(?:\{|\*|default|const|function|class|let|var)/m.test(sanitized);
-}
-
-function stripStringsAndComments(source) {
-  let result = '';
   let state = 'code';
 
   for (let index = 0; index < source.length; index += 1) {
@@ -96,46 +88,53 @@ function stripStringsAndComments(source) {
     if (state === 'code') {
       if (current === '/' && next === '/') {
         state = 'line-comment';
-        result += '  ';
         index += 1;
         continue;
       }
 
       if (current === '/' && next === '*') {
         state = 'block-comment';
-        result += '  ';
         index += 1;
         continue;
       }
 
       if (current === '\'') {
         state = 'single-quote';
-        result += ' ';
         continue;
       }
 
       if (current === '"') {
         state = 'double-quote';
-        result += ' ';
         continue;
       }
 
       if (current === '`') {
         state = 'template';
-        result += ' ';
         continue;
       }
 
-      result += current;
+      if (matchesKeyword(source, index, 'import')) {
+        if (isDynamicImport(source, index) || isStaticImport(source, index)) {
+          return true;
+        }
+        index += 'import'.length - 1;
+        continue;
+      }
+
+      if (matchesKeyword(source, index, 'export')) {
+        if (isExportStatement(source, index)) {
+          return true;
+        }
+        index += 'export'.length - 1;
+        continue;
+      }
+
       continue;
     }
 
     if (state === 'line-comment') {
       if (current === '\n') {
         state = 'code';
-        result += '\n';
-      } else {
-        result += ' ';
       }
       continue;
     }
@@ -143,10 +142,7 @@ function stripStringsAndComments(source) {
     if (state === 'block-comment') {
       if (current === '*' && next === '/') {
         state = 'code';
-        result += '  ';
         index += 1;
-      } else {
-        result += current === '\n' ? '\n' : ' ';
       }
       continue;
     }
@@ -155,7 +151,6 @@ function stripStringsAndComments(source) {
       if (current === '\'' && previous !== '\\') {
         state = 'code';
       }
-      result += current === '\n' ? '\n' : ' ';
       continue;
     }
 
@@ -163,7 +158,6 @@ function stripStringsAndComments(source) {
       if (current === '"' && previous !== '\\') {
         state = 'code';
       }
-      result += current === '\n' ? '\n' : ' ';
       continue;
     }
 
@@ -171,9 +165,76 @@ function stripStringsAndComments(source) {
       if (current === '`' && previous !== '\\') {
         state = 'code';
       }
-      result += current === '\n' ? '\n' : ' ';
     }
   }
 
-  return result;
+  return false;
+}
+
+function matchesKeyword(source, index, keyword) {
+  if (!source.startsWith(keyword, index)) {
+    return false;
+  }
+  return !isIdentifierChar(source[index - 1]) && !isIdentifierChar(source[index + keyword.length]);
+}
+
+function isStaticImport(source, index) {
+  if (!hasStatementPrefix(source, index)) {
+    return false;
+  }
+
+  const nextIndex = skipWhitespace(source, index + 'import'.length);
+  return nextIndex > index + 'import'.length && /[\w*{]/.test(source[nextIndex] ?? '');
+}
+
+function isDynamicImport(source, index) {
+  const previous = source[index - 1];
+  if (isIdentifierChar(previous) || previous === '$' || previous === '.' || previous === '}') {
+    return false;
+  }
+
+  return source[skipWhitespace(source, index + 'import'.length)] === '(';
+}
+
+function isExportStatement(source, index) {
+  if (!hasStatementPrefix(source, index)) {
+    return false;
+  }
+
+  const nextIndex = skipWhitespace(source, index + 'export'.length);
+  if (nextIndex === index + 'export'.length) {
+    return false;
+  }
+
+  const next = source[nextIndex];
+  if (next === '{' || next === '*') {
+    return true;
+  }
+
+  return ['default', 'const', 'function', 'class', 'let', 'var']
+    .some((keyword) => matchesKeyword(source, nextIndex, keyword));
+}
+
+function hasStatementPrefix(source, index) {
+  for (let cursor = index - 1; cursor >= 0; cursor -= 1) {
+    const current = source[cursor];
+    if (current === ' ' || current === '\t' || current === '\r') {
+      continue;
+    }
+    return current === ';' || current === '\n';
+  }
+
+  return true;
+}
+
+function skipWhitespace(source, index) {
+  let cursor = index;
+  while (/\s/.test(source[cursor] ?? '')) {
+    cursor += 1;
+  }
+  return cursor;
+}
+
+function isIdentifierChar(value) {
+  return typeof value === 'string' && /[\w$]/.test(value);
 }
