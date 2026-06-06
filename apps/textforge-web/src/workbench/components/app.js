@@ -18,7 +18,6 @@ import {
   TextForgeWorkspaceSidebar,
 } from '@textforge/ui';
 
-import { readPhase35ScreenshotPreset } from '../bootstrap-options.js';
 import { surfaceViewportScrollByViewId } from '../surface-scroll.js';
 
 const element = React.createElement;
@@ -282,9 +281,9 @@ function hasDroppedFiles(dataTransfer) {
 
 function WelcomeState({ hydrationSource }) {
   return element(TextForgeEmptyState, {
-    eyebrow: 'Phase 4',
+    eyebrow: 'Workbench',
     icon: 'status',
-    title: 'Markdown preview and generated assets',
+    title: 'Editor workspace ready',
     children: element(
       React.Fragment,
       null,
@@ -292,16 +291,16 @@ function WelcomeState({ hydrationSource }) {
         'p',
         null,
         hydrationSource === 'storage'
-          ? 'The shell reopened the browser-managed workspace, rebuilt the local command and package contribution registry, and restored TF-MD preview, generated-asset export, and popup-ready viewer surfaces.'
-          : 'The shell seeded a fresh browser-managed workspace with TF-MD preview, local diagram export, and the existing local command shell layout.',
+          ? 'The shell reopened the browser-managed workspace, rebuilt local command routes, and restored package-owned editor and viewer surfaces.'
+          : 'The shell seeded a fresh browser-managed workspace with bundled resources, editor surfaces, and local viewer workflows.',
       ),
       element(
         'ul',
         { className: 'tf-welcome__list' },
-        element('li', null, 'Markdown resources can open in both the source editor and the package-owned TF-MD preview surface'),
-        element('li', null, 'Workspace-relative images resolve through the browser-managed workspace without host filesystem access'),
-        element('li', null, 'Mermaid and Graphviz blocks can render inline and export generated SVG and PNG workspace assets'),
-        element('li', null, 'No plugin manager, remote package loading, or rich Markdown editing was pulled forward'),
+        element('li', null, 'Text resources open in the source editor and compatible package-owned preview surfaces'),
+        element('li', null, 'Bundled resources stay read-only while user workspace resources remain editable'),
+        element('li', null, 'Generated outputs are stored as ordinary workspace resources under local browser storage'),
+        element('li', null, 'No remote package loading, remote sync, or silent host filesystem access is used'),
       ),
     ),
   });
@@ -341,7 +340,7 @@ function StartupRecoveryState({ controller }) {
     children: element(
       React.Fragment,
       null,
-      element('p', null, 'Recovery mode bypasses restored tabs and the default startup document so the app can reopen into a clean shell.'),
+      element('p', null, 'Recovery mode bypasses restored tabs and the startup surface so the app can reopen into a clean shell.'),
       element('p', null, 'Open without files keeps the current workspace data. Reset workspace clears the persisted browser workspace and rebuilds the starter seed.'),
     ),
   });
@@ -521,7 +520,7 @@ function WorkbenchDetailsCard() {
     element(
       'p',
       { className: 'tf-surface-details__summary' },
-      'The shell now layers TF-MD preview, local diagram generation, and generated asset provenance onto the existing browser-managed workspace, local ui state model, popup overlays, and resizable right panel layout.',
+      'The shell layers package-owned editor and viewer surfaces onto the browser-managed workspace, local ui state model, popup overlays, and resizable right panel layout.',
     ),
   );
 }
@@ -1059,7 +1058,6 @@ function TransientFlag({ flag }) {
 
 export function TextForgeWorkbenchApp({ controller }) {
   const snapshot = useWorkbenchSnapshot(controller);
-  const screenshotPreset = React.useMemo(() => readPhase35ScreenshotPreset(), []);
   const [commandPaletteOpen, setCommandPaletteOpen] = React.useState(false);
   const mainView = snapshot.activeMainView;
   const utilityOpen = snapshot.state.utilityPaneOpen;
@@ -1226,7 +1224,6 @@ export function TextForgeWorkbenchApp({ controller }) {
         }),
         onSidebarCollapsedChange: controller.actions.setWorkspaceTreeCollapsed,
         onUtilityCollapsedChange: controller.actions.setUtilityPaneCollapsed,
-        panelLayout: screenshotPreset.panelLayout,
         sidebarCollapsed: snapshot.state.workspaceTreeCollapsed,
         utility: element(
           TextForgeUtilityPane,

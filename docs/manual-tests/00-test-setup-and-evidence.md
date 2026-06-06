@@ -88,14 +88,8 @@ Dirty-profile pass:
 Use these URLs to jump directly into deterministic fixtures.
 
 ```text
-/?phase35=main
-/?phase35=tree-collapsed
-/?phase35=utility
-/?phase35=popup
-/?phase35=panels-narrow
-/?phase35=panels-wide
 /?testProfile=markdown-minimal
-/?testProfile=markdown-phase4
+/?testProfile=markdown-tfmd
 /?testProfile=itm-tree
 /?testProfile=itm-graph
 /?testProfile=itm-mindmap
@@ -116,7 +110,6 @@ Expected:
 
 - unknown profile names fall back to normal startup;
 - valid profile names open the requested bundled resource and preferred surface;
-- `phase35` presets affect layout only, not stored workspace content;
 - `luaConsole=1` opens the Lua console without requiring manual command search.
 
 ## Evidence To Capture
@@ -134,4 +127,3 @@ For each failed test, capture:
 - whether the browser profile was clean or dirty.
 
 Use [test-log-template.md](test-log-template.md) for consistent reporting.
-

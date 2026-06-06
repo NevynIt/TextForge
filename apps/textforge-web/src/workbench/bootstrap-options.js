@@ -1,63 +1,5 @@
 export const sampleResourcePaths = {
   bundledReadme: '/.textforge/resources/docs/README.md',
-  notes: '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md',
-};
-
-const phase35ScreenshotPresets = {
-  main: {
-    panelLayout: undefined,
-    openResourcePath: sampleResourcePaths.notes,
-    openPlacement: 'main',
-    utilityPaneOpen: false,
-    utilitySectionId: 'inspector',
-    workspaceTreeCollapsed: true,
-  },
-  'tree-collapsed': {
-    panelLayout: undefined,
-    openResourcePath: sampleResourcePaths.notes,
-    openPlacement: 'main',
-    utilityPaneOpen: true,
-    utilitySectionId: 'inspector',
-    workspaceTreeCollapsed: true,
-  },
-  utility: {
-    panelLayout: undefined,
-    openResourcePath: sampleResourcePaths.notes,
-    openPlacement: 'main',
-    utilityPaneOpen: true,
-    utilitySectionId: 'storage',
-    workspaceTreeCollapsed: false,
-  },
-  popup: {
-    panelLayout: undefined,
-    openResourcePath: sampleResourcePaths.notes,
-    openPlacement: 'popup',
-    utilityPaneOpen: true,
-    utilitySectionId: 'inspector',
-    workspaceTreeCollapsed: false,
-  },
-  'panels-narrow': {
-    panelLayout: {
-      sidebar: { defaultSize: '14' },
-      utility: { defaultSize: '30' },
-    },
-    openResourcePath: sampleResourcePaths.notes,
-    openPlacement: 'main',
-    utilityPaneOpen: true,
-    utilitySectionId: 'inspector',
-    workspaceTreeCollapsed: false,
-  },
-  'panels-wide': {
-    panelLayout: {
-      sidebar: { defaultSize: '28' },
-      utility: { defaultSize: '18' },
-    },
-    openResourcePath: sampleResourcePaths.notes,
-    openPlacement: 'main',
-    utilityPaneOpen: true,
-    utilitySectionId: 'inspector',
-    workspaceTreeCollapsed: false,
-  },
 };
 
 const workbenchTestProfiles = {
@@ -66,7 +8,7 @@ const workbenchTestProfiles = {
     preferredSurfaceId: '@textforge/markdown/preview',
     openPlacement: 'main',
   },
-  'markdown-phase4': {
+  'markdown-tfmd': {
     openResourcePath: '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md',
     preferredSurfaceId: '@textforge/markdown/preview',
     openPlacement: 'main',
@@ -140,15 +82,6 @@ const workbenchTestProfiles = {
 
 export const luaRecoveryQueryParam = 'luaSkipPreload';
 export const workbenchRecoveryQueryParam = 'recovery';
-
-export function readPhase35ScreenshotPreset() {
-  if (typeof window === 'undefined') {
-    return phase35ScreenshotPresets.main;
-  }
-
-  const presetId = new URL(window.location.href).searchParams.get('phase35');
-  return phase35ScreenshotPresets[presetId] ?? phase35ScreenshotPresets.main;
-}
 
 export function readWorkbenchTestProfile() {
   if (typeof window === 'undefined') {

@@ -82,7 +82,6 @@ import { createMarkdownPreviewRequestManager } from '../../markdownPreviewState.
 import {
   luaRecoveryQueryParam,
   readLuaBootstrapRecoveryState,
-  readPhase35ScreenshotPreset,
   readPreviewTraceEnabled,
   readWorkbenchBootstrapOptions,
   readWorkbenchRecoveryMode,
@@ -141,10 +140,7 @@ const utilitySections = [
 ];
 
 export function createTextForgeWorkbenchController() {
-  const screenshotPreset = readPhase35ScreenshotPreset();
   const workbenchTestProfile = readWorkbenchTestProfile();
-  const hasExplicitBootstrapProfile = typeof window !== 'undefined'
-    && new URL(window.location.href).searchParams.has('phase35');
   const luaBootstrapRecovery = readLuaBootstrapRecoveryState();
   const workbenchRecoveryMode = readWorkbenchRecoveryMode();
   const bootstrapOptions = readWorkbenchBootstrapOptions();
@@ -195,9 +191,9 @@ export function createTextForgeWorkbenchController() {
     expandedFolderIds: [],
     selectedWorkspaceItemId: undefined,
     workspaceTreeEdit: undefined,
-    utilityPaneOpen: screenshotPreset.utilityPaneOpen,
-    utilitySectionId: screenshotPreset.utilitySectionId,
-    workspaceTreeCollapsed: screenshotPreset.workspaceTreeCollapsed,
+    utilityPaneOpen: true,
+    utilitySectionId: 'inspector',
+    workspaceTreeCollapsed: false,
     storageResetPending: false,
     surfaceFocusPlacement: 'main',
     contextMenu: undefined,
@@ -551,7 +547,7 @@ export function createTextForgeWorkbenchController() {
 
     const storedMainSessions = state.sessions?.main ?? [];
     const storedPopupSessions = state.sessions?.popup ?? [];
-    const legacyDefaultPath = sampleResourcePaths.notes;
+    const legacyDefaultPath = '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md';
     const bundledReadmePath = sampleResourcePaths.bundledReadme;
     const legacyDefaultResourceId = createBundledOverlayId(legacyDefaultPath);
     const bundledReadmeResourceId = createBundledOverlayId(bundledReadmePath);
@@ -603,7 +599,7 @@ export function createTextForgeWorkbenchController() {
   }
 
   function restoreWorkbenchUiSessions() {
-    if (workbenchTestProfile || hasExplicitBootstrapProfile) {
+    if (workbenchTestProfile) {
       return false;
     }
 
@@ -3837,7 +3833,7 @@ export function createTextForgeWorkbenchController() {
 
       const initialOpenProfile = options.suppressInitialOpen
         ? undefined
-        : (workbenchTestProfile ?? screenshotPreset);
+        : workbenchTestProfile;
       const presetEntry = initialOpenProfile?.openResourcePath
         ? workspace.getEntryByPath(initialOpenProfile.openResourcePath)
         : undefined;

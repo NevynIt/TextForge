@@ -143,9 +143,9 @@ for (const requiredPhase5Signal of ['resolveDocumentContext', 'createContributio
   }
 }
 
-for (const requiredPhase34Signal of ['TextForgeResourceBadge', 'TextForgeInspectorCard', 'TextForgeEmptyState', 'badge repair']) {
-  if (!workbenchJs.includes(requiredPhase34Signal)) {
-    throw new Error(`workbench.js must surface ${requiredPhase34Signal} for the Phase 3.4 readability pass`);
+for (const requiredReadabilitySignal of ['TextForgeResourceBadge', 'TextForgeInspectorCard', 'TextForgeEmptyState', 'badge repair']) {
+  if (!workbenchJs.includes(requiredReadabilitySignal)) {
+    throw new Error(`workbench source must surface ${requiredReadabilitySignal} for the readable shell`);
   }
 }
 
@@ -153,9 +153,9 @@ if (!workbenchJs.includes('createContributionRegistry') || !workbenchJs.includes
   throw new Error('workbench.js must build the shell command registry from registered package contribution manifests');
 }
 
-for (const forbiddenPhase41Bypass of ['createWorkspaceContributionManifest', 'createEditorContributionManifest', 'createAssetContributionManifest', 'createMarkdownContributionManifest', 'createDiagramFenceHandlers']) {
-  if (workbenchJs.includes(forbiddenPhase41Bypass)) {
-    throw new Error(`workbench.js must not bypass the Phase 4.1 registration path with ${forbiddenPhase41Bypass}`);
+for (const forbiddenRegistrationBypass of ['createWorkspaceContributionManifest', 'createEditorContributionManifest', 'createAssetContributionManifest', 'createMarkdownContributionManifest', 'createDiagramFenceHandlers']) {
+  if (workbenchJs.includes(forbiddenRegistrationBypass)) {
+    throw new Error(`workbench source must not bypass package registration with ${forbiddenRegistrationBypass}`);
   }
 }
 
@@ -167,16 +167,20 @@ if (!workbenchJs.includes("utilityPaneOpen: true") || !workbenchJs.includes("wor
   throw new Error('workbench.js must initialize the right panel open on the inspector section and the workspace tree expanded');
 }
 
-for (const requiredPhase35Signal of ['Popup Summary', 'Browser Storage', 'closeActivePopupSurface', 'toggleWorkspaceFolder']) {
-  if (!workbenchJs.includes(requiredPhase35Signal)) {
-    throw new Error(`workbench.js must surface ${requiredPhase35Signal} for the Phase 3.5 shell usability pass`);
+for (const requiredShellUsabilitySignal of ['Popup Summary', 'Browser Storage', 'closeActivePopupSurface', 'toggleWorkspaceFolder']) {
+  if (!workbenchJs.includes(requiredShellUsabilitySignal)) {
+    throw new Error(`workbench source must surface ${requiredShellUsabilitySignal} for shell usability`);
   }
 }
 
-for (const requiredPhase4Signal of ['Markdown preview', 'generated diagram', 'TF-MD', 'local image resolution', 'Surface diagnostics']) {
-  if (!workbenchJs.includes(requiredPhase4Signal)) {
-    throw new Error(`workbench.js must surface ${requiredPhase4Signal} for the Phase 4 Markdown/diagram slice`);
+for (const requiredMarkdownDiagramSignal of ['markdownPreviewSurfaceContribution', 'markdown.export-generated-diagrams', 'generatedAssetBasePath', 'generatedResources', 'Surface diagnostics']) {
+  if (!workbenchJs.includes(requiredMarkdownDiagramSignal)) {
+    throw new Error(`workbench source must surface ${requiredMarkdownDiagramSignal} for Markdown and diagram workflows`);
   }
+}
+
+if (workbenchJs.includes('phase35')) {
+  throw new Error('workbench source must not restore stale phase35 screenshot bootstrap presets');
 }
 
 for (const requiredTestProfileSignal of ['testProfile', '/docs/examples/itm/test-profiles/', '@textforge/itm/tree', '@textforge/itm/report']) {
@@ -193,7 +197,7 @@ for (const requiredLuaSignal of ['Lua Console', 'Reload Lua automation pipelines
 
 for (const requiredDependency of ['"react"', '"react-dom"', '"@textforge/security-profile"', '"@textforge/workspace"', '"@textforge/lua"']) {
   if (!packageJson.includes(requiredDependency)) {
-    throw new Error(`package.json must declare ${requiredDependency} for the Phase 3.1 shell`);
+    throw new Error(`package.json must declare ${requiredDependency} for the React workbench shell`);
   }
 }
 
@@ -339,7 +343,7 @@ function assertSecurityEnvelope() {
       notesUri: 'docs/reference/specs/resource-identity-badges.md',
     },
   }).passed !== true) {
-    throw new Error('The shell must keep Phase 3.4 badges and icons local, deterministic, and browser-bounded');
+    throw new Error('The shell must keep badges and icons local, deterministic, and browser-bounded');
   }
 
   if (createLocalCommandDispatchCheck().run({
@@ -352,7 +356,7 @@ function assertSecurityEnvelope() {
       notesUri: 'docs/reference/specs/local-command-dispatch.md',
     },
   }).passed !== true) {
-    throw new Error('The shell must keep Phase 3.3 command dispatch local and bundled');
+    throw new Error('The shell must keep command dispatch local and bundled');
   }
 
   if (createLocalUiStateBoundaryCheck().run({

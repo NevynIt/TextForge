@@ -4,7 +4,7 @@ These fixtures are intentionally small. They exist to let the shell and package 
 
 Recommended shell URLs after `corepack pnpm --filter @textforge/textforge-web preview`:
 
-- `http://127.0.0.1:4173/?testProfile=markdown-phase4`
+- `http://127.0.0.1:4173/?testProfile=markdown-tfmd`
 - `http://127.0.0.1:4173/?testProfile=itm-tree`
 - `http://127.0.0.1:4173/?testProfile=itm-graph`
 - `http://127.0.0.1:4173/?testProfile=itm-mindmap`

@@ -6,11 +6,11 @@ The shell is packaged with Vite so package dependencies such as React, React DOM
 
 The source entry is a dedicated `src/scriptLoader.js` bootstrap. Development still runs through Vite, and the normal build emits the classic loader bundle, stylesheet, and optional bundled-docs payload under `dist/`. The app boots when `assets/textforge-bundled-docs.js` is omitted, but the read-only bundled documentation tree is empty in that mode. `build:single` emits a full one-file artifact with docs inlined, while `build:single:small` emits a smaller one-file artifact without bundled docs.
 
-Phase 3.1 replaced the earlier imperative shell bootstrap with a React-rendered workbench frame while keeping editor and asset behaviour inside their package-owned surface factories. Phase 3.2 keeps that shell but hydrates it from a browser-managed Dexie workspace, adds explicit storage reset/recovery flow, and preserves the deliberate non-goals of no tab restore and no saved shell layout.
+The React-rendered workbench frame keeps editor and asset behaviour inside package-owned surface factories. It hydrates from a browser-managed Dexie workspace, adds explicit storage reset/recovery flow, and restores local UI sessions without treating shell state as canonical workspace content.
 
-Phase 3.4 turns that shell into the readable authoring workbench promised by the roadmap: deterministic placement-based resource badges, calmer contribution-driven command chrome, viewport-safe top-bar menus, explicit local scroll regions for the editor/sidebar/inspector surfaces, and a utility drawer that no longer disturbs the main layout. React icon usage stays centralized in `@textforge/ui` through `lucide-react`.
+The shell provides deterministic placement-based resource badges, calmer contribution-driven command chrome, viewport-safe top-bar menus, explicit local scroll regions for the editor/sidebar/inspector surfaces, and a utility drawer that no longer disturbs the main layout. React icon usage stays centralized in `@textforge/ui` through `lucide-react`.
 
-Phase 3.5 finishes the next shell-usability pass: popup sessions render inside a bounded overlay host, the left workspace rail and right inspector/utility rail resize and collapse through `@textforge/ui`, the inspector stays in the resizable right panel, and repeated active-resource titles are trimmed so the shell does not waste central space. The app also exposes deterministic `?phase35=` validation presets and keeps browser-measured layout evidence under `roadmap/validation/`.
+Popup sessions render inside a bounded overlay host, the left workspace rail and right inspector/utility rail resize and collapse through `@textforge/ui`, the inspector stays in the resizable right panel, and repeated active-resource titles are trimmed so the shell does not waste central space. Current deterministic validation entry points use explicit `?testProfile=...` fixtures.
 
 ## Commands
 

@@ -113,15 +113,14 @@ How:
    - 900 x 700;
    - 768 x 1024;
    - 390 x 844.
-2. Open:
+2. Open the normal startup route and representative explicit fixture routes:
 
 ```text
-/?phase35=main
-/?phase35=tree-collapsed
-/?phase35=utility
-/?phase35=popup
-/?phase35=panels-narrow
-/?phase35=panels-wide
+/
+/?testProfile=markdown-minimal
+/?testProfile=markdown-tfmd
+/?testProfile=itm-graph
+/?testProfile=ea-dashboard-sample
 ```
 
 3. For each, inspect toolbar, workspace tree, main surface, tabs, inspector, storage pane, and popup host.
@@ -175,4 +174,3 @@ Expected:
 - every item passes or has a logged, accepted release note;
 - no unresolved release smoke failure remains;
 - current non-goals are documented as non-goals, not silently broken behavior.
-

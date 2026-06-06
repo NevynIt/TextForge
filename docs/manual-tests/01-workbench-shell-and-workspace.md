@@ -10,7 +10,7 @@ What to test:
 
 How:
 
-1. Start the app with `http://127.0.0.1:4173/?phase35=main`.
+1. Start the app with `http://127.0.0.1:4173/`.
 2. Wait until the loading state finishes.
 3. Inspect the top toolbar, workspace sidebar, main document area, and utility/inspector region.
 4. Expand the workspace tree.
@@ -21,7 +21,7 @@ Expected:
 - the status area reports the workspace is ready;
 - the workspace tree contains user workspace roots such as `/docs`, `/examples`, `/roadmap`, and `/.textforge`;
 - bundled docs appear under `/.textforge/resources`;
-- the main area opens the preset Markdown resource;
+- the main area restores existing tabs when present, otherwise opens the bundled README resource;
 - no panel, tab, toolbar, or inspector text overlaps.
 
 ## Release Smoke: Workspace Tree And Selection
@@ -201,4 +201,3 @@ Expected:
 - selected resource may persist, but open tabs and custom layout should not be considered required workspace content;
 - bundled resources are overlaid again after each boot;
 - storage status returns to ready after hydration.
-

@@ -35,7 +35,7 @@ No public runtime contract changes are intended. `bootTextForgeShell(rootElement
 
 - `src/workbench.js` remains below 250 lines and exports `bootTextForgeShell`.
 - `src/main.js` continues importing from `./workbench.js`.
-- Existing query/test flows continue working, including `testProfile`, `phase35`, `recovery`, `luaConsole`, `luaSkipPreload`, Markdown preview, ITM visual targets, popup sessions, and browser workspace reset.
+- Existing query/test flows continue working, including `testProfile`, `recovery`, `luaConsole`, `luaSkipPreload`, Markdown preview, ITM visual targets, popup sessions, and browser workspace reset. The stale `phase35` screenshot presets are intentionally removed from the active startup contract.
 - Web app lint, typecheck, test, and build commands pass.
 - Full repository verification passes after the final split.
 
@@ -52,3 +52,5 @@ No public runtime contract changes are intended. `bootTextForgeShell(rootElement
 ## Notes
 
 Keep commits incremental and stage-scoped so regressions can be bisected to a narrow extraction step.
+
+Follow-up startup cleanup on 2026-06-06 removed the stale screenshot bootstrap presets from the web shell. Root cause: the old layout/screenshot preset reader returned a default preset even when no query parameter was present, so clean or empty-session startup could still open the historical rich Markdown fixture instead of the intended bundled README/editor surface. Plain startup now uses explicit workbench defaults and only `testProfile` selects deterministic fixture content.

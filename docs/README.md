@@ -24,7 +24,7 @@ This `docs/` tree is the source for the read-only resources bundled into the Tex
 ## Key Bundle Entry Points
 
 - [Minimal Markdown example](examples/markdown-minimal.md)
-- [Phase 4 Markdown preview fixture](examples/phase-4-markdown-preview.tf.md)
+- [TF-MD Markdown preview fixture](examples/phase-4-markdown-preview.tf.md)
 - [Manual user test suite](manual-tests/README.md)
 - [ITM examples](examples/itm/)
 - [BPMN examples](examples/bpmn/)

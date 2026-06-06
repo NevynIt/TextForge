@@ -10,7 +10,7 @@ What to test:
 
 How:
 
-1. Open `http://127.0.0.1:4173/?testProfile=markdown-phase4`.
+1. Open `http://127.0.0.1:4173/?testProfile=markdown-tfmd`.
 2. Wait for the preview to finish rendering.
 3. Open the same resource with `Text editor`.
 4. Switch between source and preview tabs.
@@ -50,7 +50,7 @@ What to test:
 
 How:
 
-1. Copy the bundled phase 4 Markdown preview fixture into `/docs/manual-markdown.tfmd`.
+1. Copy the bundled TF-MD Markdown preview fixture into `/docs/manual-markdown.tfmd`.
 2. Open the copy in the text editor.
 3. Add an invalid JSON fenced block:
 
@@ -183,4 +183,3 @@ Expected:
 - generated SVG opens in the SVG viewer;
 - generated PNG opens in the image viewer or generic asset viewer;
 - generated resources include provenance or clear generated-resource metadata in the inspector when available.
-
