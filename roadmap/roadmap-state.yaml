@@ -311,7 +311,8 @@
         "WP-SET-SYNC",
         "WP-AI-CHAT",
         "WP-SURFACES-ADV",
-        "WP-PIPELINE-EDITOR"
+        "WP-PIPELINE-EDITOR",
+        "WP-WEB-WORKBENCH-MODULARITY-01"
       ],
       "archive_trace": [
         "archive/registers/package-guides/surfaces.md",
@@ -2512,6 +2513,23 @@
       ],
       "archive_trace": [],
       "validation_checklist": null
+    },
+    "WP-WEB-WORKBENCH-MODULARITY-01": {
+      "title": "Web workbench modularization",
+      "path": "workpackages/WP-WEB-WORKBENCH-MODULARITY-01.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "in-progress",
+      "type": "Refactor / maintainability",
+      "depends_on": [],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0003"
+      ],
+      "archive_trace": [],
+      "validation_checklist": null
     }
   },
   "releases": {
@@ -2647,6 +2665,13 @@
       "title": "Package root modularization",
       "status": "accepted",
       "path": "decisions/ADR-0002-package-root-modularization.md",
+      "supersedes": [],
+      "archive_trace": []
+    },
+    "ADR-0003": {
+      "title": "Web workbench modularization",
+      "status": "accepted",
+      "path": "decisions/ADR-0003-web-workbench-modularization.md",
       "supersedes": [],
       "archive_trace": []
     }

@@ -10,6 +10,7 @@
 | candidate | 14 |
 | deferred | 1 |
 | defined | 32 |
+| in-progress | 1 |
 | ready | 1 |
 | validated | 23 |
 
@@ -89,3 +90,4 @@
 | `WP-REPO-SHAREPOINT` | SharePoint-like repository adapter | candidate | `MOD-ROADMAP-GOVERNANCE` |
 | `WP-DIST-PWA` | PWA/local packaged variant investigation | candidate | `MOD-SECURITY-DISTRIBUTION` |
 | `WP-PKG-MODULARITY-01` | Package root modularization | validated | `MOD-ROADMAP-GOVERNANCE` |
+| `WP-WEB-WORKBENCH-MODULARITY-01` | Web workbench modularization | in-progress | `MOD-SURFACES-UI` |
