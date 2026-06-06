@@ -48,6 +48,7 @@ Authoritative dependency data lives in `roadmap-state.yaml`.
 | `WP-SET-UI` | User settings UI | Registry-owned | Feature / UX |
 | `WP-LUA` | Lua automation | Registry-owned | Optional automation |
 | `WP-LUA-POWER-SESSION` | Lua self-escalation session and one-click recovery | Registry-owned | Optional automation |
+| `WP-LUA-VIRTUAL-HOST-01` | TextForge Lua virtual host for Fengari | Registry-owned | Corrective runtime hardening |
 | `WP-SET-SYNC` | Roaming user settings | Registry-owned | Backend feature |
 | `WP-AI-CHAT` | AI client and chat surface | Registry-owned | Optional feature |
 | `WP-SURFACES-ADV` | Advanced tabbed main surfaces | Registry-owned | UX capacity |
@@ -64,6 +65,7 @@ The module is healthy when its workpackages can move independently through the r
 ## Key Decisions
 
 - `ADR-0001` governs roadmap structure and authority.
+- `ADR-0004` governs the browser-first Fengari host and TextForge-owned Lua virtual host.
 
 ## Validation Approach
 

@@ -5,11 +5,13 @@
 - Workpackage ID: `WP-LUA-POWER-SESSION`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-SURFACES-UI`
-- ADRs: `ADR-0001`
+- ADRs: `ADR-0001`, `ADR-0004`
 
 ## Outcome
 
 Validated follow-on to `WP-LUA`: session-scoped power-session elevation ships approved `workspace`/`automation`/`surfaces` host objects, visible elevated-state console chrome, no auto-expire, one-click recovery that restarts with a one-shot Lua-preload skip, and an explicit startup recovery entry that can reopen the shell without restored files or reset the browser-managed workspace.
+
+Corrective browser-first Fengari startup and virtual host hardening is tracked in `WP-LUA-VIRTUAL-HOST-01`.
 
 ## Scope
 
@@ -40,7 +42,7 @@ Use `validation/checklists/workpackages/WP-LUA-POWER-SESSION-self-escalation-ses
 
 ## Open Decisions
 
-- No additional ADR extracted during this governance reset unless future implementation uncovers a durable decision.
+- `ADR-0004` defines the browser-first Fengari host and TextForge-owned Lua virtual host contract.
 
 ## Archive Trace
 

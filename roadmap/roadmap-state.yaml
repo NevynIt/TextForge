@@ -308,6 +308,7 @@
         "WP-SET-UI",
         "WP-LUA",
         "WP-LUA-POWER-SESSION",
+        "WP-LUA-VIRTUAL-HOST-01",
         "WP-SET-SYNC",
         "WP-AI-CHAT",
         "WP-SURFACES-ADV",
@@ -1469,7 +1470,8 @@
         "WP-05C"
       ],
       "enables": [
-        "WP-LUA-POWER-SESSION"
+        "WP-LUA-POWER-SESSION",
+        "WP-LUA-VIRTUAL-HOST-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -1477,7 +1479,8 @@
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0001"
+        "ADR-0001",
+        "ADR-0004"
       ],
       "archive_trace": [
         "archive/registers/legacy-workpackages/workpackage-register.md",
@@ -1496,14 +1499,17 @@
       "depends_on": [
         "WP-LUA"
       ],
-      "enables": [],
+      "enables": [
+        "WP-LUA-VIRTUAL-HOST-01"
+      ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
       ],
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0001"
+        "ADR-0001",
+        "ADR-0004"
       ],
       "archive_trace": [
         "archive/registers/legacy-workpackages/workpackage-register.md",
@@ -1512,6 +1518,28 @@
         "legacy source: Lua follow-on"
       ],
       "validation_checklist": "validation/checklists/workpackages/WP-LUA-POWER-SESSION-self-escalation-session-recovery.md"
+    },
+    "WP-LUA-VIRTUAL-HOST-01": {
+      "title": "TextForge Lua virtual host for Fengari",
+      "path": "workpackages/WP-LUA-VIRTUAL-HOST-01.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "implemented",
+      "type": "Corrective runtime hardening",
+      "depends_on": [
+        "WP-LUA",
+        "WP-LUA-POWER-SESSION"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0004"
+      ],
+      "archive_trace": [],
+      "validation_checklist": "validation/checklists/workpackages/WP-LUA-VIRTUAL-HOST-01-textforge-lua-virtual-host.md"
     },
     "WP-PRIVATE-CONTRACT": {
       "title": "Private/group space contracts",
@@ -2569,6 +2597,7 @@
         "WP-CANVAS",
         "WP-LUA",
         "WP-LUA-POWER-SESSION",
+        "WP-LUA-VIRTUAL-HOST-01",
         "WP-BPMN-SEM",
         "WP-BPMN-VISUAL-A",
         "WP-BPMN-DI-01",
@@ -2672,6 +2701,13 @@
       "title": "Web workbench modularization",
       "status": "accepted",
       "path": "decisions/ADR-0003-web-workbench-modularization.md",
+      "supersedes": [],
+      "archive_trace": []
+    },
+    "ADR-0004": {
+      "title": "TextForge Lua Virtual Host for Fengari",
+      "status": "accepted",
+      "path": "decisions/ADR-0004-textforge-lua-virtual-host.md",
       "supersedes": [],
       "archive_trace": []
     }

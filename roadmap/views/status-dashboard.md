@@ -10,6 +10,7 @@
 | candidate | 14 |
 | deferred | 1 |
 | defined | 32 |
+| implemented | 1 |
 | ready | 1 |
 | validated | 24 |
 
@@ -53,6 +54,7 @@
 | `WP-CANVAS` | Spatial workspace canvas | candidate | `MOD-KNOWLEDGE-WORKSPACE` |
 | `WP-LUA` | Lua automation | validated | `MOD-SURFACES-UI` |
 | `WP-LUA-POWER-SESSION` | Lua self-escalation session and one-click recovery | validated | `MOD-SURFACES-UI` |
+| `WP-LUA-VIRTUAL-HOST-01` | TextForge Lua virtual host for Fengari | implemented | `MOD-SURFACES-UI` |
 | `WP-PRIVATE-CONTRACT` | Private/group space contracts | defined | `MOD-BACKEND-ENTERPRISE` |
 | `WP-MD-REPORT` | Markdown + ITM report generation | defined | `MOD-MARKDOWN-ITM` |
 | `WP-BE-HOST` | Enterprise container and app host | defined | `MOD-BACKEND-ENTERPRISE` |

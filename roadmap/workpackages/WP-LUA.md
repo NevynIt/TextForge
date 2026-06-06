@@ -5,11 +5,13 @@
 - Workpackage ID: `WP-LUA`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-SURFACES-UI`
-- ADRs: `ADR-0001`
+- ADRs: `ADR-0001`, `ADR-0004`
 
 ## Outcome
 
 Sandboxed/local and capability-gated runtime, reserved automation discovery root, tf.* bridge, and xterm console shipped with package-owned acceptance evidence; no separate Lua-only security gate workpackage.
+
+Corrective host hardening is tracked in `WP-LUA-VIRTUAL-HOST-01` under `ADR-0004`.
 
 ## Scope
 
@@ -40,7 +42,7 @@ Use `validation/checklists/workpackages/WP-LUA-lua-automation.md` plus release-s
 
 ## Open Decisions
 
-- No additional ADR extracted during this governance reset unless future implementation uncovers a durable decision.
+- `ADR-0004` defines the browser-first Fengari host and TextForge-owned Lua virtual host contract.
 
 ## Archive Trace
 

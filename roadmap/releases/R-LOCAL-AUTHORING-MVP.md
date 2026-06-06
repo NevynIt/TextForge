@@ -2,7 +2,7 @@
 
 ## Outcome
 
-Validated local/offline authoring baseline plus selected next local workspace capabilities, including recovery-boot hardening for the browser-managed shell and live overlay-aware workspace tree counts.
+Validated local/offline authoring baseline plus selected next local workspace capabilities, including recovery-boot hardening for the browser-managed shell, live overlay-aware workspace tree counts, and browser-first Fengari Lua host hardening.
 
 ## Included Workpackages
 
@@ -32,6 +32,7 @@ The included workpackage list is generated from `roadmap-state.yaml`.
 | `WP-CANVAS` | Spatial workspace canvas | Registry-owned | no |
 | `WP-LUA` | Lua automation | Registry-owned | no |
 | `WP-LUA-POWER-SESSION` | Lua self-escalation session and one-click recovery | Registry-owned | no |
+| `WP-LUA-VIRTUAL-HOST-01` | TextForge Lua virtual host for Fengari | Registry-owned | yes |
 | `WP-BPMN-SEM` | BPMN semantic profile and validation | Registry-owned | no |
 | `WP-BPMN-VISUAL-A` | BPMN.io viewer surface | Registry-owned | no |
 | `WP-BPMN-DI-01` | BPMN Diagram Interchange read-only fidelity | Registry-owned | no |
