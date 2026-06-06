@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -17,7 +17,8 @@ const indexHtml = await readFile(resolve(rootDir, 'index.html'), 'utf8');
 const fileIndexHtml = await readFile(resolve(rootDir, 'public/index.html'), 'utf8');
 const mainJs = await readFile(resolve(rootDir, 'src/main.js'), 'utf8');
 const scriptLoaderJs = await readFile(resolve(rootDir, 'src/scriptLoader.js'), 'utf8');
-const workbenchJs = await readFile(resolve(rootDir, 'src/workbench.js'), 'utf8');
+const workbenchEntrypointJs = await readFile(resolve(rootDir, 'src/workbench.js'), 'utf8');
+const workbenchJs = await readSourceCorpus(resolve(rootDir, 'src'));
 const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
 const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
 const uiPackageJson = await readFile(resolve(rootDir, '..', '..', 'packages', 'ui', 'package.json'), 'utf8');
@@ -53,6 +54,10 @@ if (!scriptLoaderJs.includes('./styles.css') || !scriptLoaderJs.includes('./main
 
 if (!mainJs.includes('./workbench.js') || !mainJs.includes('bootTextForgeShell') || !mainJs.includes('mountTextForgeShell')) {
   throw new Error('main.js must expose the package-driven workbench bootstrap helper');
+}
+
+if (!workbenchEntrypointJs.includes("from 'react-dom/client'") || !workbenchEntrypointJs.includes('createRoot') || !workbenchEntrypointJs.includes('bootTextForgeShell')) {
+  throw new Error('workbench.js must remain the React root bootstrap facade');
 }
 
 if (!viteConfig.includes("base: './'")) {
@@ -232,6 +237,27 @@ for (const requiredDocSignal of ['lucide-react', 'deterministic', 'remote images
 assertSecurityEnvelope();
 
 console.info('TextForge web shell checks passed.');
+
+async function readSourceCorpus(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const chunks = [];
+  for (const entry of entries) {
+    const entryPath = resolve(directory, entry.name);
+    if (entry.isDirectory()) {
+      if (entry.name === 'generated') {
+        continue;
+      }
+      chunks.push(await readSourceCorpus(entryPath));
+      continue;
+    }
+
+    if (entry.isFile() && entry.name.endsWith('.js')) {
+      chunks.push(await readFile(entryPath, 'utf8'));
+    }
+  }
+
+  return chunks.join('\n');
+}
 
 function assertSecurityEnvelope() {
   const dependencies = [
