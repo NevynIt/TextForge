@@ -18,28 +18,41 @@ const xtermCssEntry = resolve(
   '../css/xterm.css',
 );
 
+function resolveFengariBrowserHostImport(source, importer) {
+  if (source === 'fengari/src/luaconf.js' || source === fengariLuaconfEntry) {
+    return browserFengariLuaconfShim;
+  }
+
+  if (source === 'fengari/src/lualib.js' || source === fengariLualibEntry) {
+    return browserFengariLualibShim;
+  }
+
+  if (
+    (source === './lualib.js' || source === './luaconf.js')
+    && typeof importer === 'string'
+    && importer.replaceAll('\\', '/').includes('/fengari/src/')
+  ) {
+    return source === './luaconf.js' ? browserFengariLuaconfShim : browserFengariLualibShim;
+  }
+
+  return undefined;
+}
+
 function browserFengariHostPlugin() {
   return {
     name: 'textforge-browser-fengari-host',
     enforce: 'pre',
     resolveId(source, importer) {
-      if (source === 'fengari/src/luaconf.js' || source === fengariLuaconfEntry) {
-        return browserFengariLuaconfShim;
-      }
+      return resolveFengariBrowserHostImport(source, importer);
+    },
+  };
+}
 
-      if (source === 'fengari/src/lualib.js' || source === fengariLualibEntry) {
-        return browserFengariLualibShim;
-      }
-
-      if (
-        (source === './lualib.js' || source === './luaconf.js')
-        && typeof importer === 'string'
-        && importer.replaceAll('\\', '/').includes('/fengari/src/')
-      ) {
-        return source === './luaconf.js' ? browserFengariLuaconfShim : browserFengariLualibShim;
-      }
-
-      return undefined;
+function browserFengariOptimizeDepsPlugin() {
+  return {
+    name: 'textforge-browser-fengari-optimize-deps',
+    resolveId(source, importer) {
+      return resolveFengariBrowserHostImport(source, importer);
     },
   };
 }
@@ -74,6 +87,11 @@ export default defineConfig(({ command }) => ({
   },
   optimizeDeps: {
     force: true,
+    rolldownOptions: {
+      plugins: [
+        browserFengariOptimizeDepsPlugin(),
+      ],
+    },
   },
   build: command === 'build'
     ? {

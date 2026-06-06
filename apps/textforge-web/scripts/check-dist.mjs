@@ -71,6 +71,10 @@ if (!viteConfigSource.includes('src/fengari-browser/lualib.cjs')) {
   throw new Error('vite.config.mjs must alias Fengari lualib.js to the browser host shim');
 }
 
+if (!/optimizeDeps:\s*{[\s\S]*rolldownOptions:\s*{[\s\S]*browserFengariOptimizeDepsPlugin\(\)/.test(viteConfigSource)) {
+  throw new Error('vite.config.mjs must apply Fengari browser host shims to Vite dev dependency optimization');
+}
+
 if (viteConfigSource.includes('process.versions.node')) {
   throw new Error('vite.config.mjs must not define process.versions.node for the browser build');
 }
