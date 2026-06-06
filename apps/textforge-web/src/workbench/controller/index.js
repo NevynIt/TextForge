@@ -115,11 +115,14 @@ import {
   writeStoredWorkbenchUiState,
 } from '../ui-state.js';
 import {
-  createBundledOverlayId,
   createBundledWorkspaceOverlayState,
   createUserSeedWorkspaceState,
   sanitizePersistentWorkspaceState,
 } from '../workspace-seed.js';
+import {
+  createRestoredSurfaceOpenOptions,
+  migrateStoredWorkbenchUiState,
+} from '../session-restore.js';
 import {
   mainSessionContextCommandIds,
   popupSessionContextCommandIds,
@@ -540,64 +543,6 @@ export function createTextForgeWorkbenchController() {
     focusMainSession(matchingSession.id);
   }
 
-  function migrateStoredWorkbenchUiState(state) {
-    if (!state || typeof state !== 'object') {
-      return state;
-    }
-
-    const storedMainSessions = state.sessions?.main ?? [];
-    const storedPopupSessions = state.sessions?.popup ?? [];
-    const legacyDefaultPath = '/.textforge/resources/docs/examples/phase-4-markdown-preview.tf.md';
-    const bundledReadmePath = sampleResourcePaths.bundledReadme;
-    const legacyDefaultResourceId = createBundledOverlayId(legacyDefaultPath);
-    const bundledReadmeResourceId = createBundledOverlayId(bundledReadmePath);
-
-    // Migrate the old single-session seeded default so reloads open the bundled README instead.
-    if (
-      storedMainSessions.length !== 1
-      || storedPopupSessions.length !== 0
-      || (
-        storedMainSessions[0]?.resourcePath !== legacyDefaultPath
-        && storedMainSessions[0]?.resourceId !== legacyDefaultResourceId
-      )
-    ) {
-      return state;
-    }
-
-    const rewriteDescriptor = (descriptor) => {
-      if (!descriptor || typeof descriptor !== 'object') {
-        return descriptor;
-      }
-
-      if (
-        descriptor.resourcePath !== legacyDefaultPath
-        && descriptor.resourceId !== legacyDefaultResourceId
-      ) {
-        return descriptor;
-      }
-
-      return {
-        ...descriptor,
-        resourcePath: bundledReadmePath,
-        resourceId: bundledReadmeResourceId,
-      };
-    };
-
-    return {
-      ...state,
-      sessions: {
-        ...state.sessions,
-        main: storedMainSessions.map(rewriteDescriptor),
-        popup: storedPopupSessions,
-      },
-      active: {
-        ...state.active,
-        main: rewriteDescriptor(state.active?.main),
-        popup: state.active?.popup,
-      },
-    };
-  }
-
   function restoreWorkbenchUiSessions() {
     if (workbenchTestProfile) {
       return false;
@@ -618,14 +563,7 @@ export function createTextForgeWorkbenchController() {
           continue;
         }
 
-        openResourceEntry(entry, {
-          placement: descriptor.placement,
-          preferredSurfaceId: descriptor.contributionId,
-          sessionKey: descriptor.sessionKey,
-          surfaceState: descriptor.surfaceState,
-          title: descriptor.title,
-          expandSelection: false,
-        });
+        openResourceEntry(entry, createRestoredSurfaceOpenOptions(descriptor));
       }
     };
 

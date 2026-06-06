@@ -183,6 +183,16 @@ if (workbenchJs.includes('phase35')) {
   throw new Error('workbench source must not restore stale phase35 screenshot bootstrap presets');
 }
 
+for (const forbiddenStartupCopy of [
+  'Markdown preview and generated assets',
+  'restored TF-MD preview, generated-asset export',
+  'Markdown resources can open in both the source editor and the package-owned TF-MD preview surface',
+]) {
+  if (workbenchJs.includes(forbiddenStartupCopy)) {
+    throw new Error(`workbench source must not retain stale startup copy: ${forbiddenStartupCopy}`);
+  }
+}
+
 for (const requiredTestProfileSignal of ['testProfile', '/docs/examples/itm/test-profiles/', '@textforge/itm/tree', '@textforge/itm/report']) {
   if (!workbenchJs.includes(requiredTestProfileSignal)) {
     throw new Error(`workbench.js must surface ${requiredTestProfileSignal} for the focused ITM rendering test profiles`);
