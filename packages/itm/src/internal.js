@@ -126,6 +126,15 @@ export const itmResolverDiagnosticCodes = Object.freeze({
   capabilityMismatch: 'itm.resolve.capability-mismatch',
   blocked: 'itm.resolve.blocked',
   circular: 'itm.resolve.circular',
+  unresolvedScope: 'itm.scope.unresolved',
+  ambiguousScope: 'itm.scope.ambiguous',
+  mismatchedScope: 'itm.scope.mismatched',
+  identityMapConflict: 'itm.identity-map.conflict',
+  missingPackageDefaultContext: 'itm.package.default-context-missing',
+  duplicateIdentityMapEntry: 'itm.idmap.duplicate-entry',
+  contextIdentityMapUnresolved: 'itm.context.idmap-unresolved',
+  contextUnresolved: 'itm.context.unresolved',
+  contextUnmatchedEnd: 'itm.context.unmatched-end',
 });
 
 const itmPackageUsageScopes = new Set([
@@ -136,6 +145,8 @@ const itmPackageUsageScopes = new Set([
   'rules',
   'viewpoints',
   'pipelines',
+  'contexts',
+  'identityMaps',
 ]);
 const itmValidationDiagnosticCodes = Object.freeze({
   ruleFailed: 'itm.validation.rule-failed',
@@ -635,6 +646,15 @@ function normalizePackageScope(scope) {
     case 'pipeline':
     case 'pipelines':
       return 'pipelines';
+    case 'context':
+    case 'contexts':
+      return 'contexts';
+    case 'identity':
+    case 'identitymap':
+    case 'identitymaps':
+    case 'identity-map':
+    case 'identity-maps':
+      return 'identityMaps';
     default:
       return undefined;
   }
@@ -660,6 +680,12 @@ function listPackageContentScopes(packageContent = {}) {
   }
   if ((packageContent.pipelines?.length ?? 0) > 0) {
     scopes.add('pipelines');
+  }
+  if ((packageContent.contexts?.length ?? 0) > 0) {
+    scopes.add('contexts');
+  }
+  if ((packageContent.identityMaps?.length ?? 0) > 0) {
+    scopes.add('identityMaps');
   }
   if (
     scopes.size > 0
@@ -692,6 +718,10 @@ function scopeActivatesPackageCategory(activeScopes, category) {
       return activeScopes.has('viewpoints');
     case 'pipelines':
       return activeScopes.has('pipelines');
+    case 'contexts':
+      return activeScopes.has('contexts');
+    case 'identityMaps':
+      return activeScopes.has('identityMaps');
     default:
       return false;
   }
@@ -1001,6 +1031,346 @@ function findOwningPackage(entry, ownershipIndex, document) {
   return owner;
 }
 
+function asItmRecord(value) {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? value
+    : undefined;
+}
+
+function readStringValue(value) {
+  if (typeof value === 'string') {
+    return value.trim() || undefined;
+  }
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+  return undefined;
+}
+
+function readFirstString(record, keys) {
+  const source = asItmRecord(record);
+  if (!source) {
+    return undefined;
+  }
+  for (const key of keys) {
+    const value = readStringValue(source[key]);
+    if (value) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+function readStringList(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => readStringValue(entry)).filter(Boolean);
+  }
+  const scalar = readStringValue(value);
+  if (!scalar) {
+    return [];
+  }
+  return scalar
+    .split(/[,\s]+/u)
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+}
+
+function readNamedRecordList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => asItmRecord(entry))
+      .filter(Boolean);
+  }
+  const record = asItmRecord(value);
+  if (!record) {
+    return [];
+  }
+  return Object.entries(record).map(([name, entry]) => ({
+    ...(asItmRecord(entry) ?? {}),
+    name,
+  }));
+}
+
+function normalizeDirectiveName(name) {
+  return String(name ?? '').trim().toLowerCase().replace(/[-_]/gu, '');
+}
+
+function directiveMatches(directive, names) {
+  const normalizedName = normalizeDirectiveName(directive?.name);
+  return names.map(normalizeDirectiveName).includes(normalizedName);
+}
+
+function getDirectiveBodyForEntry(document, directiveName, argumentText, entry) {
+  const source = getEntrySourceRange(entry);
+  return (document.directives ?? []).find((directive) =>
+    directiveMatches(directive, [directiveName])
+    && String(directive.argumentText ?? '').trim() === String(argumentText ?? '').trim()
+    && compareSourcePositions(directive.source, source) === 0)?.body;
+}
+
+function sanitizeItmMetadataKey(value) {
+  return String(value ?? '')
+    .trim()
+    .replace(/[^A-Za-z0-9:_-]+/gu, '_')
+    .replace(/^_+|_+$/gu, '')
+    || 'anonymous';
+}
+
+function splitContextName(argumentText) {
+  const normalized = String(argumentText ?? '').trim();
+  if (!normalized) {
+    return undefined;
+  }
+  return normalized.split(/\s+/u)[0];
+}
+
+function createEvaluationDiagnostic(code, message, entry, document, options = {}) {
+  return createDiagnostic(message, options.severity ?? 'warning', {
+    code,
+    uri: document.uri,
+    file: getEntrySourceFile(entry, document.uri),
+    range: getEntrySourceRange(entry) ?? entry?.source,
+    packageRef: options.packageRef,
+    packageUid: options.packageUid,
+    usingScope: options.usingScope,
+    entityUid: options.entityUid,
+    relationshipUid: options.relationshipUid,
+    origin: {
+      packageId: '@textforge/itm',
+      subsystem: options.subsystem ?? 'itm-evaluation',
+      ...options.origin,
+    },
+  });
+}
+
+function readContextDefaults(record = {}) {
+  const source = asItmRecord(record) ?? {};
+  const defaults = asItmRecord(source.defaults) ?? source;
+  return {
+    rootTypeRef: readFirstString(defaults, [
+      'root',
+      'rootType',
+      'rootTypeRef',
+      'rootNodeType',
+      'defaultRootType',
+    ]),
+    childTypeRef: readFirstString(defaults, [
+      'child',
+      'childType',
+      'childTypeRef',
+      'childrenType',
+      'defaultChildType',
+    ]),
+    entityTypeRef: readFirstString(defaults, [
+      'entityType',
+      'entityTypeRef',
+      'nodeType',
+      'nodeTypeRef',
+      'type',
+      'typeRef',
+      'defaultType',
+      'defaultEntityType',
+      'defaultNodeType',
+    ]),
+    relationshipTypeRef: readFirstString(defaults, [
+      'relationship',
+      'relationshipType',
+      'relationshipTypeRef',
+      'link',
+      'linkType',
+      'linkTypeRef',
+      'edge',
+      'edgeType',
+      'edgeTypeRef',
+      'defaultRelationshipType',
+      'defaultLinkType',
+      'defaultEdgeType',
+    ]),
+    identityMapRefs: [
+      ...readStringList(defaults.idmap),
+      ...readStringList(defaults.idmaps),
+      ...readStringList(defaults.identityMap),
+      ...readStringList(defaults.identityMaps),
+      ...readStringList(defaults.identityMapRef),
+      ...readStringList(defaults.identityMapRefs),
+    ],
+    appliesTo: readStringList(source.appliesTo ?? source.scope ?? source.scopes),
+  };
+}
+
+function readPackageBody(document, pkg) {
+  return asItmRecord(getDirectiveBodyForEntry(document, 'package', pkg.name, pkg)) ?? {};
+}
+
+function readPackageExportConfig(document, pkg) {
+  const body = readPackageBody(document, pkg);
+  const exportsConfig = asItmRecord(body.exports) ?? asItmRecord(body.export) ?? {};
+  const defaults = asItmRecord(body.defaults) ?? asItmRecord(body.defaultExports) ?? {};
+  return {
+    contexts: [
+      ...readStringList(exportsConfig.context),
+      ...readStringList(exportsConfig.contexts),
+      ...readStringList(body.exportContext),
+      ...readStringList(body.exportContexts),
+    ],
+    identityMaps: [
+      ...readStringList(exportsConfig.identityMap),
+      ...readStringList(exportsConfig.identityMaps),
+      ...readStringList(body.exportIdentityMap),
+      ...readStringList(body.exportIdentityMaps),
+    ],
+    defaultContexts: [
+      ...readStringList(defaults.context),
+      ...readStringList(defaults.contexts),
+      ...readStringList(body.defaultContext),
+      ...readStringList(body.defaultContexts),
+    ],
+    defaultIdentityMaps: [
+      ...readStringList(defaults.identityMap),
+      ...readStringList(defaults.identityMaps),
+      ...readStringList(body.defaultIdentityMap),
+      ...readStringList(body.defaultIdentityMaps),
+    ],
+  };
+}
+
+function collectContextDefinitions(document, ownershipIndex) {
+  const contexts = [];
+  for (const context of document.contexts ?? []) {
+    const name = context.name ?? context.id;
+    if (!name) {
+      continue;
+    }
+    const values = asItmRecord(context.values) ?? asItmRecord(context.body) ?? context;
+    contexts.push({
+      ...context,
+      name,
+      sourceRange: getEntrySourceRange(context) ?? context.source,
+      sourceFile: getEntrySourceFile(context, document.uri),
+      packageUid: findOwningPackage(context, ownershipIndex, document)?.uid,
+      defaults: readContextDefaults(values),
+    });
+  }
+
+  for (const directive of document.directives ?? []) {
+    if (!directiveMatches(directive, ['context', 'scope'])) {
+      continue;
+    }
+    if (contexts.some((context) => compareSourcePositions(context.sourceRange ?? context.source, directive.source) === 0)) {
+      continue;
+    }
+    const name = readFirstString(directive.body, ['name', 'id'])
+      ?? splitContextName(directive.argumentText);
+    if (!name) {
+      continue;
+    }
+    const synthetic = {
+      uid: `context:${sanitizeItmMetadataKey(name)}:${contexts.length}`,
+      kind: 'context',
+      name,
+      body: directive.body,
+      sourceRange: directive.source,
+      source: directive.source,
+      sourceFile: directive.source?.file ?? document.uri,
+    };
+    contexts.push({
+      ...synthetic,
+      packageUid: findOwningPackage(synthetic, ownershipIndex, document)?.uid,
+      defaults: readContextDefaults(directive.body),
+    });
+  }
+  return contexts.sort(compareSourcePositions);
+}
+
+function normalizeIdentityMapEntry(value) {
+  if (typeof value === 'string') {
+    return { id: value, typeRef: value, qualifiedId: value };
+  }
+  const record = asItmRecord(value);
+  if (!record) {
+    return {};
+  }
+  return {
+    id: readFirstString(record, ['id', 'canonicalId', 'localId']),
+    qualifiedId: readFirstString(record, ['qualifiedId', 'canonicalQualifiedId']),
+    typeRef: readFirstString(record, ['type', 'typeRef', 'entityType', 'relationshipType']),
+    source: readFirstString(record, ['source', 'origin']),
+  };
+}
+
+function normalizeIdentityMapEntries(value) {
+  const record = asItmRecord(value);
+  if (!record) {
+    return new Map();
+  }
+  const entries = new Map();
+  for (const [key, entry] of Object.entries(record)) {
+    const normalized = normalizeIdentityMapEntry(entry);
+    entries.set(String(key), normalized);
+    entries.set(String(key).toLowerCase(), normalized);
+  }
+  return entries;
+}
+
+function normalizeIdentityAliasMap(value) {
+  return normalizeIdentityMapEntries(value);
+}
+
+function collectIdentityMapDefinitions(document, ownershipIndex) {
+  const maps = [];
+  for (const identityMap of document.identityMaps ?? document.identitymaps ?? []) {
+    const name = identityMap.name ?? identityMap.id;
+    if (!name) {
+      continue;
+    }
+    const topLevelEntries = identityMap.entries ?? identityMap.values;
+    maps.push({
+      ...identityMap,
+      name,
+      sourceRange: getEntrySourceRange(identityMap),
+      sourceFile: getEntrySourceFile(identityMap, document.uri),
+      packageUid: findOwningPackage(identityMap, ownershipIndex, document)?.uid,
+      aliases: normalizeIdentityAliasMap(topLevelEntries),
+      entities: normalizeIdentityMapEntries(identityMap.entities ?? identityMap.nodes ?? topLevelEntries),
+      relationships: normalizeIdentityMapEntries(identityMap.relationships ?? identityMap.edges ?? identityMap.links ?? topLevelEntries),
+      defaults: normalizeIdentityMapEntry(identityMap.defaults),
+    });
+  }
+
+  for (const directive of document.directives ?? []) {
+    if (!directiveMatches(directive, ['idmap', 'identitymap', 'identity-map', 'identity'])) {
+      continue;
+    }
+    if (maps.some((identityMap) => compareSourcePositions(identityMap.sourceRange ?? identityMap.source, directive.source) === 0)) {
+      continue;
+    }
+    const name = readFirstString(directive.body, ['name', 'id'])
+      ?? splitContextName(directive.argumentText);
+    if (!name) {
+      continue;
+    }
+    const body = asItmRecord(directive.body) ?? {};
+    const synthetic = {
+      uid: `identity-map:${sanitizeItmMetadataKey(name)}:${maps.length}`,
+      kind: 'identity-map',
+      name,
+      body,
+      sourceRange: directive.source,
+      source: directive.source,
+      sourceFile: directive.source?.file ?? document.uri,
+    };
+    maps.push({
+      ...synthetic,
+      packageUid: findOwningPackage(synthetic, ownershipIndex, document)?.uid,
+      aliases: normalizeIdentityAliasMap(body.entries ?? body.values ?? body),
+      entities: normalizeIdentityMapEntries(body.entities ?? body.nodes),
+      relationships: normalizeIdentityMapEntries(body.relationships ?? body.edges ?? body.links),
+      defaults: normalizeIdentityMapEntry(body.defaults ?? body.default),
+    });
+  }
+  return maps.sort(compareSourcePositions);
+}
+
 function materializePackageContent(document, ownershipIndex) {
   const contentByUid = new Map((document.packages ?? []).map((pkg) => [pkg.uid, {
     namespaces: [],
@@ -1013,7 +1383,12 @@ function materializePackageContent(document, ownershipIndex) {
     referenceRelationships: [],
     pluginRequirements: [],
     pipelines: [],
+    contexts: [],
+    identityMaps: [],
   }]));
+
+  const contexts = collectContextDefinitions(document, ownershipIndex);
+  const identityMaps = collectIdentityMapDefinitions(document, ownershipIndex);
 
   function assign(entries, key) {
     for (const entry of entries ?? []) {
@@ -1034,18 +1409,27 @@ function materializePackageContent(document, ownershipIndex) {
   assign(document.entities, 'referenceEntities');
   assign(document.relationships, 'referenceRelationships');
   assign(document.pluginRequirements, 'pluginRequirements');
+  assign(contexts, 'contexts');
+  assign(identityMaps, 'identityMaps');
 
   return contentByUid;
 }
 
-function readPackageActivationScopes(pkg, packageContent = {}) {
-  const configured = Array.isArray(pkg?.attributes?.values?.activation)
-    ? pkg.attributes.values.activation
-    : typeof pkg?.attributes?.values?.activation === 'string'
-      ? [pkg.attributes.values.activation]
-      : [];
+function readPackageActivationScopes(pkg, packageContent = {}, document) {
+  const packageBody = document ? readPackageBody(document, pkg) : {};
+  const configuredValues = [
+    ...(Array.isArray(pkg?.attributes?.values?.activation)
+      ? pkg.attributes.values.activation
+      : typeof pkg?.attributes?.values?.activation === 'string'
+        ? [pkg.attributes.values.activation]
+        : []),
+    ...readStringList(packageBody.activation),
+    ...readStringList(packageBody.activations),
+    ...readStringList(packageBody.defaultActivation),
+    ...readStringList(packageBody.defaultActivations),
+  ];
   const scopes = [];
-  for (const entry of configured) {
+  for (const entry of configuredValues) {
     const normalized = String(entry ?? '').trim();
     if (!normalized) {
       continue;
@@ -1113,11 +1497,53 @@ function normalizePackageUsageEntry(usage, ownershipIndex) {
   };
 }
 
+function isEntryInLocalScopedActivation(entry, document) {
+  const range = getEntrySourceRange(entry);
+  if (!range) {
+    return false;
+  }
+  const file = getEntrySourceFile(entry, document.uri) ?? document.uri ?? '__root__';
+  return (document.scopedActivations ?? []).some((activation) => {
+    if (activation.status !== 'closed' || !activation.range) {
+      return false;
+    }
+    const activationFile = activation.range.file ?? activation.source?.file ?? document.uri ?? '__root__';
+    return activationFile === file
+      && compareSourcePositions(activation.range, range) <= 0
+      && compareSourcePositions(range, {
+        startLine: activation.range.endLine,
+        startColumn: activation.range.endColumn,
+        endLine: activation.range.endLine,
+        endColumn: activation.range.endColumn,
+      }) < 0;
+  });
+}
+
 function buildEffectiveItmDocument(document) {
   const ownershipIndex = createPackageOwnershipIndex(document);
+  const contexts = collectContextDefinitions(document, ownershipIndex);
+  const identityMaps = collectIdentityMapDefinitions(document, ownershipIndex);
   const packageContentByUid = materializePackageContent(document, ownershipIndex);
   const packageDiagnostics = [];
   const activePackageScopes = new Map();
+  const activePackageContextRefs = new Map();
+  const activePackageIdentityMapRefs = new Map();
+  const activePackageContextRefsByFile = new Map();
+  const activePackageIdentityMapRefsByFile = new Map();
+
+  function addFileScopedPackageRefs(target, file, packageUid, refs) {
+    const normalizedRefs = [...new Set((refs ?? []).map((ref) => String(ref ?? '').trim()).filter(Boolean))];
+    if (normalizedRefs.length === 0) {
+      return;
+    }
+    const fileKey = file ?? document.uri ?? '__root__';
+    const packageRefs = target.get(fileKey) ?? new Map();
+    packageRefs.set(packageUid, new Set([
+      ...(packageRefs.get(packageUid) ?? []),
+      ...normalizedRefs,
+    ]));
+    target.set(fileKey, packageRefs);
+  }
 
   for (const [packageName, packages] of ownershipIndex.packagesByName.entries()) {
     if (packages.length <= 1) {
@@ -1175,10 +1601,12 @@ function buildEffectiveItmDocument(document) {
     const packageContent = packageContentByUid.get(pkg.uid) ?? {};
     const availableScopes = listPackageContentScopes(packageContent);
     const requestedScope = normalizePackageScope(usage.scope) ?? usage.scope;
+    const usageFile = usage.source?.file ?? document.uri ?? '__root__';
     const scopesToActivate = requestedScope === 'all'
-      ? readPackageActivationScopes(pkg, packageContent)
+      ? readPackageActivationScopes(pkg, packageContent, document)
       : [requestedScope];
     const activeScopes = activePackageScopes.get(pkg.uid) ?? new Set();
+    const exportConfig = readPackageExportConfig(document, pkg);
 
     for (const scope of scopesToActivate) {
       if (!itmPackageUsageScopes.has(scope) || (scope !== 'all' && !availableScopes.has(scope))) {
@@ -1201,6 +1629,78 @@ function buildEffectiveItmDocument(document) {
     if (activeScopes.size > 0) {
       activePackageScopes.set(pkg.uid, activeScopes);
     }
+
+    if (requestedScope === 'all') {
+      const defaultContextRefs = exportConfig.defaultContexts.length > 0
+        ? exportConfig.defaultContexts
+        : packageContent.contexts.filter((context) =>
+          context.default === true
+          || context.attributes?.values?.default === true
+          || context.body?.default === true).map((context) => context.name);
+      const defaultIdentityMapRefs = exportConfig.defaultIdentityMaps.length > 0
+        ? exportConfig.defaultIdentityMaps
+        : packageContent.identityMaps.filter((identityMap) =>
+          identityMap.default === true
+          || identityMap.attributes?.values?.default === true
+          || identityMap.body?.default === true).map((identityMap) => identityMap.name);
+
+      if ((packageContent.contexts?.length ?? 0) > 0 && defaultContextRefs.length === 0) {
+        packageDiagnostics.push(createEvaluationDiagnostic(
+          itmResolverDiagnosticCodes.missingPackageDefaultContext,
+          `Package '${pkg.name}' declares contexts but does not declare a default context for %using '${pkg.name}'.`,
+          usage,
+          document,
+          {
+            packageRef: pkg.name,
+            packageUid: pkg.uid,
+            usingScope: usage.scope,
+          },
+        ));
+      }
+
+      activePackageContextRefs.set(pkg.uid, new Set([
+        ...(activePackageContextRefs.get(pkg.uid) ?? []),
+        ...defaultContextRefs,
+        ...exportConfig.contexts,
+      ]));
+      addFileScopedPackageRefs(activePackageContextRefsByFile, usageFile, pkg.uid, [
+        ...defaultContextRefs,
+        ...exportConfig.contexts,
+      ]);
+      activePackageIdentityMapRefs.set(pkg.uid, new Set([
+        ...(activePackageIdentityMapRefs.get(pkg.uid) ?? []),
+        ...defaultIdentityMapRefs,
+        ...exportConfig.identityMaps,
+      ]));
+      addFileScopedPackageRefs(activePackageIdentityMapRefsByFile, usageFile, pkg.uid, [
+        ...defaultIdentityMapRefs,
+        ...exportConfig.identityMaps,
+      ]);
+    }
+
+    if (activeScopes.has('contexts')) {
+      activePackageContextRefs.set(pkg.uid, new Set([
+        ...(activePackageContextRefs.get(pkg.uid) ?? []),
+        ...packageContent.contexts.map((context) => context.name),
+        ...exportConfig.contexts,
+      ]));
+      addFileScopedPackageRefs(activePackageContextRefsByFile, usageFile, pkg.uid, [
+        ...packageContent.contexts.map((context) => context.name),
+        ...exportConfig.contexts,
+      ]);
+    }
+
+    if (activeScopes.has('identityMaps')) {
+      activePackageIdentityMapRefs.set(pkg.uid, new Set([
+        ...(activePackageIdentityMapRefs.get(pkg.uid) ?? []),
+        ...packageContent.identityMaps.map((identityMap) => identityMap.name),
+        ...exportConfig.identityMaps,
+      ]));
+      addFileScopedPackageRefs(activePackageIdentityMapRefsByFile, usageFile, pkg.uid, [
+        ...packageContent.identityMaps.map((identityMap) => identityMap.name),
+        ...exportConfig.identityMaps,
+      ]);
+    }
   }
 
   const materializedPackages = (document.packages ?? []).map((pkg) => ({
@@ -1212,6 +1712,12 @@ function buildEffectiveItmDocument(document) {
     return (entries ?? []).filter((entry) => {
       const owner = findOwningPackage(entry, ownershipIndex, document);
       if (!owner) {
+        return true;
+      }
+      if (
+        (category === 'referenceEntities' || category === 'referenceRelationships')
+        && isEntryInLocalScopedActivation(entry, document)
+      ) {
         return true;
       }
       return scopeActivatesPackageCategory(activePackageScopes.get(owner.uid), category);
@@ -1230,6 +1736,8 @@ function buildEffectiveItmDocument(document) {
     relationships: filterEntries(document.relationships, 'referenceRelationships'),
     packages: materializedPackages,
     packageUsages: normalizedPackageUsages,
+    contexts,
+    identityMaps,
     diagnostics: mergeDiagnostics(document.diagnostics, packageDiagnostics),
   });
 
@@ -1237,6 +1745,564 @@ function buildEffectiveItmDocument(document) {
     effectiveDocument,
     packageDiagnostics,
     activePackageScopes,
+    activePackageContextRefs,
+    activePackageIdentityMapRefs,
+    activePackageContextRefsByFile,
+    activePackageIdentityMapRefsByFile,
+  };
+}
+
+function listContextActivations(document) {
+  if ((document.scopedActivations?.length ?? 0) > 0) {
+    const activations = [];
+    for (const activation of document.scopedActivations ?? []) {
+      activations.push({
+        ...activation,
+        name: activation.name ?? activation.contextRef ?? activation.context,
+        scope: activation.scope,
+        sourceRange: activation.source,
+        source: activation.source,
+      });
+      if (activation.endSource) {
+        activations.push({
+          uid: `${activation.uid}:end`,
+          name: '',
+          reset: true,
+          sourceRange: activation.endSource,
+          source: activation.endSource,
+        });
+      }
+    }
+    return activations
+      .filter((activation) => activation.reset || activation.name)
+      .sort(compareSourcePositions);
+  }
+
+  const explicitActivations = (document.contextActivations ?? document.activations ?? []).map((activation) => ({
+    ...activation,
+    name: activation.name ?? activation.contextRef ?? activation.context,
+    sourceRange: getEntrySourceRange(activation),
+    source: activation.source ?? activation.sourceRange,
+  }));
+  const directiveActivations = (document.directives ?? [])
+    .filter((directive) => directiveMatches(directive, ['begin', 'activate']))
+    .map((directive) => ({
+      uid: `context-activation:${sanitizeItmMetadataKey(directive.argumentText)}:${directive.source?.startLine ?? 0}`,
+      name: splitContextName(directive.argumentText),
+      scope: String(directive.argumentText ?? '').trim().split(/\s+/u)[1],
+      sourceRange: directive.source,
+      source: directive.source,
+      directive,
+    }));
+  const resets = (document.directives ?? [])
+    .filter((directive) => directiveMatches(directive, ['end', 'endcontext']))
+    .map((directive) => ({
+      uid: `context-activation:end:${directive.source?.startLine ?? 0}`,
+      name: '',
+      reset: true,
+      sourceRange: directive.source,
+      source: directive.source,
+      directive,
+    }));
+  return [...explicitActivations, ...directiveActivations, ...resets]
+    .filter((activation) => activation.reset || activation.name)
+    .sort(compareSourcePositions);
+}
+
+function contextAllowsScope(context, requestedScope) {
+  const scopes = context?.defaults?.appliesTo ?? [];
+  if (!requestedScope || scopes.length === 0) {
+    return true;
+  }
+  return scopes.map((scope) => String(scope).trim()).includes(requestedScope);
+}
+
+function resolveContextReference(name, activation, context) {
+  const normalizedName = String(name ?? '').trim();
+  const activationFile = getEntrySourceFile(activation, context.document.uri) ?? context.document.uri ?? '__root__';
+  const sameFileMatches = context.contexts.filter((candidate) =>
+    candidate.name === normalizedName
+    && (candidate.sourceFile ?? context.document.uri ?? '__root__') === activationFile);
+  if (sameFileMatches.length === 1) {
+    return { context: sameFileMatches[0] };
+  }
+  if (sameFileMatches.length > 1) {
+    return { ambiguous: sameFileMatches };
+  }
+
+  const filePackageRefs = context.activePackageContextRefsByFile.get(activationFile) ?? new Map();
+  const packageMatches = context.contexts.filter((candidate) =>
+    candidate.name === normalizedName
+    && candidate.packageUid
+    && filePackageRefs.get(candidate.packageUid)?.has(candidate.name));
+  if (packageMatches.length === 1) {
+    return { context: packageMatches[0] };
+  }
+  if (packageMatches.length > 1) {
+    return { ambiguous: packageMatches };
+  }
+
+  const globalMatches = context.contexts.filter((candidate) =>
+    candidate.name === normalizedName
+    && !candidate.packageUid);
+  if (globalMatches.length === 1) {
+    return { context: globalMatches[0] };
+  }
+  if (globalMatches.length > 1) {
+    return { ambiguous: globalMatches };
+  }
+
+  return { unresolved: true };
+}
+
+function resolveIdentityMapReference(name, entry, context) {
+  const normalizedName = String(name ?? '').trim();
+  const file = getEntrySourceFile(entry, context.document.uri) ?? context.document.uri ?? '__root__';
+  const sameFileMatches = context.identityMaps.filter((candidate) =>
+    candidate.name === normalizedName
+    && (candidate.sourceFile ?? context.document.uri ?? '__root__') === file);
+  if (sameFileMatches.length === 1) {
+    return { identityMap: sameFileMatches[0] };
+  }
+  if (sameFileMatches.length > 1) {
+    return { ambiguous: sameFileMatches };
+  }
+
+  const filePackageRefs = context.activePackageIdentityMapRefsByFile.get(file) ?? new Map();
+  const packageMatches = context.identityMaps.filter((candidate) =>
+    candidate.name === normalizedName
+    && candidate.packageUid
+    && filePackageRefs.get(candidate.packageUid)?.has(candidate.name));
+  if (packageMatches.length === 1) {
+    return { identityMap: packageMatches[0] };
+  }
+  if (packageMatches.length > 1) {
+    return { ambiguous: packageMatches };
+  }
+
+  return { unresolved: true };
+}
+
+function resolveIdentityMapAlias(value, identityMap) {
+  const normalizedValue = String(value ?? '').trim();
+  if (!normalizedValue) {
+    return undefined;
+  }
+  const aliasEntry = identityMap?.aliases?.get(normalizedValue)
+    ?? identityMap?.aliases?.get(normalizedValue.toLowerCase())
+    ?? identityMap?.entities?.get(normalizedValue)
+    ?? identityMap?.entities?.get(normalizedValue.toLowerCase())
+    ?? identityMap?.relationships?.get(normalizedValue)
+    ?? identityMap?.relationships?.get(normalizedValue.toLowerCase());
+  return aliasEntry?.typeRef
+    ?? aliasEntry?.qualifiedId
+    ?? aliasEntry?.id
+    ?? normalizedValue;
+}
+
+function resolveContextDefaultValue(value, identityMaps) {
+  const normalizedValue = String(value ?? '').trim();
+  if (!normalizedValue) {
+    return undefined;
+  }
+  for (const identityMap of identityMaps ?? []) {
+    const resolved = resolveIdentityMapAlias(normalizedValue, identityMap);
+    if (resolved && resolved !== normalizedValue) {
+      return resolved;
+    }
+  }
+  return normalizedValue;
+}
+
+function createContextActivationIndex(document, evaluationContext) {
+  const diagnostics = [];
+  const activeByFile = new Map();
+  for (const activation of listContextActivations(document)) {
+    const file = getEntrySourceFile(activation, document.uri) ?? document.uri ?? '__root__';
+    if (activation.reset) {
+      activeByFile.set(file, [
+        ...(activeByFile.get(file) ?? []),
+        {
+          activation,
+          context: undefined,
+          reset: true,
+        },
+      ]);
+      continue;
+    }
+    const resolved = resolveContextReference(activation.name, activation, evaluationContext);
+    if (resolved.unresolved) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.contextUnresolved,
+        `Context '${activation.name}' could not be resolved for %begin.`,
+        activation,
+        document,
+        { origin: { directive: 'begin' } },
+      ));
+      continue;
+    }
+    if (resolved.ambiguous) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.ambiguousScope,
+        `Context '${activation.name}' is ambiguous for %begin.`,
+        activation,
+        document,
+        { origin: { directive: 'begin' } },
+      ));
+      continue;
+    }
+    if (!contextAllowsScope(resolved.context, activation.scope)) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.mismatchedScope,
+        `Context '${activation.name}' does not apply to scope '${activation.scope}'.`,
+        activation,
+        document,
+        { origin: { directive: 'begin' } },
+      ));
+      continue;
+    }
+    activeByFile.set(file, [
+      ...(activeByFile.get(file) ?? []),
+      {
+        activation,
+        context: resolved.context,
+        reset: false,
+      },
+    ]);
+  }
+  return { activeByFile, diagnostics };
+}
+
+function findActiveContextForEntry(entry, activationIndex, document) {
+  const file = getEntrySourceFile(entry, document.uri) ?? document.uri ?? '__root__';
+  const activations = activationIndex.activeByFile.get(file) ?? [];
+  let active;
+  for (const activation of activations) {
+    if (compareSourcePositions(activation.activation, entry) > 0) {
+      break;
+    }
+    active = activation.reset ? undefined : activation.context;
+  }
+  return active;
+}
+
+function identityEntryConflicts(left = {}, right = {}) {
+  return Boolean(
+    (left.id && right.id && left.id !== right.id)
+    || (left.qualifiedId && right.qualifiedId && left.qualifiedId !== right.qualifiedId)
+    || (left.typeRef && right.typeRef && left.typeRef !== right.typeRef)
+  );
+}
+
+function mergeIdentityEntries(entries, owner, document, diagnostics) {
+  const merged = {};
+  const sources = [];
+  for (const entry of entries) {
+    if (!entry) {
+      continue;
+    }
+    if (identityEntryConflicts(merged, entry)) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.identityMapConflict,
+        `Identity map values conflict while evaluating '${owner.label ?? owner.id ?? owner.uid}'.`,
+        owner,
+        document,
+        {
+          entityUid: owner.kind === 'entity' ? owner.uid : undefined,
+          relationshipUid: owner.kind === 'relationship' ? owner.uid : undefined,
+          origin: { identityMapSources: sources },
+        },
+      ));
+      continue;
+    }
+    if (entry.id && !merged.id) {
+      merged.id = entry.id;
+    }
+    if (entry.qualifiedId && !merged.qualifiedId) {
+      merged.qualifiedId = entry.qualifiedId;
+    }
+    if (entry.typeRef && !merged.typeRef) {
+      merged.typeRef = entry.typeRef;
+    }
+    if (entry.source) {
+      sources.push(entry.source);
+    }
+  }
+  return Object.keys(merged).length > 0 ? merged : undefined;
+}
+
+function entityIdentityKeys(entity) {
+  return [
+    entity.qualifiedId,
+    entity.id,
+    entity.localId,
+    entity.label,
+    entity.rawLabel,
+  ].map((value) => String(value ?? '').trim()).filter(Boolean);
+}
+
+function relationshipIdentityKeys(relationship, entityByUid) {
+  const source = entityByUid.get(relationship.sourceId);
+  const target = relationship.targetId ? entityByUid.get(relationship.targetId) : undefined;
+  const sourceKeys = [relationship.sourceRef, source?.qualifiedId, source?.id, source?.label].filter(Boolean);
+  const targetKeys = [relationship.targetRef, target?.qualifiedId, target?.id, target?.label].filter(Boolean);
+  const keys = [];
+  for (const sourceKey of sourceKeys) {
+    for (const targetKey of targetKeys.length > 0 ? targetKeys : ['']) {
+      keys.push(`${sourceKey}->${targetKey}`);
+      keys.push(`${sourceKey}:${relationship.typeRef}->${targetKey}`);
+    }
+  }
+  if (relationship.id) {
+    keys.push(relationship.id);
+  }
+  return [...new Set(keys.map((value) => String(value ?? '').trim()).filter(Boolean))];
+}
+
+function readIdentityEntriesFromMaps(identityMaps, keys, kind) {
+  const entries = [];
+  for (const identityMap of identityMaps) {
+    const source = kind === 'relationship' ? identityMap.relationships : identityMap.entities;
+    for (const key of keys) {
+      const entry = source.get(key) ?? source.get(key.toLowerCase());
+      if (entry) {
+        entries.push({
+          ...entry,
+          source: entry.source ?? identityMap.name,
+        });
+      }
+    }
+    if (identityMap.defaults && Object.keys(identityMap.defaults).length > 0) {
+      entries.push({
+        ...identityMap.defaults,
+        source: identityMap.name,
+      });
+    }
+  }
+  return entries;
+}
+
+function listDuplicateIdentityMapKeys(identityMap) {
+  const rawText = String(identityMap?.rawText ?? '');
+  if (!rawText) {
+    return [];
+  }
+  const counts = new Map();
+  for (const line of rawText.split(/\r?\n/u)) {
+    const match = line.match(/^\s{0,4}([A-Za-z][A-Za-z0-9_:-]*)\s:/u);
+    if (!match?.[1]) {
+      continue;
+    }
+    counts.set(match[1], (counts.get(match[1]) ?? 0) + 1);
+  }
+  return [...counts.entries()]
+    .filter(([, count]) => count > 1)
+    .map(([key]) => key);
+}
+
+function createScopedActivationDiagnostics(document) {
+  const diagnostics = [];
+  for (const activation of document.scopedActivations ?? []) {
+    if (activation.status === 'unmatched-end') {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.contextUnmatchedEnd,
+        `Scoped activation end '${activation.endName ?? activation.name}' has no matching %begin.`,
+        activation,
+        document,
+        { origin: { directive: 'end' } },
+      ));
+    } else if (activation.status === 'mismatched') {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.mismatchedScope,
+        `Scoped activation end '${activation.endName}' does not match active scope '${activation.name}'.`,
+        activation,
+        document,
+        { origin: { directive: 'end' } },
+      ));
+    } else if (activation.status === 'open') {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.mismatchedScope,
+        `Scoped activation '${activation.name}' is not closed.`,
+        activation,
+        document,
+        { origin: { directive: 'begin' } },
+      ));
+    }
+  }
+  return diagnostics;
+}
+
+function resolveActiveIdentityMaps(entry, activeContext, evaluationContext, diagnostics) {
+  const document = evaluationContext.document;
+  const file = getEntrySourceFile(entry, document.uri) ?? document.uri ?? '__root__';
+  const refs = new Set(activeContext?.defaults?.identityMapRefs ?? []);
+  const filePackageRefs = evaluationContext.activePackageIdentityMapRefsByFile.get(file) ?? new Map();
+  for (const packageRefs of filePackageRefs.values()) {
+    for (const ref of packageRefs) {
+      refs.add(ref);
+    }
+  }
+  const maps = [];
+  for (const ref of refs) {
+    const resolved = resolveIdentityMapReference(ref, entry, evaluationContext);
+    if (resolved.identityMap) {
+      maps.push(resolved.identityMap);
+      continue;
+    }
+    diagnostics.push(createEvaluationDiagnostic(
+      resolved.ambiguous ? itmResolverDiagnosticCodes.ambiguousScope : itmResolverDiagnosticCodes.contextIdentityMapUnresolved,
+      resolved.ambiguous
+        ? `Identity map '${ref}' is ambiguous.`
+        : `Identity map '${ref}' could not be resolved.`,
+      entry,
+      document,
+      {
+        subsystem: 'itm-identity-map',
+        origin: { identityMapRef: ref },
+      },
+    ));
+  }
+  return maps;
+}
+
+function cloneAttributeBagWithValues(entry, values) {
+  return {
+    ...(entry.attributes ?? {}),
+    values: {
+      ...(entry.attributes?.values ?? {}),
+      ...values,
+    },
+  };
+}
+
+function isUntypedRelationship(relationship, document) {
+  const legacyDefault = document.metadata?.defaultRelationshipType ?? 'related_to';
+  return !relationship.typeRef || relationship.typeRef === 'related_to' || relationship.typeRef === legacyDefault;
+}
+
+function applyContextualEvaluation(document, effective) {
+  const diagnostics = [];
+  const evaluationContext = {
+    document,
+    contexts: document.contexts ?? [],
+    identityMaps: document.identityMaps ?? [],
+    activePackageContextRefsByFile: effective.activePackageContextRefsByFile ?? new Map(),
+    activePackageIdentityMapRefsByFile: effective.activePackageIdentityMapRefsByFile ?? new Map(),
+  };
+  diagnostics.push(...createScopedActivationDiagnostics(document));
+  for (const identityMap of evaluationContext.identityMaps) {
+    for (const key of listDuplicateIdentityMapKeys(identityMap)) {
+      diagnostics.push(createEvaluationDiagnostic(
+        itmResolverDiagnosticCodes.duplicateIdentityMapEntry,
+        `Identity map '${identityMap.name ?? identityMap.uid}' declares '${key}' more than once.`,
+        identityMap,
+        document,
+        {
+          subsystem: 'itm-identity-map',
+          origin: { identityMapRef: identityMap.name, key },
+        },
+      ));
+    }
+  }
+  const activationIndex = createContextActivationIndex(document, evaluationContext);
+  diagnostics.push(...activationIndex.diagnostics);
+  const entityByUid = new Map((document.entities ?? []).map((entity) => [entity.uid, entity]));
+
+  const entities = (document.entities ?? []).map((entity) => {
+    const activeContext = findActiveContextForEntry(entity, activationIndex, document);
+    const identityMaps = resolveActiveIdentityMaps(entity, activeContext, evaluationContext, diagnostics);
+    const contextTypeRef = entity.parentId
+      ? activeContext?.defaults?.childTypeRef ?? activeContext?.defaults?.entityTypeRef
+      : activeContext?.defaults?.rootTypeRef ?? activeContext?.defaults?.entityTypeRef;
+    const identity = mergeIdentityEntries(
+      readIdentityEntriesFromMaps(identityMaps, entityIdentityKeys(entity), 'entity'),
+      entity,
+      document,
+      diagnostics,
+    );
+    const inferredTypeRef = !entity.typeRef
+      ? identity?.typeRef ?? resolveContextDefaultValue(contextTypeRef, identityMaps)
+      : undefined;
+    const inferredId = !entity.id
+      ? identity?.id
+      : undefined;
+    const inferredQualifiedId = !entity.qualifiedId
+      ? identity?.qualifiedId
+      : undefined;
+    const canonicalId = entity.qualifiedId ?? inferredQualifiedId ?? entity.id ?? inferredId ?? entity.uid;
+    return {
+      ...entity,
+      ...inferredId ? { id: inferredId, localId: inferredId } : {},
+      ...inferredQualifiedId ? { qualifiedId: inferredQualifiedId } : {},
+      ...inferredTypeRef ? { typeRef: inferredTypeRef } : {},
+      attributes: cloneAttributeBagWithValues(entity, {
+        canonicalIdentity: {
+          id: canonicalId,
+          source: entity.id || entity.qualifiedId ? 'authored' : inferredId || inferredQualifiedId ? 'identity-map' : 'derived',
+          ...activeContext ? { context: activeContext.name } : {},
+          ...inferredTypeRef ? { inferredTypeRef } : entity.typeRef ? { typeRef: entity.typeRef } : {},
+        },
+      }),
+    };
+  });
+
+  const updatedEntityByUid = new Map(entities.map((entity) => [entity.uid, entity]));
+  const relationships = (document.relationships ?? []).map((relationship) => {
+    const activeContext = findActiveContextForEntry(relationship, activationIndex, document);
+    const identityMaps = resolveActiveIdentityMaps(relationship, activeContext, evaluationContext, diagnostics);
+    const identity = mergeIdentityEntries(
+      readIdentityEntriesFromMaps(identityMaps, relationshipIdentityKeys(relationship, updatedEntityByUid), 'relationship'),
+      relationship,
+      document,
+      diagnostics,
+    );
+    const inferredTypeRef = isUntypedRelationship(relationship, document)
+      ? identity?.typeRef ?? resolveContextDefaultValue(activeContext?.defaults?.relationshipTypeRef, identityMaps)
+      : undefined;
+    const inferredId = !relationship.id
+      ? identity?.id
+      : undefined;
+    const typeRef = inferredTypeRef ?? relationship.typeRef;
+    const canonicalId = relationship.id
+      ?? inferredId
+      ?? getStableRelationshipId({ ...relationship, typeRef });
+    return {
+      ...relationship,
+      ...inferredId ? { id: inferredId } : {},
+      ...inferredTypeRef ? { typeRef: inferredTypeRef } : {},
+      attributes: cloneAttributeBagWithValues(relationship, {
+        canonicalIdentity: {
+          id: canonicalId,
+          source: relationship.id ? 'authored' : inferredId ? 'identity-map' : 'derived',
+          ...activeContext ? { context: activeContext.name } : {},
+          ...inferredTypeRef ? { inferredTypeRef } : { typeRef },
+        },
+      }),
+    };
+  });
+
+  const metadataValues = {
+    ...(document.metadata?.values ?? {}),
+    canonicalIdentity: {
+      entityCount: entities.length,
+      relationshipCount: relationships.length,
+      contextCount: evaluationContext.contexts.length,
+      identityMapCount: evaluationContext.identityMaps.length,
+    },
+  };
+
+  return {
+    document: createDocument({
+      ...document,
+      metadata: {
+        ...(document.metadata ?? {}),
+        values: metadataValues,
+      },
+      entities,
+      relationships,
+      diagnostics: mergeDiagnostics(document.diagnostics, diagnostics),
+    }),
+    diagnostics,
   };
 }
 
@@ -1543,11 +2609,19 @@ function evaluateItmDocumentContext(input, options = {}) {
   const document = isResolvedDocument(input) ? createDocument(input) : input;
   const resolvedDocument = isResolvedDocument(input) ? input : resolveDocument(document);
   const effective = buildEffectiveItmDocument(document);
-  const capabilityContext = resolveItmCapabilityContext(effective.effectiveDocument, options);
-  const effectiveResolvedDocument = resolveDocument(effective.effectiveDocument);
+  const contextual = applyContextualEvaluation(effective.effectiveDocument, effective);
+  const capabilityContextBase = resolveItmCapabilityContext(contextual.document, options);
+  const capabilityContext = {
+    ...capabilityContextBase,
+    activePackageScopes: effective.activePackageScopes,
+    activePackageContextRefs: effective.activePackageContextRefs,
+    activePackageIdentityMapRefs: effective.activePackageIdentityMapRefs,
+  };
+  const effectiveResolvedDocument = resolveDocument(contextual.document);
   const diagnostics = [
     ...(resolvedDocument.diagnostics ?? []),
     ...effective.packageDiagnostics,
+    ...contextual.diagnostics,
     ...(capabilityContext.diagnostics ?? []),
   ];
   const activeRuleNames = new Set((effectiveResolvedDocument.validationRules ?? []).map((rule) => rule.name));
@@ -1598,7 +2672,7 @@ function evaluateItmDocumentContext(input, options = {}) {
   return {
     document,
     resolvedDocument,
-    effectiveDocument: effective.effectiveDocument,
+    effectiveDocument: contextual.document,
     effectiveResolvedDocument,
     capabilityContext,
     diagnostics: mergeDiagnostics(

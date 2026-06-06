@@ -307,6 +307,15 @@ export declare const itmResolverDiagnosticCodes: Readonly<{
   readonly capabilityMismatch: 'itm.resolve.capability-mismatch';
   readonly blocked: 'itm.resolve.blocked';
   readonly circular: 'itm.resolve.circular';
+  readonly unresolvedScope: 'itm.scope.unresolved';
+  readonly ambiguousScope: 'itm.scope.ambiguous';
+  readonly mismatchedScope: 'itm.scope.mismatched';
+  readonly identityMapConflict: 'itm.identity-map.conflict';
+  readonly missingPackageDefaultContext: 'itm.package.default-context-missing';
+  readonly duplicateIdentityMapEntry: 'itm.idmap.duplicate-entry';
+  readonly contextIdentityMapUnresolved: 'itm.context.idmap-unresolved';
+  readonly contextUnresolved: 'itm.context.unresolved';
+  readonly contextUnmatchedEnd: 'itm.context.unmatched-end';
 }>;
 export declare function createItmResolverDiagnostic(
   category: ItmResolverDiagnosticCategory,
