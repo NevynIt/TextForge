@@ -6,6 +6,8 @@ import { defineConfig } from 'vite';
 const require = createRequire(import.meta.url);
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
 const loaderEntry = resolve(rootDir, 'src/scriptLoader.js');
+const browserFsShim = resolve(rootDir, 'src/node-compat/fs.js');
+const browserFsPromisesShim = resolve(rootDir, 'src/node-compat/fs-promises.js');
 const browserOsShim = resolve(rootDir, 'src/node-compat/os.js');
 const xtermCssEntry = resolve(
   require.resolve('@xterm/xterm/package.json'),
@@ -22,7 +24,12 @@ export default defineConfig(({ command }) => ({
   resolve: {
     alias: {
       '@textforge/vendor/xterm.css': xtermCssEntry,
+      'fs/promises': browserFsPromisesShim,
+      'node:fs/promises': browserFsPromisesShim,
+      fs: browserFsShim,
+      'node:fs': browserFsShim,
       os: browserOsShim,
+      'node:os': browserOsShim,
     },
   },
   build: command === 'build'
