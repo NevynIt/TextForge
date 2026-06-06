@@ -22,6 +22,7 @@ import {
   joinWorkspacePath,
   normalizeWorkspacePath,
   resetWorkspaceDexieStorage,
+  workspaceDexieSchemaVersion,
   workspaceEntryToResourceRef,
   workspaceProviderIds,
   workspaceStorageErrorCodes,
@@ -116,6 +117,7 @@ import {
   writeStoredWorkbenchUiState,
 } from '../ui-state.js';
 import {
+  createBundledOverlayId,
   createBundledWorkspaceOverlayState,
   createUserSeedWorkspaceState,
   sanitizePersistentWorkspaceState,
@@ -131,6 +133,7 @@ import { createWorkbenchRegistries } from './registries.js';
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const workspaceDatabaseName = 'textforge-workspace';
+const transientWorkspaceDriver = 'memory';
 const utilitySections = [
   { id: 'inspector', label: 'Inspector', icon: 'status' },
   { id: 'popups', label: 'Popup Summary', icon: 'utility' },
@@ -216,6 +219,69 @@ export function createTextForgeWorkbenchController() {
       ? null
       : new URL(window.location.href).searchParams.get('testProfile'),
   });
+
+  function isWorkspaceStorageError(error) {
+    return error?.name === 'WorkspaceStorageError'
+      || Object.values(workspaceStorageErrorCodes).includes(error?.code);
+  }
+
+  function isWorkspaceStorageResetRequired(error) {
+    return error?.code === workspaceStorageErrorCodes.corruptedState
+      || error?.code === workspaceStorageErrorCodes.incompatibleState;
+  }
+
+  function createTransientWorkspaceService(error) {
+    const baseWorkspace = createWorkspaceService({
+      workspaceId: 'textforge-shell',
+      name: 'TextForge Workspace',
+      now: createTimestampFactory(),
+      idFactory: createSequentialIdFactory('workspace'),
+      state: createUserSeedWorkspaceState(),
+    });
+    const errorSnapshot = error
+      ? {
+        code: error.code ?? workspaceStorageErrorCodes.initializationFailed,
+        message: error.message ?? 'Workspace browser storage is unavailable.',
+      }
+      : undefined;
+
+    return {
+      ...baseWorkspace,
+      getPersistenceStatus() {
+        return {
+          state: 'error',
+          driver: transientWorkspaceDriver,
+          databaseName: workspaceDatabaseName,
+          schemaVersion: workspaceDexieSchemaVersion,
+          browserManaged: false,
+          lastSavedAt: undefined,
+          pendingReason: 'indexeddb-unavailable',
+          error: errorSnapshot,
+        };
+      },
+      subscribePersistence() {
+        return () => {};
+      },
+      whenIdle: async () => baseWorkspace.snapshot(),
+      persistNow: async () => baseWorkspace.snapshot(),
+      disposePersistence() {},
+    };
+  }
+
+  function createEmptyWorkspaceService() {
+    return createWorkspaceService({
+      workspaceId: 'textforge-shell',
+      name: 'TextForge Workspace',
+      now: createTimestampFactory(),
+      idFactory: createSequentialIdFactory('workspace'),
+    });
+  }
+
+  function applyWorkspaceOverlay(baseWorkspace) {
+    workspace = createWorkspaceOverlayService(baseWorkspace, {
+      overlay: () => createBundledWorkspaceOverlayState(baseWorkspace.snapshot()),
+    });
+  }
 
   function emit() {
     cachedSnapshot = undefined;
@@ -3696,6 +3762,8 @@ export function createTextForgeWorkbenchController() {
     disposePersistedWorkspace();
     emit();
 
+    let baseWorkspace;
+
     try {
       if (options.resetStorage) {
         await resetWorkspaceDexieStorage({ databaseName: workspaceDatabaseName });
@@ -3712,18 +3780,49 @@ export function createTextForgeWorkbenchController() {
         },
       });
       persistedWorkspace = hydrated.workspace;
+      baseWorkspace = hydrated.workspace;
       const sanitizedWorkspace = sanitizePersistentWorkspaceState(hydrated.workspace.snapshot());
       if (sanitizedWorkspace.changed) {
         hydrated.workspace.replaceState(sanitizedWorkspace.state);
         await hydrated.workspace.persistNow('workspace.strip-bundled-overlay');
       }
-      workspace = createWorkspaceOverlayService(hydrated.workspace, {
-        overlay: () => createBundledWorkspaceOverlayState(hydrated.workspace.snapshot()),
-      });
       hydrationSource = hydrated.hydrationSource;
-      unsubscribePersistence = hydrated.workspace.subscribePersistence(() => emit());
+    } catch (error) {
+      if (!isWorkspaceStorageError(error)) {
+        throw error;
+      }
+
+      storageFailure = createStorageFailure(error);
+      if (isWorkspaceStorageResetRequired(error)) {
+        workspace = createEmptyWorkspaceService();
+        hydrationSource = 'seed';
+        runtime.status = 'error';
+        state.selectedWorkspaceItemId = undefined;
+        state.utilityPaneOpen = true;
+        state.utilitySectionId = 'storage';
+        suspendWorkbenchUiStatePersistence = false;
+        emit();
+        return;
+      }
+
+      baseWorkspace = createTransientWorkspaceService(error);
+      persistedWorkspace = baseWorkspace;
+      hydrationSource = 'transient';
+      state.utilityPaneOpen = true;
+      state.utilitySectionId = 'storage';
+    }
+
+    applyWorkspaceOverlay(baseWorkspace);
+    unsubscribePersistence = baseWorkspace.subscribePersistence?.(() => emit());
+
+    try {
       if (!runtime.skipLuaPreloadOnce) {
-        reloadLuaAutomation();
+        try {
+          reloadLuaAutomation();
+        } catch (error) {
+          console.error('TextForge Lua automation preload failed.', error);
+          showTransientFlag('Lua automation skipped', error?.message ?? 'Lua automation preload failed.');
+        }
       }
       runtime.status = 'ready';
       tracePreview('hydrateWorkspace:ready', {
@@ -3759,22 +3858,18 @@ export function createTextForgeWorkbenchController() {
         tracePreview('hydrateWorkspace:initial-open-skipped', { restoredSessions });
         emit();
       }
-      await applyWorkbenchBootstrapOptions();
+      try {
+        await applyWorkbenchBootstrapOptions();
+      } catch (error) {
+        console.error('TextForge startup bootstrap failed.', error);
+        showTransientFlag('Startup action skipped', error?.message ?? 'A startup command failed.');
+      }
       suspendWorkbenchUiStatePersistence = false;
       persistWorkbenchUiState();
     } catch (error) {
-      workspace = createWorkspaceService({
-        workspaceId: 'textforge-shell',
-        name: 'TextForge Workspace',
-        now: createTimestampFactory(),
-        idFactory: createSequentialIdFactory('workspace'),
-      });
-      hydrationSource = 'seed';
-      runtime.status = 'error';
-      storageFailure = createStorageFailure(error);
-      state.selectedWorkspaceItemId = undefined;
-      state.utilityPaneOpen = true;
-      state.utilitySectionId = 'storage';
+      console.error('TextForge workspace startup failed after storage hydration.', error);
+      runtime.status = 'ready';
+      showTransientFlag('Startup restore skipped', error?.message ?? 'A startup restore step failed.');
       suspendWorkbenchUiStatePersistence = false;
       emit();
     }
@@ -3834,7 +3929,7 @@ export function createTextForgeWorkbenchController() {
             : 'idle',
         driver: 'dexie',
         databaseName: workspaceDatabaseName,
-        schemaVersion: 1,
+        schemaVersion: workspaceDexieSchemaVersion,
         browserManaged: true,
         lastSavedAt: undefined,
         pendingReason: runtime.status === 'loading'

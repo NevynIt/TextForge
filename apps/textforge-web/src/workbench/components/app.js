@@ -897,6 +897,9 @@ function StoragePaneView({ controller, snapshot }) {
     : persistenceStatus.state === 'persisting'
       ? 'info'
       : 'success';
+  const storageEngine = persistenceStatus.browserManaged === false
+    ? `${persistenceStatus.driver} / transient`
+    : `${persistenceStatus.driver} / IndexedDB`;
 
   return element(
     'div',
@@ -952,10 +955,17 @@ function StoragePaneView({ controller, snapshot }) {
         children: element('p', null, snapshot.runtime.storageFailure?.detail ?? 'Reset browser storage to recover.'),
       })
       : null,
+    snapshot.runtime.status === 'ready' && persistenceStatus.state === 'error'
+      ? element(TextForgeCallout, {
+        tone: 'warning',
+        title: snapshot.runtime.storageFailure?.title ?? 'Workspace storage unavailable',
+        children: element('p', null, snapshot.runtime.storageFailure?.detail ?? 'Changes are available for this session but are not being saved to IndexedDB.'),
+      })
+      : null,
     element(
       'dl',
       { className: 'tf-meta-list tf-storage__meta' },
-      element('div', null, element('dt', null, 'Storage engine'), element('dd', null, `${persistenceStatus.driver} / IndexedDB`)),
+      element('div', null, element('dt', null, 'Storage engine'), element('dd', null, storageEngine)),
       element('div', null, element('dt', null, 'Database'), element('dd', null, persistenceStatus.databaseName)),
       element('div', null, element('dt', null, 'Hydration source'), element('dd', null, snapshot.runtime.hydrationSource)),
       element('div', null, element('dt', null, 'Save state'), element('dd', null, persistenceStatus.state)),
