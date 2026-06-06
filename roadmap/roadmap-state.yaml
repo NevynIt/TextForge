@@ -2495,6 +2495,23 @@
         "legacy source: Future optional"
       ],
       "validation_checklist": null
+    },
+    "WP-PKG-MODULARITY-01": {
+      "title": "Package root modularization",
+      "path": "workpackages/WP-PKG-MODULARITY-01.md",
+      "module": "MOD-ROADMAP-GOVERNANCE",
+      "status": "in-progress",
+      "type": "Refactor / maintainability",
+      "depends_on": [],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0002"
+      ],
+      "archive_trace": [],
+      "validation_checklist": null
     }
   },
   "releases": {
@@ -2625,6 +2642,13 @@
       "archive_trace": [
         "archive/rapid/RAPID-up-to-2026-06-05.md"
       ]
+    },
+    "ADR-0002": {
+      "title": "Package root modularization",
+      "status": "accepted",
+      "path": "decisions/ADR-0002-package-root-modularization.md",
+      "supersedes": [],
+      "archive_trace": []
     }
   }
 }

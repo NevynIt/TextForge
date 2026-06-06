@@ -4,7 +4,7 @@
 
 | Module | Title | Workpackages |
 |---|---|---|
-| `MOD-ROADMAP-GOVERNANCE` | Roadmap governance | `WP-ROADMAP-CLEANUP`, `WP-RELEASE-GATE`, `WP-REPO-SHAREPOINT` |
+| `MOD-ROADMAP-GOVERNANCE` | Roadmap governance | `WP-ROADMAP-CLEANUP`, `WP-RELEASE-GATE`, `WP-REPO-SHAREPOINT`, `WP-PKG-MODULARITY-01` |
 | `MOD-WORKSPACE-RESOURCES` | Workspace resources | `WP-RES-01`, `WP-RES-02`, `WP-RES-03`, `WP-SERVICES-LOCAL` |
 | `MOD-REPOSITORY` | Repository | `WP-REPO-01` |
 | `MOD-ITM` | ITM | `WP-ITM-01`, `WP-ITM-02` |

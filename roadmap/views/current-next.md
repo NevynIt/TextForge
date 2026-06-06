@@ -8,6 +8,7 @@
 |---|---|---|---|
 | `WP-TABLES` | Tables, catalogues, and matrices | blocked | `MOD-TABLES` |
 | `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | ready | `MOD-EA-VIEWER` |
+| `WP-PKG-MODULARITY-01` | Package root modularization | in-progress | `MOD-ROADMAP-GOVERNANCE` |
 
 ## Next Candidates
 
