@@ -43,6 +43,10 @@ if (!fileIndexHtml.includes('./assets/textforge.css')) {
   throw new Error('public/index.html must load the built shell stylesheet');
 }
 
+if (!packageJson.includes('"build:single"') || !packageJson.includes('node scripts/create-single-file-dist.mjs')) {
+  throw new Error('package.json must expose a separate build:single target for single-file distribution');
+}
+
 // public/index.html must include a Content Security Policy meta tag for file:// distribution
 if (!/http-equiv\s*=\s*["']Content-Security-Policy["']/i.test(fileIndexHtml) && !/Content-Security-Policy/i.test(fileIndexHtml)) {
   throw new Error('public/index.html must include a Content-Security-Policy meta tag for file:// launch');
