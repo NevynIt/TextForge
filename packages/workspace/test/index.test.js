@@ -276,6 +276,25 @@ test('workspace badges stay deterministic and duplicate stored badges are repair
   assert.equal(createWorkspaceTreeItems(restoredState).every((item) => Boolean(item.badge?.key)), true);
 });
 
+test('workspace tree folder counts derive from the live overlay state', () => {
+  const baseWorkspace = createWorkspaceService({
+    workspaceId: 'workspace-overlay-count-test',
+    idFactory: createSequentialIdFactory('entry'),
+    now: fixedNow,
+  });
+  const textforgeFolder = baseWorkspace.createFolder({ path: '/.textforge' });
+  const overlaidWorkspace = createWorkspaceOverlayService(baseWorkspace, {
+    overlay: () => createBundledOverlayState(textforgeFolder.id),
+  });
+
+  const items = createWorkspaceTreeItems(overlaidWorkspace.snapshot());
+  const resourcesFolder = items.find((item) => item.path === '/.textforge/resources');
+  const docsFolder = items.find((item) => item.path === '/.textforge/resources/docs');
+
+  assert.equal(resourcesFolder?.detail, '1 item');
+  assert.equal(docsFolder?.detail, '1 item');
+});
+
 test('workspace contribution manifest exposes the Phase 3.3 shell commands', () => {
   const manifest = createWorkspaceContributionManifest();
 
