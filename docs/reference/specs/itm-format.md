@@ -412,7 +412,9 @@ Ids are used for:
 - stable generated outputs;
 - visual editing write-back.
 
-Ids must be unique within their namespace unless an explicit overlay is declared. Duplicate ids in the same namespace are validation errors by default. Namespace and overlay rules are described later.### Local ids and canonical identity
+Ids must be unique within their namespace unless an explicit overlay is declared. Duplicate ids in the same namespace are validation errors by default. Namespace and overlay rules are described later.
+
+### Local ids and canonical identity
 
 The `&id` written on a node is the id used for authoring and local link resolution in the current document or namespace.
 
@@ -1087,7 +1089,9 @@ Namespace rules:
 - imported packages should not pollute the current namespace unless explicitly used;
 - namespace aliases should be stable within a document;
 - namespace URIs identify semantic ownership, not necessarily fetchable URLs;
-- namespace-qualified names should use `::`, not `:`.### Namespace scope
+- namespace-qualified names should use `::`, not `:`.
+
+### Namespace scope
 
 A `%namespace` declaration binds a prefix within the current file or package module.
 
@@ -1158,7 +1162,9 @@ Type declarations can support:
 - editor completion;
 - model navigation;
 - transformation to external formats;
-- semantic interoperability.### Explicit types and inferred types
+- semantic interoperability.
+
+### Explicit types and inferred types
 
 A type explicitly written on an entity or relationship always wins over profile/context inference.
 
@@ -1556,7 +1562,9 @@ Rules may also check model structure:
 
 A rule pipeline is a sequence of validation steps. Steps may be built into the implementation, supplied by a plugin, or implemented in a scripting engine.
 
-Validation should be able to produce diagnostics without changing the model.### Scope and resolution validation
+Validation should be able to produce diagnostics without changing the model.
+
+### Scope and resolution validation
 
 Validation also covers the language's composition and activation model.
 
@@ -2864,7 +2872,9 @@ A tolerant parser may preserve unknown constructs and produce diagnostics instea
 
 Tolerant mode is useful for authoring and migration.
 
-Strict mode is useful for CI/CD, publication, and controlled repositories.### Context-aware parser
+Strict mode is useful for CI/CD, publication, and controlled repositories.
+
+### Context-aware parser
 
 A context-aware parser supports:
 
