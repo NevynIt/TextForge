@@ -409,6 +409,28 @@
         "archive/registers/package-guides/ui.md",
         "archive/registers/package-guides/markdown.md"
       ]
+    },
+    "MOD-DEVELOPER-DOCUMENTATION": {
+      "title": "Developer documentation and API governance",
+      "path": "modules/developer-documentation.md",
+      "status": "defined",
+      "owns": [
+        "developer-facing API reference generation",
+        "TSDoc comment conventions for exported APIs",
+        "TypeDoc documentation workflow",
+        "API Extractor API report workflow",
+        "package API review discipline"
+      ],
+      "depends_on": [
+        "MOD-ROADMAP-GOVERNANCE"
+      ],
+      "enables": [
+        "WP-API-DOCS-01",
+        "WP-API-GOV-01"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0005-developer-api-documentation-governance.md"
+      ]
     }
   },
   "workpackages": {
@@ -2558,6 +2580,50 @@
       ],
       "archive_trace": [],
       "validation_checklist": null
+    },
+    "WP-API-DOCS-01": {
+      "title": "Public API documentation with TSDoc and TypeDoc",
+      "path": "workpackages/WP-API-DOCS-01.md",
+      "module": "MOD-DEVELOPER-DOCUMENTATION",
+      "status": "defined",
+      "type": "Developer tooling / documentation",
+      "depends_on": [
+        "WP-ROADMAP-CLEANUP"
+      ],
+      "enables": [
+        "WP-API-GOV-01"
+      ],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0005"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0005-developer-api-documentation-governance.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-API-DOCS-01-public-api-documentation.md"
+    },
+    "WP-API-GOV-01": {
+      "title": "API surface governance with API Extractor",
+      "path": "workpackages/WP-API-GOV-01.md",
+      "module": "MOD-DEVELOPER-DOCUMENTATION",
+      "status": "candidate",
+      "type": "Developer tooling / governance",
+      "depends_on": [
+        "WP-API-DOCS-01"
+      ],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0005"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0005-developer-api-documentation-governance.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-API-GOV-01-api-surface-governance.md"
     }
   },
   "releases": {
@@ -2708,6 +2774,13 @@
       "title": "TextForge Lua Virtual Host for Fengari",
       "status": "accepted",
       "path": "decisions/ADR-0004-textforge-lua-virtual-host.md",
+      "supersedes": [],
+      "archive_trace": []
+    },
+    "ADR-0005": {
+      "title": "Developer API documentation and API surface governance",
+      "status": "proposed",
+      "path": "decisions/ADR-0005-developer-api-documentation-governance.md",
       "supersedes": [],
       "archive_trace": []
     }

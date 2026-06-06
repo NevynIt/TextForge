@@ -7,9 +7,9 @@
 | Status | Count |
 |---|---:|
 | blocked | 1 |
-| candidate | 14 |
+| candidate | 15 |
 | deferred | 1 |
-| defined | 32 |
+| defined | 33 |
 | implemented | 1 |
 | ready | 1 |
 | validated | 24 |
@@ -92,3 +92,5 @@
 | `WP-DIST-PWA` | PWA/local packaged variant investigation | candidate | `MOD-SECURITY-DISTRIBUTION` |
 | `WP-PKG-MODULARITY-01` | Package root modularization | validated | `MOD-ROADMAP-GOVERNANCE` |
 | `WP-WEB-WORKBENCH-MODULARITY-01` | Web workbench modularization | validated | `MOD-SURFACES-UI` |
+| `WP-API-DOCS-01` | Public API documentation with TSDoc and TypeDoc | defined | `MOD-DEVELOPER-DOCUMENTATION` |
+| `WP-API-GOV-01` | API surface governance with API Extractor | candidate | `MOD-DEVELOPER-DOCUMENTATION` |
