@@ -6,6 +6,7 @@ import { defineConfig } from 'vite';
 const require = createRequire(import.meta.url);
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
 const loaderEntry = resolve(rootDir, 'src/scriptLoader.js');
+const browserOsShim = resolve(rootDir, 'src/node-compat/os.js');
 const xtermCssEntry = resolve(
   require.resolve('@xterm/xterm/package.json'),
   '../css/xterm.css',
@@ -20,6 +21,7 @@ export default defineConfig(({ command }) => ({
   resolve: {
     alias: {
       '@textforge/vendor/xterm.css': xtermCssEntry,
+      os: browserOsShim,
     },
   },
   build: command === 'build'
