@@ -561,10 +561,65 @@ function parseScalarString(value) {
   return void 0;
 }
 function parseStringArray(value) {
+  if (Array.isArray(value)) {
+    return value.map((entry) => parseScalarString(entry)).filter((entry) => Boolean(entry));
+  }
+  const scalar = parseScalarString(value);
+  return scalar ? [scalar] : void 0;
+}
+function compactRecord(record) {
+  const result = {};
+  for (const [key, value] of Object.entries(record)) {
+    if (value !== void 0 && (!Array.isArray(value) || value.length > 0)) {
+      result[key] = value;
+    }
+  }
+  return Object.keys(result).length > 0 ? result : void 0;
+}
+function parseContextDefaults(record) {
+  const defaults = asRecord(record?.defaults) ?? {};
+  return compactRecord({
+    rootType: parseScalarString(defaults.rootType),
+    childType: parseScalarString(defaults.childType),
+    relationshipType: parseScalarString(defaults.relationshipType)
+  });
+}
+function parseContextInferenceRule(entry) {
+  const record = asRecord(entry);
+  if (!record) {
+    return void 0;
+  }
+  const typeRef = parseScalarString(record.type) ?? parseScalarString(record.typeRef);
+  return compactRecord({
+    id: parseScalarString(record.id),
+    when: asRecord(record.when) ?? {},
+    type: typeRef,
+    typeRef
+  });
+}
+function parseContextInferenceRuleArray(value) {
   if (!Array.isArray(value)) {
     return void 0;
   }
-  return value.map((entry) => parseScalarString(entry)).filter((entry) => Boolean(entry));
+  return value.map((entry) => parseContextInferenceRule(entry)).filter((entry) => Boolean(entry));
+}
+function parseContextInfer(record) {
+  const infer = asRecord(record?.infer) ?? {};
+  return compactRecord({
+    nodes: parseContextInferenceRuleArray(infer.nodes),
+    relationships: parseContextInferenceRuleArray(infer.relationships)
+  });
+}
+function parseContextActivate(record) {
+  const activate = asRecord(record?.activate);
+  if (!activate) {
+    return void 0;
+  }
+  return compactRecord({
+    rules: parseStringArray(activate.rules),
+    styles: parseStringArray(activate.styles),
+    viewpoints: parseStringArray(activate.viewpoints)
+  });
 }
 function parseViewpointParameters(value) {
   const parameters = [];
@@ -1536,140 +1591,6 @@ function collectDuplicateMappingKeys(rawText) {
   }
   return [...counts.entries()].filter(([, count]) => count > 1).map(([key]) => key);
 }
-function isRangeWithinActivation(range, activation) {
-  const start = activation.source;
-  const end = activation.endSource ?? activation.range;
-  if (!range || !start || !end) {
-    return false;
-  }
-  if (start.file && range.file && start.file !== range.file) {
-    return false;
-  }
-  if (range.startLine < start.startLine) {
-    return false;
-  }
-  if (range.startLine === start.startLine && range.startColumn < start.startColumn) {
-    return false;
-  }
-  if (range.startLine > end.endLine) {
-    return false;
-  }
-  if (range.startLine === end.endLine && range.startColumn > end.endColumn) {
-    return false;
-  }
-  return true;
-}
-function resolveContextMappedValue(context, identityMaps, key) {
-  const rawValue = parseScalarString(context.values?.[key]);
-  if (!rawValue) {
-    return void 0;
-  }
-  const idmapName = parseScalarString(context.values?.idmap);
-  const identityMap = idmapName ? identityMaps.get(idmapName) : void 0;
-  return parseScalarString(identityMap?.entries?.[rawValue]) ?? rawValue;
-}
-function isContextAvailableForActivation(context, activation, document) {
-  const packageRef = parseScalarString(context.values?.package);
-  if (!packageRef) {
-    return true;
-  }
-  const contextFile = context.source?.file;
-  const activationFile = activation.source?.file;
-  if ((!contextFile && !activationFile) || contextFile && activationFile && contextFile === activationFile) {
-    return true;
-  }
-  const activationLine = activation.source?.startLine ?? Number.MAX_SAFE_INTEGER;
-  return (document.packageUsages ?? []).some((usage) => {
-    if (usage.packageRef !== `${packageRef}.contexts`) {
-      return false;
-    }
-    if (usage.source?.file && activation.source?.file && usage.source.file !== activation.source.file) {
-      return false;
-    }
-    return (usage.source?.startLine ?? Number.MAX_SAFE_INTEGER) <= activationLine;
-  });
-}
-function applyContextInference(document) {
-  const identityMaps = new Map((document.identityMaps ?? []).map((identityMap) => [identityMap.name, identityMap]).filter(([name]) => Boolean(name)));
-  const contexts = new Map((document.contexts ?? []).map((context) => [context.name, context]));
-  for (const context of document.contexts ?? []) {
-    const idmapName = parseScalarString(context.values?.idmap);
-    if (idmapName && !identityMaps.has(idmapName)) {
-      pushDiagnostic(
-        document,
-        "error",
-        `Context '${context.name}' references missing idmap '${idmapName}'.`,
-        context.source?.startLine ?? 1,
-        "",
-        context.source,
-        { code: "itm.context.idmap-unresolved" }
-      );
-    }
-  }
-  for (const activation of document.scopedActivations ?? []) {
-    if (activation.status === "unmatched-end") {
-      continue;
-    }
-    const context = contexts.get(activation.name);
-    if (!context || !isContextAvailableForActivation(context, activation, document)) {
-      if (!context && (document.includes?.length ?? 0) > 0) {
-        continue;
-      }
-      pushDiagnostic(
-        document,
-        "error",
-        `Scoped context '${activation.name}' is not defined or active.`,
-        activation.source?.startLine ?? 1,
-        "",
-        activation.source,
-        { code: "itm.context.unresolved" }
-      );
-      continue;
-    }
-    const rootType = resolveContextMappedValue(context, identityMaps, "root");
-    const childType = resolveContextMappedValue(context, identityMaps, "child");
-    const relationshipType = resolveContextMappedValue(context, identityMaps, "relationship");
-    const contextPackageRef = parseScalarString(context.values?.package);
-    const packageLocalContext = Boolean(
-      contextPackageRef && ((!context.source?.file && !activation.source?.file) || context.source?.file && activation.source?.file && context.source.file === activation.source.file)
-    );
-    const packageIndependentFile = packageLocalContext ? `__itm_context__:${contextPackageRef}:${context.name}` : void 0;
-    if (rootType || childType) {
-      for (const entity of document.entities) {
-        if (entity.typeRef || !isRangeWithinActivation(entity.sourceRange, activation)) {
-          continue;
-        }
-        const parent = entity.parentId ? document.entities.find((candidate) => candidate.uid === entity.parentId) : void 0;
-        const parentRange = parent?.sourceRange ? { ...parent.sourceRange, file: activation.source?.file } : void 0;
-        const parentInScope = parent ? isRangeWithinActivation(parentRange, activation) : false;
-        const inferredType = parentInScope ? childType : rootType;
-        if (inferredType) {
-          entity.typeRef = inferredType;
-          if (packageIndependentFile && entity.sourceRange) {
-            entity.sourceRange = {
-              ...entity.sourceRange,
-              file: packageIndependentFile
-            };
-          }
-        }
-      }
-    }
-    if (relationshipType) {
-      for (const relationship of document.relationships) {
-        if (relationship.typeRef !== "related_to" || !isRangeWithinActivation(relationship.sourceRange, activation)) {
-          continue;
-        }
-        relationship.typeRef = relationshipType;
-        if (packageIndependentFile && relationship.sourceRange) {
-          relationship.sourceRange = {
-            ...relationship.sourceRange,
-            file: packageIndependentFile
-          };
-        }
-      }
-    }
-  }
-}
 function pruneEmptyCollections(document) {
   const result = { ...document };
   for (const key of [
@@ -2206,12 +2127,14 @@ ${block.rawText}`;
         const requiredAttributes = parseStringArray(record.requiredAttributes);
         const optionalAttributes = parseStringArray(record.optionalAttributes);
         const superTypeRefs = parseStringArray(record.extends) ?? parseStringArray(record.superTypeRefs);
+        const abstract = record.abstract === true;
         const attributes = createAttributeBag(record);
         const entityType = {
           uid: `entity-type:${sanitizeUidSegment(entityTypeName)}`,
           kind: "entity-type",
           name: entityTypeName,
           ...entityTypeDescription ? { description: entityTypeDescription } : {},
+          ...abstract ? { abstract } : {},
           ...requiredAttributes ? { requiredAttributes } : {},
           ...optionalAttributes ? { optionalAttributes } : {},
           ...superTypeRefs ? { superTypeRefs } : {},
@@ -2229,12 +2152,14 @@ ${block.rawText}`;
         const inverseTypeRef = parseScalarString(record.inverseType);
         const requiredAttributes = parseStringArray(record.requiredAttributes);
         const optionalAttributes = parseStringArray(record.optionalAttributes);
+        const abstract = record.abstract === true;
         const attributes = createAttributeBag(record);
         const relationshipType = {
           uid: `relationship-type:${sanitizeUidSegment(relationshipTypeName)}`,
           kind: "relationship-type",
           name: relationshipTypeName,
           ...relationshipTypeDescription ? { description: relationshipTypeDescription } : {},
+          ...abstract ? { abstract } : {},
           ...superTypeRefs ? { superTypeRefs } : {},
           ...sourceTypeRefs ? { sourceTypeRefs } : {},
           ...targetTypeRefs ? { targetTypeRefs } : {},
@@ -2376,6 +2301,11 @@ ${block.rawText}`;
           kind: "context",
           name: contextName || "",
           values: values ?? {},
+          ...parseStringArray(values?.extends) ? { superContextRefs: parseStringArray(values?.extends) } : {},
+          ...parseScalarString(values?.defaultNamespace) ? { defaultNamespace: parseScalarString(values?.defaultNamespace) } : {},
+          ...parseContextDefaults(values) ? { defaults: parseContextDefaults(values) } : {},
+          ...parseContextInfer(values) ? { infer: parseContextInfer(values) } : {},
+          ...parseContextActivate(values) ? { activate: parseContextActivate(values) } : {},
           rawText,
           source: directiveSource,
           ...bodySource ? { bodySource } : {}
@@ -2736,7 +2666,6 @@ ${block.rawText}`;
       { code: "itm.context.unclosed" }
     );
   }
-  applyContextInference(document);
   const entityByQualifiedId = /* @__PURE__ */ new Map();
   const entityByUnqualifiedId = /* @__PURE__ */ new Map();
   for (const entity of document.entities) {
@@ -2983,7 +2912,6 @@ function mergeDocuments(root, included) {
     ...directives ? { directives } : {},
     ...diagnostics ? { diagnostics } : {}
   };
-  applyContextInference(mergedDocument);
   return mergedDocument;
 }
 function asRecord2(value) {
@@ -5102,7 +5030,16 @@ function identityMapEntries(identityMap) {
   return identityMap.entries ?? identityMap.values ?? {};
 }
 function contextValues(context) {
-  return context.values ?? context.body ?? {};
+  if (context.values ?? context.body) {
+    return context.values ?? context.body ?? {};
+  }
+  return {
+    ...context.superContextRefs ? { extends: context.superContextRefs } : {},
+    ...context.defaultNamespace ? { defaultNamespace: context.defaultNamespace } : {},
+    ...context.defaults ? { defaults: context.defaults } : {},
+    ...context.infer ? { infer: context.infer } : {},
+    ...context.activate ? { activate: context.activate } : {}
+  };
 }
 function serializeScopedActivation(activation) {
   const name = activation.name || activation.endName || "";
@@ -5152,8 +5089,9 @@ ${formatBlock(toYamlValue(contextValues(context)))}`);
   }
   for (const entityType of sortBySource(document.entityTypes ?? [])) {
     const body = {
-      ...attributeValuesWithoutKeys(entityType.attributes, ["description", "requiredAttributes", "optionalAttributes", "extends", "superTypeRefs"]),
+      ...attributeValuesWithoutKeys(entityType.attributes, ["description", "abstract", "requiredAttributes", "optionalAttributes", "extends", "superTypeRefs"]),
       ...entityType.description ? { description: entityType.description } : {},
+      ...entityType.abstract ? { abstract: true } : {},
       ...entityType.requiredAttributes ? { requiredAttributes: entityType.requiredAttributes } : {},
       ...entityType.optionalAttributes ? { optionalAttributes: entityType.optionalAttributes } : {},
       ...entityType.superTypeRefs ? { extends: entityType.superTypeRefs } : {}
@@ -5163,8 +5101,9 @@ ${formatBlock(body)}` : ""}`);
   }
   for (const relationshipType of sortBySource(document.relationshipTypes ?? [])) {
     const body = {
-      ...attributeValuesWithoutKeys(relationshipType.attributes, ["description", "extends", "superTypeRefs", "sourceTypes", "targetTypes", "inverseType", "requiredAttributes", "optionalAttributes"]),
+      ...attributeValuesWithoutKeys(relationshipType.attributes, ["description", "abstract", "extends", "superTypeRefs", "sourceTypes", "targetTypes", "inverseType", "requiredAttributes", "optionalAttributes"]),
       ...relationshipType.description ? { description: relationshipType.description } : {},
+      ...relationshipType.abstract ? { abstract: true } : {},
       ...relationshipType.superTypeRefs ? { extends: relationshipType.superTypeRefs } : {},
       ...relationshipType.sourceTypeRefs ? { sourceTypes: relationshipType.sourceTypeRefs } : {},
       ...relationshipType.targetTypeRefs ? { targetTypes: relationshipType.targetTypeRefs } : {},

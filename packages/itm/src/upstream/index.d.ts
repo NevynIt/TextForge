@@ -105,11 +105,49 @@ interface ItmIdentityMap {
     source?: ItmSourceRange;
     bodySource?: ItmSourceRange;
 }
+interface ItmContextDefaults {
+    rootType?: ItmQualifiedName;
+    childType?: ItmQualifiedName;
+    relationshipType?: ItmQualifiedName;
+}
+interface ItmContextInferenceCondition {
+    untyped?: boolean;
+    position?: "root" | "child" | "leaf";
+    depth?: number;
+    parentType?: ItmQualifiedName;
+    sourceType?: ItmQualifiedName;
+    targetType?: ItmQualifiedName;
+    labelMatches?: string;
+    hasTag?: string;
+    hasAttribute?: string;
+    attributeEquals?: Record<string, ItmValue>;
+    [key: string]: ItmValue | undefined;
+}
+interface ItmContextInferenceRule {
+    id?: string;
+    when: ItmContextInferenceCondition;
+    type: ItmQualifiedName;
+    typeRef?: ItmQualifiedName;
+}
+interface ItmContextInference {
+    nodes?: ItmContextInferenceRule[];
+    relationships?: ItmContextInferenceRule[];
+}
+interface ItmContextActivationSet {
+    rules?: string[];
+    styles?: string[];
+    viewpoints?: string[];
+}
 interface ItmContext {
     uid: ItmUid;
     kind: "context";
     name: string;
     values: Record<string, ItmValue>;
+    superContextRefs?: string[];
+    defaultNamespace?: string;
+    defaults?: ItmContextDefaults;
+    infer?: ItmContextInference;
+    activate?: ItmContextActivationSet;
     rawText?: string;
     source?: ItmSourceRange;
     bodySource?: ItmSourceRange;
@@ -187,6 +225,7 @@ interface ItmEntityType extends ItmElement {
     name: ItmQualifiedName;
     namespacePrefix?: string;
     description?: string;
+    abstract?: boolean;
     requiredAttributes?: string[];
     optionalAttributes?: string[];
     superTypeRefs?: ItmQualifiedName[];
@@ -197,6 +236,7 @@ interface ItmRelationshipType extends ItmElement {
     name: ItmQualifiedName;
     namespacePrefix?: string;
     description?: string;
+    abstract?: boolean;
     superTypeRefs?: ItmQualifiedName[];
     sourceTypeRefs?: ItmQualifiedName[];
     targetTypeRefs?: ItmQualifiedName[];
@@ -1177,4 +1217,4 @@ declare function readStdAsset(key: string): ItmStdAsset | undefined;
 declare function loadStdAsset(key: string): Promise<LoadedItmStdAsset | undefined>;
 declare function createStdIncludeProvider(): ItmIncludeProvider;
 
-export { type ArchimateAllowedRelationship, type CanonicalGraphEdge, type CanonicalGraphModel, type CanonicalGraphNode, type CanonicalGraphOrganization, type CanonicalGraphView, type ComposeDocumentOptions, type CreateCanonicalGraphOptions, type ExportArchimateExchangeOptions, type ExportBpmnXmlOptions, type ImportArchimateExchangeAsItmOptions, type ImportArchimateExchangeOptions, type ImportBpmnXmlAsItmOptions, type ImportBpmnXmlOptions, type ItmAttributeBag, type ItmAttributePatch, type ItmAttributePatchOperation, type ItmBlankLineTrivia, type ItmComment, type ItmCommentPlacement, type ItmContext, type ItmCreateEntityPatchOperation, type ItmCreateRelationshipPatchOperation, type ItmDeleteAttributePatchOperation, type ItmDeleteEntityPatchOperation, type ItmDeleteRelationshipPatchOperation, type ItmDescription, type ItmDescriptionPatch, type ItmDescriptionPatchOperation, type ItmDiagnostic, ItmDiagnosticError, type ItmDirective, type ItmDocument, ItmDocumentBuilder, type ItmElement, type ItmEmbeddedBlock, type ItmEntity, type ItmEntityDraft, type ItmEntityMoveInput, type ItmEntityRenameInput, type ItmEntityType, type ItmEntityTypeDraft, type ItmEntityTypeUpdateInput, type ItmExpandedCollapsedDelta, type ItmGeneratedAsset, type ItmGeneratedAssetKind, type ItmHiddenDelta, type ItmIdentityMap, type ItmInclude, type ItmIncludeDraft, type ItmIncludeProvider, type ItmIncludeProviderContext, type ItmIncludeStatus, type ItmLabelOverrideDelta, type ItmLoadedIncludeSource, type ItmLocalName, type ItmMetadata, type ItmModelPatch, type ItmMovedDelta, type ItmNamespace, type ItmOverlay, type ItmOverlayDraft, type ItmOverlayPolicy, type ItmOverlayUpdateInput, type ItmPackage, type ItmPackageDraft, type ItmPackageUpdateInput, type ItmPackageUsage, type ItmPackageUsageDraft, type ItmPackageUsageScope, type ItmPatchOperation, type ItmPatchSource, type ItmPinnedDelta, type ItmPipeline, type ItmPipelineInput, type ItmPipelineOperation, type ItmPipelineStep, type ItmPipelineStepDraft, type ItmPluginCapability, type ItmPluginProvider, type ItmPluginRequirement, type ItmPluginRequirementDraft, type ItmPluginRequirementUpdateInput, type ItmPrimitive, type ItmProcessingResult, type ItmQualifiedName, type ItmRelationship, type ItmRelationshipDraft, type ItmRelationshipKind, type ItmRelationshipType, type ItmRelationshipTypeDraft, type ItmRelationshipTypeUpdateInput, type ItmRelationshipUpdateInput, type ItmRenameEntityPatchOperation, type ItmRepository, type ItmRepositoryDraft, type ItmRepositoryKind, type ItmRepositoryUpdateInput, type ItmScopedActivation, type ItmScopedActivationStatus, type ItmSelector, type ItmSelectorContext, type ItmSelectorExpression, type ItmSelectorExpressionKind, type ItmSetAttributePatchOperation, type ItmSetEntityTypePatchOperation, type ItmSeverity, type ItmSourceProvider, type ItmSourceRange, type ItmSourceRequest, type ItmSourceSyntax, type ItmStdAsset, type ItmStyleOrigin, type ItmStyleOverrideDelta, type ItmStyleRule, type ItmStyleRuleDraft, type ItmStyleRuleUpdateInput, type ItmTrivia, type ItmTypeHierarchy, type ItmUid, type ItmUpdateViewDeltaPatchOperation, type ItmValidationMode, type ItmValidationRule, type ItmValidationRuleDraft, type ItmValidationRuleUpdateInput, type ItmValue, type ItmView, type ItmViewDelta, type ItmViewDraft, type ItmViewUpdateInput, type ItmViewpoint, type ItmViewpointDraft, type ItmViewpointParameter, type ItmViewpointParameterType, type ItmViewpointUpdateInput, type LoadedItmStdAsset, type ParseItmOptions, type ResolvedItmDiagnostic, type ResolvedItmDocument, type ResolvedItmDocumentIndexes, type ResolvedItmEntity, type ResolvedItmEntityType, type ResolvedItmInclude, type ResolvedItmOverlay, type ResolvedItmPackage, type ResolvedItmPackageUsage, type ResolvedItmRelationship, type ResolvedItmRelationshipType, type ResolvedItmSelectorContext, type ResolvedItmStyleRule, type ResolvedItmValidationRule, type ResolvedItmView, type ResolvedItmViewpoint, type SerializeItmOptions, type ValidateArchimateOptions, composeDocument, composeDocumentResult, composeText, createAttributeBag, createBaseUrlIncludeProvider, createBaseUrlSourceProvider, createCanonicalGraph, createDocument, createDocumentIndexes, createEntity, createRelationship, createStdIncludeProvider, createTypeHierarchy, expandEntityTypeSelection, expandRelationshipTypeSelection, exportArchiMateExchange, exportArchiMateExchangeResult, exportBpmnXml, exportBpmnXmlResult, getEntityByUid, getRelationshipByUid, getStableRelationshipId, hasErrorDiagnostics, importArchiMateExchange, importArchiMateExchangeAsItm, importArchiMateExchangeAsItmResult, importArchiMateExchangeResult, importBpmnXml, importBpmnXmlAsItm, importBpmnXmlAsItmResult, importBpmnXmlResult, isEntityOfType, isRelationshipOfType, isResolvedDocument, listStdAssets, loadStdAsset, parseDocument, parseDocumentResult, parseDocumentResultAsync, parseEffectiveDocument, parseItm, parseItmResult, readStdAsset, resolveDocument, serializeDocument, serializeDocumentResult, serializeItm, throwOnErrorDiagnostics, validateArchiMateExchangeReadiness, validateArchiMateRules, validateBpmnExportReadiness, validateBpmnRules };
+export { type ArchimateAllowedRelationship, type CanonicalGraphEdge, type CanonicalGraphModel, type CanonicalGraphNode, type CanonicalGraphOrganization, type CanonicalGraphView, type ComposeDocumentOptions, type CreateCanonicalGraphOptions, type ExportArchimateExchangeOptions, type ExportBpmnXmlOptions, type ImportArchimateExchangeAsItmOptions, type ImportArchimateExchangeOptions, type ImportBpmnXmlAsItmOptions, type ImportBpmnXmlOptions, type ItmAttributeBag, type ItmAttributePatch, type ItmAttributePatchOperation, type ItmBlankLineTrivia, type ItmComment, type ItmCommentPlacement, type ItmContext, type ItmContextActivationSet, type ItmContextDefaults, type ItmContextInference, type ItmContextInferenceCondition, type ItmContextInferenceRule, type ItmCreateEntityPatchOperation, type ItmCreateRelationshipPatchOperation, type ItmDeleteAttributePatchOperation, type ItmDeleteEntityPatchOperation, type ItmDeleteRelationshipPatchOperation, type ItmDescription, type ItmDescriptionPatch, type ItmDescriptionPatchOperation, type ItmDiagnostic, ItmDiagnosticError, type ItmDirective, type ItmDocument, ItmDocumentBuilder, type ItmElement, type ItmEmbeddedBlock, type ItmEntity, type ItmEntityDraft, type ItmEntityMoveInput, type ItmEntityRenameInput, type ItmEntityType, type ItmEntityTypeDraft, type ItmEntityTypeUpdateInput, type ItmExpandedCollapsedDelta, type ItmGeneratedAsset, type ItmGeneratedAssetKind, type ItmHiddenDelta, type ItmIdentityMap, type ItmInclude, type ItmIncludeDraft, type ItmIncludeProvider, type ItmIncludeProviderContext, type ItmIncludeStatus, type ItmLabelOverrideDelta, type ItmLoadedIncludeSource, type ItmLocalName, type ItmMetadata, type ItmModelPatch, type ItmMovedDelta, type ItmNamespace, type ItmOverlay, type ItmOverlayDraft, type ItmOverlayPolicy, type ItmOverlayUpdateInput, type ItmPackage, type ItmPackageDraft, type ItmPackageUpdateInput, type ItmPackageUsage, type ItmPackageUsageDraft, type ItmPackageUsageScope, type ItmPatchOperation, type ItmPatchSource, type ItmPinnedDelta, type ItmPipeline, type ItmPipelineInput, type ItmPipelineOperation, type ItmPipelineStep, type ItmPipelineStepDraft, type ItmPluginCapability, type ItmPluginProvider, type ItmPluginRequirement, type ItmPluginRequirementDraft, type ItmPluginRequirementUpdateInput, type ItmPrimitive, type ItmProcessingResult, type ItmQualifiedName, type ItmRelationship, type ItmRelationshipDraft, type ItmRelationshipKind, type ItmRelationshipType, type ItmRelationshipTypeDraft, type ItmRelationshipTypeUpdateInput, type ItmRelationshipUpdateInput, type ItmRenameEntityPatchOperation, type ItmRepository, type ItmRepositoryDraft, type ItmRepositoryKind, type ItmRepositoryUpdateInput, type ItmScopedActivation, type ItmScopedActivationStatus, type ItmSelector, type ItmSelectorContext, type ItmSelectorExpression, type ItmSelectorExpressionKind, type ItmSetAttributePatchOperation, type ItmSetEntityTypePatchOperation, type ItmSeverity, type ItmSourceProvider, type ItmSourceRange, type ItmSourceRequest, type ItmSourceSyntax, type ItmStdAsset, type ItmStyleOrigin, type ItmStyleOverrideDelta, type ItmStyleRule, type ItmStyleRuleDraft, type ItmStyleRuleUpdateInput, type ItmTrivia, type ItmTypeHierarchy, type ItmUid, type ItmUpdateViewDeltaPatchOperation, type ItmValidationMode, type ItmValidationRule, type ItmValidationRuleDraft, type ItmValidationRuleUpdateInput, type ItmValue, type ItmView, type ItmViewDelta, type ItmViewDraft, type ItmViewUpdateInput, type ItmViewpoint, type ItmViewpointDraft, type ItmViewpointParameter, type ItmViewpointParameterType, type ItmViewpointUpdateInput, type LoadedItmStdAsset, type ParseItmOptions, type ResolvedItmDiagnostic, type ResolvedItmDocument, type ResolvedItmDocumentIndexes, type ResolvedItmEntity, type ResolvedItmEntityType, type ResolvedItmInclude, type ResolvedItmOverlay, type ResolvedItmPackage, type ResolvedItmPackageUsage, type ResolvedItmRelationship, type ResolvedItmRelationshipType, type ResolvedItmSelectorContext, type ResolvedItmStyleRule, type ResolvedItmValidationRule, type ResolvedItmView, type ResolvedItmViewpoint, type SerializeItmOptions, type ValidateArchimateOptions, composeDocument, composeDocumentResult, composeText, createAttributeBag, createBaseUrlIncludeProvider, createBaseUrlSourceProvider, createCanonicalGraph, createDocument, createDocumentIndexes, createEntity, createRelationship, createStdIncludeProvider, createTypeHierarchy, expandEntityTypeSelection, expandRelationshipTypeSelection, exportArchiMateExchange, exportArchiMateExchangeResult, exportBpmnXml, exportBpmnXmlResult, getEntityByUid, getRelationshipByUid, getStableRelationshipId, hasErrorDiagnostics, importArchiMateExchange, importArchiMateExchangeAsItm, importArchiMateExchangeAsItmResult, importArchiMateExchangeResult, importBpmnXml, importBpmnXmlAsItm, importBpmnXmlAsItmResult, importBpmnXmlResult, isEntityOfType, isRelationshipOfType, isResolvedDocument, listStdAssets, loadStdAsset, parseDocument, parseDocumentResult, parseDocumentResultAsync, parseEffectiveDocument, parseItm, parseItmResult, readStdAsset, resolveDocument, serializeDocument, serializeDocumentResult, serializeItm, throwOnErrorDiagnostics, validateArchiMateExchangeReadiness, validateArchiMateRules, validateBpmnExportReadiness, validateBpmnRules };
