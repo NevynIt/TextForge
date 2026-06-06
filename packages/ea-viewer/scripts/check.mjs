@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
@@ -9,7 +9,11 @@ import {
   verifyDagreLayoutEngine,
 } from '../src/index.js';
 
-const source = readFileSync(resolve(import.meta.dirname, '..', 'src', 'index.js'), 'utf8');
+const sourceDir = resolve(import.meta.dirname, '..', 'src');
+const source = readdirSync(sourceDir, { withFileTypes: true })
+  .filter((entry) => entry.isFile() && entry.name.endsWith('.js'))
+  .map((entry) => readFileSync(resolve(sourceDir, entry.name), 'utf8'))
+  .join('\n');
 const [dagreModule, graphlibModule] = await Promise.all([
   import('dagre-d3-es/src/dagre/index.js'),
   import('dagre-d3-es/src/graphlib/index.js'),
