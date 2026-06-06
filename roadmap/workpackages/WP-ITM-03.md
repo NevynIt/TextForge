@@ -5,11 +5,13 @@
 - Workpackage ID: `WP-ITM-03`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-ITM`
-- ADRs: `ADR-0006`
+- ADRs: `ADR-0006`, `ADR-0007`
 
 ## Outcome
 
 `@textforge/itm` implements the revised ITM format additions for comments/trivia, identity maps, named contexts, scoped activation, package context exports, context-driven inference, and include module isolation.
+
+`ADR-0007` patches the validated baseline with regulated type inheritance, canonical context defaults/inference rules, package `defaultContext` activation, and `%idmap` identity-only semantics.
 
 ## Scope
 
@@ -20,6 +22,9 @@
 - Keep included-file active state local to the included module.
 - Allow packages to export contexts and identity maps that consumers activate explicitly.
 - Surface diagnostics for unresolved, ambiguous, mismatched, or unclosed scoped activations and identity-map conflicts.
+- Normalize scalar/list `extends` for entity and relationship types and evaluate polymorphic inheritance.
+- Use canonical context `defaults` and ordered `infer.nodes` / `infer.relationships` rules for type inference.
+- Reserve `%idmap` for canonical identity mapping instead of type aliases.
 
 ## Non-goals
 
@@ -51,8 +56,8 @@ Use `validation/checklists/workpackages/WP-ITM-03-scoped-contexts-identity-comme
 
 ## Open Decisions
 
-- None. `ADR-0006` owns the durable language decision for this workpackage.
+- None. `ADR-0006` owns the base format addition and `ADR-0007` owns the inheritance/context-inference patch.
 
 ## Archive Trace
 
-- Introduced by `ADR-0006`.
+- Introduced by `ADR-0006`; refined by `ADR-0007`.

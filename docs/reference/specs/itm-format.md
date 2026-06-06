@@ -465,6 +465,8 @@ Aliases are additional identifiers that are known to refer to the same model ele
 
 Identity equivalence is not a normal model relationship. It does not create a semantic edge such as `same_as`. It is resolved during identity processing before ordinary relationship validation.
 
+`%idmap` is reserved for canonical/global identity mapping. It must not be used as a type alias table. Type defaults and type inference belong in `%context` definitions.
+
 ### 9.1 Identity map scope
 
 In a normal model file, `%idmap` applies to the current file only.
@@ -489,7 +491,8 @@ A validator should report diagnostics when:
 - the same canonical id is assigned to multiple local ids without an explicit alias/equivalence policy;
 - an alias conflicts with another canonical id;
 - a required canonical id is missing in strict repository mode;
-- an identity map is imported from a package but not activated.
+- an identity map is imported from a package but not activated;
+- an identity map is used as a type alias table, for example with `root`, `child`, or `relationship` keys that point to type names.
 
 A full repository processor may use canonical ids to detect cross-file equivalence, duplicate model elements, merge conflicts, and stable export identifiers.
 
@@ -1154,6 +1157,41 @@ Types can also be declared as reusable definitions.
 }
 ```
 
+Entity types and relationship types may inherit from other types with `extends`. Scalar shorthand may be parsed, but the canonical form is a YAML list and formatters should write the list form.
+
+```itm
+%entitytype bpmn::Task
+{
+  extends:
+    - bpmn::Activity
+}
+
+%relationshiptype bpmn::sequenceFlow
+{
+  extends:
+    - bpmn::FlowRelationship
+  sourceTypes:
+    - bpmn::FlowNode
+  targetTypes:
+    - bpmn::FlowNode
+}
+```
+
+Multiple inheritance is allowed. Inheritance graphs must be acyclic.
+
+Types may be abstract:
+
+```itm
+%entitytype bpmn::FlowNode
+{
+  abstract: true
+}
+```
+
+Abstract types may be used in selectors, inheritance, relationship constraints, and inference conditions. They must not be directly instantiated by `[Type]` or produced as an inferred concrete type.
+
+Selectors and relationship constraints are polymorphic by default. A selector for `[bpmn::FlowNode]` matches an entity typed as `bpmn::Task` when `bpmn::Task` extends `bpmn::FlowNode`. A relationship constraint that allows source or target type `bpmn::FlowNode` also allows subtypes.
+
 Type declarations can support:
 
 - documentation;
@@ -1199,12 +1237,20 @@ A context is declared with `%context NAME` followed by a YAML-compatible block.
 %context bpmn_process
 {
   defaultNamespace: local
-  rootType: bpmn::Process
-  defaultRelationshipType: bpmn::sequenceFlow
+
+  defaults:
+    rootType: bpmn::Process
+    childType: bpmn::Task
+    relationshipType: bpmn::sequenceFlow
 
   infer:
-    childrenOf:
-      bpmn::Process: bpmn::Task
+    nodes:
+      - id: gateway_by_question
+        when:
+          untyped: true
+          parentType: bpmn::Process
+          labelMatches: "\\?$"
+        type: bpmn::Gateway
 }
 ```
 
@@ -1227,10 +1273,12 @@ Contexts may be declared in ordinary model files or inside packages.
 A context may define:
 
 - `defaultNamespace` for unqualified ids created in the active scope;
-- `rootType` for untyped root nodes in the active scope;
-- `childType` or `childTypeRules` for untyped children;
-- `defaultRelationshipType` for untyped links;
-- relationship inference rules based on source type, target type, parent type, or position;
+- `extends` as a context name or list of context names;
+- `defaults.rootType` for untyped root nodes in the active scope;
+- `defaults.childType` for untyped non-root nodes;
+- `defaults.relationshipType` for untyped links;
+- ordered `infer.nodes` rules for special-case node type inference;
+- ordered `infer.relationships` rules for special-case relationship type inference;
 - default attributes;
 - default tags;
 - default validation mode;
@@ -1243,22 +1291,40 @@ Example:
 %context capability_model
 {
   defaultNamespace: cap
-  rootType: cap::Capability
+
+  defaults:
+    rootType: cap::Capability
+    childType: cap::Activity
+    relationshipType: cap::relates_to
 
   infer:
-    childrenOf:
-      cap::Capability:
-        byPosition:
-          1: cap::Outcome
-          2: cap::Activity
-          3: cap::Requirement
+    nodes:
+      - id: outcome_by_label
+        when:
+          untyped: true
+          parentType: cap::Capability
+          labelMatches: "^Detect\\b"
+        type: cap::Outcome
+
+      - id: requirement_by_label
+        when:
+          untyped: true
+          parentType: cap::Capability
+          labelMatches: "^Evidence\\b"
+        type: cap::Requirement
 
     relationships:
-      - source: cap::Activity
-        target: cap::Outcome
+      - id: activity_contributes_to_outcome
+        when:
+          untyped: true
+          sourceType: cap::Activity
+          targetType: cap::Outcome
         type: cap::contributes_to
-      - source: cap::Requirement
-        target: cap::Activity
+      - id: requirement_constrains_activity
+        when:
+          untyped: true
+          sourceType: cap::Requirement
+          targetType: cap::Activity
         type: cap::constrains
 }
 ```
@@ -1292,6 +1358,45 @@ requirement:
     - type: cap::constrains
       target: activity
 ```
+
+Context inheritance is explicit and acyclic:
+
+```itm
+%context bpmn_base
+{
+  defaults:
+    relationshipType: bpmn::sequenceFlow
+}
+
+%context bpmn_process
+{
+  extends:
+    - bpmn_base
+  defaults:
+    rootType: bpmn::Process
+    childType: bpmn::Task
+}
+```
+
+Local defaults override inherited defaults. Local inference rules are evaluated before inherited rules. A local rule with the same `id` replaces an inherited rule.
+
+Node type resolution order is:
+
+1. explicit `[Type]` on the node;
+2. first matching local context node rule;
+3. first matching inherited context node rule;
+4. `defaults.rootType` or `defaults.childType`;
+5. untyped node or validation error, depending on active profile requirements.
+
+Relationship type resolution order is:
+
+1. explicit `@type:target` relationship syntax;
+2. first matching local context relationship rule;
+3. first matching inherited context relationship rule;
+4. `defaults.relationshipType`;
+5. untyped relationship or validation error, depending on active profile requirements.
+
+Allowed node `when` fields are `untyped`, `position`, `depth`, `parentType`, `labelMatches`, `hasTag`, `hasAttribute`, and `attributeEquals`. Allowed relationship `when` fields are `untyped`, `sourceType`, `targetType`, `labelMatches`, `hasTag`, `hasAttribute`, and `attributeEquals`. Unknown core `when` fields are validation errors unless a profile extension declares them.
 
 ### 20.2 Scoped activation blocks
 
@@ -1355,8 +1460,11 @@ A validator should report diagnostics when:
 - an `%end` appears without a matching `%begin`;
 - a context name is declared more than once in the same file/package scope;
 - an unqualified context name is ambiguous;
+- a parent context is unknown or context inheritance is cyclic;
+- an inference rule id is duplicated locally;
+- an inference rule uses an unknown `when` field or an invalid regular expression;
 - a context refers to unknown types, relationship types, namespaces, rules, styles, or viewpoints;
-- an inference rule conflicts with an explicit type;
+- an inference rule attempts to infer an unknown or abstract type;
 - two active contexts define incompatible defaults with the same precedence;
 - a package default context refers to a missing context;
 - a scoped activation appears in an indentation position that violates the implementation's strict formatting rules.

@@ -106,7 +106,8 @@
         "archive/registers/package-guides/itm.md",
         "archive/registers/specs/legacy-specs/architecture/textforge-rebuild-whitepaper.md",
         "archive/grilling/legacy-grilling/itm-visuals-grilling.md",
-        "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md"
+        "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
+        "decisions/ADR-0007-itm-type-inheritance-and-context-inference.md"
       ]
     },
     "MOD-MARKDOWN-ITM": {
@@ -1022,10 +1023,12 @@
       "production_required": true,
       "deferrable": false,
       "key_adrs": [
-        "ADR-0006"
+        "ADR-0006",
+        "ADR-0007"
       ],
       "archive_trace": [
         "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
+        "decisions/ADR-0007-itm-type-inheritance-and-context-inference.md",
         "docs/reference/specs/itm-format.md"
       ],
       "validation_checklist": "validation/checklists/workpackages/WP-ITM-03-scoped-contexts-identity-comments.md"
@@ -2825,6 +2828,16 @@
       "path": "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
       "supersedes": [],
       "archive_trace": [
+        "docs/reference/specs/itm-format.md"
+      ]
+    },
+    "ADR-0007": {
+      "title": "ITM type inheritance and context inference",
+      "status": "accepted",
+      "path": "decisions/ADR-0007-itm-type-inheritance-and-context-inference.md",
+      "supersedes": [],
+      "archive_trace": [
+        "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
         "docs/reference/specs/itm-format.md"
       ]
     }
