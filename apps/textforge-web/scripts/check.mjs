@@ -22,6 +22,7 @@ const workbenchJs = await readSourceCorpus(resolve(rootDir, 'src'));
 const bundledDocsRuntimeJs = await readFile(resolve(rootDir, 'src', 'workbench', 'bundled-docs.js'), 'utf8');
 const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
 const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
+const packageScripts = JSON.parse(packageJson).scripts ?? {};
 const uiPackageJson = await readFile(resolve(rootDir, '..', '..', 'packages', 'ui', 'package.json'), 'utf8');
 const storageBoundaryDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'reference', 'specs', 'browser-managed-workspace-storage.md'), 'utf8');
 const commandDispatchDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'reference', 'specs', 'local-command-dispatch.md'), 'utf8');
@@ -58,6 +59,14 @@ if (!packageJson.includes('"build:single"') || !packageJson.includes('node scrip
 
 if (!packageJson.includes('"build:single:small"') || !packageJson.includes('--without-docs')) {
   throw new Error('package.json must expose a separate build:single:small target without bundled docs');
+}
+
+if (!packageScripts.build?.includes('build:single:from-dist') || !packageScripts.build?.includes('build:single:small:from-dist') || !packageScripts.build?.includes('build:zip:from-dist')) {
+  throw new Error('package.json normal build must regenerate single-file distributions and the versioned release zip');
+}
+
+if (!packageScripts['build:zip:from-dist']?.includes('scripts/archive-dist.mjs')) {
+  throw new Error('package.json must archive the dist output through the versioned release zip script');
 }
 
 // public/index.html must include a Content Security Policy meta tag for file:// distribution

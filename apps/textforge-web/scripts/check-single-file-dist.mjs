@@ -53,6 +53,16 @@ if (hasEsModuleSyntax(scriptJs)) {
   throw new Error('dist-single/index.html inline script must not contain runtime ES module syntax');
 }
 
+for (const forbiddenStartupCopy of [
+  'Markdown preview and generated assets',
+  'restored TF-MD preview, generated-asset export',
+  'Markdown resources can open in both the source editor and the package-owned TF-MD preview surface',
+]) {
+  if (scriptJs.includes(forbiddenStartupCopy)) {
+    throw new Error(`${distDirectoryName}/index.html inline script must not retain stale startup copy: ${forbiddenStartupCopy}`);
+  }
+}
+
 if (!styleCss.trim()) {
   throw new Error('dist-single/index.html inline style must not be empty');
 }
