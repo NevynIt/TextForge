@@ -26,7 +26,7 @@ const header = (title) => `# ${title}\n\n> Generated from \`roadmap-state.yaml\`
 const esc = (value) => String(value ?? "").replace(/\|/g, "\\|");
 
 const current = wps.filter(([, wp]) => ["in-progress", "ready", "blocked"].includes(wp.status));
-const next = wps.filter(([, wp]) => ["defined", "candidate"].includes(wp.status)).slice(0, 25);
+const next = wps.filter(([, wp]) => ["defined", "candidate"].includes(wp.status));
 writeIfChanged("views/current-next.md", `${header("Current And Next")}## Current\n\n| WP | Title | Status | Module |\n|---|---|---|---|\n${current.map(([id, wp]) => `| \`${id}\` | ${esc(wp.title)} | ${wp.status} | \`${wp.module}\` |`).join("\n")}\n\n## Next Candidates\n\n| WP | Title | Status | Module |\n|---|---|---|---|\n${next.map(([id, wp]) => `| \`${id}\` | ${esc(wp.title)} | ${wp.status} | \`${wp.module}\` |`).join("\n")}\n`);
 
 const statusCounts = {};

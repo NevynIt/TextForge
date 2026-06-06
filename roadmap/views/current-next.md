@@ -38,3 +38,26 @@
 | `WP-PRIVATE-SERVER` | Private/group spaces server | defined | `MOD-BACKEND-ENTERPRISE` |
 | `WP-SET-SYNC` | Roaming user settings | defined | `MOD-SURFACES-UI` |
 | `WP-GITLAB` | GitLab persistence adapter | defined | `MOD-BACKEND-ENTERPRISE` |
+| `WP-BPMN-VISUAL-C` | BPMN modeler/edit/write-back | candidate | `MOD-BPMN` |
+| `WP-SERVICES-BE` | Backend-backed service folders | defined | `MOD-BACKEND-ENTERPRISE` |
+| `WP-COLLAB-LEASES` | Soft collaboration leases | defined | `MOD-BACKEND-ENTERPRISE` |
+| `WP-AI-MEDIATOR` | AI contract and backend mediator | defined | `MOD-BACKEND-ENTERPRISE` |
+| `WP-AI-CHAT` | AI client and chat surface | defined | `MOD-SURFACES-UI` |
+| `WP-AI-PREF` | AI preference integration | defined | `MOD-BACKEND-ENTERPRISE` |
+| `WP-ARCHIMATE-SEM` | ArchiMate semantic profile | defined | `MOD-ARCHIMATE` |
+| `WP-SURFACES-ADV` | Advanced tabbed main surfaces | defined | `MOD-SURFACES-UI` |
+| `WP-MD-RICH` | Rich Markdown editing | defined | `MOD-MARKDOWN-ITM` |
+| `WP-PIPELINE-EDITOR` | Pipeline/diagram editor surfaces | defined | `MOD-SURFACES-UI` |
+| `WP-ARCHIMATE-VISUAL` | ArchiMate visual editing investigation | defined | `MOD-ARCHIMATE` |
+| `WP-SKETCH` | Sketch and annotation resources | defined | `MOD-SKETCH` |
+| `WP-COMMENTS-SIDECAR` | Comments and review sidecars | candidate | `MOD-KNOWLEDGE-WORKSPACE` |
+| `WP-CHANGE-PROPOSALS` | Reviewable change proposals | candidate | `MOD-KNOWLEDGE-WORKSPACE` |
+| `WP-PDF-EXPORT` | PDF generation/export | defined | `MOD-MARKDOWN-ITM` |
+| `WP-PDF-ANNOTATE` | PDF annotation | defined | `MOD-SKETCH` |
+| `WP-RELEASE-GATE` | Release envelope and accreditation evidence | defined | `MOD-ROADMAP-GOVERNANCE` |
+| `WP-SSO-SAML` | Generic SAML / enterprise IdP adapter | candidate | `MOD-SECURITY-DISTRIBUTION` |
+| `WP-SSO-KEYCLOAK` | Keycloak adapter | candidate | `MOD-SECURITY-DISTRIBUTION` |
+| `WP-REPO-SHAREPOINT` | SharePoint-like repository adapter | candidate | `MOD-ROADMAP-GOVERNANCE` |
+| `WP-DIST-PWA` | PWA/local packaged variant investigation | candidate | `MOD-SECURITY-DISTRIBUTION` |
+| `WP-API-DOCS-01` | Public API documentation with TSDoc and TypeDoc | defined | `MOD-DEVELOPER-DOCUMENTATION` |
+| `WP-API-GOV-01` | API surface governance with API Extractor | candidate | `MOD-DEVELOPER-DOCUMENTATION` |
