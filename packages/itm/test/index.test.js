@@ -14,6 +14,7 @@ import {
   listItmVisualTargets,
   loadItmDocument,
   parseDocument,
+  parseDocumentResult,
   projectItmDocument,
   resolveItmVisualTarget,
   renderItmPublicationHtml,
@@ -637,6 +638,214 @@ test('validateItmDocument does not activate built-in package rules from provider
     diagnostics.some((diagnostic) => diagnostic.code === 'itm.validation.rule-failed'),
     false,
   );
+});
+
+test('WP-ITM-03 parses comments and trivia without creating model entities', () => {
+  const document = parseDocument(`// root-level model note
+
+&order Order
+  // comment attached to the next sibling
+  &receive Receive order
+
+// trailing note
+`, {
+    uri: '/docs/examples/itm/wp-itm-03-comments.itm',
+  });
+
+  assert.deepEqual(
+    document.entities.map((entity) => entity.label),
+    ['Order', 'Receive order'],
+  );
+  assert.deepEqual(
+    (document.comments ?? []).map((comment) => comment.text),
+    [
+      'root-level model note',
+      'comment attached to the next sibling',
+      'trailing note',
+    ],
+  );
+  assert.equal((document.trivia ?? []).some((entry) => entry.kind === 'blank-line'), true);
+  assert.equal((document.comments ?? []).every((comment) => comment.source?.file === '/docs/examples/itm/wp-itm-03-comments.itm'), true);
+});
+
+test('WP-ITM-03 applies scoped context inference from %idmap, %context, %begin, and %end', async () => {
+  const loaded = await loadItmDocument(`%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%idmap bpmn_basic
+{
+  root: bpmn::Process
+  child: bpmn::Task
+  relationship: bpmn::sequenceFlow
+}
+%context process_flow
+{
+  idmap: bpmn_basic
+  root: root
+  child: child
+  relationship: relationship
+}
+
+%begin process_flow
+&order_process Order process
+  &receive Receive order @validate
+  &validate Validate order
+%end process_flow
+
+&orphan Untyped after scope
+`, {
+    uri: '/docs/examples/itm/wp-itm-03-context-scope.itm',
+    includeStdProfiles: false,
+  });
+
+  const orderProcess = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'order_process');
+  const receive = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'receive');
+  const validate = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'validate');
+  const orphan = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'orphan');
+  const sequenceFlow = loaded.effectiveResolvedDocument.relationships.find((relationship) => relationship.sourceId === receive?.uid && relationship.targetId === validate?.uid);
+
+  assert.deepEqual(
+    loaded.document.identityMaps?.map((identityMap) => ({
+      name: identityMap.name,
+      entries: identityMap.entries,
+    })),
+    [{
+      name: 'bpmn_basic',
+      entries: {
+        root: 'bpmn::Process',
+        child: 'bpmn::Task',
+        relationship: 'bpmn::sequenceFlow',
+      },
+    }],
+  );
+  assert.deepEqual(
+    loaded.document.contexts?.map((context) => ({
+      name: context.name,
+      values: context.values,
+    })),
+    [{
+      name: 'process_flow',
+      values: {
+        idmap: 'bpmn_basic',
+        root: 'root',
+        child: 'child',
+        relationship: 'relationship',
+      },
+    }],
+  );
+  assert.equal(loaded.document.scopedActivations?.[0]?.name, 'process_flow');
+  assert.equal(loaded.document.scopedActivations?.[0]?.endName, 'process_flow');
+  assert.equal(loaded.document.scopedActivations?.[0]?.endSource?.startLine, 20);
+  assert.equal(orderProcess?.typeRef, 'bpmn::Process');
+  assert.equal(receive?.typeRef, 'bpmn::Task');
+  assert.equal(validate?.typeRef, 'bpmn::Task');
+  assert.equal(sequenceFlow?.typeRef, 'bpmn::sequenceFlow');
+  assert.equal(orphan?.typeRef, undefined);
+  assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.severity === 'error'), false);
+});
+
+test('WP-ITM-03 package contexts activate explicitly and do not leak across includes', async () => {
+  const workspace = {
+    getEntryByPath(path) {
+      if (path === '/profiles/bpmn-package.itm') {
+        return {
+          kind: 'resource',
+          representation: 'text',
+          path,
+          text: `%package bpmn_context_profile
+{
+  activation:
+    - bpmn_context_profile.contexts
+}
+%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+%entitytype bpmn::Process
+%entitytype bpmn::Task
+%relationshiptype bpmn::sequenceFlow
+%idmap bpmn_basic
+{
+  root: bpmn::Process
+  child: bpmn::Task
+  relationship: bpmn::sequenceFlow
+}
+%context package_process
+{
+  package: bpmn_context_profile
+  idmap: bpmn_basic
+  root: root
+  child: child
+  relationship: relationship
+}
+%begin package_process
+&included_process Included process
+  &included_task Included task
+%end package_process`,
+        };
+      }
+      return undefined;
+    },
+  };
+
+  const loaded = await loadItmDocument(`%include ../profiles/bpmn-package.itm
+&before_using Before using
+%using bpmn_context_profile.contexts
+%begin package_process
+&local_process Local process
+  &local_task Local task
+%end package_process
+&after_scope After explicit scope
+`, {
+    uri: '/docs/root.itm',
+    includeProviders: [createWorkspaceItmIncludeProvider(workspace)],
+    includeStdProfiles: false,
+  });
+
+  const beforeUsing = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'before_using');
+  const includedProcess = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'included_process');
+  const includedTask = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'included_task');
+  const localProcess = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'local_process');
+  const localTask = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'local_task');
+  const afterScope = loaded.effectiveResolvedDocument.entities.find((entity) => entity.id === 'after_scope');
+
+  assert.equal(beforeUsing?.typeRef, undefined);
+  assert.equal(includedProcess?.typeRef, 'bpmn::Process');
+  assert.equal(includedTask?.typeRef, 'bpmn::Task');
+  assert.equal(localProcess?.typeRef, 'bpmn::Process');
+  assert.equal(localTask?.typeRef, 'bpmn::Task');
+  assert.equal(afterScope?.typeRef, undefined);
+  assert.equal(
+    loaded.capabilityContext.activePackageScopes.get('package:bpmn_context_profile')?.has('contexts'),
+    true,
+  );
+  assert.equal(loaded.diagnostics.some((diagnostic) => diagnostic.code === 'itm.context.leaked-from-include'), false);
+});
+
+test('WP-ITM-03 reports stable diagnostics for invalid identity maps and scoped contexts', () => {
+  const parsed = parseDocumentResult(`%idmap duplicate_alias
+{
+  task: bpmn::Task
+  task: archimate::BusinessProcess
+}
+%context broken_context
+{
+  idmap: missing_map
+  root: missing_root
+}
+%begin missing_context
+&task Task
+%end missing_context
+%end stray_context
+`, {
+    uri: '/docs/examples/itm/wp-itm-03-invalid.itm',
+  });
+
+  const diagnostics = [
+    ...parsed.diagnostics,
+    ...validateItmDocument(parsed.value),
+  ];
+  const codes = new Set(diagnostics.map((diagnostic) => diagnostic.code));
+
+  assert.equal(codes.has('itm.idmap.duplicate-entry'), true);
+  assert.equal(codes.has('itm.context.idmap-unresolved'), true);
+  assert.equal(codes.has('itm.context.unresolved'), true);
+  assert.equal(codes.has('itm.context.unmatched-end'), true);
 });
 
 test('createItmResolverDiagnostic exposes stable mismatch categories for downstream resolvers', () => {

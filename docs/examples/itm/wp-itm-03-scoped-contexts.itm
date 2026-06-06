@@ -1,0 +1,45 @@
+// WP-ITM-03 example: comments, identity maps, scoped contexts, and package contexts.
+%metadata
+{
+  title: WP-ITM-03 scoped context example
+  defaultNamespace: local
+}
+
+%package bpmn_context_profile
+{
+  activation:
+    - bpmn_context_profile.contexts
+}
+
+%namespace bpmn https://www.omg.org/spec/BPMN/20100524/MODEL
+
+%entitytype bpmn::Process
+%entitytype bpmn::Task
+%relationshiptype bpmn::sequenceFlow
+
+%idmap bpmn_basic
+{
+  root: bpmn::Process
+  child: bpmn::Task
+  relationship: bpmn::sequenceFlow
+}
+
+%context package_process
+{
+  package: bpmn_context_profile
+  idmap: bpmn_basic
+  root: root
+  child: child
+  relationship: relationship
+}
+
+%using bpmn_context_profile.contexts
+
+%begin package_process
+&order_process Order process
+  // This child should infer bpmn::Task from the active context.
+  &receive Receive order @validate
+  &validate Validate order
+%end package_process
+
+&after_scope Plain item outside the scoped context
