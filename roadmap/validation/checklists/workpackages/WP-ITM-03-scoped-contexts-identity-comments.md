@@ -18,6 +18,7 @@
 | AC-006 | Package-exported contexts and identity maps activate only through `%using` or scoped activation | Test | Pass | `packages/itm/test/index.test.js`; `validation/evidence/WP-ITM-03.md` |
 | AC-007 | Diagnostics cover unresolved, ambiguous, mismatched, and unclosed scoped activation plus identity-map conflicts | Test | Pass | `packages/itm/test/index.test.js`; `validation/evidence/WP-ITM-03.md` |
 | AC-008 | Markdown and web package checks still pass without headless browser UI validation | Test | Pass | `validation/evidence/WP-ITM-03.md` |
+| AC-009 | ADR-0007 inheritance, canonical context inference, package default contexts, abstract diagnostics, and identity-only `%idmap` semantics are implemented | Test | Pass | `packages/itm/test/index.test.js`; `validation/evidence/WP-ITM-03.md` |
 
 ## Evidence items
 
@@ -27,6 +28,7 @@
 | EV-002 | command output | `validation/evidence/WP-ITM-03.md` | Markdown and web focused checks |
 | EV-003 | command output | `validation/evidence/WP-ITM-03.md` | Roadmap view/check regeneration |
 | EV-004 | command output | `validation/evidence/WP-ITM-03.md` | Repository verify |
+| EV-005 | command output | `validation/evidence/WP-ITM-03.md` | ADR-0007 patch coverage |
 
 ## Diagnostics / defects
 
@@ -44,3 +46,4 @@ Validated on 2026-06-06.
 ## Follow-up work
 
 - BPMN, ArchiMate, Markdown publication, and visual editing packages may later use the new context and identity semantics.
+- Future formatters can normalize scalar `extends` to canonical list form in author-facing rewrites.
