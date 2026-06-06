@@ -32,8 +32,31 @@ export const luaBlockedGlobals = Object.freeze([
 ]);
 
 export const luaBlockedModules = Object.freeze([
+  'buffer',
+  'child_process',
+  'crypto',
+  'fs',
+  'fs/promises',
+  'http',
+  'https',
   'io',
+  'net',
   'os',
+  'path',
+  'process',
   'socket',
+  'tmp',
+  'url',
   'js',
 ]);
+
+export const defaultLuaHostCapabilities = Object.freeze({
+  workspaceRead: true,
+  workspaceWrite: false,
+  workspaceDelete: false,
+  workspaceRename: false,
+  workspaceCreateFolder: false,
+  pipelineRun: true,
+  actionRun: true,
+  power: false,
+});

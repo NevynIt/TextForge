@@ -13,6 +13,17 @@ export interface LuaExecutionLimits {
   readonly instructionHookInterval: number;
 }
 
+export interface LuaHostCapabilities {
+  readonly workspaceRead: boolean;
+  readonly workspaceWrite: boolean;
+  readonly workspaceDelete: boolean;
+  readonly workspaceRename: boolean;
+  readonly workspaceCreateFolder: boolean;
+  readonly pipelineRun: boolean;
+  readonly actionRun: boolean;
+  readonly power: boolean;
+}
+
 export interface LuaConsoleLine {
   readonly kind: string;
   readonly text: string;
@@ -85,6 +96,7 @@ export declare const luaCapabilityIds: {
   readonly console: '@textforge/lua/capability/console';
 };
 export declare const defaultLuaExecutionLimits: LuaExecutionLimits;
+export declare const defaultLuaHostCapabilities: LuaHostCapabilities;
 export declare const luaBlockedGlobals: ReadonlyArray<string>;
 export declare const luaBlockedModules: ReadonlyArray<string>;
 export declare const luaCommandContributions: ReadonlyArray<import('@textforge/core').CommandContribution>;
@@ -153,6 +165,9 @@ export declare function runLuaScript(options?: {
   readonly pipelineDefinitions?: ReadonlyArray<LuaPipelineDefinition>;
   readonly recursionDepth?: number;
   readonly expectedOutput?: string;
+  readonly hostCapabilities?: Partial<LuaHostCapabilities>;
+  readonly clock?: () => string | number | Date;
+  readonly now?: () => string | number | Date;
   readonly invokePipelineStep?: (input: { readonly id: string; readonly value: unknown }) => unknown;
   readonly invokeActionStep?: (input: { readonly id: string; readonly value: unknown }) => unknown;
   readonly powerSession?: LuaPowerSessionOptions;

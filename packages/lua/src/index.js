@@ -1,5 +1,6 @@
 export {
   defaultLuaExecutionLimits,
+  defaultLuaHostCapabilities,
   luaAutomationRoot,
   luaBlockedGlobals,
   luaBlockedModules,

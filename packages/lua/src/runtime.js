@@ -82,11 +82,34 @@ export const luaBlockedGlobals = Object.freeze([
 ]);
 
 export const luaBlockedModules = Object.freeze([
+  'buffer',
+  'child_process',
+  'crypto',
+  'fs',
+  'fs/promises',
+  'http',
+  'https',
   'io',
+  'net',
   'os',
+  'path',
+  'process',
   'socket',
+  'tmp',
+  'url',
   'js',
 ]);
+
+export const defaultLuaHostCapabilities = Object.freeze({
+  workspaceRead: true,
+  workspaceWrite: false,
+  workspaceDelete: false,
+  workspaceRename: false,
+  workspaceCreateFolder: false,
+  pipelineRun: true,
+  actionRun: true,
+  power: false,
+});
 
 export const luaCommandContributions = [
   createCommand('lua.open-console', 'Open Lua console', {
@@ -1028,7 +1051,7 @@ function luaValueToJs(L, index, depth = 0) {
     case lua.LUA_TNIL:
       return null;
     case lua.LUA_TBOOLEAN:
-      return lua.lua_toboolean(L, absoluteIndex) !== 0;
+      return lua.lua_toboolean(L, absoluteIndex) === true || lua.lua_toboolean(L, absoluteIndex) === 1;
     case lua.LUA_TNUMBER:
       return lua.lua_tonumber(L, absoluteIndex);
     case lua.LUA_TSTRING:
@@ -1128,10 +1151,184 @@ function pushPipelineValueTable(L, inputValue) {
   lua.lua_setfield(L, -2, to_luastring('diagnostic'));
 }
 
+function createLuaHostCapabilities(overrides = {}) {
+  const capabilities = {
+    ...defaultLuaHostCapabilities,
+    ...(overrides ?? {}),
+  };
+  return Object.fromEntries(
+    Object.entries(defaultLuaHostCapabilities).map(([key]) => [key, capabilities[key] === true]),
+  );
+}
+
+function getLuaArgumentString(L, index, fallback = '') {
+  if (lua.lua_gettop(L) < index || lua.lua_isnil(L, index)) {
+    return fallback;
+  }
+
+  return lua.lua_tojsstring(L, index);
+}
+
+function getLuaArgumentNumber(L, index, fallback = undefined) {
+  if (lua.lua_gettop(L) < index || lua.lua_isnil(L, index)) {
+    return fallback;
+  }
+
+  return lua.lua_tonumber(L, index);
+}
+
+function assertHostCapability(L, runtime, capabilityName, action) {
+  if (runtime.hostCapabilities?.[capabilityName] === true) {
+    return undefined;
+  }
+
+  return lauxlib.luaL_error(
+    L,
+    to_luastring(`TextForge Lua host denied ${action}; missing capability ${capabilityName}.`),
+  );
+}
+
+function getWorkspaceState(runtime) {
+  if (runtime.workspace && typeof runtime.workspace.snapshot === 'function') {
+    return runtime.workspace.snapshot();
+  }
+
+  return {
+    manifest: undefined,
+    folders: runtime.workspaceIndex.folders ?? [],
+    resources: runtime.workspaceIndex.resources ?? [],
+  };
+}
+
+function getWorkspaceEntryByPath(runtime, path) {
+  const normalizedPath = normalizeWorkspacePath(path);
+  if (runtime.workspace && typeof runtime.workspace.getEntryByPath === 'function') {
+    return runtime.workspace.getEntryByPath(normalizedPath);
+  }
+
+  const state = getWorkspaceState(runtime);
+  return [...(state.folders ?? []), ...(state.resources ?? [])]
+    .find((entry) => entry.path === normalizedPath);
+}
+
+function createWorkspaceEntryStat(entry) {
+  if (!entry) {
+    return undefined;
+  }
+
+  const capabilities = entry.metadata?.capabilityIds ?? [];
+  return {
+    id: entry.id,
+    path: entry.path,
+    kind: entry.kind,
+    representation: entry.representation,
+    title: entry.metadata?.title,
+    languageId: entry.languageId,
+    mimeType: entry.mimeType,
+    providerId: entry.metadata?.providerId,
+    readable: capabilities.includes('resource.read'),
+    writable: capabilities.includes('resource.write'),
+    listable: capabilities.includes('resource.list'),
+    deletable: capabilities.includes('resource.delete'),
+    renamable: capabilities.includes('resource.rename'),
+    createdAt: entry.metadata?.createdAt,
+    updatedAt: entry.metadata?.updatedAt,
+  };
+}
+
+function createWorkspaceList(runtime, path) {
+  const folder = getWorkspaceEntryByPath(runtime, path);
+  if (!folder || folder.kind !== 'folder') {
+    return [];
+  }
+
+  const state = getWorkspaceState(runtime);
+  return [...(state.folders ?? []), ...(state.resources ?? [])]
+    .filter((entry) => entry.parentId === folder.id)
+    .sort((left, right) => left.path.localeCompare(right.path))
+    .map((entry) => createWorkspaceEntryStat(entry));
+}
+
+function ensureTextWorkspaceResource(L, entry, path, action) {
+  if (!entry) {
+    return lauxlib.luaL_error(L, to_luastring(`TextForge workspace ${action} failed; unknown path ${path}.`));
+  }
+
+  if (entry.kind !== 'resource' || entry.representation !== 'text') {
+    return lauxlib.luaL_error(L, to_luastring(`TextForge workspace ${action} requires a text resource: ${path}.`));
+  }
+
+  return undefined;
+}
+
+function saveWorkspaceText(runtime, path, text) {
+  if (!runtime.workspace || typeof runtime.workspace.createTextResource !== 'function') {
+    throw new Error('TextForge workspace writes require a mutable workspace service.');
+  }
+
+  const normalizedPath = normalizeWorkspacePath(path);
+  const current = getWorkspaceEntryByPath(runtime, normalizedPath);
+  if (current) {
+    if (current.kind !== 'resource' || current.representation !== 'text') {
+      throw new Error(`TextForge workspace write requires a text resource: ${normalizedPath}.`);
+    }
+
+    if (typeof runtime.workspace.saveTextResource !== 'function') {
+      throw new Error('TextForge workspace writes require saveTextResource.');
+    }
+
+    return runtime.workspace.saveTextResource({
+      resourceId: current.id,
+      text,
+      languageId: current.languageId,
+      mimeType: current.mimeType,
+    });
+  }
+
+  return runtime.workspace.createTextResource({
+    path: normalizedPath,
+    title: basenameWorkspacePath(normalizedPath),
+    text,
+    languageId: 'plaintext',
+    mimeType: 'text/plain',
+  });
+}
+
+function createRuntimeClock(options = {}) {
+  if (typeof options.clock === 'function') {
+    return options.clock;
+  }
+
+  if (typeof options.now === 'function') {
+    return options.now;
+  }
+
+  return () => new Date();
+}
+
+function normalizeClockValue(value) {
+  if (value instanceof Date) {
+    return value;
+  }
+
+  if (typeof value === 'number') {
+    return new Date(value);
+  }
+
+  if (typeof value === 'string') {
+    return new Date(value);
+  }
+
+  return new Date();
+}
+
 function createRuntimeContext(options = {}) {
   return {
     limits: createLuaExecutionLimits(options.limits),
+    workspace: options.workspace,
     workspaceIndex: createWorkspaceTextResourceIndex(options.workspace),
+    hostCapabilities: createLuaHostCapabilities(options.hostCapabilities),
+    clock: createRuntimeClock(options),
     automationRoot: normalizeWorkspacePath(options.automationRoot ?? defaultAutomationRoot),
     pipelineDefinitions: [...(options.pipelineDefinitions ?? [])],
     automationDefinitions: [...(options.automationDefinitions ?? [])],
@@ -1232,9 +1429,9 @@ function installBundledModules(L, runtime) {
       if (pipelineDefinition?.source) {
         const nestedResult = runLuaAutomationDefinition(pipelineDefinition, {
           input: inputValue,
-          workspace: {
-            resources: runtime.workspaceIndex.resources,
-          },
+          workspace: runtime.workspace ?? getWorkspaceState(runtime),
+          hostCapabilities: runtime.hostCapabilities,
+          clock: runtime.clock,
           automationDefinitions: runtime.automationDefinitions,
           pipelineDefinitions: runtime.pipelineDefinitions,
           invokePipelineStep: runtime.invokePipelineStep,
@@ -1294,9 +1491,9 @@ function installBundledModules(L, runtime) {
 
       const nestedResult = runLuaAutomationDefinition(actionDefinition, {
         input: inputValue,
-        workspace: {
-          resources: runtime.workspaceIndex.resources,
-        },
+        workspace: runtime.workspace ?? getWorkspaceState(runtime),
+        hostCapabilities: runtime.hostCapabilities,
+        clock: runtime.clock,
         automationDefinitions: runtime.automationDefinitions,
         pipelineDefinitions: runtime.pipelineDefinitions,
         invokePipelineStep: runtime.invokePipelineStep,
@@ -1334,6 +1531,142 @@ function installBundledModules(L, runtime) {
       return 1;
     });
     lua.lua_setfield(L, -2, to_luastring('inspect'));
+  }
+
+  function pushTfEnvModule() {
+    lua.lua_newtable(L);
+    pushLuaString(L, 'fengari');
+    lua.lua_setfield(L, -2, to_luastring('runtime'));
+    pushLuaString(L, 'textforge-browser');
+    lua.lua_setfield(L, -2, to_luastring('platform'));
+    pushLuaString(L, '/');
+    lua.lua_setfield(L, -2, to_luastring('workspace_root'));
+    pushLuaValue(L, runtime.hostCapabilities);
+    lua.lua_setfield(L, -2, to_luastring('capabilities'));
+  }
+
+  function pushTfTimeModule() {
+    lua.lua_newtable(L);
+    lua.lua_pushjsfunction(L, () => {
+      const date = normalizeClockValue(runtime.clock());
+      pushLuaString(L, Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString());
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('now'));
+    lua.lua_pushjsfunction(L, () => {
+      const format = getLuaArgumentString(L, 1, 'iso');
+      const timestamp = getLuaArgumentNumber(L, 2, undefined);
+      const date = timestamp === undefined
+        ? normalizeClockValue(runtime.clock())
+        : new Date(timestamp * 1000);
+      if (format === 'unix') {
+        lua.lua_pushnumber(L, Math.floor(date.getTime() / 1000));
+        return 1;
+      }
+
+      pushLuaString(L, Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString());
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('date'));
+    lua.lua_pushjsfunction(L, () => {
+      const left = getLuaArgumentNumber(L, 1, 0);
+      const right = getLuaArgumentNumber(L, 2, 0);
+      lua.lua_pushnumber(L, left - right);
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('difftime'));
+  }
+
+  function pushTfFsModule() {
+    lua.lua_newtable(L);
+    lua.lua_pushjsfunction(L, () => {
+      const inputPath = getLuaArgumentString(L, 1, '/');
+      pushLuaString(L, normalizeWorkspacePath(inputPath));
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('resolve'));
+    lua.lua_pushjsfunction(L, () => {
+      const inputPath = getLuaArgumentString(L, 1, '/');
+      lua.lua_pushboolean(L, getWorkspaceEntryByPath(runtime, inputPath) ? 1 : 0);
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('exists'));
+    lua.lua_pushjsfunction(L, () => {
+      const inputPath = getLuaArgumentString(L, 1, '/');
+      pushLuaValue(L, createWorkspaceEntryStat(getWorkspaceEntryByPath(runtime, inputPath)));
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('stat'));
+    lua.lua_pushjsfunction(L, () => {
+      const assertion = assertHostCapability(L, runtime, 'workspaceRead', 'workspace listing');
+      if (assertion !== undefined) {
+        return assertion;
+      }
+
+      const inputPath = getLuaArgumentString(L, 1, '/');
+      pushLuaValue(L, createWorkspaceList(runtime, inputPath));
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('list'));
+    lua.lua_pushjsfunction(L, () => {
+      const assertion = assertHostCapability(L, runtime, 'workspaceRead', 'workspace text reads');
+      if (assertion !== undefined) {
+        return assertion;
+      }
+
+      const inputPath = getLuaArgumentString(L, 1, '/');
+      const entry = getWorkspaceEntryByPath(runtime, inputPath);
+      const resourceAssertion = ensureTextWorkspaceResource(L, entry, normalizeWorkspacePath(inputPath), 'read_text');
+      if (resourceAssertion !== undefined) {
+        return resourceAssertion;
+      }
+
+      pushLuaString(L, entry.text ?? '');
+      return 1;
+    });
+    lua.lua_setfield(L, -2, to_luastring('read_text'));
+    lua.lua_pushjsfunction(L, () => {
+      const assertion = assertHostCapability(L, runtime, 'workspaceWrite', 'workspace text writes');
+      if (assertion !== undefined) {
+        return assertion;
+      }
+
+      const inputPath = getLuaArgumentString(L, 1, '/');
+      const text = getLuaArgumentString(L, 2, '');
+      try {
+        saveWorkspaceText(runtime, inputPath, text);
+        runtime.workspaceIndex = createWorkspaceTextResourceIndex(runtime.workspace ?? getWorkspaceState(runtime));
+        lua.lua_pushboolean(L, 1);
+        return 1;
+      } catch (error) {
+        return lauxlib.luaL_error(L, to_luastring(error?.message ?? 'TextForge workspace write failed.'));
+      }
+    });
+    lua.lua_setfield(L, -2, to_luastring('write_text'));
+    lua.lua_pushjsfunction(L, () => {
+      const assertion = assertHostCapability(L, runtime, 'workspaceCreateFolder', 'workspace folder creation');
+      if (assertion !== undefined) {
+        return assertion;
+      }
+
+      if (!runtime.workspace || typeof runtime.workspace.createFolder !== 'function') {
+        return lauxlib.luaL_error(L, to_luastring('TextForge workspace folder creation requires a mutable workspace service.'));
+      }
+
+      const inputPath = getLuaArgumentString(L, 1, '/');
+      try {
+        runtime.workspace.createFolder({
+          path: normalizeWorkspacePath(inputPath),
+          title: basenameWorkspacePath(inputPath),
+        });
+        runtime.workspaceIndex = createWorkspaceTextResourceIndex(runtime.workspace);
+        lua.lua_pushboolean(L, 1);
+        return 1;
+      } catch (error) {
+        return lauxlib.luaL_error(L, to_luastring(error?.message ?? 'TextForge workspace folder creation failed.'));
+      }
+    });
+    lua.lua_setfield(L, -2, to_luastring('mkdir'));
   }
 
   function assertPowerSessionEnabled() {
@@ -1390,6 +1723,12 @@ function installBundledModules(L, runtime) {
     lua.lua_setfield(L, -2, to_luastring('actions'));
     pushTfConsoleModule();
     lua.lua_setfield(L, -2, to_luastring('console'));
+    pushTfEnvModule();
+    lua.lua_setfield(L, -2, to_luastring('env'));
+    pushTfTimeModule();
+    lua.lua_setfield(L, -2, to_luastring('time'));
+    pushTfFsModule();
+    lua.lua_setfield(L, -2, to_luastring('fs'));
     pushTfPowerModule();
     lua.lua_setfield(L, -2, to_luastring('power'));
     lua.lua_pushjsfunction(L, () => {
@@ -1404,6 +1743,9 @@ function installBundledModules(L, runtime) {
     ['tf.pipeline', pushTfPipelineModule],
     ['tf.actions', pushTfActionsModule],
     ['tf.console', pushTfConsoleModule],
+    ['tf.env', pushTfEnvModule],
+    ['tf.time', pushTfTimeModule],
+    ['tf.fs', pushTfFsModule],
     ['tf.power', pushTfPowerModule],
     ['tf', pushTfModule],
   ]);
@@ -1765,7 +2107,10 @@ export function runLuaScript(options = {}) {
 
 function syncConsoleRuntimeState(runtime, runOptions = {}, automationDefinitions = [], pipelineDefinitions = []) {
   Object.assign(runtime.limits, createLuaExecutionLimits(runOptions.limits));
+  runtime.workspace = runOptions.workspace;
   runtime.workspaceIndex = createWorkspaceTextResourceIndex(runOptions.workspace);
+  runtime.hostCapabilities = createLuaHostCapabilities(runOptions.hostCapabilities);
+  runtime.clock = createRuntimeClock(runOptions);
   runtime.automationRoot = normalizeWorkspacePath(runOptions.automationRoot ?? defaultAutomationRoot);
   runtime.automationDefinitions = [...automationDefinitions];
   runtime.pipelineDefinitions = [...pipelineDefinitions];

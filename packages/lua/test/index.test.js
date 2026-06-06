@@ -109,13 +109,15 @@ test('automation discovery only scans the reserved automation root and subfolder
 });
 
 test('runtime reports blocked modules, blocked globals, and hard instruction limits', () => {
-  const blockedRequire = runLuaScript({
-    scriptPath: '/lua/blocked.lua',
-    source: 'return require("socket")',
-  });
-  assert.equal(blockedRequire.ok, false);
-  assert.equal(blockedRequire.diagnostics[0]?.code, 'lua.runtime-error');
-  assert.match(blockedRequire.diagnostics[0]?.message ?? '', /Blocked Lua module request: socket/i);
+  for (const moduleName of ['socket', 'io', 'os', 'fs', 'path', 'process', 'child_process', 'tmp']) {
+    const blockedRequire = runLuaScript({
+      scriptPath: '/lua/blocked.lua',
+      source: `return require("${moduleName}")`,
+    });
+    assert.equal(blockedRequire.ok, false, `${moduleName} should be blocked`);
+    assert.equal(blockedRequire.diagnostics[0]?.code, 'lua.runtime-error');
+    assert.match(blockedRequire.diagnostics[0]?.message ?? '', new RegExp(`Blocked Lua module request: ${moduleName.replace('/', '\\/')}`, 'i'));
+  }
 
   const blockedGlobal = runLuaScript({
     scriptPath: '/lua/browser.lua',
@@ -135,6 +137,95 @@ test('runtime reports blocked modules, blocked globals, and hard instruction lim
   });
   assert.equal(timeout.ok, false);
   assert.match(timeout.diagnostics[0]?.message ?? '', /instruction limit/i);
+});
+
+test('TextForge Lua virtual host exposes env, time, and workspace read modules', () => {
+  const workspace = createWorkspace();
+  workspace.createFolder({ path: '/docs', title: 'docs' });
+  workspace.createTextResource({
+    path: '/docs/notes.md',
+    title: 'notes.md',
+    text: 'hello workspace',
+    languageId: 'markdown',
+    mimeType: 'text/markdown',
+  });
+
+  const result = runLuaScript({
+    workspace,
+    clock: () => '2026-06-06T12:00:00.000Z',
+    scriptPath: '/lua/host.lua',
+    source: [
+      'local tf = require("tf")',
+      'local env = require("tf.env")',
+      'local fs = require("tf.fs")',
+      'local time = require("tf.time")',
+      'return function()',
+      '  return tf.emit_json({',
+      '    runtime = env.runtime,',
+      '    platform = env.platform,',
+      '    canWrite = env.capabilities.workspaceWrite,',
+      '    now = time.now(),',
+      '    resolved = fs.resolve("docs/../docs/notes.md"),',
+      '    exists = fs.exists("/docs/notes.md"),',
+      '    text = fs.read_text("/docs/notes.md"),',
+      '    stat = fs.stat("/docs/notes.md"),',
+      '    first = fs.list("/docs")[1]',
+      '  })',
+      'end',
+    ].join('\n'),
+  });
+
+  assert.equal(result.ok, true, result.diagnostics[0]?.message);
+  assert.equal(result.value?.kind, 'json');
+  assert.equal(result.value?.value.runtime, 'fengari');
+  assert.equal(result.value?.value.platform, 'textforge-browser');
+  assert.equal(result.value?.value.canWrite, false);
+  assert.equal(result.value?.value.now, '2026-06-06T12:00:00.000Z');
+  assert.equal(result.value?.value.resolved, '/docs/notes.md');
+  assert.equal(result.value?.value.exists, true);
+  assert.equal(result.value?.value.text, 'hello workspace');
+  assert.equal(result.value?.value.stat.path, '/docs/notes.md');
+  assert.equal(result.value?.value.stat.languageId, 'markdown');
+  assert.equal(result.value?.value.first.path, '/docs/notes.md');
+});
+
+test('TextForge Lua virtual host denies workspace writes unless explicitly granted', () => {
+  const workspace = createWorkspace();
+  workspace.createFolder({ path: '/docs', title: 'docs' });
+
+  const denied = runLuaScript({
+    workspace,
+    scriptPath: '/lua/write.lua',
+    source: 'return require("tf.fs").write_text("/docs/out.txt", "blocked")',
+  });
+  assert.equal(denied.ok, false);
+  assert.match(denied.diagnostics[0]?.message ?? '', /missing capability workspaceWrite/i);
+  assert.equal(workspace.getEntryByPath('/docs/out.txt'), undefined);
+
+  const allowed = runLuaScript({
+    workspace,
+    hostCapabilities: {
+      workspaceWrite: true,
+    },
+    scriptPath: '/lua/write.lua',
+    source: [
+      'local tf = require("tf")',
+      'local fs = require("tf.fs")',
+      'return function()',
+      '  return tf.emit_json({ ok = fs.write_text("/docs/out.txt", "allowed") })',
+      'end',
+    ].join('\n'),
+  });
+  assert.equal(allowed.ok, true, allowed.diagnostics[0]?.message);
+  assert.equal(workspace.getEntryByPath('/docs/out.txt')?.text, 'allowed');
+
+  const mkdirDenied = runLuaScript({
+    workspace,
+    scriptPath: '/lua/mkdir.lua',
+    source: 'return require("tf.fs").mkdir("/generated")',
+  });
+  assert.equal(mkdirDenied.ok, false);
+  assert.match(mkdirDenied.diagnostics[0]?.message ?? '', /missing capability workspaceCreateFolder/i);
 });
 
 test('console sessions keep globals across commands and treat bare expressions as results', () => {
