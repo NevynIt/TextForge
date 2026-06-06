@@ -17,6 +17,7 @@ export default defineConfig(({ command }) => ({
   define: {
     'process.env.NODE_ENV': JSON.stringify(command === 'build' ? 'production' : 'development'),
     'process.env.FENGARICONF': 'undefined',
+    'process.versions.node': JSON.stringify('20'),
   },
   resolve: {
     alias: {
