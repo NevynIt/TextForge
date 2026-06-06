@@ -6,7 +6,6 @@
 
 | WP | Title | Status | Module |
 |---|---|---|---|
-| `WP-ITM-03` | ITM scoped contexts, identity maps, and comments | in-progress | `MOD-ITM` |
 | `WP-TABLES` | Tables, catalogues, and matrices | blocked | `MOD-TABLES` |
 | `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | ready | `MOD-EA-VIEWER` |
 

@@ -11,9 +11,8 @@
 | deferred | 1 |
 | defined | 33 |
 | implemented | 1 |
-| in-progress | 1 |
 | ready | 1 |
-| validated | 24 |
+| validated | 25 |
 
 ## Workpackages
 
@@ -37,7 +36,7 @@
 | `WP-SET-01` | User settings core and local persistence | defined | `MOD-SURFACES-UI` |
 | `WP-ITM-01` | ITM parser/model foundation | validated | `MOD-ITM` |
 | `WP-ITM-02` | ITM directives, packages, validation, diagnostics | validated | `MOD-ITM` |
-| `WP-ITM-03` | ITM scoped contexts, identity maps, and comments | in-progress | `MOD-ITM` |
+| `WP-ITM-03` | ITM scoped contexts, identity maps, and comments | validated | `MOD-ITM` |
 | `WP-REPO-01` | Repository reference and include resolver | validated | `MOD-REPOSITORY` |
 | `WP-ITM-VISUALS` | ITM static visual projections and publication baseline | validated | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-01` | Visual ITM profile v1 | validated | `MOD-VISUAL-ITM-RENDERERS` |

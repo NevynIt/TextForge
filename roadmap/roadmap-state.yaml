@@ -1002,7 +1002,7 @@
       "title": "ITM scoped contexts, identity maps, and comments",
       "path": "workpackages/WP-ITM-03.md",
       "module": "MOD-ITM",
-      "status": "in-progress",
+      "status": "validated",
       "type": "Domain foundation",
       "depends_on": [
         "WP-ITM-01",
