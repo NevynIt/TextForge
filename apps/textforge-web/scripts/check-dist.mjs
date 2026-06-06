@@ -52,8 +52,23 @@ if (/node-compat\/process|node-compat\\process/.test(scriptLoaderSource)) {
   throw new Error('src/scriptLoader.js must not install the process compatibility shim before startup');
 }
 
-if (!viteConfigSource.includes("'process.env.FENGARICONF': 'undefined'")) {
-  throw new Error('vite.config.mjs must compile away Fengari process.env.FENGARICONF access');
+if (/['"]process\.env\.FENGARICONF['"]/.test(viteConfigSource)) {
+  throw new Error('vite.config.mjs must not define process.env.FENGARICONF; use the browser luaconf shim');
+}
+
+if (
+  /['"]process\.env\.NODE_ENV['"]/.test(viteConfigSource)
+  && !/define:\s*command\s*===\s*['"]build['"]/.test(viteConfigSource)
+) {
+  throw new Error('vite.config.mjs may define process.env.NODE_ENV only for production build output');
+}
+
+if (!viteConfigSource.includes('src/fengari-browser/luaconf.cjs')) {
+  throw new Error('vite.config.mjs must alias Fengari luaconf.js to the browser host shim');
+}
+
+if (!viteConfigSource.includes('src/fengari-browser/lualib.cjs')) {
+  throw new Error('vite.config.mjs must alias Fengari lualib.js to the browser host shim');
 }
 
 if (viteConfigSource.includes('process.versions.node')) {
@@ -65,6 +80,7 @@ for (const [description, pattern] of [
   ['install a window process shim', /window\.process\s*=/],
   ['bundle the TextForge process compatibility shim', /Node process APIs are unavailable in the browser TextForge shell/],
   ['retain raw Fengari process configuration access', /process\.env\.FENGARICONF/],
+  ['retain raw process environment access', /process\.env\.[A-Z0-9_]+/],
   ['bundle Fengari child_process execution support', /child_process\.(?:exec|execSync|spawn|spawnSync)/],
   ['bundle Fengari temporary host-file support', /tmpNameSync|tmp\.tmpNameSync/],
   ['bundle Fengari Node package path resolution', /path(?:lib)?\.resolve\(\s*process\.cwd\(\)/],

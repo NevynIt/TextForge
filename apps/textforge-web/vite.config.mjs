@@ -8,8 +8,10 @@ const rootDir = fileURLToPath(new URL('.', import.meta.url));
 const loaderEntry = resolve(rootDir, 'src/scriptLoader.js');
 const browserFsShim = resolve(rootDir, 'src/node-compat/fs.js');
 const browserFsPromisesShim = resolve(rootDir, 'src/node-compat/fs-promises.js');
+const browserFengariLuaconfShim = resolve(rootDir, 'src/fengari-browser/luaconf.cjs');
 const browserFengariLualibShim = resolve(rootDir, 'src/fengari-browser/lualib.cjs');
 const browserOsShim = resolve(rootDir, 'src/node-compat/os.js');
+const fengariLuaconfEntry = require.resolve('fengari/src/luaconf.js');
 const fengariLualibEntry = require.resolve('fengari/src/lualib.js');
 const xtermCssEntry = resolve(
   require.resolve('@xterm/xterm/package.json'),
@@ -21,12 +23,20 @@ function browserFengariHostPlugin() {
     name: 'textforge-browser-fengari-host',
     enforce: 'pre',
     resolveId(source, importer) {
+      if (source === 'fengari/src/luaconf.js' || source === fengariLuaconfEntry) {
+        return browserFengariLuaconfShim;
+      }
+
+      if (source === 'fengari/src/lualib.js' || source === fengariLualibEntry) {
+        return browserFengariLualibShim;
+      }
+
       if (
-        source === './lualib.js'
+        (source === './lualib.js' || source === './luaconf.js')
         && typeof importer === 'string'
         && importer.replaceAll('\\', '/').includes('/fengari/src/')
       ) {
-        return browserFengariLualibShim;
+        return source === './luaconf.js' ? browserFengariLuaconfShim : browserFengariLualibShim;
       }
 
       return undefined;
@@ -39,10 +49,12 @@ export default defineConfig(({ command }) => ({
   plugins: [
     browserFengariHostPlugin(),
   ],
-  define: {
-    'process.env.NODE_ENV': JSON.stringify(command === 'build' ? 'production' : 'development'),
-    'process.env.FENGARICONF': 'undefined',
-  },
+  define: command === 'build'
+    ? {
+        'process.env.NODE_ENV': JSON.stringify('production'),
+        'process.env.LOG': 'undefined',
+      }
+    : undefined,
   resolve: {
     alias: [
       { find: '@textforge/vendor/xterm.css', replacement: xtermCssEntry },
@@ -50,11 +62,18 @@ export default defineConfig(({ command }) => ({
       { find: 'node:fs/promises', replacement: browserFsPromisesShim },
       { find: 'fs', replacement: browserFsShim },
       { find: 'node:fs', replacement: browserFsShim },
+      { find: fengariLuaconfEntry, replacement: browserFengariLuaconfShim },
+      { find: /fengari[/\\]src[/\\]luaconf\.js$/, replacement: browserFengariLuaconfShim },
+      { find: './luaconf.js', replacement: browserFengariLuaconfShim },
       { find: fengariLualibEntry, replacement: browserFengariLualibShim },
       { find: /fengari[/\\]src[/\\]lualib\.js$/, replacement: browserFengariLualibShim },
+      { find: './lualib.js', replacement: browserFengariLualibShim },
       { find: 'os', replacement: browserOsShim },
       { find: 'node:os', replacement: browserOsShim },
     ],
+  },
+  optimizeDeps: {
+    force: true,
   },
   build: command === 'build'
     ? {
