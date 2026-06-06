@@ -81,9 +81,11 @@ import { activateMarkdownPreviewLink } from '../../markdownPreviewLinks.js';
 import { createMarkdownPreviewRequestManager } from '../../markdownPreviewState.js';
 import {
   luaRecoveryQueryParam,
+  readLuaBootstrapRecoveryState,
   readPhase35ScreenshotPreset,
   readPreviewTraceEnabled,
   readWorkbenchBootstrapOptions,
+  readWorkbenchRecoveryMode,
   readWorkbenchTestProfile,
   sampleResourcePaths,
 } from '../bootstrap-options.js';
