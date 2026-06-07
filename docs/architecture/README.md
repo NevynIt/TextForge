@@ -7,3 +7,4 @@ Most files here are reference material for implementation and review rather than
 ## Snapshot papers
 
 - [Value-oriented evolution snapshot - 2026-06-07](value-oriented-evolution-snapshot-2026-06-07.md)
+- [Value-oriented implementation sequence snapshot - 2026-06-07](value-oriented-implementation-sequence-2026-06-07.md)
