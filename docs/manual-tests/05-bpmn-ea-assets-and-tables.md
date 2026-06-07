@@ -143,8 +143,8 @@ Expected:
 
 What to test:
 
-- `.csv` and `.tsv` resources keep the text editor as the default open path while exposing the table grid through `Open with`;
-- the table grid can be opened explicitly for both CSV and TSV resources;
+- `.csv` and `.tsv` resources open in the table grid by default while still exposing the text editor through `Open with`;
+- the text editor remains available explicitly for both CSV and TSV resources;
 - table-surface editing, structure changes, and failure states behave correctly through the shipped `@textforge/tables` runtime.
 
 How:
@@ -155,12 +155,15 @@ How:
    - `headerless-sales.csv`
    - `malformed-quotes.csv`
 2. Select `people.csv` from the workspace tree.
-3. Open it normally and confirm the initial surface is the text editor rather than the table grid.
-4. Run `Open with` for `people.csv` and select `Table grid`.
-5. In the grid:
+3. Open it normally and confirm the initial surface is the table grid rather than the text editor.
+4. In the grid:
    - confirm the visible columns are `name`, `role`, and `location`;
    - confirm there are 3 data rows;
    - confirm the footer/summary reflects a CSV table rather than a TSV table.
+5. Confirm interaction behavior before editing:
+   - a single click focuses a cell instead of immediately entering edit mode;
+   - dragging across cells or extending a selection with keyboard modifiers creates a visible range selection;
+   - copy and paste work against the selected cell or selected range.
 6. Perform one committed edit in `people.csv`, then reopen it in the text editor:
    - change one cell value, such as `Berlin` to `Munich`;
    - add one row;
@@ -168,8 +171,8 @@ How:
    - rename one header if the rename control is enabled;
    - reopen in the text editor and confirm the CSV text was rewritten to match the committed grid state.
 7. Repeat the open-path check for `inventory.tsv`:
-   - open normally and confirm the default surface is still the text editor;
-   - run `Open with` and select `Table grid`;
+   - open normally and confirm the default surface is the table grid;
+   - use `Open with` to switch to the text editor and confirm the raw TSV source is still available;
    - confirm the grid shows 4 columns and preserves tabular data correctly for TSV input.
 8. Open `headerless-sales.csv` in `Table grid`.
 9. Confirm the first open does not invent a persisted header row:
@@ -197,9 +200,10 @@ Notes:
 
 Expected:
 
-- both `.csv` and `.tsv` resources open in `@textforge/editors/code-mirror-text` by default;
-- `Open with` offers `@textforge/tables/csv-grid` for both file types;
-- the table grid does not displace the text editor as the selected default surface;
+- both `.csv` and `.tsv` resources open in `@textforge/tables/csv-grid` by default;
+- `Open with` offers `@textforge/editors/code-mirror-text` for both file types;
+- single clicks focus/select cells instead of entering edit mode immediately;
+- range selection works well enough for normal copy/paste flows;
 - committed edits rewrite the backing text resource and are visible when reopened in the text editor;
 - headerless input can be viewed without inventing a persisted header row unless the user explicitly switches modes;
 - malformed CSV shows table-surface diagnostics or a failure panel instead of a blank surface or shell crash;

@@ -645,6 +645,18 @@ async function mountTablesGridRuntime(container, execution, initialParseState, d
       });
     }, [commitMutation, readOnly]);
 
+    const onCellFocused = React.useCallback((event) => {
+      const rowIndex = Number.isInteger(event?.rowIndex) ? event.rowIndex : -1;
+      const displayedRow = rowIndex >= 0 ? event.api?.getDisplayedRowAtIndex?.(rowIndex) : undefined;
+      const rowKey = displayedRow?.data?.__tfRowKey;
+      const columnField = event?.column?.getColId?.();
+
+      setSelectedRowKey(rowKey);
+      if (columnField) {
+        setSelectedColumnField(columnField);
+      }
+    }, []);
+
     const rowData = React.useMemo(() => createRowData(model), [model]);
     const columnDefs = React.useMemo(() => createColumnDefs(model, readOnly), [model, readOnly]);
     const selectedColumn = model.columns.find((column) => column.field === selectedColumnField);
@@ -837,21 +849,19 @@ async function mountTablesGridRuntime(container, execution, initialParseState, d
             rowData,
             columnDefs,
             modules: gridModules,
+            cellSelection: true,
+            suppressMultiRangeSelection: false,
             domLayout: 'normal',
-            singleClickEdit: !readOnly,
+            singleClickEdit: false,
             stopEditingWhenCellsLoseFocus: true,
             suppressMovableColumns: false,
-            rowSelection: 'single',
             animateRows: false,
             defaultColDef: {
               editable: !readOnly,
             },
             getRowId: (params) => params.data.__tfRowKey,
             onCellValueChanged,
-            onSelectionChanged: (event) => {
-              const selected = event.api.getSelectedRows?.()?.[0];
-              setSelectedRowKey(selected?.__tfRowKey);
-            },
+            onCellFocused,
           }),
         ),
       ),
@@ -935,7 +945,7 @@ export function createCsvTsvGridSurfaceContribution(dependencies = {}) {
     mimeTypes: ['text/csv', 'text/tab-separated-values'],
     fileExtensions: ['csv', 'tsv'],
     placements: ['main', 'popup', 'auxiliary'],
-    openWithPriority: 80,
+    openWithPriority: 110,
     open(execution = {}) {
       const title = execution.resourceTitle ?? execution.resource?.path ?? 'CSV / TSV grid';
       const parseState = parseSourceText(execution.sourceText ?? '', execution, {

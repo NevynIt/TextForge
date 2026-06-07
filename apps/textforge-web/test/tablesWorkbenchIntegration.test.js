@@ -28,15 +28,15 @@ test('workbench registry includes tables package and exposes CSV/TSV open-with o
   });
   assert.deepEqual(
     csvSelection.candidates.map((candidate) => candidate.surfaceId),
-    ['@textforge/editors/code-mirror-text', '@textforge/tables/csv-grid'],
+    ['@textforge/tables/csv-grid', '@textforge/editors/code-mirror-text'],
   );
-  assert.equal(csvSelection.selectedSurfaceId, '@textforge/editors/code-mirror-text');
+  assert.equal(csvSelection.selectedSurfaceId, '@textforge/tables/csv-grid');
 
   const tsvSelection = createOpenWithSelection(surfaceRegistry, {
     resource: createTextResource('/docs/sample.tsv', 'tsv', 'text/tab-separated-values'),
   });
   assert.deepEqual(
     tsvSelection.candidates.map((candidate) => candidate.surfaceId),
-    ['@textforge/editors/code-mirror-text', '@textforge/tables/csv-grid'],
+    ['@textforge/tables/csv-grid', '@textforge/editors/code-mirror-text'],
   );
 });

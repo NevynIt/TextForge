@@ -199,7 +199,7 @@ test('tables contribution manifest exposes the csv/tsv grid capability and surfa
   assert.equal(contributions.packageId, '@textforge/tables');
   assert.equal(contributions.capabilities.some((capability) => capability.id === tablesGridCapabilityId), true);
   assert.equal(contributions.surfaces.some((surface) => surface.id === tablesGridSurfaceId), true);
-  assert.equal(createTablesContributionManifest().surfaces[0].openWithPriority, 80);
+  assert.equal(createTablesContributionManifest().surfaces[0].openWithPriority, 110);
   assert.equal(matchesResourcePredicate(tablesTextDocumentPredicate, {
     kind: 'resource',
     representation: 'text',
