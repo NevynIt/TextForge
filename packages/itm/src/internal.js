@@ -194,6 +194,13 @@ function escapeHtml(value) {
     .replaceAll('"', '&quot;');
 }
 
+function escapeJsonScript(value) {
+  return JSON.stringify(value ?? null)
+    .replaceAll('&', '\\u0026')
+    .replaceAll('<', '\\u003c')
+    .replaceAll('>', '\\u003e');
+}
+
 function normalizeItmSeverity(severity) {
   switch (severity) {
     case 'error':
@@ -5773,16 +5780,51 @@ function renderMindmapBranch(node) {
 
 function renderMindmapProjection(projected, options = {}) {
   const root = projected.mindmap?.root;
+  const title = createProjectionTitle(projected, options);
+  const resolved = resolveItmVisualTarget({
+    document: projected.sourceDocument ?? projected.document,
+    effectiveDocument: projected.document,
+    resolvedDocument: projected.resolvedDocument,
+    effectiveResolvedDocument: projected.resolvedDocument,
+    diagnostics: projected.diagnostics,
+  }, {
+    projection: 'mindmap',
+    title,
+  });
   const childrenMarkup = (root?.children?.length ?? 0) > 0
     ? `<ul class="tf-itm-mindmap__children tf-itm-mindmap__children--root">${root.children.map((child) => renderMindmapBranch(child)).join('')}</ul>`
     : '<p class="tf-itm-empty">No branches matched the selected mindmap projection.</p>';
   return renderPublicationSection(projected, { ...options, projection: 'mindmap' }, `
-<div class="tf-itm-mindmap">
-  <article class="tf-itm-mindmap__root">
-    <strong>${escapeHtml(root?.label ?? createProjectionTitle(projected, options))}</strong>
-    ${root?.typeRef ? `<span>${escapeHtml(root.typeRef)}</span>` : ''}
-  </article>
-  ${childrenMarkup}
+<div class="tf-itm-jsmind-publication" data-itm-jsmind-publication>
+  <script type="application/json" data-itm-jsmind-model>${escapeJsonScript({
+    title,
+    visualDocument: resolved.visualDocument,
+    diagnostics: [...resolved.diagnostics, ...resolved.visualDiagnostics],
+  })}</script>
+  <section class="tf-visual-runtime tf-visual-runtime--jsmind tf-visual-runtime--placeholder">
+    <header class="tf-visual-runtime__header">
+      <div>
+        <span class="tf-visual-runtime__eyebrow">jsMind runtime</span>
+        <h4>${escapeHtml(title)}</h4>
+      </div>
+      <div class="tf-visual-runtime__meta">
+        <span>${resolved.visualDocument.nodes.length} topics</span>
+        <span>${resolved.visualDocument.edges.length} cross-links</span>
+      </div>
+    </header>
+    <div class="tf-visual-runtime__body tf-visual-runtime__body--message">
+      <p class="tf-visual-runtime__message">Loading jsMind mindmap runtime...</p>
+    </div>
+  </section>
+  <noscript>
+    <div class="tf-itm-mindmap">
+      <article class="tf-itm-mindmap__root">
+        <strong>${escapeHtml(root?.label ?? title)}</strong>
+        ${root?.typeRef ? `<span>${escapeHtml(root.typeRef)}</span>` : ''}
+      </article>
+      ${childrenMarkup}
+    </div>
+  </noscript>
 </div>`);
 }
 
@@ -5970,10 +6012,9 @@ function createLargeItmProjectionGuardHtml(title, estimate) {
     <div><dt>Relationship hints</dt><dd>${estimate.relationshipHintCount}</dd></div>
     <div><dt>Estimate</dt><dd>${estimate.estimatedSeconds}s+</dd></div>
   </dl>
-  <p>Continue rendering may block this surface while the graph model and layout are computed.</p>
+  <p>The full graph layout is intentionally paused because this browser runtime cannot interrupt it once started.</p>
   <p>
-    <button type="button" data-itm-large-continue>Continue rendering</button>
-    <button type="button" data-itm-large-cancel>Keep queued</button>
+    <button type="button" data-itm-large-cancel>Cancel rendering</button>
   </p>
 </section>`.trim();
 }
@@ -6088,28 +6129,15 @@ function createItmProjectionSurfaceContribution(projectionKind, label, descripti
           };
 
           if (workEstimate?.expensive) {
-            const continueButton = container.querySelector?.('[data-itm-large-continue]');
             const cancelButton = container.querySelector?.('[data-itm-large-cancel]');
-            const handleContinue = () => {
-              if (disposed) {
-                return;
-              }
-              container.innerHTML = createItmSurfaceMessageHtml(
-                resourceTitle,
-                `Resolving ${projectionKind} target after user confirmation. Estimated ${workEstimate.estimatedSeconds}s+.`,
-              );
-              void runResolution();
-            };
             const handleCancel = () => {
               surfaceModel.html = createItmSurfaceMessageHtml(
                 resourceTitle,
-                'Large ITM graph rendering is still queued. Use Continue rendering to run the blocking graph layout.',
+                'Large ITM graph rendering was canceled before the blocking layout started.',
               );
               container.innerHTML = surfaceModel.html;
             };
-            continueButton?.addEventListener?.('click', handleContinue);
             cancelButton?.addEventListener?.('click', handleCancel);
-            disposeCallbacks.push(() => continueButton?.removeEventListener?.('click', handleContinue));
             disposeCallbacks.push(() => cancelButton?.removeEventListener?.('click', handleCancel));
           } else {
             void runResolution();

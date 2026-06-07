@@ -33,7 +33,7 @@ test('workbench registry renders ITM Markdown mindmap and report test profiles',
   const expectations = [
     {
       filename: 'itm-markdown-mindmap.md',
-      markers: [/Mindmap smoke publication/, /tf-itm-mindmap/],
+      markers: [/Mindmap smoke publication/, /data-itm-jsmind-publication/, /tf-visual-runtime--jsmind/],
     },
     {
       filename: 'itm-markdown-report.md',

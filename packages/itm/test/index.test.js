@@ -312,7 +312,8 @@ test('ITM graph projection surface defers large profile rendering behind an expl
   });
 
   assert.match(opened.surface.model.html, /data-itm-large-profile="true"/);
-  assert.match(opened.surface.model.html, /Continue rendering/);
+  assert.match(opened.surface.model.html, /Cancel rendering/);
+  assert.doesNotMatch(opened.surface.model.html, /Continue rendering/);
   assert.doesNotMatch(opened.surface.model.html, /Resolving graph target/);
 });
 

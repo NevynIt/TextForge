@@ -9,3 +9,6 @@ export {
   createRendererJsMindContributionManifest,
   jsmindSurfaceContribution,
 } from './contribution.js';
+export {
+  mountJsMindRuntime,
+} from './runtime-mount.js';

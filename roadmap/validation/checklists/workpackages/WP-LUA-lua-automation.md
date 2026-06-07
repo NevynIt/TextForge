@@ -11,7 +11,7 @@
 - The runtime exposes curated `tf`, `tf.pipeline`, `tf.actions`, and `tf.console` modules while rejecting blocked module requests such as `io`, `os`, `socket`, and `js`.
 - The runtime rejects blocked browser/host globals such as `fetch`, `window`, `document`, and unrestricted evaluation helpers.
 - Lua action discovery materializes contribution records that participate in the normal command/pipeline context rather than an app-local side channel.
-- The shell surfaces an interactive xterm.js-backed Lua console and can execute a console command from the built `file://` artifact without requiring a dev server.
+- The shell surfaces an interactive TextForge-owned Lua prompt/transcript console and can execute a console command from the built `file://` artifact without requiring a dev server.
 - Lua execution limits produce structured diagnostics for blocked APIs, contract mismatches, recursion overflow, and runaway loops.
 - Lua console transcript/history text remains selectable for copy/paste.
 - Lua console transcript/history rows have enough line height and padding to avoid clipped descenders or bracket bottoms.

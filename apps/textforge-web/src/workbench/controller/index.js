@@ -53,6 +53,10 @@ import {
   rasterizeSvgToPngBytes,
 } from '@textforge/diagrams';
 import {
+  createJsMindSurfaceModel,
+  mountJsMindRuntime,
+} from '@textforge/renderer-jsmind';
+import {
   createMarkdownSnippet,
   parseMarkdownCapabilityRequirements,
   markdownPreviewSurfaceContribution,
@@ -70,7 +74,7 @@ import {
   luaConsoleResourcePath,
   luaConsoleSurfaceContribution,
 } from '@textforge/lua';
-// WP-LUA keeps the interactive xterm.js "Lua Console" and "Reload Lua automation pipelines" flows contribution-driven.
+// WP-LUA keeps the interactive Lua Console and "Reload Lua automation pipelines" flows contribution-driven.
 import {
   createStatusBadge,
   createToolbarSlot,
@@ -88,6 +92,9 @@ import {
   readWorkbenchTestProfile,
   sampleResourcePaths,
 } from '../bootstrap-options.js';
+import {
+  diagramExportWorkerSource,
+} from '../diagram-export-worker-source.js';
 import {
   createBlobUrlDriver,
   createZipFilename,
@@ -344,6 +351,16 @@ export function createTextForgeWorkbenchController() {
         emit();
       }, 3200);
     }
+  }
+
+  function yieldToBrowser() {
+    return new Promise((resolve) => {
+      if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+        window.requestAnimationFrame(() => resolve());
+        return;
+      }
+      globalThis.setTimeout(resolve, 0);
+    });
   }
 
   function subscribe(listener) {
@@ -2378,6 +2395,101 @@ export function createTextForgeWorkbenchController() {
     });
   }
 
+  function createPngDescriptorFromGeneratedSvg(svgDescriptor, pngBytes) {
+    const pngPath = String(svgDescriptor.path ?? '').replace(/\.svg$/i, '.png');
+    return {
+      ...svgDescriptor,
+      path: pngPath,
+      title: basenameWorkspacePath(pngPath),
+      representation: 'bytes',
+      mimeType: 'image/png',
+      languageId: undefined,
+      text: undefined,
+      bytes: pngBytes,
+      format: 'png',
+      generatedAt: new Date().toISOString(),
+    };
+  }
+
+  async function rasterizeGeneratedDiagramSvgsOnMainThread(svgDescriptors) {
+    const pngDescriptors = [];
+    for (const [index, descriptor] of svgDescriptors.entries()) {
+      showTransientFlag(
+        'Exporting diagrams',
+        `Creating PNG ${index + 1} of ${svgDescriptors.length}. The browser remains responsive between diagrams.`,
+        'info',
+      );
+      await yieldToBrowser();
+      const pngBytes = await rasterizeSvgToPngBytes(descriptor.text, {
+        document: globalThis.document,
+      });
+      pngDescriptors.push(createPngDescriptorFromGeneratedSvg(descriptor, pngBytes));
+    }
+    return pngDescriptors;
+  }
+
+  async function rasterizeGeneratedDiagramSvgs(svgDescriptors) {
+    if (svgDescriptors.length === 0) {
+      return [];
+    }
+
+    if (typeof Worker !== 'function') {
+      return rasterizeGeneratedDiagramSvgsOnMainThread(svgDescriptors);
+    }
+
+    showTransientFlag(
+      'Exporting diagrams',
+      `Creating ${svgDescriptors.length} PNG asset${svgDescriptors.length === 1 ? '' : 's'} in a background worker.`,
+      'info',
+    );
+
+    try {
+      const results = await new Promise((resolve, reject) => {
+        const workerUrl = URL.createObjectURL(new Blob([diagramExportWorkerSource], {
+          type: 'text/javascript',
+        }));
+        const worker = new Worker(workerUrl);
+        const finish = (callback, value) => {
+          worker.terminate();
+          URL.revokeObjectURL(workerUrl);
+          callback(value);
+        };
+        worker.addEventListener('message', (event) => {
+          if (event.data?.type === 'done') {
+            finish(resolve, event.data.results ?? []);
+            return;
+          }
+          if (event.data?.type === 'error') {
+            finish(reject, new Error(event.data.message ?? 'Diagram export worker failed.'));
+          }
+        });
+        worker.addEventListener('error', (event) => {
+          finish(reject, new Error(event.message || 'Diagram export worker failed.'));
+        });
+        worker.postMessage({
+          jobs: svgDescriptors.map((descriptor, index) => ({
+            id: String(index),
+            svgText: descriptor.text,
+          })),
+        });
+      });
+      return results.flatMap((result) => {
+        const descriptor = svgDescriptors[Number(result.id)];
+        if (!descriptor || !result.bytes) {
+          return [];
+        }
+        return createPngDescriptorFromGeneratedSvg(descriptor, new Uint8Array(result.bytes));
+      });
+    } catch (error) {
+      showTransientFlag(
+        'Diagram worker unavailable',
+        `${error?.message ?? 'Worker export failed.'} Falling back to chunked PNG export.`,
+        'warning',
+      );
+      return rasterizeGeneratedDiagramSvgsOnMainThread(svgDescriptors);
+    }
+  }
+
   function describeGeneratedResource(resource) {
     const provenance = resource.metadata?.provenance;
     if (!provenance || provenance.kind !== 'generated') {
@@ -2419,6 +2531,56 @@ export function createTextForgeWorkbenchController() {
         { label: 'Provenance', value: resource.metadata?.provenance?.kind ?? 'none' },
         { label: 'Diagnostics', value: String(resource.metadata?.diagnostics?.length ?? 0) },
       ],
+    };
+  }
+
+  function hydrateItmJsmindPublications(container, resourceTitle) {
+    const disposers = [];
+    if (!container?.querySelectorAll) {
+      return () => {};
+    }
+
+    for (const island of container.querySelectorAll('[data-itm-jsmind-publication]')) {
+      if (island.getAttribute('data-itm-jsmind-mounted') === 'true') {
+        continue;
+      }
+      const modelScript = island.querySelector('[data-itm-jsmind-model]');
+      try {
+        const payload = JSON.parse(modelScript?.textContent ?? '{}');
+        if (!payload.visualDocument) {
+          continue;
+        }
+        island.setAttribute('data-itm-jsmind-mounted', 'true');
+        const model = createJsMindSurfaceModel(payload.visualDocument, {
+          title: payload.title ?? resourceTitle,
+          diagnostics: Array.isArray(payload.diagnostics) ? payload.diagnostics : [],
+        });
+        disposers.push(mountJsMindRuntime(island, model, {
+          openSourceRange,
+        }));
+      } catch (error) {
+        island.innerHTML = `<section class="tf-visual-runtime tf-visual-runtime--error"><p class="tf-visual-runtime__message">${escapeHtml(error?.message ?? 'jsMind publication failed to initialize.')}</p></section>`;
+      }
+    }
+
+    return () => {
+      for (const dispose of disposers) {
+        dispose?.();
+      }
+    };
+  }
+
+  function createHydratedMarkdownPreviewSurface(surface, resourceTitle) {
+    return {
+      ...surface,
+      mount(container) {
+        const disposeSurface = surface.mount(container);
+        const disposeJsmind = hydrateItmJsmindPublications(container, resourceTitle);
+        return () => {
+          disposeJsmind();
+          disposeSurface?.();
+        };
+      },
     };
   }
 
@@ -2526,6 +2688,9 @@ export function createTextForgeWorkbenchController() {
         };
       },
     };
+    const mountedSurface = session.contributionId === markdownPreviewSurfaceContribution.id
+      ? createHydratedMarkdownPreviewSurface(surface, resourceTitle)
+      : surface;
     return {
       id: session.id,
       kind: 'surface',
@@ -2550,7 +2715,7 @@ export function createTextForgeWorkbenchController() {
         createResourceDescriptorInspectorSection(resource),
       ].filter(Boolean),
       controls: [...controls, ...(runtimeView?.controls ?? [])],
-      surface,
+      surface: mountedSurface,
     };
   }
 
@@ -3574,7 +3739,7 @@ export function createTextForgeWorkbenchController() {
     const rendered = await renderMarkdownResource(resource, {
       fenceExecutionOptions: {
         generatedAssetBasePath: `/generated/${sanitizeFilenameSegment(stem, 'diagram')}`,
-        includePng: true,
+        includePng: false,
         document: globalThis.document,
       },
     });
@@ -3584,8 +3749,17 @@ export function createTextForgeWorkbenchController() {
       return;
     }
 
-    const savedResources = rendered.generatedResources.map((descriptor) => upsertGeneratedWorkspaceResource(descriptor));
+    const svgResources = rendered.generatedResources.filter((descriptor) =>
+      descriptor.representation === 'text' && descriptor.mimeType === 'image/svg+xml' && typeof descriptor.text === 'string');
+    const pngResources = await rasterizeGeneratedDiagramSvgs(svgResources);
+    const savedResources = [...rendered.generatedResources, ...pngResources]
+      .map((descriptor) => upsertGeneratedWorkspaceResource(descriptor));
     await persistWorkspace('markdown.export-generated-diagrams');
+    showTransientFlag(
+      'Generated diagrams exported',
+      `Saved ${svgResources.length} SVG and ${pngResources.length} PNG asset${svgResources.length + pngResources.length === 1 ? '' : 's'}.`,
+      'info',
+    );
     expandFolderPath('/generated');
     if (savedResources[0]) {
       openResourceEntry(savedResources[0], {

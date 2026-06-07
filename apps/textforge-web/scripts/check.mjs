@@ -24,6 +24,7 @@ const viteConfig = await readFile(resolve(rootDir, 'vite.config.mjs'), 'utf8');
 const packageJson = await readFile(resolve(rootDir, 'package.json'), 'utf8');
 const packageScripts = JSON.parse(packageJson).scripts ?? {};
 const uiPackageJson = await readFile(resolve(rootDir, '..', '..', 'packages', 'ui', 'package.json'), 'utf8');
+const luaRuntimeJs = await readFile(resolve(rootDir, '..', '..', 'packages', 'lua', 'src', 'runtime.js'), 'utf8');
 const storageBoundaryDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'reference', 'specs', 'browser-managed-workspace-storage.md'), 'utf8');
 const commandDispatchDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'reference', 'specs', 'local-command-dispatch.md'), 'utf8');
 const localUiStateDoc = await readFile(resolve(rootDir, '..', '..', 'docs', 'reference', 'specs', 'local-shell-ui-state.md'), 'utf8');
@@ -208,8 +209,8 @@ for (const requiredTestProfileSignal of ['testProfile', '/docs/examples/itm/test
   }
 }
 
-for (const requiredLuaSignal of ['Lua Console', 'Reload Lua automation pipelines', 'xterm', 'lua.open-console', 'tf.power', 'Power session active', 'luaSkipPreload']) {
-  if (!workbenchJs.includes(requiredLuaSignal)) {
+for (const requiredLuaSignal of ['Lua Console', 'Reload Lua automation pipelines', 'tf-lua-console__transcript', 'tf-lua-console__input', 'lua.open-console', 'tf.power', 'Power session active', 'luaSkipPreload']) {
+  if (!`${workbenchJs}\n${luaRuntimeJs}`.includes(requiredLuaSignal)) {
     throw new Error(`workbench.js must surface ${requiredLuaSignal} for WP-LUA and WP-LUA-POWER-SESSION`);
   }
 }

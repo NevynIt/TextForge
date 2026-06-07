@@ -31,6 +31,24 @@
 | EV-006 | test output | `corepack pnpm --filter ./apps/textforge-web test` | 13 passing tests; existing Fengari warning observed. |
 | EV-007 | build output | `corepack pnpm --filter ./apps/textforge-web build` | Build passed; existing browser externalization/import-meta warnings observed. |
 | EV-008 | roadmap check | `node roadmap/scripts/generate-views.mjs --check`; `corepack pnpm roadmap:dependency-map:publish:check` | Both passed. |
+| EV-009 | follow-up test output | `corepack pnpm --filter @textforge/lua test`; `corepack pnpm --filter @textforge/itm test`; `corepack pnpm --filter @textforge/renderer-jsmind test`; `corepack pnpm --filter @textforge/textforge-web test` | Follow-up regressions covered: selectable owned Lua transcript, jsMind-backed Markdown mindmap publication marker, nonblocking large ITM guard. |
+| EV-010 | follow-up build output | `corepack pnpm --filter @textforge/lua build`; `corepack pnpm --filter @textforge/itm build`; `corepack pnpm --filter @textforge/renderer-jsmind build`; `corepack pnpm --filter @textforge/textforge-web build` | Touched package builds passed. Web build passed with the existing `@viz-js/viz` import-meta warning only. |
+
+## Follow-up correction
+
+Manual retest found four residual issues after the initial stabilization pass:
+
+- Markdown generated diagram export still froze while producing PNG assets.
+- `?testProfile=itm-markdown-mindmap` rendered the static placeholder mindmap instead of the jsMind-backed runtime.
+- Lua history remained unselectable because xterm still owned the transcript rows.
+- The retail ITM large-graph guard exposed a blocking "Continue rendering" action and unclear "Keep queued" wording.
+
+Corrections made in the follow-up pass:
+
+- Generated diagram export now renders SVGs first, then rasterizes PNGs in a Blob-backed Web Worker when supported, with a yielding main-thread fallback.
+- ITM mindmap publication emits a Visual ITM/jsMind hydration island and the web Markdown preview mounts it with the shared `@textforge/renderer-jsmind` runtime.
+- Lua console no longer depends on xterm; the prompt and transcript are TextForge-owned DOM controls, with a selectable `<pre>` transcript and explicit regression coverage.
+- Large retail ITM graph surfaces no longer expose the known blocking continue action; the guard stays responsive and uses a clear `Cancel rendering` action until graph resolution can be moved wholesale off-thread.
 
 ## Diagnostics / defects
 
@@ -42,10 +60,10 @@
 
 - Export Markdown print HTML with Mermaid and confirm the diagram appears.
 - Run generated diagram export and confirm SVG/PNG assets are created.
-- Open `?testProfile=itm-markdown-mindmap` and `?testProfile=itm-markdown-report`.
+- Open `?testProfile=itm-markdown-mindmap` and confirm the jsMind toolbar/runtime appears; open `?testProfile=itm-markdown-report` and confirm report publication output.
 - Select/copy Lua history text and confirm row spacing is not clipped.
 - Open `Training By Design.bpmn`.
-- Test EA dashboard view switching, node dragging plus slider/checkbox changes, and the retail ITM profile progress/cancel guard.
+- Test EA dashboard view switching, node dragging plus slider/checkbox changes, and the retail ITM profile cancel guard.
 
 ## Validation conclusion
 

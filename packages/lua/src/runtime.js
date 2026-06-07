@@ -114,8 +114,8 @@ export const defaultLuaHostCapabilities = Object.freeze({
 export const luaCommandContributions = [
   createCommand('lua.open-console', 'Open Lua console', {
     category: 'lua',
-    description: 'Open the xterm.js-backed Lua console surface.',
-    keywords: ['lua', 'console', 'terminal', 'xterm'],
+    description: 'Open the local Lua console surface.',
+    keywords: ['lua', 'console', 'prompt'],
     menu: { id: 'lua', label: 'Lua', groupOrder: 60, order: 10 },
     toolbar: { order: 120, kind: 'secondary' },
     when: { workspaceReady: true },
@@ -352,12 +352,6 @@ export function isLuaConsoleMultilineInput(command) {
   return String(command ?? '').replaceAll('\r\n', '\n').replaceAll('\r', '\n').includes('\n');
 }
 
-function writeConsoleTranscript(terminal, state) {
-  for (const line of state.transcript) {
-    terminal.writeln(line);
-  }
-}
-
 function formatLuaConsoleResult(result) {
   const lines = [];
   for (const line of result.consoleLines ?? []) {
@@ -386,7 +380,9 @@ export function createLuaConsoleSurface(options = {}) {
         '<div class="tf-lua-console__session" data-lua-session-state>Sandbox session</div>',
         '<button class="tf-lua-console__recovery" data-lua-recovery type="button" hidden>Restart In Safe Mode</button>',
         '</header>',
-        '<div class="tf-lua-console__terminal" data-lua-terminal></div>',
+        '<div class="tf-lua-console__terminal" data-lua-terminal>',
+        '<pre class="tf-lua-console__transcript" data-lua-transcript aria-label="Lua console transcript"></pre>',
+        '</div>',
         '<section class="tf-lua-console__composer" aria-label="Lua prompt composer">',
         '<div class="tf-lua-console__composer-header">',
         '<div class="tf-lua-console__composer-title">Interactive prompt</div>',
@@ -406,14 +402,16 @@ export function createLuaConsoleSurface(options = {}) {
       ].join('');
       const sessionStateHost = container.querySelector('[data-lua-session-state]');
       const recoveryButton = container.querySelector('[data-lua-recovery]');
-      const host = container.querySelector('[data-lua-terminal]');
+      const terminalFrame = container.querySelector('[data-lua-terminal]');
+      const transcriptHost = container.querySelector('[data-lua-transcript]');
       const inputHost = container.querySelector('[data-lua-input]');
       const runButton = container.querySelector('[data-lua-run]');
       const previousHistoryButton = container.querySelector('[data-lua-history-prev]');
       const nextHistoryButton = container.querySelector('[data-lua-history-next]');
       const clearButton = container.querySelector('[data-lua-clear]');
       if (
-        !host
+        !terminalFrame
+        || !transcriptHost
         || !sessionStateHost
         || !recoveryButton
         || !inputHost
@@ -428,15 +426,19 @@ export function createLuaConsoleSurface(options = {}) {
       }
 
       let disposed = false;
-      let terminal;
-      let fitAddon;
       let busy = false;
       let recoveryPending = false;
       let state = normalizeLuaConsoleState(typeof options.getState === 'function' ? options.getState() : {});
 
+      const renderTranscriptMirror = () => {
+        transcriptHost.textContent = state.transcript.join('\n');
+        transcriptHost.scrollTop = transcriptHost.scrollHeight;
+      };
+
       const syncState = (nextState) => {
         state = normalizeLuaConsoleState(nextState);
         options.setState?.(state);
+        renderTranscriptMirror();
       };
 
       const renderSessionState = () => {
@@ -455,12 +457,11 @@ export function createLuaConsoleSurface(options = {}) {
       };
 
       const rerenderTranscript = () => {
-        if (!terminal || disposed) {
+        if (disposed) {
           return;
         }
 
-        terminal.write('\x1b[2J\x1b[H');
-        writeConsoleTranscript(terminal, state);
+        renderTranscriptMirror();
         renderSessionState();
       };
 
@@ -496,16 +497,10 @@ export function createLuaConsoleSurface(options = {}) {
           historyDraft: '',
           currentInput: '',
         });
-        for (const line of commandLines) {
-          terminal?.writeln(line);
-        }
         syncComposerView();
 
         if (trimmed === 'help' || trimmed === ':help' || trimmed === '.help') {
           const nextLines = createLuaConsoleHelpLines();
-          for (const line of nextLines) {
-            terminal?.writeln(line);
-          }
           syncState({
             ...state,
             transcript: [...nextTranscript, ...nextLines],
@@ -523,9 +518,6 @@ export function createLuaConsoleSurface(options = {}) {
         try {
           const result = await options.runCommand?.(command);
           const nextLines = formatLuaConsoleResult(result ?? { ok: true, consoleLines: [], diagnostics: [] });
-          for (const line of nextLines) {
-            terminal?.writeln(line);
-          }
           syncState({
             ...state,
             transcript: [...nextTranscript, ...nextLines],
@@ -537,7 +529,6 @@ export function createLuaConsoleSurface(options = {}) {
           renderSessionState();
         } catch (error) {
           const nextLine = `error: ${error?.message ?? 'Lua console command failed.'}`;
-          terminal?.writeln(nextLine);
           syncState({
             ...state,
             transcript: [...nextTranscript, nextLine],
@@ -554,55 +545,15 @@ export function createLuaConsoleSurface(options = {}) {
         }
       };
 
-      const boot = async () => {
-        const [{ Terminal }, { FitAddon }] = await Promise.all([
-          import('@xterm/xterm'),
-          import('@xterm/addon-fit'),
-        ]);
+      const boot = () => {
         if (disposed) {
           return;
         }
 
-        terminal = new Terminal({
-          convertEol: true,
-          cursorBlink: false,
-          disableStdin: true,
-          fontFamily: '"Iosevka Term", Consolas, "SFMono-Regular", monospace',
-          fontSize: 13,
-          lineHeight: 1.25,
-          theme: {
-            background: '#09111f',
-            foreground: '#d9e6ff',
-            cursor: '#7dd3fc',
-            black: '#0b1220',
-            brightBlack: '#344055',
-            red: '#f97373',
-            brightRed: '#fb7185',
-            green: '#86efac',
-            brightGreen: '#4ade80',
-            yellow: '#fcd34d',
-            brightYellow: '#f59e0b',
-            blue: '#60a5fa',
-            brightBlue: '#38bdf8',
-            magenta: '#f9a8d4',
-            brightMagenta: '#f472b6',
-            cyan: '#67e8f9',
-            brightCyan: '#22d3ee',
-            white: '#d9e6ff',
-            brightWhite: '#ffffff',
-          },
-        });
-        fitAddon = new FitAddon();
-        terminal.loadAddon(fitAddon);
-        terminal.open(host);
-        requestAnimationFrame(() => fitAddon.fit());
         rerenderTranscript();
         renderSessionState();
         syncComposerView();
         inputHost.focus();
-        const resizeObserver = new ResizeObserver(() => fitAddon?.fit());
-        resizeObserver.observe(host);
-        disposeCallbacks.push(() => resizeObserver.disconnect());
       };
 
       const browseHistory = (direction) => {
@@ -681,7 +632,7 @@ export function createLuaConsoleSurface(options = {}) {
         }
       });
 
-      void boot();
+      boot();
       return () => {
         disposed = true;
         for (const dispose of disposeCallbacks) {
@@ -691,7 +642,6 @@ export function createLuaConsoleSurface(options = {}) {
             dispose?.dispose?.();
           }
         }
-        terminal?.dispose?.();
         container.replaceChildren();
       };
     },
@@ -701,7 +651,7 @@ export function createLuaConsoleSurface(options = {}) {
 export const luaConsoleSurfaceContribution = {
   id: `${packageId}/console`,
   label: 'Lua Console',
-  description: 'xterm.js-backed local Lua console with a persistent sandboxed session.',
+  description: 'Local Lua console with a persistent sandboxed session.',
   localName: 'console',
   capabilities: [luaCapabilityIds.console],
   defaultActive: true,
@@ -711,7 +661,7 @@ export const luaConsoleSurfaceContribution = {
     return {
       mountId: `lua-console:${execution.resource?.resourceId ?? 'session'}`,
       summary: 'Local Lua console with a persistent sandboxed session.',
-      detail: 'Interactive xterm.js surface; no DOM, network, or local filesystem access.',
+      detail: 'Interactive Lua prompt surface; no DOM, network, or local filesystem access.',
       readOnly: false,
       surface: createLuaConsoleSurface({
         getState: execution.getConsoleState,

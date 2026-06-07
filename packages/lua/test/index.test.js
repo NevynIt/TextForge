@@ -7,6 +7,7 @@ import { createWorkspaceService } from '@textforge/workspace';
 
 import {
   createLuaContributionManifest,
+  createLuaConsoleSurface,
   createLuaExecutionService,
   defaultLuaExecutionLimits,
   discoverLuaAutomations,
@@ -264,6 +265,22 @@ test('lua console transcript formatting preserves multi-line commands', () => {
     'lua> print("a")',
     '...  print("b")',
   ]);
+});
+
+test('lua console surface exposes a selectable transcript host', () => {
+  const surface = createLuaConsoleSurface();
+  const container = {
+    innerHTML: '',
+    querySelector() {
+      return null;
+    },
+    replaceChildren() {},
+  };
+
+  const dispose = surface.mount(container);
+  assert.match(container.innerHTML, /data-lua-transcript/);
+  assert.match(container.innerHTML, /tf-lua-console__transcript/);
+  dispose();
 });
 
 test('lua console multiline detection treats embedded newlines as multi-line input', () => {

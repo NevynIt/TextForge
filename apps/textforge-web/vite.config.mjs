@@ -13,10 +13,6 @@ const browserFengariLualibShim = resolve(rootDir, 'src/fengari-browser/lualib.cj
 const browserOsShim = resolve(rootDir, 'src/node-compat/os.js');
 const fengariLuaconfEntry = require.resolve('fengari/src/luaconf.js');
 const fengariLualibEntry = require.resolve('fengari/src/lualib.js');
-const xtermCssEntry = resolve(
-  require.resolve('@xterm/xterm/package.json'),
-  '../css/xterm.css',
-);
 
 function resolveFengariBrowserHostImport(source, importer) {
   if (source === 'fengari/src/luaconf.js' || source === fengariLuaconfEntry) {
@@ -70,7 +66,6 @@ export default defineConfig(({ command }) => ({
     : undefined,
   resolve: {
     alias: [
-      { find: '@textforge/vendor/xterm.css', replacement: xtermCssEntry },
       { find: 'fs/promises', replacement: browserFsPromisesShim },
       { find: 'node:fs/promises', replacement: browserFsPromisesShim },
       { find: 'fs', replacement: browserFsShim },

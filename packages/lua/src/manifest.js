@@ -22,8 +22,8 @@ import {
 export const luaCommandContributions = [
   createCommand('lua.open-console', 'Open Lua console', {
     category: 'lua',
-    description: 'Open the xterm.js-backed Lua console surface.',
-    keywords: ['lua', 'console', 'terminal', 'xterm'],
+    description: 'Open the local Lua console surface.',
+    keywords: ['lua', 'console', 'prompt'],
     menu: { id: 'lua', label: 'Lua', groupOrder: 60, order: 10 },
     toolbar: { order: 120, kind: 'secondary' },
     when: { workspaceReady: true },
