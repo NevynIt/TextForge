@@ -26,6 +26,7 @@
 | `WP-SET-01` | User settings core and local persistence | defined | `MOD-SURFACES-UI` |
 | `WP-ITM-04` | ITM validation and conformance modules | candidate | `MOD-ITM` |
 | `WP-ITM-05` | Parameterized ITM reports and dashboards | candidate | `MOD-ITM` |
+| `WP-ITM-REACT-FLOW-DAGRE-01` | React Flow Dagre ITM graph surface | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-TRANSLATORS` | Visual ITM translator utilities | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-VDELTA-01` | Visual ITM view-delta consumption and capture | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-LIVE-SYNC-01` | Bidirectional source/visual live sync | candidate | `MOD-VISUAL-ITM-RENDERERS` |

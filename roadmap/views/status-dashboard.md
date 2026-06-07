@@ -7,7 +7,7 @@
 | Status | Count |
 |---|---:|
 | blocked | 1 |
-| candidate | 24 |
+| candidate | 25 |
 | deferred | 1 |
 | defined | 31 |
 | implemented | 1 |
@@ -48,6 +48,7 @@
 | `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | in-progress | `MOD-MARKDOWN-ITM` |
 | `WP-RENDER-JSMIND` | jsMind runtime renderer package | validated | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-RENDER-SIGMA` | Sigma/Graphology runtime renderer package | validated | `MOD-VISUAL-ITM-RENDERERS` |
+| `WP-ITM-REACT-FLOW-DAGRE-01` | React Flow Dagre ITM graph surface | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-TRANSLATORS` | Visual ITM translator utilities | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-VDELTA-01` | Visual ITM view-delta consumption and capture | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-LIVE-SYNC-01` | Bidirectional source/visual live sync | candidate | `MOD-VISUAL-ITM-RENDERERS` |

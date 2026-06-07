@@ -71,6 +71,7 @@ The module is healthy when its workpackages can move independently through the r
 - `ADR-0004` governs the browser-first Fengari host and TextForge-owned Lua virtual host.
 - `ADR-0010` proposes the interactive ITM exploration workbench.
 - `ADR-0011` proposes local AI command/action integration through the shared provider and policy boundary in `MOD-LOCAL-AI`.
+- `ADR-0012` proposes a package-owned React Flow + Dagre ITM graph surface that mounts through ordinary surface/open-with behavior.
 
 ## Validation Approach
 

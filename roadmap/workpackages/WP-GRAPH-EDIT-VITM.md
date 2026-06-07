@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-GRAPH-EDIT-VITM`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-VISUAL-ITM-RENDERERS`
-- ADRs: `ADR-0001`
+- ADRs: `ADR-0001`, `ADR-0012`
 
 ## Outcome
 
@@ -40,7 +40,7 @@ Use `validation/checklists/workpackages/WP-GRAPH-EDIT-VITM-visual-itm-edit-write
 
 ## Open Decisions
 
-- No additional ADR extracted during this governance reset unless future implementation uncovers a durable decision.
+- How later semantic edit/write-back affordances consume the React Flow + Dagre renderer boundary proposed by `ADR-0012`.
 
 ## Archive Trace
 

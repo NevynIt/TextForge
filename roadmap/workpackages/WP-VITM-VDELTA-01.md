@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-VITM-VDELTA-01`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-VISUAL-ITM-RENDERERS`
-- ADRs: `ADR-0001`
+- ADRs: `ADR-0001`, `ADR-0012`
 
 ## Outcome
 
@@ -40,7 +40,7 @@ Define validation evidence before implementation starts.
 
 ## Open Decisions
 
-- No additional ADR extracted during this governance reset unless future implementation uncovers a durable decision.
+- Whether moved/pinned node capture from `WP-ITM-REACT-FLOW-DAGRE-01` lands in this workpackage or remains renderer-local until visual delta capture is implemented.
 
 ## Archive Trace
 

@@ -112,7 +112,8 @@
         "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
         "decisions/ADR-0007-itm-type-inheritance-and-context-inference.md",
         "decisions/ADR-0008-itm-validation-and-conformance-modules.md",
-        "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md"
+        "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md",
+        "decisions/ADR-0012-react-flow-dagre-itm-graph-surface.md"
       ]
     },
     "MOD-MARKDOWN-ITM": {
@@ -151,7 +152,9 @@
         "Visual ITM document profile",
         "visual target picker and resolver integration",
         "runtime renderer package parity",
-        "visual edit/write-back follow-ons"
+        "visual edit/write-back follow-ons",
+        "React Flow and Dagre interactive ITM graph surface",
+        "viewpoint/view control model for renderer-bound graph controls"
       ],
       "depends_on": [
         "MOD-ITM",
@@ -168,13 +171,15 @@
         "WP-VITM-TRANSLATORS",
         "WP-VITM-VDELTA-01",
         "WP-VITM-LIVE-SYNC-01",
-        "WP-GRAPH-EDIT-VITM"
+        "WP-GRAPH-EDIT-VITM",
+        "WP-ITM-REACT-FLOW-DAGRE-01"
       ],
       "archive_trace": [
         "archive/registers/specs/legacy-specs/architecture/visual-itm-v1-profile.md",
         "archive/registers/specs/legacy-specs/architecture/visual-itm-runtime-recovery.md",
         "archive/grilling/legacy-grilling/v20-visual-recovery-to-bpmn-chain-findings.md",
-        "archive/grilling/legacy-grilling/itm-visuals-grilling.md"
+        "archive/grilling/legacy-grilling/itm-visuals-grilling.md",
+        "decisions/ADR-0012-react-flow-dagre-itm-graph-surface.md"
       ]
     },
     "MOD-BPMN": {
@@ -249,7 +254,8 @@
         "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/GlobalDashboard.jsx",
         "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/SystemView.jsx",
         "external reference: C:/Stuff/ea-dashboard/frontend/src/pages/SettingsView.jsx",
-        "external reference: C:/Stuff/ea-dashboard/data_export/ea_architecture_backup_2026-06-05.json"
+        "external reference: C:/Stuff/ea-dashboard/data_export/ea_architecture_backup_2026-06-05.json",
+        "decisions/ADR-0012-react-flow-dagre-itm-graph-surface.md"
       ]
     },
     "MOD-TABLES": {
@@ -334,7 +340,8 @@
         "archive/grilling/legacy-grilling/phase-4.1-grilling.md",
         "archive/grilling/legacy-grilling/phase-5-grilling.md",
         "decisions/ADR-0010-interactive-itm-exploration-workbench.md",
-        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md",
+        "decisions/ADR-0012-react-flow-dagre-itm-graph-surface.md"
       ]
     },
     "MOD-LOCAL-AI": {
@@ -1125,7 +1132,8 @@
         "WP-ITM-PUB-VISUAL-01"
       ],
       "enables": [
-        "WP-ITM-EXPLORATION-01"
+        "WP-ITM-EXPLORATION-01",
+        "WP-ITM-REACT-FLOW-DAGRE-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -1223,7 +1231,8 @@
         "WP-RENDER-JSMIND",
         "WP-RENDER-SIGMA",
         "WP-VITM-TRANSLATORS",
-        "WP-GRAPH-EDIT-VITM"
+        "WP-GRAPH-EDIT-VITM",
+        "WP-ITM-REACT-FLOW-DAGRE-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP",
@@ -1292,7 +1301,8 @@
         "WP-ITM-PUB-VISUAL-01",
         "WP-BPMN-VISUAL-B",
         "WP-VITM-VDELTA-01",
-        "WP-VITM-LIVE-SYNC-01"
+        "WP-VITM-LIVE-SYNC-01",
+        "WP-ITM-REACT-FLOW-DAGRE-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP",
@@ -1430,6 +1440,36 @@
       ],
       "validation_checklist": "validation/checklists/workpackages/WP-RENDER-SIGMA-runtime-renderer.md"
     },
+    "WP-ITM-REACT-FLOW-DAGRE-01": {
+      "title": "React Flow Dagre ITM graph surface",
+      "path": "workpackages/WP-ITM-REACT-FLOW-DAGRE-01.md",
+      "module": "MOD-VISUAL-ITM-RENDERERS",
+      "status": "candidate",
+      "type": "Feature / interactive renderer",
+      "depends_on": [
+        "WP-VITM-01",
+        "WP-ITM-VRESOLVE-01",
+        "WP-ITM-05"
+      ],
+      "enables": [
+        "WP-ITM-EXPLORATION-01",
+        "WP-VITM-VDELTA-01",
+        "WP-GRAPH-EDIT-VITM"
+      ],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0012"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0012-react-flow-dagre-itm-graph-surface.md",
+        "external reference: WP-EA-VIEWER-01 React Flow and Dagre interaction pattern"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-REACT-FLOW-DAGRE-01-react-flow-dagre-itm-graph-surface.md"
+    },
     "WP-VITM-TRANSLATORS": {
       "title": "Visual ITM translator utilities",
       "path": "workpackages/WP-VITM-TRANSLATORS.md",
@@ -1475,7 +1515,8 @@
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0001"
+        "ADR-0001",
+        "ADR-0012"
       ],
       "archive_trace": [
         "archive/registers/legacy-workpackages/workpackage-register.md",
@@ -1534,7 +1575,8 @@
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0001"
+        "ADR-0001",
+        "ADR-0012"
       ],
       "archive_trace": [
         "archive/registers/legacy-workpackages/workpackage-register.md",
@@ -2552,7 +2594,8 @@
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0010"
+        "ADR-0010",
+        "ADR-0012"
       ],
       "archive_trace": [
         "decisions/ADR-0010-interactive-itm-exploration-workbench.md",
@@ -2608,7 +2651,8 @@
       "production_required": false,
       "deferrable": false,
       "key_adrs": [
-        "ADR-0001"
+        "ADR-0001",
+        "ADR-0012"
       ],
       "archive_trace": [
         "external reference: C:/Stuff/ea-dashboard/frontend/src/App.jsx",
@@ -3051,7 +3095,8 @@
         "WP-BPMN-VISUAL-C",
         "WP-TABLES",
         "WP-ARCHIMATE-SEM",
-        "WP-ARCHIMATE-VISUAL"
+        "WP-ARCHIMATE-VISUAL",
+        "WP-ITM-REACT-FLOW-DAGRE-01"
       ],
       "target_outcome": "Runtime Visual ITM and read-only BPMN consumption baseline with clearly deferred edit/write-back gates."
     },
@@ -3196,6 +3241,17 @@
       "archive_trace": [
         "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md",
         "decisions/ADR-0010-interactive-itm-exploration-workbench.md"
+      ]
+    },
+    "ADR-0012": {
+      "title": "React Flow Dagre surface for ITM graphs",
+      "status": "proposed",
+      "path": "decisions/ADR-0012-react-flow-dagre-itm-graph-surface.md",
+      "supersedes": [],
+      "archive_trace": [
+        "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md",
+        "decisions/ADR-0010-interactive-itm-exploration-workbench.md",
+        "workpackages/WP-EA-VIEWER-01.md"
       ]
     }
   }

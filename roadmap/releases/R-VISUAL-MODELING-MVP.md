@@ -17,6 +17,7 @@ The included workpackage list is generated from `roadmap-state.yaml`.
 | `WP-RENDER-CYTOSCAPE` | Cytoscape runtime renderer package | Registry-owned | no |
 | `WP-RENDER-JSMIND` | jsMind runtime renderer package | Registry-owned | no |
 | `WP-RENDER-SIGMA` | Sigma/Graphology runtime renderer package | Registry-owned | no |
+| `WP-ITM-REACT-FLOW-DAGRE-01` | React Flow Dagre ITM graph surface | Registry-owned | no |
 | `WP-VITM-TRANSLATORS` | Visual ITM translator utilities | Registry-owned | no |
 | `WP-VITM-VDELTA-01` | Visual ITM view-delta consumption and capture | Registry-owned | no |
 | `WP-VITM-LIVE-SYNC-01` | Bidirectional source/visual live sync | Registry-owned | no |

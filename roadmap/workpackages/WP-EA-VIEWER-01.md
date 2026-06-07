@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-EA-VIEWER-01`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-EA-VIEWER`
-- ADRs: `ADR-0001`
+- ADRs: `ADR-0001`, `ADR-0012`
 
 ## Outcome
 
@@ -63,6 +63,7 @@ Use `validation/checklists/workpackages/WP-EA-VIEWER-01-exact-ea-dashboard-viewe
 
 - Confirm the final package name during implementation if `@textforge/ea-viewer` conflicts with existing naming conventions.
 - Decide whether to include a tiny fixture in-repo or keep large EA exports only as external validation references.
+- Keep `ADR-0012` generic graph extraction separate from the exact EA Dashboard port behavior in this workpackage.
 
 ## Archive Trace
 

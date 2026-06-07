@@ -58,6 +58,7 @@ The module is healthy when TextForge can open EA dashboard JSON fixture exports 
 
 - `ADR-0001` governs roadmap structure and authority.
 - The first slice is an exact port, not a rewrite into Visual ITM, ArchiMate, or a generic graph package.
+- `ADR-0012` extracts the reusable React Flow + Dagre interaction pattern for generic ITM graphs without changing the exact-port boundary.
 
 ## Validation Approach
 

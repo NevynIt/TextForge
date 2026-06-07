@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-ITM-EXPLORATION-01`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-SURFACES-UI`
-- ADRs: `ADR-0010`
+- ADRs: `ADR-0010`, `ADR-0012`
 
 ## Outcome
 
@@ -67,6 +67,7 @@ Use `validation/checklists/workpackages/WP-ITM-EXPLORATION-01-interactive-itm-ex
 - How much selector explanation metadata belongs in `@textforge/itm` versus UI-only adapters.
 - Whether transformation providers share the existing pipeline contribution registry or need a workbench-specific adapter layer.
 - How pinned transient surfaces are represented in session state.
+- Whether the React Flow + Dagre graph surface becomes the default interactive graph panel for exploration sessions.
 
 ## Archive Trace
 
