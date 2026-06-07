@@ -69,7 +69,6 @@ export interface AssetViewerSurfaceModel {
   readonly binding: WorkspaceAssetBinding;
   readonly lease?: BlobUrlLease;
   readonly blobUrl?: string;
-  readonly previewPaused: boolean;
   readonly resourceText: string;
   readonly provenance: string | WorkspaceGeneratedProvenance;
   readonly provenanceLabel: string;

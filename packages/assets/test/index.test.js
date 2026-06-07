@@ -6,7 +6,6 @@ import test from 'node:test';
 import {
   createAssetContributionManifest,
   createAssetProvenanceLabel,
-  createAssetViewerSurfaceModel,
   createBinaryAssetViewerSurface,
   createImageAssetViewerSurface,
   createPdfAssetViewerSurface,
@@ -107,60 +106,6 @@ test('text-stored SVG resources survive workspace zip round-trip and stay previe
     workspaceResource: restoredSvg,
     title: svg.metadata.title,
   }).viewerKind, 'svg');
-});
-
-test('generated text SVG previews are paused by default to avoid decode hangs', () => {
-  const workspace = createWorkspaceService({
-    workspaceId: 'asset-generated-svg-test',
-    idFactory: createSequentialIdFactory('entry'),
-    now: fixedNow,
-  });
-  workspace.createFolder({ path: '/generated' });
-  const svg = workspace.createTextResource({
-    path: '/generated/diagram.svg',
-    text: '<svg xmlns="http://www.w3.org/2000/svg"><rect width="20" height="20"/></svg>',
-    languageId: 'svg',
-    mimeType: 'image/svg+xml',
-    title: 'diagram.svg',
-    metadata: {
-      provenance: {
-        kind: 'generated',
-        pipelineId: '@textforge/diagrams/mermaid-svg',
-      },
-    },
-  });
-  const model = createAssetViewerSurfaceModel({
-    resource: workspaceEntryToResourceRef(svg),
-    workspaceResource: svg,
-    title: svg.metadata.title,
-  });
-
-  assert.equal(model.viewerKind, 'svg');
-  assert.equal(model.previewPaused, true);
-});
-
-test('ordinary small text SVG previews still load directly', () => {
-  const workspace = createWorkspaceService({
-    workspaceId: 'asset-small-svg-test',
-    idFactory: createSequentialIdFactory('entry'),
-    now: fixedNow,
-  });
-  workspace.createFolder({ path: '/docs' });
-  const svg = workspace.createTextResource({
-    path: '/docs/icon.svg',
-    text: '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="10" r="8"/></svg>',
-    languageId: 'svg',
-    mimeType: 'image/svg+xml',
-    title: 'icon.svg',
-  });
-  const model = createAssetViewerSurfaceModel({
-    resource: workspaceEntryToResourceRef(svg),
-    workspaceResource: svg,
-    title: svg.metadata.title,
-  });
-
-  assert.equal(model.viewerKind, 'svg');
-  assert.equal(model.previewPaused, false);
 });
 
 test('text-stored SVG resources rehydrate correctly through persisted Dexie workspace storage', async () => {

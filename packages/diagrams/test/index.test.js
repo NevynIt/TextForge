@@ -7,6 +7,7 @@ import {
   createDiagramGeneratedResources,
   createGeneratedDiagramPath,
   createGraphvizFenceHandler,
+  hasRenderedSvgPayload,
   renderGraphvizToSvg,
   renderMermaidToSvg,
 } from '../src/index.js';
@@ -52,6 +53,21 @@ test('diagram package can describe generated svg and png resources', () => {
 
   assert.equal(resources[0]?.representation, 'text');
   assert.equal(resources[1]?.representation, 'bytes');
+});
+
+test('mermaid output guard rejects stylesheet-only empty svg artifacts', () => {
+  assert.equal(
+    hasRenderedSvgPayload('<svg><style>.node{fill:red}</style><g></g></svg>'),
+    false,
+  );
+  assert.equal(
+    hasRenderedSvgPayload('<svg><style>.node{fill:red}</style><g><path d="M0,0L10,10"/></g></svg>'),
+    true,
+  );
+  assert.equal(
+    hasRenderedSvgPayload('<svg><defs><marker id="arrow"/></defs><g><text>Rendered</text></g></svg>'),
+    true,
+  );
 });
 
 test('mermaid rendering requires a browser document in node-based checks', async () => {

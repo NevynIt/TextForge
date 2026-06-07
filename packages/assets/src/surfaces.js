@@ -148,21 +148,7 @@ function createMediaNode(ownerDocument, model) {
   stage.className = 'asset-viewer__stage';
 
   if (model.viewerKind === 'svg' || model.viewerKind === 'image') {
-    if (model.viewerKind === 'svg' && model.previewPaused) {
-      const fallback = ownerDocument.createElement('div');
-      fallback.className = 'asset-viewer__fallback';
-      const message = ownerDocument.createElement('p');
-      message.textContent = 'SVG preview is paused for this generated or large asset.';
-      const action = ownerDocument.createElement('button');
-      action.type = 'button';
-      action.textContent = 'Load SVG preview';
-      action.disabled = !model.blobUrl;
-      action.addEventListener('click', () => {
-        stage.replaceChildren(createImageNode(ownerDocument, model));
-      }, { once: true });
-      fallback.append(message, action);
-      stage.append(fallback);
-    } else if (model.blobUrl) {
+    if (model.blobUrl) {
       stage.append(createImageNode(ownerDocument, model));
     } else {
       const fallback = ownerDocument.createElement('pre');
@@ -224,12 +210,6 @@ export function createAssetViewerSurfaceModel(request, binding, lease) {
     : request.workspaceResource?.representation === 'text'
       ? request.workspaceResource.text
       : '';
-  const previewPaused = viewerKind === 'svg'
-    && request.workspaceResource?.representation === 'text'
-    && (
-      resourceText.length > 200000
-      || request.workspaceResource?.metadata?.provenance?.kind === 'generated'
-    );
 
   return {
     id: `asset-viewer:${request.resource.resourceId}`,
@@ -241,7 +221,6 @@ export function createAssetViewerSurfaceModel(request, binding, lease) {
     binding: resolvedBinding,
     lease,
     blobUrl,
-    previewPaused,
     resourceText,
     provenance: request.provenance ?? 'workspace-bound',
     provenanceLabel: createAssetProvenanceLabel(request.provenance),

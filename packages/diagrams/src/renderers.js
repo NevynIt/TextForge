@@ -52,11 +52,30 @@ function createHiddenHost(targetDocument) {
   host.style.position = 'absolute';
   host.style.left = '-10000px';
   host.style.top = '0';
-  host.style.width = '0';
-  host.style.height = '0';
+  host.style.width = '1200px';
+  host.style.height = '900px';
   host.style.overflow = 'hidden';
+  host.style.visibility = 'hidden';
   targetDocument.body.append(host);
   return host;
+}
+
+function createMermaidRenderId(baseId) {
+  const prefix = String(baseId ?? 'textforge-mermaid')
+    .trim()
+    .replace(/[^A-Za-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    || 'textforge-mermaid';
+  return `${prefix}-render-${++mermaidCounter}`;
+}
+
+export function hasRenderedSvgPayload(svgText) {
+  const content = String(svgText ?? '')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+    .replace(/<defs\b[\s\S]*?<\/defs>/gi, '')
+    .replace(/<title\b[\s\S]*?<\/title>/gi, '')
+    .replace(/<desc\b[\s\S]*?<\/desc>/gi, '');
+  return /<(path|rect|circle|ellipse|line|polyline|polygon|text|foreignObject|image)\b/i.test(content);
 }
 
 function parseSvgDimension(value) {
@@ -95,9 +114,12 @@ export async function renderMermaidToSvg(source, options = {}) {
 
   ensureMermaid();
   const host = createHiddenHost(targetDocument);
-  const diagramId = options.id ?? `textforge-mermaid-${++mermaidCounter}`;
+  const diagramId = createMermaidRenderId(options.id);
   try {
     const result = await mermaid.render(diagramId, source, host);
+    if (!hasRenderedSvgPayload(result.svg)) {
+      throw new Error('Mermaid produced an empty SVG. The render output had no visible SVG payload.');
+    }
     return result.svg;
   } finally {
     host.remove();

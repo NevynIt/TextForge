@@ -24,6 +24,7 @@ export {
   diagramPipelineContributions,
 } from './pipelines.js';
 export {
+  hasRenderedSvgPayload,
   rasterizeSvgToPngBytes,
   renderGraphvizToSvg,
   renderMermaidToSvg,
