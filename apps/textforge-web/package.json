@@ -21,7 +21,7 @@
     "build:zip:from-dist": "node scripts/archive-dist.mjs",
     "dev": "vite --host 127.0.0.1",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node --test test/bootstrapOptions.test.js test/markdownPreviewState.test.js test/markdownPreviewLinks.test.js test/markdownWorkbenchIntegration.test.js test/eaWorkbenchIntegration.test.js && node scripts/check.mjs",
+    "test": "node --test test/bootstrapOptions.test.js test/markdownPreviewState.test.js test/markdownPreviewLinks.test.js test/markdownWorkbenchIntegration.test.js test/eaWorkbenchIntegration.test.js test/tablesWorkbenchIntegration.test.js && node scripts/check.mjs",
     "lint": "node scripts/check.mjs",
     "typecheck": "node scripts/check.mjs"
   },
@@ -41,6 +41,7 @@
     "@textforge/renderer-sigma": "workspace:*",
     "@textforge/security-profile": "workspace:*",
     "@textforge/surfaces": "workspace:*",
+    "@textforge/tables": "workspace:*",
     "@textforge/ui": "workspace:*",
     "@textforge/workspace": "workspace:*",
     "react": "^18.3.1",
