@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-AI-PREF`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-BACKEND-ENTERPRISE`
-- ADRs: `ADR-0001`
+- ADRs: `ADR-0001`, `ADR-0011`
 
 ## Outcome
 
@@ -40,7 +40,7 @@ Define validation evidence before implementation starts.
 
 ## Open Decisions
 
-- No additional ADR extracted during this governance reset unless future implementation uncovers a durable decision.
+- Whether AI policy remains split between local and backend-mediated providers or is consolidated after `ADR-0011` is accepted or revised.
 
 ## Archive Trace
 

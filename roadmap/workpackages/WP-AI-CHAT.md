@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-AI-CHAT`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-SURFACES-UI`
-- ADRs: `ADR-0001`
+- ADRs: `ADR-0001`, `ADR-0011`
 
 ## Outcome
 
@@ -40,7 +40,7 @@ Define validation evidence before implementation starts.
 
 ## Open Decisions
 
-- No additional ADR extracted during this governance reset unless future implementation uncovers a durable decision.
+- Whether chat depends only on `WP-AI-MEDIATOR` or can consume the generic local AI provider contract proposed by `ADR-0011`.
 
 ## Archive Trace
 

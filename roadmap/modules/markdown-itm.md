@@ -57,6 +57,7 @@ The module is healthy when its workpackages can move independently through the r
 
 - `ADR-0001` governs roadmap structure and authority.
 - `ADR-0009` proposes parameterized ITM reports and dashboards.
+- `ADR-0011` proposes local AI Markdown assistance as reviewable suggestions and patch proposals.
 
 ## Validation Approach
 

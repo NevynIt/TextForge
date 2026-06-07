@@ -24,6 +24,7 @@ Surfaces and UI defines the stable ownership boundary for the workpackages liste
 
 - feature package semantics
 - backend authorization
+- local AI provider semantics
 - resource persistence internals
 
 ## Public Contracts
@@ -69,6 +70,7 @@ The module is healthy when its workpackages can move independently through the r
 - `ADR-0001` governs roadmap structure and authority.
 - `ADR-0004` governs the browser-first Fengari host and TextForge-owned Lua virtual host.
 - `ADR-0010` proposes the interactive ITM exploration workbench.
+- `ADR-0011` proposes local AI command/action integration through the shared provider and policy boundary in `MOD-LOCAL-AI`.
 
 ## Validation Approach
 

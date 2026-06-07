@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-AI-MEDIATOR`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-BACKEND-ENTERPRISE`
-- ADRs: `ADR-0001`
+- ADRs: `ADR-0001`, `ADR-0011`
 
 ## Outcome
 
@@ -40,7 +40,7 @@ Define validation evidence before implementation starts.
 
 ## Open Decisions
 
-- No additional ADR extracted during this governance reset unless future implementation uncovers a durable decision.
+- How backend-mediated providers remain policy-compatible with the separate local AI provider boundary proposed by `ADR-0011`.
 
 ## Archive Trace
 

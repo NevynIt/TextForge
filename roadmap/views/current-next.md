@@ -47,6 +47,12 @@
 | `WP-AI-MEDIATOR` | AI contract and backend mediator | defined | `MOD-BACKEND-ENTERPRISE` |
 | `WP-AI-CHAT` | AI client and chat surface | defined | `MOD-SURFACES-UI` |
 | `WP-AI-PREF` | AI preference integration | defined | `MOD-BACKEND-ENTERPRISE` |
+| `WP-AI-LOCAL-01` | Browser local AI provider and policy-gated capability contract | candidate | `MOD-LOCAL-AI` |
+| `WP-AI-LOCAL-COMMANDS` | Local AI command palette and editor actions | candidate | `MOD-LOCAL-AI` |
+| `WP-AI-MD-ASSIST` | Markdown authoring, review, extraction, and report assistance | candidate | `MOD-LOCAL-AI` |
+| `WP-AI-ITM-REVIEW` | ITM semantic review, diagnostics, and patch proposals | candidate | `MOD-LOCAL-AI` |
+| `WP-AI-SEARCH-01` | Workspace semantic search without embeddings | candidate | `MOD-LOCAL-AI` |
+| `WP-AI-EMBED-01` | Optional local embedding/vector provider contract and vector index | candidate | `MOD-LOCAL-AI` |
 | `WP-ARCHIMATE-SEM` | ArchiMate semantic profile | defined | `MOD-ARCHIMATE` |
 | `WP-SURFACES-ADV` | Advanced tabbed main surfaces | defined | `MOD-SURFACES-UI` |
 | `WP-PIPELINE-EDITOR` | Pipeline/diagram editor surfaces | defined | `MOD-SURFACES-UI` |

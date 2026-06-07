@@ -23,6 +23,7 @@ Backend and enterprise defines the stable ownership boundary for the workpackage
 
 - local-only static profile
 - frontend package contribution loading
+- browser-local AI provider detection or local semantic assistance
 - provider-specific SSO adapters as product default
 
 ## Public Contracts
@@ -64,6 +65,7 @@ The module is healthy when its workpackages can move independently through the r
 ## Key Decisions
 
 - `ADR-0001` governs roadmap structure and authority.
+- `ADR-0011` keeps browser-local AI under `MOD-LOCAL-AI` while preserving backend-mediated AI as a separate optional path.
 
 ## Validation Approach
 

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Proposed. Incorporated into the roadmap as candidate scope under `MOD-LOCAL-AI`, `R-LOCAL-AI-MVP`, and `A-039`.
 
 ## Date
 
@@ -59,6 +59,18 @@ The new module is local/browser-side. It does not replace `MOD-BACKEND-ENTERPRIS
 - `MOD-LOCAL-AI` owns the browser-local provider contract, feature detection, local-only policy gates, and local semantic assistance services.
 
 Local AI must be implemented as a capability provider behind the existing contribution/capability spine, not as direct browser API calls scattered across UI components.
+
+## Roadmap mapping
+
+Authoritative IDs and status live in `roadmap-state.yaml`.
+
+- Module: `MOD-LOCAL-AI`
+- Candidate release: `R-LOCAL-AI-MVP`
+- Candidate workpackages: `WP-AI-LOCAL-01`, `WP-AI-LOCAL-COMMANDS`, `WP-AI-MD-ASSIST`, `WP-AI-ITM-REVIEW`, `WP-AI-SEARCH-01`, `WP-AI-EMBED-01`
+- Related existing workpackages: `WP-AI-MEDIATOR`, `WP-AI-CHAT`, `WP-AI-PREF`, `WP-LINK-INDEX`, `WP-COMMENTS-SIDECAR`, `WP-CHANGE-PROPOSALS`, `WP-ITM-EXPLORATION-01`
+- Roadmap incorporation event: `A-039`
+
+The first five new workpackages form `R-LOCAL-AI-MVP`. `WP-AI-EMBED-01` remains a later optional candidate and is deliberately excluded from that MVP release.
 
 ## Capability model
 
@@ -581,9 +593,9 @@ This workpackage is optional and should not block local AI MVP adoption.
 
 ## Implementation sequence
 
-Recommended sequence:
+Recommended implementation sequence after this ADR is accepted or revised:
 
-1. Add `MOD-LOCAL-AI` and `WP-AI-LOCAL-01` to `roadmap-state.yaml`.
+1. Re-check browser API names, trial status, device requirements, availability values, and language support.
 2. Implement provider detection and `noopLocalAiProvider`.
 3. Add settings/policy gates and visible availability state.
 4. Add command palette actions for summarize, translate, language detection, and explain diagnostic.
@@ -683,15 +695,19 @@ Mitigations:
 
 ## Follow-up required
 
-- Add `MOD-LOCAL-AI` to `roadmap-state.yaml`.
-- Add `WP-AI-LOCAL-01`, `WP-AI-LOCAL-COMMANDS`, `WP-AI-MD-ASSIST`, `WP-AI-ITM-REVIEW`, `WP-AI-SEARCH-01`, and `WP-AI-EMBED-01` to `roadmap-state.yaml`.
-- Add module page `roadmap/modules/local-ai.md`.
-- Add workpackage pages under `roadmap/workpackages/`.
-- Add validation checklists for the local AI workpackages.
-- Update dependency maps and generated roadmap views.
-- Add a RAPID entry when implementation starts or when this ADR is accepted.
+Roadmap incorporation follow-up is complete for candidate status:
+
+- `MOD-LOCAL-AI` is registered in `roadmap-state.yaml`.
+- `WP-AI-LOCAL-01`, `WP-AI-LOCAL-COMMANDS`, `WP-AI-MD-ASSIST`, `WP-AI-ITM-REVIEW`, `WP-AI-SEARCH-01`, and `WP-AI-EMBED-01` are registered as candidate workpackages.
+- `R-LOCAL-AI-MVP` is registered as the candidate release for the first useful local AI slice.
+- Module, workpackage, release, validation checklist, generated view, dependency map, and RAPID artifacts are updated by `A-039`.
+
+Open follow-up before implementation:
+
+- Accept, revise, or reject this ADR before implementation starts.
 - Decide whether `WP-AI-CHAT` should depend on `WP-AI-MEDIATOR` only, or on a generic AI provider contract that can be satisfied by local or backend providers.
 - Decide whether AI provider policy should remain split between `MOD-LOCAL-AI` and `MOD-BACKEND-ENTERPRISE`, or later be consolidated into a common `MOD-AI-POLICY`.
+- Re-check Chrome built-in AI API names, availability states, hardware requirements, and origin/developer trial status immediately before implementation.
 
 ## Scope
 
@@ -707,7 +723,8 @@ This ADR introduces proposed roadmap structure and capability boundaries. It doe
 
 ## References
 
-- Chrome built-in AI APIs: `https://developer.chrome.com/docs/ai/built-in-apis`
+- Chrome built-in AI overview: `https://developer.chrome.com/docs/ai/built-in/overview`
+- Chrome built-in AI get started: `https://developer.chrome.com/docs/ai/get-started`
 - Chrome Prompt API: `https://developer.chrome.com/docs/ai/prompt-api`
 - Chrome Summarizer API: `https://developer.chrome.com/docs/ai/summarizer-api`
 - Chrome Translator API: `https://developer.chrome.com/docs/ai/translator-api`

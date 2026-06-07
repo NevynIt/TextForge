@@ -56,6 +56,7 @@ The module is healthy when its workpackages can move independently through the r
 ## Key Decisions
 
 - `ADR-0001` governs roadmap structure and authority.
+- `ADR-0011` proposes deterministic retrieval plus local AI reranking for semantic search without making embeddings mandatory.
 
 ## Validation Approach
 

@@ -64,6 +64,7 @@ The module is healthy when its workpackages can move independently through the r
 - `ADR-0007` governs ITM type inheritance and context inference.
 - `ADR-0008` proposes ITM validation and conformance-module semantics.
 - `ADR-0009` proposes parameterized ITM reports and dashboards.
+- `ADR-0011` proposes AI-labelled semantic ITM review after deterministic validation.
 
 ## Validation Approach
 

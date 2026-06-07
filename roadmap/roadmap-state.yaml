@@ -333,7 +333,37 @@
         "archive/registers/package-guides/editors.md",
         "archive/grilling/legacy-grilling/phase-4.1-grilling.md",
         "archive/grilling/legacy-grilling/phase-5-grilling.md",
-        "decisions/ADR-0010-interactive-itm-exploration-workbench.md"
+        "decisions/ADR-0010-interactive-itm-exploration-workbench.md",
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
+      ]
+    },
+    "MOD-LOCAL-AI": {
+      "title": "Local AI and semantic assistance",
+      "path": "modules/local-ai.md",
+      "status": "candidate",
+      "owns": [
+        "browser-local AI provider contract and capability detection",
+        "policy-gated local AI command and assistance services",
+        "local AI semantic review and search assistance",
+        "optional local embedding provider seam"
+      ],
+      "depends_on": [
+        "MOD-SURFACES-UI",
+        "MOD-WORKSPACE-RESOURCES",
+        "MOD-KNOWLEDGE-WORKSPACE",
+        "MOD-MARKDOWN-ITM",
+        "MOD-ITM"
+      ],
+      "enables": [
+        "WP-AI-LOCAL-01",
+        "WP-AI-LOCAL-COMMANDS",
+        "WP-AI-MD-ASSIST",
+        "WP-AI-ITM-REVIEW",
+        "WP-AI-SEARCH-01",
+        "WP-AI-EMBED-01"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
       ]
     },
     "MOD-BACKEND-ENTERPRISE": {
@@ -368,7 +398,8 @@
       "archive_trace": [
         "archive/registers/package-guides/backend-optional.md",
         "archive/registers/specs/legacy-specs/architecture/backend-optional-architecture.md",
-        "archive/grilling/legacy-grilling/backend-grilling.md"
+        "archive/grilling/legacy-grilling/backend-grilling.md",
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
       ]
     },
     "MOD-SECURITY-DISTRIBUTION": {
@@ -486,7 +517,8 @@
         "WP-05D",
         "WP-SET-UI",
         "WP-SURFACES-ADV",
-        "WP-EA-VIEWER-01"
+        "WP-EA-VIEWER-01",
+        "WP-AI-LOCAL-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -553,7 +585,8 @@
         "WP-LUA",
         "WP-SERVICES-LOCAL",
         "WP-PIPELINE-EDITOR",
-        "WP-EA-VIEWER-01"
+        "WP-EA-VIEWER-01",
+        "WP-AI-LOCAL-COMMANDS"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -614,7 +647,8 @@
         "WP-CANVAS",
         "WP-PRIVATE-CONTRACT",
         "WP-SKETCH",
-        "WP-EA-VIEWER-01"
+        "WP-EA-VIEWER-01",
+        "WP-AI-SEARCH-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -711,7 +745,9 @@
       "enables": [
         "WP-DOC-GRAPH",
         "WP-COMMENTS-SIDECAR",
-        "WP-CANVAS"
+        "WP-CANVAS",
+        "WP-AI-SEARCH-01",
+        "WP-AI-EMBED-01"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -926,7 +962,8 @@
       "enables": [
         "WP-SET-UI",
         "WP-SET-SYNC",
-        "WP-AI-PREF"
+        "WP-AI-PREF",
+        "WP-AI-LOCAL-01"
       ],
       "release_candidates": [],
       "production_required": true,
@@ -991,7 +1028,8 @@
         "WP-VITM-01",
         "WP-ITM-VRESOLVE-01",
         "WP-BPMN-SEM",
-        "WP-ARCHIMATE-SEM"
+        "WP-ARCHIMATE-SEM",
+        "WP-AI-ITM-REVIEW"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -1025,7 +1063,8 @@
         "WP-ITM-VRESOLVE-01",
         "WP-BPMN-SEM",
         "WP-ARCHIMATE-SEM",
-        "WP-MD-REPORT"
+        "WP-MD-REPORT",
+        "WP-AI-ITM-REVIEW"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -1056,7 +1095,8 @@
       "enables": [
         "WP-BPMN-SEM",
         "WP-ARCHIMATE-SEM",
-        "WP-TABLES"
+        "WP-TABLES",
+        "WP-AI-ITM-REVIEW"
       ],
       "release_candidates": [
         "R-LOCAL-AUTHORING-MVP"
@@ -1515,7 +1555,8 @@
         "WP-05C"
       ],
       "enables": [
-        "WP-SERVICES-BE"
+        "WP-SERVICES-BE",
+        "WP-AI-EMBED-01"
       ],
       "release_candidates": [],
       "production_required": false,
@@ -1543,7 +1584,8 @@
       ],
       "enables": [
         "WP-AI-PREF",
-        "WP-SURFACES-ADV"
+        "WP-SURFACES-ADV",
+        "WP-AI-LOCAL-01"
       ],
       "release_candidates": [],
       "production_required": false,
@@ -1710,7 +1752,8 @@
       "enables": [
         "WP-ITM-PUB-VISUAL-01",
         "WP-MD-RICH",
-        "WP-PDF-EXPORT"
+        "WP-PDF-EXPORT",
+        "WP-AI-MD-ASSIST"
       ],
       "release_candidates": [],
       "production_required": false,
@@ -2159,7 +2202,8 @@
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0001"
+        "ADR-0001",
+        "ADR-0011"
       ],
       "archive_trace": [
         "archive/registers/legacy-workpackages/workpackage-register.md",
@@ -2185,7 +2229,8 @@
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0001"
+        "ADR-0001",
+        "ADR-0011"
       ],
       "archive_trace": [
         "archive/registers/legacy-workpackages/workpackage-register.md",
@@ -2213,7 +2258,8 @@
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0001"
+        "ADR-0001",
+        "ADR-0011"
       ],
       "archive_trace": [
         "archive/registers/legacy-workpackages/workpackage-register.md",
@@ -2222,6 +2268,164 @@
         "legacy source: Phase 11.3"
       ],
       "validation_checklist": null
+    },
+    "WP-AI-LOCAL-01": {
+      "title": "Browser local AI provider and policy-gated capability contract",
+      "path": "workpackages/WP-AI-LOCAL-01.md",
+      "module": "MOD-LOCAL-AI",
+      "status": "candidate",
+      "type": "Local AI foundation",
+      "depends_on": [
+        "WP-05A",
+        "WP-SET-01",
+        "WP-SET-UI"
+      ],
+      "enables": [
+        "WP-AI-LOCAL-COMMANDS",
+        "WP-AI-MD-ASSIST",
+        "WP-AI-ITM-REVIEW",
+        "WP-AI-SEARCH-01",
+        "WP-AI-CHAT"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AI-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0011"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-AI-LOCAL-01-browser-local-ai-provider.md"
+    },
+    "WP-AI-LOCAL-COMMANDS": {
+      "title": "Local AI command palette and editor actions",
+      "path": "workpackages/WP-AI-LOCAL-COMMANDS.md",
+      "module": "MOD-LOCAL-AI",
+      "status": "candidate",
+      "type": "Local AI UX integration",
+      "depends_on": [
+        "WP-AI-LOCAL-01",
+        "WP-05C"
+      ],
+      "enables": [
+        "WP-AI-MD-ASSIST",
+        "WP-AI-ITM-REVIEW"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AI-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0011"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-AI-LOCAL-COMMANDS-local-ai-command-actions.md"
+    },
+    "WP-AI-MD-ASSIST": {
+      "title": "Markdown authoring, review, extraction, and report assistance",
+      "path": "workpackages/WP-AI-MD-ASSIST.md",
+      "module": "MOD-LOCAL-AI",
+      "status": "candidate",
+      "type": "Local AI authoring assistance",
+      "depends_on": [
+        "WP-AI-LOCAL-01",
+        "WP-MD-REPORT"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AI-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0011"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-AI-MD-ASSIST-markdown-authoring-review-extraction.md"
+    },
+    "WP-AI-ITM-REVIEW": {
+      "title": "ITM semantic review, diagnostics, and patch proposals",
+      "path": "workpackages/WP-AI-ITM-REVIEW.md",
+      "module": "MOD-LOCAL-AI",
+      "status": "candidate",
+      "type": "Local AI semantic review",
+      "depends_on": [
+        "WP-AI-LOCAL-01",
+        "WP-ITM-02",
+        "WP-ITM-03",
+        "WP-ITM-04"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-LOCAL-AI-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0011"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-AI-ITM-REVIEW-itm-semantic-review.md"
+    },
+    "WP-AI-SEARCH-01": {
+      "title": "Workspace semantic search without embeddings",
+      "path": "workpackages/WP-AI-SEARCH-01.md",
+      "module": "MOD-LOCAL-AI",
+      "status": "candidate",
+      "type": "Local AI search assistance",
+      "depends_on": [
+        "WP-AI-LOCAL-01",
+        "WP-LINK-INDEX",
+        "WP-RES-01"
+      ],
+      "enables": [
+        "WP-AI-EMBED-01"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AI-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0011"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-AI-SEARCH-01-workspace-semantic-search-without-embeddings.md"
+    },
+    "WP-AI-EMBED-01": {
+      "title": "Optional local embedding/vector provider contract and vector index",
+      "path": "workpackages/WP-AI-EMBED-01.md",
+      "module": "MOD-LOCAL-AI",
+      "status": "candidate",
+      "type": "Optional local AI indexing",
+      "depends_on": [
+        "WP-AI-SEARCH-01",
+        "WP-SERVICES-LOCAL",
+        "WP-LINK-INDEX"
+      ],
+      "enables": [],
+      "release_candidates": [],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0011"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-AI-EMBED-01-local-embedding-vector-provider.md"
     },
     "WP-ARCHIMATE-SEM": {
       "title": "ArchiMate semantic profile",
@@ -2810,6 +3014,19 @@
       ],
       "target_outcome": "Validated local/offline authoring baseline plus selected next local workspace capabilities."
     },
+    "R-LOCAL-AI-MVP": {
+      "title": "Local AI MVP",
+      "status": "candidate",
+      "path": "releases/R-LOCAL-AI-MVP.md",
+      "workpackages": [
+        "WP-AI-LOCAL-01",
+        "WP-AI-LOCAL-COMMANDS",
+        "WP-AI-MD-ASSIST",
+        "WP-AI-ITM-REVIEW",
+        "WP-AI-SEARCH-01"
+      ],
+      "target_outcome": "Policy-gated browser-local AI provider foundation with explicit user-triggered assistance for commands, Markdown, ITM semantic review, and cited workspace search."
+    },
     "R-VISUAL-MODELING-MVP": {
       "title": "Visual modeling MVP",
       "status": "defined",
@@ -2969,6 +3186,16 @@
       "archive_trace": [
         "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md",
         "decisions/ADR-0008-itm-validation-and-conformance-modules.md"
+      ]
+    },
+    "ADR-0011": {
+      "title": "Local AI capability architecture and semantic assistance layer",
+      "status": "proposed",
+      "path": "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md",
+      "supersedes": [],
+      "archive_trace": [
+        "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md",
+        "decisions/ADR-0010-interactive-itm-exploration-workbench.md"
       ]
     }
   }
