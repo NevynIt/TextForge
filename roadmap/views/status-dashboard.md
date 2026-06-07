@@ -9,9 +9,9 @@
 | blocked | 1 |
 | candidate | 16 |
 | deferred | 1 |
-| defined | 33 |
+| defined | 31 |
 | implemented | 1 |
-| ready | 1 |
+| in-progress | 3 |
 | validated | 25 |
 
 ## Workpackages
@@ -44,7 +44,7 @@
 | `WP-ITM-VTARGET-01` | ITM visual target picker MVP | validated | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-ITM-VRESOLVE-01` | Shared ITM visual target resolver | validated | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-RENDER-CYTOSCAPE` | Cytoscape runtime renderer package | validated | `MOD-VISUAL-ITM-RENDERERS` |
-| `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | defined | `MOD-MARKDOWN-ITM` |
+| `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | in-progress | `MOD-MARKDOWN-ITM` |
 | `WP-RENDER-JSMIND` | jsMind runtime renderer package | validated | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-RENDER-SIGMA` | Sigma/Graphology runtime renderer package | validated | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-TRANSLATORS` | Visual ITM translator utilities | candidate | `MOD-VISUAL-ITM-RENDERERS` |
@@ -78,10 +78,10 @@
 | `WP-AI-PREF` | AI preference integration | defined | `MOD-BACKEND-ENTERPRISE` |
 | `WP-ARCHIMATE-SEM` | ArchiMate semantic profile | defined | `MOD-ARCHIMATE` |
 | `WP-SURFACES-ADV` | Advanced tabbed main surfaces | defined | `MOD-SURFACES-UI` |
-| `WP-MD-RICH` | Rich Markdown editing | defined | `MOD-MARKDOWN-ITM` |
+| `WP-MD-RICH` | Rich Markdown editing | in-progress | `MOD-MARKDOWN-ITM` |
 | `WP-PIPELINE-EDITOR` | Pipeline/diagram editor surfaces | defined | `MOD-SURFACES-UI` |
 | `WP-ARCHIMATE-VISUAL` | ArchiMate visual editing investigation | defined | `MOD-ARCHIMATE` |
-| `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | ready | `MOD-EA-VIEWER` |
+| `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | in-progress | `MOD-EA-VIEWER` |
 | `WP-SKETCH` | Sketch and annotation resources | defined | `MOD-SKETCH` |
 | `WP-COMMENTS-SIDECAR` | Comments and review sidecars | candidate | `MOD-KNOWLEDGE-WORKSPACE` |
 | `WP-CHANGE-PROPOSALS` | Reviewable change proposals | candidate | `MOD-KNOWLEDGE-WORKSPACE` |

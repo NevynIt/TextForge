@@ -6,8 +6,10 @@
 
 | WP | Title | Status | Module |
 |---|---|---|---|
+| `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | in-progress | `MOD-MARKDOWN-ITM` |
 | `WP-TABLES` | Tables, catalogues, and matrices | blocked | `MOD-TABLES` |
-| `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | ready | `MOD-EA-VIEWER` |
+| `WP-MD-RICH` | Rich Markdown editing | in-progress | `MOD-MARKDOWN-ITM` |
+| `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | in-progress | `MOD-EA-VIEWER` |
 
 ## Next Candidates
 
@@ -23,7 +25,6 @@
 | `WP-SSO-OIDC` | Generic OIDC / Keycloak adapter | candidate | `MOD-SECURITY-DISTRIBUTION` |
 | `WP-SET-01` | User settings core and local persistence | defined | `MOD-SURFACES-UI` |
 | `WP-ITM-04` | ITM validation and conformance modules | candidate | `MOD-ITM` |
-| `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | defined | `MOD-MARKDOWN-ITM` |
 | `WP-VITM-TRANSLATORS` | Visual ITM translator utilities | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-VDELTA-01` | Visual ITM view-delta consumption and capture | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-LIVE-SYNC-01` | Bidirectional source/visual live sync | candidate | `MOD-VISUAL-ITM-RENDERERS` |
@@ -47,7 +48,6 @@
 | `WP-AI-PREF` | AI preference integration | defined | `MOD-BACKEND-ENTERPRISE` |
 | `WP-ARCHIMATE-SEM` | ArchiMate semantic profile | defined | `MOD-ARCHIMATE` |
 | `WP-SURFACES-ADV` | Advanced tabbed main surfaces | defined | `MOD-SURFACES-UI` |
-| `WP-MD-RICH` | Rich Markdown editing | defined | `MOD-MARKDOWN-ITM` |
 | `WP-PIPELINE-EDITOR` | Pipeline/diagram editor surfaces | defined | `MOD-SURFACES-UI` |
 | `WP-ARCHIMATE-VISUAL` | ArchiMate visual editing investigation | defined | `MOD-ARCHIMATE` |
 | `WP-SKETCH` | Sketch and annotation resources | defined | `MOD-SKETCH` |

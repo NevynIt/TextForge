@@ -1271,7 +1271,7 @@
       "title": "Shared visual pipeline for itm-pub",
       "path": "workpackages/WP-ITM-PUB-VISUAL-01.md",
       "module": "MOD-MARKDOWN-ITM",
-      "status": "defined",
+      "status": "in-progress",
       "type": "Domain / feature",
       "depends_on": [
         "WP-ITM-VRESOLVE-01",
@@ -2246,7 +2246,7 @@
       "title": "Rich Markdown editing",
       "path": "workpackages/WP-MD-RICH.md",
       "module": "MOD-MARKDOWN-ITM",
-      "status": "defined",
+      "status": "in-progress",
       "type": "Optional editor feature",
       "depends_on": [
         "WP-MD-REPORT"
@@ -2264,7 +2264,7 @@
         "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
         "legacy source: Phase 14"
       ],
-      "validation_checklist": null
+      "validation_checklist": "validation/checklists/workpackages/WP-MD-RICH-rich-markdown-editing.md"
     },
     "WP-PIPELINE-EDITOR": {
       "title": "Pipeline/diagram editor surfaces",
@@ -2324,7 +2324,7 @@
       "title": "Exact EA dashboard viewer surface",
       "path": "workpackages/WP-EA-VIEWER-01.md",
       "module": "MOD-EA-VIEWER",
-      "status": "ready",
+      "status": "in-progress",
       "type": "Feature / exact port",
       "depends_on": [
         "WP-05A",

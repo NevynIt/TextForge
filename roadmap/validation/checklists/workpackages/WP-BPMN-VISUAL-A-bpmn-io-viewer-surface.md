@@ -14,6 +14,8 @@ Read-only BPMN XML visual consumption using BPMN.io / `bpmn-js`.
 - No ITM `%view` / `%viewpoint` target integration is required in this slice.
 - Package dependencies are declared through the package manifest and pass license checks.
 - Surface lifecycle works with open/close/reopen flows.
+- The surface open/mount path has regression coverage for exported runtime helper symbols.
+- Opening a BPMN resource such as `Training By Design.bpmn` does not fail with `createBpmnViewerRuntimeMarkup is not defined`.
 
 ## Validation evidence
 

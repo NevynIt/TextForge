@@ -15,6 +15,10 @@ Embedded TextForge surface port of the EA Dashboard React viewer for local JSON 
 - Timeline/year slider is present and changes the same data/view state as the source dashboard.
 - Level-of-detail slider is present and changes the same data/view state as the source dashboard.
 - Viewpoint/filter controls, drill-down selection, and selected-node detail panels remain usable.
+- React Flow node positions adjusted by the user survive slider and checkbox changes.
+- Network topology and business capability map views use distinct graph builders/content.
+- EA Dashboard ITM examples activate the required EAD translator, relationship identity, graph model, Dagre, and graph viewer capabilities without capability-missing diagnostics.
+- Large retail ITM profiles estimate/render expensive graph work without freezing startup and expose progress plus cancel/continue controls.
 - The default viewer makes no Axios, Django, Gemini, or other network calls.
 - Invalid or unrelated JSON reports diagnostics or a clear fallback.
 - Surface lifecycle works with open, close, and reopen flows.
