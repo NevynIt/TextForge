@@ -33,6 +33,8 @@
 | EV-008 | roadmap check | `node roadmap/scripts/generate-views.mjs --check`; `corepack pnpm roadmap:dependency-map:publish:check` | Both passed. |
 | EV-009 | follow-up test output | `corepack pnpm --filter @textforge/lua test`; `corepack pnpm --filter @textforge/itm test`; `corepack pnpm --filter @textforge/renderer-jsmind test`; `corepack pnpm --filter @textforge/textforge-web test` | Follow-up regressions covered: selectable owned Lua transcript, jsMind-backed Markdown mindmap publication marker, nonblocking large ITM guard. |
 | EV-010 | follow-up build output | `corepack pnpm --filter @textforge/lua build`; `corepack pnpm --filter @textforge/itm build`; `corepack pnpm --filter @textforge/renderer-jsmind build`; `corepack pnpm --filter @textforge/textforge-web build` | Touched package builds passed. Web build passed with the existing `@viz-js/viz` import-meta warning only. |
+| EV-011 | second follow-up test output | `corepack pnpm --filter @textforge/diagrams test`; `corepack pnpm --filter @textforge/renderer-jsmind test`; `corepack pnpm --filter @textforge/renderer-cytoscape test`; `corepack pnpm --filter @textforge/renderer-sigma test`; `corepack pnpm --filter @textforge/textforge-web test` | Covered resilient SVG-to-PNG export, passive embedded jsMind render mounting, and large visual-runtime source guards. |
+| EV-012 | second follow-up build output | `corepack pnpm --filter @textforge/diagrams build`; `corepack pnpm --filter @textforge/renderer-jsmind build`; `corepack pnpm --filter @textforge/renderer-cytoscape build`; `corepack pnpm --filter @textforge/renderer-sigma build`; `corepack pnpm --filter @textforge/textforge-web build` | Touched package builds passed. Web build passed with existing upstream browser externalization/import-meta warnings. |
 
 ## Follow-up correction
 
@@ -50,6 +52,12 @@ Corrections made in the follow-up pass:
 - Lua console no longer depends on xterm; the prompt and transcript are TextForge-owned DOM controls, with a selectable `<pre>` transcript and explicit regression coverage.
 - Large retail ITM graph surfaces no longer expose the known blocking continue action; the guard stays responsive and uses a clear `Cancel rendering` action until graph resolution can be moved wholesale off-thread.
 
+Second residual retest found generated diagram PNG rasterization could still fail the command, embedded jsMind needed to be a passive rendered diagram rather than a full runtime surface, and opening large retail ITM visual-runtime viewpoints could still start synchronous renderer resolution. Corrections made:
+
+- SVG-to-PNG rasterization now uses Blob URLs and per-diagram error handling; SVG export completes even when a PNG cannot be decoded.
+- Markdown `itm-pub` mindmap hydration now uses a passive embedded jsMind render without toolbar/sidebar runtime controls.
+- Cytoscape, Sigma, and jsMind visual-runtime resolvers pause large ITM sources before synchronous graph resolution and display a background-worker-required warning instead of freezing the UI.
+
 ## Diagnostics / defects
 
 | ID | Severity | Status | Notes |
@@ -60,10 +68,10 @@ Corrections made in the follow-up pass:
 
 - Export Markdown print HTML with Mermaid and confirm the diagram appears.
 - Run generated diagram export and confirm SVG/PNG assets are created.
-- Open `?testProfile=itm-markdown-mindmap` and confirm the jsMind toolbar/runtime appears; open `?testProfile=itm-markdown-report` and confirm report publication output.
+- Open `?testProfile=itm-markdown-mindmap` and confirm the passive jsMind-rendered mindmap shows connector lines; open `?testProfile=itm-markdown-report` and confirm report publication output.
 - Select/copy Lua history text and confirm row spacing is not clipped.
 - Open `Training By Design.bpmn`.
-- Test EA dashboard view switching, node dragging plus slider/checkbox changes, and the retail ITM profile cancel guard.
+- Test EA dashboard view switching, node dragging plus slider/checkbox changes, and the retail ITM profile visual-runtime guard.
 
 ## Validation conclusion
 

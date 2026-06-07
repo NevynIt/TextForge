@@ -53,13 +53,20 @@ self.addEventListener('message', (event) => {
   void (async () => {
     const results = [];
     for (const job of jobs) {
-      const bytes = await rasterizeSvgInWorker(String(job.svgText ?? ''));
-      results.push({
-        id: job.id,
-        bytes,
-      });
+      try {
+        const bytes = await rasterizeSvgInWorker(String(job.svgText ?? ''));
+        results.push({
+          id: job.id,
+          bytes,
+        });
+      } catch (error) {
+        results.push({
+          id: job.id,
+          error: error?.message ?? 'PNG rasterization failed.',
+        });
+      }
     }
-    self.postMessage({ type: 'done', results }, results.map((result) => result.bytes));
+    self.postMessage({ type: 'done', results }, results.map((result) => result.bytes).filter(Boolean));
   })().catch((error) => {
     self.postMessage({
       type: 'error',

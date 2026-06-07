@@ -7,6 +7,9 @@ import {
   createRendererCytoscapeContributionManifest,
   findCytoscapeMatches,
 } from '../src/index.js';
+import {
+  resolveSurfaceModelFromExecution,
+} from '../src/resolver.js';
 
 const visualDocument = {
   format: 'textforge.visual-itm/v1',
@@ -58,4 +61,13 @@ test('findCytoscapeMatches searches node and edge metadata', () => {
   assert.deepEqual(findCytoscapeMatches(visualDocument, 'plan').map((entry) => entry.id), ['roadmap']);
   assert.deepEqual(findCytoscapeMatches(visualDocument, 'depends').map((entry) => entry.id), ['depends-on']);
   assert.deepEqual(findCytoscapeMatches(visualDocument, 'missing'), []);
+});
+
+test('Cytoscape resolver pauses large ITM visual sources before synchronous graph resolution', async () => {
+  const sourceText = Array.from({ length: 1002 }, (_, index) => `&node${index} Node ${index}`).join('\n');
+  const resolved = await resolveSurfaceModelFromExecution({ sourceText }, 'Large graph');
+
+  assert.match(resolved.surfaceHtml, /Large visual rendering is paused/);
+  assert.match(resolved.surfaceHtml, /Background-worker visual rendering is required/);
+  assert.equal(resolved.model.visualDocument.nodes.length, 0);
 });

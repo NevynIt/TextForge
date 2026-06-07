@@ -16,5 +16,6 @@ export {
   jsmindSurfaceContribution,
 } from './contribution.js';
 export {
+  mountJsMindEmbeddedRender,
   mountJsMindRuntime,
 } from './runtime-mount.js';

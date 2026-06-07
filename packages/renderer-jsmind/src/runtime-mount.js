@@ -1,5 +1,6 @@
 import {
   createBaseRuntimeMarkup,
+  createEmbeddedRenderMarkup,
   createEmptySelectionMarkup,
   createRuntimeMessageHtml,
   createSelectionMarkup,
@@ -22,6 +23,88 @@ function openPrimaryProvenance(node, execution) {
   }
 
   return execution.openSourceRange?.(provenance.sourcePath, provenance.sourceRange, { placement: 'main' }) ?? false;
+}
+
+export function mountJsMindEmbeddedRender(container, model) {
+  container.innerHTML = createEmbeddedRenderMarkup(model.title, model.visualDocument.nodes.length);
+  const stage = container.querySelector('[data-jsmind-embedded-stage]');
+  if (!stage) {
+    container.innerHTML = createRuntimeMessageHtml(model.title, 'jsMind render UI failed to initialize.', 'error');
+    return () => {
+      container.innerHTML = '';
+    };
+  }
+
+  const stageId = `jsmind-render-${Math.random().toString(36).slice(2)}`;
+  stage.id = stageId;
+
+  let disposed = false;
+  let instance;
+
+  void (async () => {
+    try {
+      await import('jsmind/style/jsmind.css');
+      const module = await import('jsmind');
+      if (disposed) {
+        return;
+      }
+
+      const jsMind = module.default;
+      instance = new jsMind({
+        container: stageId,
+        editable: false,
+        theme: 'primary',
+        mode: 'side',
+        support_html: false,
+        log_level: 'error',
+        view: {
+          engine: 'canvas',
+          draggable: false,
+          hide_scrollbars_when_draggable: false,
+          hmargin: 180,
+          vmargin: 100,
+          line_width: 2,
+          line_color: '#78909c',
+          line_style: 'curved',
+          node_overflow: 'wrap',
+        },
+        layout: {
+          hspace: 120,
+          vspace: 44,
+          pspace: 20,
+          cousin_space: 18,
+        },
+        default_event_handle: {
+          enable_mousedown_handle: false,
+          enable_click_handle: false,
+          enable_dblclick_handle: false,
+          enable_mousewheel_handle: false,
+        },
+        shortcut: { enable: false },
+      });
+      instance.show({
+        meta: {
+          name: model.title,
+          author: 'TextForge',
+          version: '1.0',
+        },
+        format: 'node_array',
+        data: model.nodes,
+      });
+    } catch (error) {
+      if (!disposed) {
+        container.innerHTML = createRuntimeMessageHtml(model.title, error?.message ?? 'jsMind render failed to load.', 'error');
+      }
+    }
+  })();
+
+  return () => {
+    disposed = true;
+    if (instance) {
+      instance.clear?.();
+    }
+    container.innerHTML = '';
+  };
 }
 
 export function mountJsMindRuntime(container, model, execution) {

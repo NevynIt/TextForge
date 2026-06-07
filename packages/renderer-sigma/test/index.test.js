@@ -7,6 +7,9 @@ import {
   createSigmaGraphDescriptor,
   findSigmaMatches,
 } from '../src/index.js';
+import {
+  resolveSurfaceModelFromExecution,
+} from '../src/surface-model.js';
 
 const visualDocument = {
   format: 'textforge.visual-itm/v1',
@@ -57,4 +60,13 @@ test('findSigmaMatches searches node and edge metadata', () => {
   assert.deepEqual(findSigmaMatches(visualDocument, 'planning').map((entry) => entry.id), ['roadmap']);
   assert.deepEqual(findSigmaMatches(visualDocument, 'depends').map((entry) => entry.id), ['depends-on']);
   assert.deepEqual(findSigmaMatches(visualDocument, 'missing'), []);
+});
+
+test('Sigma resolver pauses large ITM visual sources before synchronous graph resolution', async () => {
+  const sourceText = Array.from({ length: 1002 }, (_, index) => `&node${index} Node ${index}`).join('\n');
+  const resolved = await resolveSurfaceModelFromExecution({ sourceText }, 'Large graph');
+
+  assert.match(resolved.surfaceHtml, /Large visual rendering is paused/);
+  assert.match(resolved.surfaceHtml, /Background-worker visual rendering is required/);
+  assert.equal(resolved.model.visualDocument.nodes.length, 0);
 });

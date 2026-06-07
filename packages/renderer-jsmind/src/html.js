@@ -78,6 +78,19 @@ export function createBaseRuntimeMarkup(title, diagnosticsCount) {
   `;
 }
 
+export function createEmbeddedRenderMarkup(title, topicsCount) {
+  return `
+    <figure class="tf-jsmind-render" data-jsmind-embedded-render>
+      <figcaption>
+        <span class="tf-visual-runtime__eyebrow">jsMind render</span>
+        <strong>${escapeHtml(title)}</strong>
+        <span>${topicsCount} topics</span>
+      </figcaption>
+      <div class="tf-jsmind-render__stage" data-jsmind-embedded-stage></div>
+    </figure>
+  `;
+}
+
 export function createEmptySelectionMarkup(message = 'Select a topic.') {
   return `<p class="tf-visual-runtime__empty">${escapeHtml(message)}</p>`;
 }

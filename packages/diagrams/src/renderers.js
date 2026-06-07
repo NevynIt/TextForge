@@ -127,21 +127,26 @@ export async function rasterizeSvgToPngBytes(svgText, options = {}) {
     throw new Error('Canvas 2D context is unavailable for SVG rasterization.');
   }
 
-  const svgUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+  const svgBlob = new Blob([svgText], { type: 'image/svg+xml;charset=utf-8' });
+  const svgUrl = URL.createObjectURL(svgBlob);
   const image = new Image();
   image.decoding = 'async';
-  await new Promise((resolve, reject) => {
-    image.onload = () => resolve();
-    image.onerror = () => reject(new Error('Failed to load generated SVG into the rasterization pipeline.'));
-    image.src = svgUrl;
-  });
+  try {
+    await new Promise((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error('Failed to load generated SVG into the rasterization pipeline.'));
+      image.src = svgUrl;
+    });
 
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-  if (!blob) {
-    throw new Error('Canvas could not produce a PNG blob.');
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) {
+      throw new Error('Canvas could not produce a PNG blob.');
+    }
+
+    return new Uint8Array(await blob.arrayBuffer());
+  } finally {
+    URL.revokeObjectURL(svgUrl);
   }
-
-  return new Uint8Array(await blob.arrayBuffer());
 }

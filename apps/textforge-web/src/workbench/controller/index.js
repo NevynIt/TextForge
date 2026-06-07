@@ -54,7 +54,7 @@ import {
 } from '@textforge/diagrams';
 import {
   createJsMindSurfaceModel,
-  mountJsMindRuntime,
+  mountJsMindEmbeddedRender,
 } from '@textforge/renderer-jsmind';
 import {
   createMarkdownSnippet,
@@ -2413,6 +2413,7 @@ export function createTextForgeWorkbenchController() {
 
   async function rasterizeGeneratedDiagramSvgsOnMainThread(svgDescriptors) {
     const pngDescriptors = [];
+    let failureCount = 0;
     for (const [index, descriptor] of svgDescriptors.entries()) {
       showTransientFlag(
         'Exporting diagrams',
@@ -2420,10 +2421,21 @@ export function createTextForgeWorkbenchController() {
         'info',
       );
       await yieldToBrowser();
-      const pngBytes = await rasterizeSvgToPngBytes(descriptor.text, {
-        document: globalThis.document,
-      });
-      pngDescriptors.push(createPngDescriptorFromGeneratedSvg(descriptor, pngBytes));
+      try {
+        const pngBytes = await rasterizeSvgToPngBytes(descriptor.text, {
+          document: globalThis.document,
+        });
+        pngDescriptors.push(createPngDescriptorFromGeneratedSvg(descriptor, pngBytes));
+      } catch (_error) {
+        failureCount += 1;
+      }
+    }
+    if (failureCount > 0) {
+      showTransientFlag(
+        'PNG export incomplete',
+        `${failureCount} PNG asset${failureCount === 1 ? '' : 's'} could not be rasterized. SVG export completed.`,
+        'warning',
+      );
     }
     return pngDescriptors;
   }
@@ -2473,13 +2485,22 @@ export function createTextForgeWorkbenchController() {
           })),
         });
       });
-      return results.flatMap((result) => {
+      const pngDescriptors = results.flatMap((result) => {
         const descriptor = svgDescriptors[Number(result.id)];
         if (!descriptor || !result.bytes) {
           return [];
         }
         return createPngDescriptorFromGeneratedSvg(descriptor, new Uint8Array(result.bytes));
       });
+      const failureCount = svgDescriptors.length - pngDescriptors.length;
+      if (failureCount > 0) {
+        showTransientFlag(
+          'PNG export incomplete',
+          `${failureCount} PNG asset${failureCount === 1 ? '' : 's'} could not be rasterized. SVG export completed.`,
+          'warning',
+        );
+      }
+      return pngDescriptors;
     } catch (error) {
       showTransientFlag(
         'Diagram worker unavailable',
@@ -2555,9 +2576,7 @@ export function createTextForgeWorkbenchController() {
           title: payload.title ?? resourceTitle,
           diagnostics: Array.isArray(payload.diagnostics) ? payload.diagnostics : [],
         });
-        disposers.push(mountJsMindRuntime(island, model, {
-          openSourceRange,
-        }));
+        disposers.push(mountJsMindEmbeddedRender(island, model));
       } catch (error) {
         island.innerHTML = `<section class="tf-visual-runtime tf-visual-runtime--error"><p class="tf-visual-runtime__message">${escapeHtml(error?.message ?? 'jsMind publication failed to initialize.')}</p></section>`;
       }

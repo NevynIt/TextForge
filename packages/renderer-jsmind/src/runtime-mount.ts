@@ -1,5 +1,10 @@
 import type { JsMindSurfaceModel } from './model.js';
 
+export declare function mountJsMindEmbeddedRender(
+  container: Element,
+  model: JsMindSurfaceModel,
+): () => void;
+
 export declare function mountJsMindRuntime(
   container: Element,
   model: JsMindSurfaceModel,

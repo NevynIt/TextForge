@@ -6,7 +6,11 @@ import {
   createJsMindNodeArray,
   createRendererJsMindContributionManifest,
   findJsMindMatches,
+  mountJsMindEmbeddedRender,
 } from '../src/index.js';
+import {
+  resolveSurfaceModelFromExecution,
+} from '../src/execution.js';
 
 test('renderer-jsmind exports a dedicated contribution manifest', () => {
   assert.equal(contributions.id, '@textforge/renderer-jsmind');
@@ -53,4 +57,17 @@ test('findJsMindMatches searches node identity and metadata', () => {
   assert.deepEqual(findJsMindMatches(visualDocument, 'planning').map((entry) => entry.id), ['roadmap']);
   assert.deepEqual(findJsMindMatches(visualDocument, 'deliver').map((entry) => entry.id), ['delivery']);
   assert.deepEqual(findJsMindMatches(visualDocument, 'missing'), []);
+});
+
+test('renderer-jsmind exports a passive embedded Markdown render mount', () => {
+  assert.equal(typeof mountJsMindEmbeddedRender, 'function');
+});
+
+test('jsMind resolver pauses large ITM visual sources before synchronous graph resolution', async () => {
+  const sourceText = Array.from({ length: 1002 }, (_, index) => `&node${index} Node ${index}`).join('\n');
+  const resolved = await resolveSurfaceModelFromExecution({ sourceText }, 'Large mindmap');
+
+  assert.match(resolved.surfaceHtml, /Large visual rendering is paused/);
+  assert.match(resolved.surfaceHtml, /Background-worker visual rendering is required/);
+  assert.equal(resolved.model.visualDocument.nodes.length, 0);
 });
