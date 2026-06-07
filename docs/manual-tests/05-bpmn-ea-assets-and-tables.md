@@ -139,21 +139,47 @@ Expected:
 - MIME type and extension still route to the same viewer;
 - no imported asset is corrupted or changed to an empty file.
 
-## Tables Current Scope
+## CSV And TSV Grid Surface
 
 What to test:
 
-- current tables behavior matches shipped scope.
+- `.csv` and `.tsv` resources keep the text editor as the default open path while exposing the table grid through `Open with`;
+- the table grid can be opened explicitly for both CSV and TSV resources;
+- table-surface editing, structure changes, and failure states behave correctly once the owning `@textforge/tables` runtime is present in the branch/build under test.
 
 How:
 
-1. Search bundled docs and command palette for table-specific surfaces or commands.
-2. Open Markdown documents containing pipe tables.
-3. Upload a `.csv` file if a table surface is advertised by the current build.
+1. Create or upload:
+   - a small `.csv` file with a header row;
+   - a small `.tsv` file with a header row;
+   - a headerless `.csv` file;
+   - a malformed `.csv` file with quoting errors;
+   - if practical, one warn-threshold and one block-threshold sample.
+2. Open the `.csv` resource normally.
+3. Confirm the default surface is the text editor.
+4. Run `Open with` and select `Table grid`.
+5. Repeat the same check for the `.tsv` resource.
+6. In the table grid, if editing is available in the build under test:
+   - edit a cell;
+   - add a row;
+   - delete a row;
+   - add a column;
+   - delete a column;
+   - rename a header;
+   - switch header mode between auto/header/no-header where exposed.
+7. Reopen the edited resource in the text editor and inspect the serialized text.
+8. Open the headerless sample in the grid and toggle header interpretation if the control is present.
+9. Open the malformed sample in the grid.
+10. Open the warn-threshold and block-threshold samples if available.
 
 Expected:
 
-- Markdown pipe tables render correctly inside Markdown preview;
-- if no table-specific surface is shipped, `.csv` opens as text or generic resource behavior and no table command is misleadingly advertised;
-- if a later build ships `@textforge/tables` behavior, document the observed table surface, editing, import/export, and diagnostics in this file before release.
-
+- both `.csv` and `.tsv` resources open in `@textforge/editors/code-mirror-text` by default;
+- `Open with` offers `@textforge/tables/csv-grid` for both file types;
+- the table grid does not displace the text editor as the selected default surface;
+- committed edits rewrite the backing text resource and are visible when reopened in the text editor;
+- headerless input can be viewed without inventing a persisted header row unless the user explicitly switches modes;
+- malformed CSV shows table-surface diagnostics or a failure panel instead of a blank surface or shell crash;
+- warn-threshold samples warn but still allow inspection when that is the shipped behavior;
+- block-threshold samples refuse unsafe grid mounting with a clear diagnostic path;
+- Markdown pipe tables remain a Markdown-preview concern and are unaffected by the CSV/TSV grid surface.
