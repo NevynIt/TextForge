@@ -6,10 +6,13 @@ export {
   renderReadonlyTableModel,
 } from './readonly-render.js';
 export {
+  createCsvTsvAgGridFallbackSurfaceContribution,
   createCsvTsvGridSurfaceContribution,
+  csvTsvAgGridFallbackSurfaceContribution,
   csvTsvGridSurfaceContribution,
 } from './grid-surface.js';
 export {
+  tablesAgGridFallbackSurfaceId,
   tablesGridCapabilityId,
   tablesGridSurfaceId,
   tablesTextDocumentPredicate,

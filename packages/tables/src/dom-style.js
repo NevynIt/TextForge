@@ -72,6 +72,17 @@ function createAgGridThemeStyleElement(documentRef, cssText) {
   return style;
 }
 
+function createGlideStyleElement(documentRef, cssText) {
+  const style = documentRef.createElement('style');
+  style.dataset.textforgeTablesGlideStyle = 'true';
+  const cspNonce = readCspNonce(documentRef);
+  if (cspNonce) {
+    style.setAttribute('nonce', cspNonce);
+  }
+  style.textContent = cssText;
+  return style;
+}
+
 export function ensureTablesPackageStyle(container) {
   const documentRef = container?.ownerDocument ?? globalThis.document;
   if (!documentRef?.head) {
@@ -105,6 +116,27 @@ export function ensureTablesAgGridThemeStyle(container, cssText) {
   }
 
   const style = createAgGridThemeStyleElement(documentRef, cssText);
+  documentRef.head.appendChild(style);
+  return () => {
+    style.remove();
+  };
+}
+
+export function ensureTablesGlideStyle(container, cssText) {
+  const documentRef = container?.ownerDocument ?? globalThis.document;
+  if (!documentRef?.head || !cssText) {
+    return () => {};
+  }
+
+  const existing = documentRef.head.querySelector('style[data-textforge-tables-glide-style="true"]');
+  if (existing) {
+    if (existing.textContent !== cssText) {
+      existing.textContent = cssText;
+    }
+    return () => {};
+  }
+
+  const style = createGlideStyleElement(documentRef, cssText);
   documentRef.head.appendChild(style);
   return () => {
     style.remove();

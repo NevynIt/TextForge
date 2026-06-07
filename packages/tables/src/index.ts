@@ -24,10 +24,13 @@ export type {
   TablesGridSurfaceDependencies,
 } from './grid-surface';
 export {
+  createCsvTsvAgGridFallbackSurfaceContribution,
   createCsvTsvGridSurfaceContribution,
+  csvTsvAgGridFallbackSurfaceContribution,
   csvTsvGridSurfaceContribution,
 } from './grid-surface';
 export {
+  tablesAgGridFallbackSurfaceId,
   tablesGridCapabilityId,
   tablesGridSurfaceId,
   tablesTextDocumentPredicate,

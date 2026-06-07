@@ -1,6 +1,9 @@
 export declare function ensureTablesPackageStyle(container: {
   ownerDocument?: Document;
 }): () => void;
+export declare function ensureTablesGlideStyle(container: {
+  ownerDocument?: Document;
+}, cssText: string): () => void;
 export declare function ensureTablesAgGridThemeStyle(container: {
   ownerDocument?: Document;
 }, cssText: string): () => void;

@@ -12,12 +12,25 @@ import {
   createTablesFailureHtml,
   createTablesRuntimeMarkup,
   ensureTablesAgGridThemeStyle,
+  ensureTablesGlideStyle,
   ensureTablesPackageStyle,
 } from '../src/dom-style.js';
-import { createCsvTsvGridSurfaceContribution } from '../src/grid-surface.js';
+import {
+  applyTableCellEdits,
+  applyTableFormatOverrides,
+  appendTableColumn,
+  appendTableRow,
+  clearTableSelection,
+  createCsvTsvAgGridFallbackSurfaceContribution,
+  createCsvTsvGridSurfaceContribution,
+  removeTableColumn,
+  removeTableRow,
+  renameTableColumn,
+} from '../src/grid-surface.js';
 import {
   contributions,
   createTablesContributionManifest,
+  tablesAgGridFallbackSurfaceId,
   tablesGridCapabilityId,
   tablesGridSurfaceId,
   tablesTextDocumentPredicate,
@@ -32,6 +45,9 @@ function createStyleTestContainer() {
       }
       if (selector === 'style[data-textforge-tables-ag-grid-style="true"]') {
         return headChildren.find((child) => child.dataset?.textforgeTablesAgGridStyle === 'true');
+      }
+      if (selector === 'style[data-textforge-tables-glide-style="true"]') {
+        return headChildren.find((child) => child.dataset?.textforgeTablesGlideStyle === 'true');
       }
       return undefined;
     },
@@ -84,6 +100,8 @@ test('root exports expose the parser, serializer, and readonly renderer', async 
   assert.equal(typeof root.parseDelimitedTable, 'function');
   assert.equal(typeof root.serializeDelimitedTable, 'function');
   assert.equal(typeof root.renderReadonlyTableModel, 'function');
+  assert.equal(typeof root.createCsvTsvGridSurfaceContribution, 'function');
+  assert.equal(typeof root.createCsvTsvAgGridFallbackSurfaceContribution, 'function');
 });
 
 test('parses a normal CSV file with auto header detection', () => {
@@ -195,11 +213,17 @@ test('renders a minimal readonly HTML table', () => {
   assert.match(html, /<td>Alice<\/td>/u);
 });
 
-test('tables contribution manifest exposes the csv/tsv grid capability and surface', () => {
+test('tables contribution manifest exposes the csv/tsv capability with Glide primary and AG fallback surfaces', () => {
   assert.equal(contributions.packageId, '@textforge/tables');
   assert.equal(contributions.capabilities.some((capability) => capability.id === tablesGridCapabilityId), true);
   assert.equal(contributions.surfaces.some((surface) => surface.id === tablesGridSurfaceId), true);
+  assert.equal(contributions.surfaces.some((surface) => surface.id === tablesAgGridFallbackSurfaceId), true);
+  assert.deepEqual(
+    createTablesContributionManifest().surfaces.map((surface) => surface.id),
+    [tablesGridSurfaceId, tablesAgGridFallbackSurfaceId],
+  );
   assert.equal(createTablesContributionManifest().surfaces[0].openWithPriority, 110);
+  assert.equal(createTablesContributionManifest().surfaces[1].openWithPriority, 109);
   assert.equal(matchesResourcePredicate(tablesTextDocumentPredicate, {
     kind: 'resource',
     representation: 'text',
@@ -247,56 +271,103 @@ test('tables grid surface can fall back cleanly when parser dependencies are una
   assert.match(opened.surface.model.html, /parser is not available/i);
 });
 
-test('tables grid surface persists committed cell edits through injected helpers', () => {
-  const persistedTexts = [];
-  const contribution = createCsvTsvGridSurfaceContribution({
-    parseDelimitedTable(sourceText, options = {}) {
-      const model = parseDelimitedTable(sourceText, {
-        format: 'csv',
-        headerMode: options.headerMode,
-        dialect: {
-          delimiter: options.delimiter,
-          newline: options.newline,
-        },
-      });
-      return {
-        ...model,
-        diagnostics: model.diagnostics,
-      };
-    },
-    serializeDelimitedTable(model, options = {}) {
-      return serializeDelimitedTable(model, {
-        format: 'csv',
-        headerMode: options.headerMode,
-        dialect: {
-          delimiter: options.delimiter,
-          newline: options.newline,
-        },
-      });
-    },
-  });
-
-  const opened = contribution.open({
+test('tables AG fallback surface can fall back cleanly when parser dependencies are unavailable', () => {
+  const opened = createCsvTsvAgGridFallbackSurfaceContribution({
+    parseDelimitedTable: null,
+    serializeDelimitedTable: null,
+  }).open({
     sourceText: 'name,value\nalpha,1\n',
     resource: {
-      resourceId: 'csv-commit',
+      resourceId: 'csv-fallback-missing',
       kind: 'resource',
       representation: 'text',
       path: '/data/report.csv',
       languageId: 'csv',
       mimeType: 'text/csv',
     },
-    persistTextDocument(nextDocument) {
-      persistedTexts.push(nextDocument.text);
-      return nextDocument;
-    },
-    setTextDocument() {},
-    markSessionCurrent() {},
   });
 
-  assert.equal(opened.readOnly, false);
-  assert.deepEqual(persistedTexts, []);
-  assert.match(opened.surface.model.html, /Loading table grid/i);
+  assert.equal(opened.diagnostics.some((diagnostic) => diagnostic.code === 'tables.surface.runtime'), true);
+  assert.match(opened.surface.model.html, /parser is not available/i);
+});
+
+test('grid helpers apply cell edits and structural row or column mutations renderer-agnostically', () => {
+  const baseModel = parseDelimitedTable('name,value\nalpha,1', { format: 'csv' });
+  const editedModel = applyTableCellEdits(baseModel, [{
+    rowIndex: 0,
+    columnField: baseModel.columns[1].field,
+    value: '2',
+  }]);
+  const rowExtendedModel = appendTableRow(editedModel);
+  const columnExtendedModel = appendTableColumn(rowExtendedModel);
+  const renamedModel = renameTableColumn(columnExtendedModel, columnExtendedModel.columns[2].field, 'status');
+  const columnTrimmedModel = removeTableColumn(renamedModel, renamedModel.columns[2].field);
+  const rowTrimmedModel = removeTableRow(columnTrimmedModel, rowExtendedModel.rows[1].id);
+
+  assert.equal(editedModel.rows[0].values[baseModel.columns[1].field], '2');
+  assert.equal(rowExtendedModel.rows.length, 2);
+  assert.equal(columnExtendedModel.columns.length, 3);
+  assert.equal(columnExtendedModel.rows[0].values[columnExtendedModel.columns[2].field], '');
+  assert.equal(renamedModel.columns[2].label, 'status');
+  assert.equal(columnTrimmedModel.columns.length, 2);
+  assert.equal(rowTrimmedModel.rows.length, 1);
+});
+
+test('grid helper clears selected cell, row, and column content', () => {
+  const model = parseDelimitedTable('name,value\nalpha,1\nbeta,2', { format: 'csv' });
+  const clearedModel = clearTableSelection(model, {
+    current: {
+      cell: [0, 0],
+      range: { x: 0, y: 0, width: 1, height: 1 },
+      rangeStack: [],
+    },
+    rows: {
+      *[Symbol.iterator]() {
+        yield 1;
+      },
+    },
+    columns: {
+      *[Symbol.iterator]() {
+        yield 1;
+      },
+    },
+  });
+
+  assert.equal(clearedModel.rows[0].values[clearedModel.columns[0].field], '');
+  assert.equal(clearedModel.rows[0].values[clearedModel.columns[1].field], '');
+  assert.equal(clearedModel.rows[1].values[clearedModel.columns[0].field], '');
+  assert.equal(clearedModel.rows[1].values[clearedModel.columns[1].field], '');
+});
+
+test('grid helper applies header, delimiter, and newline overrides through shared serialization', () => {
+  const applied = applyTableFormatOverrides(
+    'name;value\nalpha;1',
+    {
+      resource: {
+        resourceId: 'csv-override',
+        kind: 'resource',
+        representation: 'text',
+        path: '/data/report.csv',
+        languageId: 'csv',
+        mimeType: 'text/csv',
+      },
+    },
+    {
+      headerMode: 'header',
+      delimiterMode: 'semicolon',
+      newlineMode: 'crlf',
+    },
+    {
+      parseDelimitedTable,
+      serializeDelimitedTable,
+    },
+  );
+
+  assert.equal(applied.blocked, false);
+  assert.match(applied.text, /;/u);
+  assert.match(applied.text, /\r\n/u);
+  assert.equal(applied.model.metadata.resolvedHeaderMode, 'header');
+  assert.deepEqual(applied.model.columns.map((column) => column.label), ['name', 'value']);
 });
 
 test('tables DOM style helper injects a single CSP-safe style tag', () => {
@@ -323,6 +394,22 @@ test('tables AG Grid theme helper injects a single CSP-safe style tag', () => {
   assert.equal(container.headChildren[0].nonce, 'nonce-123');
   assert.equal(container.headChildren[0].dataset.textforgeTablesAgGridStyle, 'true');
   assert.match(container.headChildren[0].textContent, /\.ag-theme-test/u);
+
+  disposeB();
+  assert.equal(container.headChildren.length, 1);
+  disposeA();
+  assert.equal(container.headChildren.length, 0);
+});
+
+test('tables Glide style helper injects a single CSP-safe style tag', () => {
+  const container = createStyleTestContainer();
+  const disposeA = ensureTablesGlideStyle(container, '.gdg-test{color:red}');
+  const disposeB = ensureTablesGlideStyle(container, '.gdg-test{color:red}');
+
+  assert.equal(container.headChildren.length, 1);
+  assert.equal(container.headChildren[0].nonce, 'nonce-123');
+  assert.equal(container.headChildren[0].dataset.textforgeTablesGlideStyle, 'true');
+  assert.match(container.headChildren[0].textContent, /\.gdg-test/u);
 
   disposeB();
   assert.equal(container.headChildren.length, 1);

@@ -17,6 +17,10 @@ assert.equal(Object.hasOwn(root, 'PapaParse'), false);
 assert.equal(Object.hasOwn(root, 'GridApi'), false);
 assert.equal(source.includes("from 'papaparse'"), true);
 assert.equal(
+  source.includes("from '@glideapps/glide-data-grid'") || source.includes("import('@glideapps/glide-data-grid')"),
+  true,
+);
+assert.equal(
   source.includes("from 'ag-grid-community'") || source.includes("import('ag-grid-community')"),
   true,
 );

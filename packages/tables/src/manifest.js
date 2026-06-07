@@ -1,14 +1,19 @@
 import { createCapability, createContributionManifest } from '@textforge/core';
 
 import { parseDelimitedTable, serializeDelimitedTable } from './csv.js';
-import { createCsvTsvGridSurfaceContribution } from './grid-surface.js';
 import {
+  createCsvTsvAgGridFallbackSurfaceContribution,
+  createCsvTsvGridSurfaceContribution,
+} from './grid-surface.js';
+import {
+  tablesAgGridFallbackSurfaceId,
   tablesGridCapabilityId,
   tablesGridSurfaceId,
   tablesTextDocumentPredicate,
 } from './ids.js';
 
 export {
+  tablesAgGridFallbackSurfaceId,
   tablesGridCapabilityId,
   tablesGridSurfaceId,
   tablesTextDocumentPredicate,
@@ -17,7 +22,7 @@ export {
 function createTablesCapabilities() {
   return [
     createCapability(tablesGridCapabilityId, {
-      description: 'Open CSV and TSV text resources in the package-owned AG Grid surface.',
+      description: 'Open CSV and TSV text resources in the package-owned grid surfaces.',
       localName: 'csv-grid',
       aliases: ['tables', 'csv', 'tsv', 'grid'],
       defaultActive: true,
@@ -42,6 +47,10 @@ export function createTablesContributionManifest(overrides = {}) {
     capabilities: overrides.capabilities ?? createTablesCapabilities(),
     surfaces: overrides.surfaces ?? [
       createCsvTsvGridSurfaceContribution({
+        parseDelimitedTable: parseDelimitedTableDependency,
+        serializeDelimitedTable: serializeDelimitedTableDependency,
+      }),
+      createCsvTsvAgGridFallbackSurfaceContribution({
         parseDelimitedTable: parseDelimitedTableDependency,
         serializeDelimitedTable: serializeDelimitedTableDependency,
       }),

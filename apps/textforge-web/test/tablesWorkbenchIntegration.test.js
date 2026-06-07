@@ -28,7 +28,11 @@ test('workbench registry includes tables package and exposes CSV/TSV open-with o
   });
   assert.deepEqual(
     csvSelection.candidates.map((candidate) => candidate.surfaceId),
-    ['@textforge/tables/csv-grid', '@textforge/editors/code-mirror-text'],
+    [
+      '@textforge/tables/csv-grid',
+      '@textforge/tables/csv-grid-ag-fallback',
+      '@textforge/editors/code-mirror-text',
+    ],
   );
   assert.equal(csvSelection.selectedSurfaceId, '@textforge/tables/csv-grid');
 
@@ -37,6 +41,10 @@ test('workbench registry includes tables package and exposes CSV/TSV open-with o
   });
   assert.deepEqual(
     tsvSelection.candidates.map((candidate) => candidate.surfaceId),
-    ['@textforge/tables/csv-grid', '@textforge/editors/code-mirror-text'],
+    [
+      '@textforge/tables/csv-grid',
+      '@textforge/tables/csv-grid-ag-fallback',
+      '@textforge/editors/code-mirror-text',
+    ],
   );
 });
