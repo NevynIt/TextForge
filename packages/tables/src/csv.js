@@ -1,3 +1,5 @@
+import Papa from 'papaparse';
+
 import {
   createDisplayLabel,
   createFieldId,
@@ -40,233 +42,111 @@ function createSourceRange(line, column, offset) {
   };
 }
 
-function parseRows(text, dialect) {
-  if (text.length === 0) {
-    return { ok: true, rows: [] };
+function normalizeCellValue(value) {
+  return String(value ?? '')
+    .replaceAll('\r\n', '\n')
+    .replaceAll('\r', '\n');
+}
+
+function isEmptyRow(row) {
+  return Array.isArray(row) && row.every((value) => String(value ?? '') === '');
+}
+
+function trimTerminalEmptyRows(text, rows) {
+  if (!/\r\n|\n|\r$/u.test(String(text ?? ''))) {
+    return rows;
   }
 
-  const rows = [];
-  let row = [];
-  let field = '';
-  let inQuotes = false;
-  let afterQuote = false;
-  let offset = 0;
-  let line = 1;
-  let column = 1;
-
-  function pushField() {
-    row.push(field);
-    field = '';
+  const trimmed = [...rows];
+  while (trimmed.length > 0 && isEmptyRow(trimmed[trimmed.length - 1])) {
+    trimmed.pop();
   }
+  return trimmed;
+}
 
-  function pushRow() {
-    pushField();
-    rows.push(row);
-    row = [];
-  }
+function inferErrorRange(text, error) {
+  const row = Number.isFinite(error?.row) ? Number(error.row) : 0;
+  const line = Math.max(1, row + 1);
+  const lines = String(text ?? '').replaceAll('\r\n', '\n').replaceAll('\r', '\n').split('\n');
+  const safeLineIndex = Math.min(Math.max(0, line - 1), Math.max(0, lines.length - 1));
+  const prefixLength = lines.slice(0, safeLineIndex).reduce((total, value) => total + value.length + 1, 0);
+  const lineText = lines[safeLineIndex] ?? '';
+  const column = Math.min(
+    Math.max(1, Number.isFinite(error?.index) ? (Number(error.index) - prefixLength + 1) : 1),
+    Math.max(1, lineText.length + 1),
+  );
+  const offset = prefixLength + column - 1;
+  return createSourceRange(line, column, offset);
+}
 
-  while (offset < text.length) {
-    const current = text[offset];
-    const next = text[offset + 1];
+function mapPapaError(text, error) {
+  return createParseFailedDiagnostic(
+    error?.message ?? 'CSV or TSV parsing failed.',
+    inferErrorRange(text, error),
+  );
+}
 
-    if (inQuotes) {
-      if (current === dialect.escapeChar && dialect.escapeChar !== dialect.quoteChar && next !== undefined) {
-        field += next;
-        offset += 2;
-        if (next === '\n') {
-          line += 1;
-          column = 1;
-        } else {
-          column += 2;
-        }
-        continue;
-      }
+function isIgnorablePapaError(error) {
+  return String(error?.code ?? '') === 'UndetectableDelimiter';
+}
 
-      if (current === dialect.quoteChar) {
-        if (dialect.escapeChar === dialect.quoteChar && next === dialect.quoteChar) {
-          field += dialect.quoteChar;
-          offset += 2;
-          column += 2;
-          continue;
-        }
-        inQuotes = false;
-        afterQuote = true;
-        offset += 1;
-        column += 1;
-        continue;
-      }
+function parseRows(text, format, dialectInput) {
+  const candidateList = format === 'tsv' ? TSV_DELIMITER_CANDIDATES : CSV_DELIMITER_CANDIDATES;
+  const hasExplicitDelimiter = typeof dialectInput?.delimiter === 'string' && dialectInput.delimiter.length > 0;
+  const baseDialect = normalizeDialect(dialectInput, format);
+  const result = Papa.parse(text, {
+    delimiter: hasExplicitDelimiter ? baseDialect.delimiter : '',
+    delimitersToGuess: hasExplicitDelimiter ? undefined : candidateList,
+    newline: '',
+    quoteChar: baseDialect.quoteChar,
+    escapeChar: baseDialect.escapeChar,
+    header: false,
+    skipEmptyLines: false,
+  });
 
-      field += current;
-      if (current === '\r' && next === '\n') {
-        field = field.slice(0, -1) + '\n';
-        offset += 2;
-        line += 1;
-        column = 1;
-        continue;
-      }
-      if (current === '\n' || current === '\r') {
-        field = field.slice(0, -1) + '\n';
-        line += 1;
-        column = 1;
-      } else {
-        column += 1;
-      }
-      offset += 1;
-      continue;
-    }
-
-    if (afterQuote) {
-      if (current === dialect.delimiter) {
-        pushField();
-        afterQuote = false;
-        offset += 1;
-        column += 1;
-        continue;
-      }
-      if (current === '\r' && next === '\n') {
-        pushRow();
-        afterQuote = false;
-        offset += 2;
-        line += 1;
-        column = 1;
-        continue;
-      }
-      if (current === '\n' || current === '\r') {
-        pushRow();
-        afterQuote = false;
-        offset += 1;
-        line += 1;
-        column = 1;
-        continue;
-      }
-      return {
-        ok: false,
-        error: createParseFailedDiagnostic(
-          'Malformed quoted field contains trailing characters after the closing quote.',
-          createSourceRange(line, column, offset),
-        ),
-      };
-    }
-
-    if (current === dialect.quoteChar) {
-      if (field.length > 0) {
-        return {
-          ok: false,
-          error: createParseFailedDiagnostic(
-            'Malformed quoted field starts after unquoted content.',
-            createSourceRange(line, column, offset),
-          ),
-        };
-      }
-      inQuotes = true;
-      offset += 1;
-      column += 1;
-      continue;
-    }
-
-    if (current === dialect.delimiter) {
-      pushField();
-      offset += 1;
-      column += 1;
-      continue;
-    }
-
-    if (current === '\r' && next === '\n') {
-      pushRow();
-      offset += 2;
-      line += 1;
-      column = 1;
-      continue;
-    }
-
-    if (current === '\n' || current === '\r') {
-      pushRow();
-      offset += 1;
-      line += 1;
-      column = 1;
-      continue;
-    }
-
-    field += current;
-    offset += 1;
-    column += 1;
-  }
-
-  if (inQuotes) {
+  const errors = Array.isArray(result.errors) ? result.errors : [];
+  const blockingErrors = errors.filter((error) => !isIgnorablePapaError(error));
+  if (blockingErrors.length > 0) {
     return {
       ok: false,
-      error: createParseFailedDiagnostic(
-        'Malformed quoted field did not terminate before the end of the document.',
-        createSourceRange(line, column, offset),
-      ),
+      dialect: normalizeDialect({
+        ...dialectInput,
+        delimiter: result.meta?.delimiter || baseDialect.delimiter,
+        newline: result.meta?.linebreak || dialectInput?.newline || '\n',
+      }, format),
+      error: mapPapaError(text, blockingErrors[0]),
     };
   }
 
-  if (afterQuote || field.length > 0 || row.length > 0) {
-    pushRow();
-  }
-
-  return { ok: true, rows };
-}
-
-function scoreDelimiter(rows, delimiter, index) {
-  const nonEmptyRows = rows.filter((row) => row.length > 1 || row.some((cell) => cell.length > 0));
-  const widths = nonEmptyRows.map((row) => row.length);
-  const maxWidth = widths.length > 0 ? Math.max(...widths) : 0;
-  const widthCounts = new Map();
-  for (const width of widths) {
-    widthCounts.set(width, (widthCounts.get(width) ?? 0) + 1);
-  }
-  const dominantWidth = [...widthCounts.entries()].sort((left, right) => right[1] - left[1])[0]?.[0] ?? 0;
-  const consistentCount = dominantWidth > 0 ? widths.filter((width) => width === dominantWidth).length : 0;
-  const tabPreference = delimiter === '\t' ? 1 : 0;
+  const rows = Array.isArray(result.data)
+    ? result.data.map((row) => Array.isArray(row) ? row.map(normalizeCellValue) : [normalizeCellValue(row)])
+    : [];
+  const normalizedRows = trimTerminalEmptyRows(text, rows);
+  const dialect = normalizeDialect({
+    ...dialectInput,
+    delimiter: result.meta?.delimiter || baseDialect.delimiter,
+    newline: result.meta?.linebreak || dialectInput?.newline || '\n',
+  }, format);
 
   return {
-    score: (maxWidth * 10_000) + (consistentCount * 100) + tabPreference - index,
-    maxWidth,
-    rows,
+    ok: true,
+    dialect,
+    rows: normalizedRows,
   };
 }
 
 function detectDelimiter(text, format, dialectInput) {
-  if (typeof dialectInput?.delimiter === 'string' && dialectInput.delimiter.length > 0) {
-    const dialect = normalizeDialect(dialectInput, format);
-    const parsed = parseRows(text, dialect);
-    return parsed.ok
-      ? { dialect, rows: parsed.rows }
-      : { dialect, error: parsed.error };
-  }
-
-  const candidateList = format === 'tsv' ? TSV_DELIMITER_CANDIDATES : CSV_DELIMITER_CANDIDATES;
-  let best;
-
-  for (const [index, delimiter] of candidateList.entries()) {
-    const dialect = normalizeDialect({ ...dialectInput, delimiter }, format);
-    const parsed = parseRows(text, dialect);
-    if (!parsed.ok) {
-      continue;
-    }
-    const candidate = scoreDelimiter(parsed.rows, delimiter, index);
-    if (!best || candidate.score > best.score) {
-      best = {
-        ...candidate,
-        dialect,
-      };
-    }
-  }
-
-  if (best) {
+  const parsed = parseRows(text, format, dialectInput);
+  if (parsed.ok) {
     return {
-      dialect: best.dialect,
-      rows: best.rows,
+      dialect: parsed.dialect,
+      rows: parsed.rows,
     };
   }
-
-  const fallbackDialect = normalizeDialect({ ...dialectInput, delimiter: format === 'tsv' ? '\t' : ',' }, format);
-  const fallback = parseRows(text, fallbackDialect);
-  return fallback.ok
-    ? { dialect: fallbackDialect, rows: fallback.rows }
-    : { dialect: fallbackDialect, error: fallback.error };
+  return {
+    dialect: parsed.dialect,
+    error: parsed.error,
+  };
 }
 
 function resolveFormat(options = {}) {
@@ -445,30 +325,6 @@ function normalizeSerializeHeaderMode(model, options) {
   return normalizeResolvedHeaderMode(model.metadata?.resolvedHeaderMode, 'no-header');
 }
 
-function encodeCell(value, dialect) {
-  const raw = String(value ?? '');
-  const needsQuotes = raw.includes(dialect.delimiter)
-    || raw.includes('\n')
-    || raw.includes('\r')
-    || raw.includes(dialect.quoteChar)
-    || /^\s|\s$/u.test(raw);
-
-  if (!needsQuotes) {
-    return raw;
-  }
-
-  let encoded = raw;
-  if (dialect.escapeChar === dialect.quoteChar) {
-    encoded = encoded.replaceAll(dialect.quoteChar, `${dialect.quoteChar}${dialect.quoteChar}`);
-  } else {
-    encoded = encoded
-      .replaceAll(dialect.escapeChar, `${dialect.escapeChar}${dialect.escapeChar}`)
-      .replaceAll(dialect.quoteChar, `${dialect.escapeChar}${dialect.quoteChar}`);
-  }
-
-  return `${dialect.quoteChar}${encoded}${dialect.quoteChar}`;
-}
-
 export function parseDelimitedTable(sourceText, options = {}) {
   const text = String(sourceText ?? '');
   const format = resolveFormat(options);
@@ -593,20 +449,24 @@ export function serializeDelimitedTable(model, options = {}) {
     format,
   );
   const orderedColumns = [...(model?.columns ?? [])].sort((left, right) => left.index - right.index);
-  const lines = [];
+  const rows = [];
 
   if (headerMode === 'header') {
-    lines.push(orderedColumns.map((column, index) =>
-      encodeCell(
-        column.headerValue ?? column.sourceHeader ?? column.label ?? createDisplayLabel(index),
-        dialect,
-      )));
+    rows.push(orderedColumns.map((column, index) =>
+      String(column.headerValue ?? column.sourceHeader ?? column.label ?? createDisplayLabel(index))));
   }
 
   for (const row of model?.rows ?? []) {
-    lines.push(orderedColumns.map((column) =>
-      encodeCell(row.values?.[column.field] ?? '', dialect)));
+    rows.push(orderedColumns.map((column) =>
+      String(row.values?.[column.field] ?? '')));
   }
 
-  return lines.map((cells) => cells.join(dialect.delimiter)).join(dialect.newline);
+  return Papa.unparse(rows, {
+    delimiter: dialect.delimiter,
+    newline: dialect.newline,
+    quoteChar: dialect.quoteChar,
+    escapeChar: dialect.escapeChar,
+    header: false,
+    skipEmptyLines: false,
+  });
 }
