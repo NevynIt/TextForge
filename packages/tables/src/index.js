@@ -38,3 +38,9 @@ export function createTablesContributionManifest(overrides = {}) {
 }
 
 export const contributions = createTablesContributionManifest();
+
+export {
+  parseDelimitedTable,
+  serializeDelimitedTable,
+} from './csv.js';
+export { renderReadonlyTableModel } from './readonly-render.js';
