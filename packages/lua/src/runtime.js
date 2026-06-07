@@ -569,6 +569,7 @@ export function createLuaConsoleSurface(options = {}) {
           disableStdin: true,
           fontFamily: '"Iosevka Term", Consolas, "SFMono-Regular", monospace',
           fontSize: 13,
+          lineHeight: 1.25,
           theme: {
             background: '#09111f',
             foreground: '#d9e6ff',

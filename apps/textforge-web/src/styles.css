@@ -3306,11 +3306,22 @@ body {
   border-radius: 18px;
   box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.06);
   background: rgba(2, 6, 23, 0.82);
+  user-select: text;
 }
 
 .tf-lua-console__terminal .xterm {
   flex: 1 1 auto;
   height: 100%;
+  line-height: 1.25;
+  user-select: text;
+}
+
+.tf-lua-console__terminal .xterm-rows,
+.tf-lua-console__terminal .xterm-rows span,
+.tf-lua-console__terminal .xterm-screen,
+.tf-lua-console__terminal .xterm-viewport {
+  line-height: 1.25 !important;
+  user-select: text !important;
 }
 
 .tf-lua-console__composer {
