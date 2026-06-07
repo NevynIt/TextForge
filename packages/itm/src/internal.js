@@ -6601,7 +6601,7 @@ export const itmMarkdownFenceHandlerContributions = [
       }
 
       return {
-        html: renderItmPublicationHtml(selected, {
+        html: renderItmPublicationHtml(selected.effectiveResolvedDocument ?? selected.resolvedDocument ?? selected.effectiveDocument ?? selected.document, {
           ...renderOptions,
           capabilityContext: coerceProjectionCapabilityContext(selected, renderOptions),
         }),

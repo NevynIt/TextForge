@@ -106,6 +106,8 @@ flowchart TD
   assert.match(result.html, /blob:system-svg/);
   assert.match(result.html, /data-block="tfmd-block-1"/);
   assert.match(result.html, /language-json/);
+  assert.match(result.printHtml, /data-block="tfmd-block-1"/);
+  assert.doesNotMatch(result.printHtml, /```mermaid/);
   assert.equal(result.referencedAssets[0]?.resolvedSrc, 'blob:system-svg');
   assert.equal(result.generatedResources[0]?.path, '/generated/example-mermaid.svg');
   assert.match(result.printHtml, /<!doctype html>/i);

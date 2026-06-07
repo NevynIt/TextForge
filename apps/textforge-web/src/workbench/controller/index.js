@@ -96,6 +96,7 @@ import {
   isWorkspaceResource,
   pickLocalFile,
   readFileBytes,
+  sanitizeFilenameSegment,
   splitFilename,
 } from '../browser-files.js';
 import {
