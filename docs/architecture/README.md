@@ -3,3 +3,7 @@
 This folder contains the longer-form design and architecture papers that explain the rebuild direction, capability model, security posture, and published roadmap mirrors.
 
 Most files here are reference material for implementation and review rather than first-stop user docs.
+
+## Snapshot papers
+
+- [Value-oriented evolution snapshot - 2026-06-07](value-oriented-evolution-snapshot-2026-06-07.md)
