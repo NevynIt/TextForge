@@ -71,7 +71,7 @@ The sequence below is intentionally not a pure prerequisite graph. It brings for
 | 7 | ITM validation | `WP-ITM-04` | `MOD-ITM` | `ADR-0008`; candidate |
 | 8 | BPMN semantic profile | `WP-BPMN-SEM` | `MOD-BPMN`, `MOD-ITM` | `ADR-0001`; consumes ITM package/validation foundations |
 | 9 | BPMN viewing and Diagram Interchange | `WP-BPMN-VISUAL-A`, `WP-BPMN-DI-01`, `WP-BPMN-VISUAL-B` | `MOD-BPMN`, `MOD-VISUAL-ITM-RENDERERS` | `ADR-0001`; read-only BPMN visual chain |
-| 10 | Tables, catalogues, and matrices | `WP-TABLES` | `MOD-TABLES`, `MOD-ITM`, `MOD-BPMN` | `ADR-0001`; currently blocked in the roadmap view |
+| 10 | Tables, catalogues, and matrices | `WP-TABLES`, `WP-TABLES-02` | `MOD-TABLES`, `MOD-ITM`, `MOD-BPMN` | `ADR-0001`, `ADR-0013`; `WP-TABLES` ready, semantic table follow-up defined |
 | 11 | Markdown reports | `WP-MD-REPORT` | `MOD-MARKDOWN-ITM` | `ADR-0001`; related to `ADR-0009` |
 | 12 | `itm-pub` visual publication | `WP-ITM-PUB-VISUAL-01` | `MOD-MARKDOWN-ITM`, `MOD-VISUAL-ITM-RENDERERS` | `ADR-0001`; currently in progress |
 | 13 | Parameterized reports | `WP-ITM-05` | `MOD-ITM`, `MOD-MARKDOWN-ITM` | `ADR-0009`; candidate |

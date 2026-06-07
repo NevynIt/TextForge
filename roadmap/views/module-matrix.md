@@ -15,7 +15,7 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 | `MOD-WORKSPACE-RESOURCES` | Workspace resources | `WP-RES-01`, `WP-RES-02`, `WP-RES-03`, `WP-SERVICES-LOCAL` |
 | `MOD-MARKDOWN-ITM` | Markdown and ITM publication | `WP-MD-REPORT`, `WP-ITM-PUB-VISUAL-01`, `WP-MD-RICH`, `WP-PDF-EXPORT` |
 | `MOD-EA-VIEWER` | Enterprise architecture viewer | `WP-EA-VIEWER-01` |
-| `MOD-TABLES` | Tables | `WP-TABLES` |
+| `MOD-TABLES` | Tables | `WP-TABLES`, `WP-TABLES-02` |
 | `MOD-DEVELOPER-DOCUMENTATION` | Developer documentation and API governance | `WP-API-DOCS-01`, `WP-API-GOV-01` |
 | `MOD-KNOWLEDGE-WORKSPACE` | Knowledge workspace | `WP-LINK-INDEX`, `WP-CANVAS`, `WP-COMMENTS-SIDECAR`, `WP-CHANGE-PROPOSALS` |
 | `MOD-SKETCH` | Sketch | `WP-SKETCH`, `WP-PDF-ANNOTATE` |

@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed. Incorporated into the roadmap as implementation guidance for `MOD-TABLES`, `WP-TABLES`, and follow-up `WP-TABLES-02`.
+Accepted. Incorporated into the roadmap as implementation guidance for `MOD-TABLES`, `WP-TABLES`, and follow-up `WP-TABLES-02`.
 
 ## Date
 
@@ -166,9 +166,7 @@ It should not support sorting/filtering in this workpackage. Sorting/filtering b
 
 ## Follow-up workpackage
 
-Create `WP-TABLES-02 - Shared semantic table rendering and exports`.
-
-It should cover:
+`WP-TABLES-02 - Shared semantic table rendering and exports` covers:
 
 - TanStack Table for semantic interactive diagnostics, catalogues, and matrices;
 - migration of ITM-generated table views to `@textforge/tables`;
@@ -194,10 +192,10 @@ It should cover:
 - The first implementation has conservative large-file behavior rather than streaming/chunked editing.
 - Settings-backed thresholds must wait for a future settings workpackage.
 
-### Follow-up required
+### Roadmap integration
 
-- Update `WP-TABLES` with the clarified scope.
-- Add `WP-TABLES-02` stub.
-- Register `ADR-0013` and `WP-TABLES-02` in `roadmap-state.yaml` when safely editing the full registry.
-- Add a RAPID entry recording the grilling and ADR outcome.
-- Implement validation evidence when `WP-TABLES` moves from planning to implementation.
+- `WP-TABLES` has been updated with the clarified scope.
+- `WP-TABLES-02` has been added as the semantic table follow-up.
+- `ADR-0013` and `WP-TABLES-02` are registered in `roadmap-state.yaml`.
+- RAPID records the grilling and ADR outcome in `A-042`.
+- Implementation validation evidence remains required when `WP-TABLES` moves from planning to implementation.

@@ -35,7 +35,7 @@ The implementation order should be value-oriented rather than prerequisite-pure:
 
 | Priority | Workpackage | Reason |
 |---:|---|---|
-| 5 | `WP-TABLES` | High-value review surface for catalogues, matrices, diagnostics, and inventories. Treat its current blocked state as a near-term unblock, not as a reason to defer the feature. |
+| 5 | `WP-TABLES` | High-value review surface for catalogues, matrices, diagnostics, and inventories. The grilling is complete and the workpackage is ready for implementation. |
 | 6 | `WP-ITM-04` | Pull forward because reliable validation and conformance support tables, report quality, profile readiness, AI review, and parameterized dashboards. |
 | 7 | `WP-ITM-05` | Pull forward because parameterized reports/dashboards are the shortest path to reusable model analysis and are a prerequisite for the generic React Flow/Dagre ITM graph surface. |
 | 8 | `WP-ITM-REACT-FLOW-DAGRE-01` | Bring forward as an early visual capability after the EA viewer. It generalizes the EA dashboard control pattern into reusable ITM graph views. |
@@ -55,7 +55,7 @@ The implementation order should be value-oriented rather than prerequisite-pure:
 | 1 | `WP-MD-REPORT` | Missing base for the report/document slice. It enables both `WP-ITM-PUB-VISUAL-01` and `WP-MD-RICH`. |
 | 2 | Finish `WP-ITM-PUB-VISUAL-01` and `WP-MD-RICH` | Both are already in progress and become coherent once report generation is stable. |
 | 3 | Finish `WP-EA-VIEWER-01` | Already in progress; gives an early visible dashboard win and proves the React Flow/Dagre interaction pattern. |
-| 4 | Unblock and implement `WP-TABLES` | High-value review surface. Its declared hard prerequisites are already validated: ITM core and BPMN semantic profile. |
+| 4 | Implement `WP-TABLES` | High-value review surface. Its declared hard prerequisites are already validated: ITM core and BPMN semantic profile, and its dedicated grilling has completed. |
 | 5 | `WP-ITM-04` | Pull forward as the validation/conformance base for tables quality, reports, AI review, ArchiMate, and parameterized dashboards. |
 | 6 | `WP-ITM-05` | Pull forward because React Flow/Dagre viewpoint controls depend on parameterized execution/control concepts from `ADR-0009`. |
 | 7 | `WP-ITM-REACT-FLOW-DAGRE-01` | Early high-value visual capability after the EA viewer. Generalizes EA-style controls into ITM views/viewpoints. |

@@ -37,7 +37,8 @@ Authoritative dependency data lives in `roadmap-state.yaml`.
 
 | WP | Title | Status source | Type |
 |---|---|---|---|
-| `WP-TABLES` | Tables, catalogues, and matrices | Registry-owned | Feature |
+| `WP-TABLES` | CSV/TSV grid editor and shared table contract | Registry-owned | Feature |
+| `WP-TABLES-02` | Shared semantic table rendering and exports | Registry-owned | Feature follow-up |
 
 ## Current State
 
@@ -50,6 +51,7 @@ The module is healthy when its workpackages can move independently through the r
 ## Key Decisions
 
 - `ADR-0001` governs roadmap structure and authority.
+- `ADR-0013` records the table surface, CSV/TSV grid, and semantic table follow-up decisions.
 
 ## Validation Approach
 

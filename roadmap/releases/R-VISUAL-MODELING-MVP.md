@@ -28,7 +28,8 @@ The included workpackage list is generated from `roadmap-state.yaml`.
 | `WP-BPMN-VISUAL-B` | ITM/BPMN visual target integration | Registry-owned | no |
 | `WP-ITM-EXPLORATION-01` | Interactive ITM exploration workbench | Registry-owned | no |
 | `WP-BPMN-VISUAL-C` | BPMN modeler/edit/write-back | Registry-owned | no |
-| `WP-TABLES` | Tables, catalogues, and matrices | Registry-owned | no |
+| `WP-TABLES` | CSV/TSV grid editor and shared table contract | Registry-owned | no |
+| `WP-TABLES-02` | Shared semantic table rendering and exports | Registry-owned | no |
 | `WP-ARCHIMATE-SEM` | ArchiMate semantic profile | Registry-owned | no |
 | `WP-ARCHIMATE-VISUAL` | ArchiMate visual editing investigation | Registry-owned | no |
 

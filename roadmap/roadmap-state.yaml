@@ -36,6 +36,7 @@
       "WP-MD-RICH": 3,
       "WP-EA-VIEWER-01": 4,
       "WP-TABLES": 5,
+      "WP-TABLES-02": 5.1,
       "WP-ITM-04": 6,
       "WP-ITM-05": 7,
       "WP-ITM-REACT-FLOW-DAGRE-01": 8,
@@ -2290,14 +2291,45 @@
       "validation_checklist": null
     },
     "WP-TABLES": {
-      "title": "Tables, catalogues, and matrices",
+      "title": "CSV/TSV grid editor and shared table contract",
       "path": "workpackages/WP-TABLES.md",
       "module": "MOD-TABLES",
-      "status": "blocked",
+      "status": "ready",
       "type": "Feature",
       "depends_on": [
         "WP-ITM-01",
         "WP-BPMN-SEM"
+      ],
+      "enables": [
+        "WP-TABLES-02"
+      ],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001",
+        "ADR-0013"
+      ],
+      "archive_trace": [
+        "archive/registers/legacy-workpackages/workpackage-register.md",
+        "archive/registers/legacy-workpackages/implementation-status.md",
+        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
+        "legacy source: Phase 11",
+        "decisions/ADR-0013-table-surfaces-and-csv-tsv-grid.md",
+        "decisions/ADR-0013-attachments/wp-tables-grilling-report.md"
+      ],
+      "validation_checklist": null
+    },
+    "WP-TABLES-02": {
+      "title": "Shared semantic table rendering and exports",
+      "path": "workpackages/WP-TABLES-02.md",
+      "module": "MOD-TABLES",
+      "status": "defined",
+      "type": "Feature follow-up",
+      "depends_on": [
+        "WP-TABLES"
       ],
       "enables": [],
       "release_candidates": [
@@ -2306,13 +2338,12 @@
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0001"
+        "ADR-0013"
       ],
       "archive_trace": [
-        "archive/registers/legacy-workpackages/workpackage-register.md",
-        "archive/registers/legacy-workpackages/implementation-status.md",
-        "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
-        "legacy source: Phase 11"
+        "workpackages/WP-TABLES.md",
+        "decisions/ADR-0013-table-surfaces-and-csv-tsv-grid.md",
+        "decisions/ADR-0013-attachments/wp-tables-grilling-report.md"
       ],
       "validation_checklist": null
     },

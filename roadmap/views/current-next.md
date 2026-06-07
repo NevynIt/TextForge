@@ -11,13 +11,14 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 | 2 | `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | in-progress | `MOD-MARKDOWN-ITM` |
 | 3 | `WP-MD-RICH` | Rich Markdown editing | in-progress | `MOD-MARKDOWN-ITM` |
 | 4 | `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | in-progress | `MOD-EA-VIEWER` |
-| 5 | `WP-TABLES` | Tables, catalogues, and matrices | blocked | `MOD-TABLES` |
+| 5 | `WP-TABLES` | CSV/TSV grid editor and shared table contract | ready | `MOD-TABLES` |
 
 ## Next Candidates
 
 | Plan | WP | Title | Status | Module |
 |---:|---|---|---|---|
 | 1 | `WP-MD-REPORT` | Markdown + ITM report generation | defined | `MOD-MARKDOWN-ITM` |
+| 5.1 | `WP-TABLES-02` | Shared semantic table rendering and exports | defined | `MOD-TABLES` |
 | 6 | `WP-ITM-04` | ITM validation and conformance modules | candidate | `MOD-ITM` |
 | 7 | `WP-ITM-05` | Parameterized ITM reports and dashboards | candidate | `MOD-ITM` |
 | 8 | `WP-ITM-REACT-FLOW-DAGRE-01` | React Flow Dagre ITM graph surface | candidate | `MOD-VISUAL-ITM-RENDERERS` |

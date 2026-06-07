@@ -8,6 +8,7 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 graph TD
   WP_MD_REPORT["WP-MD-REPORT"] --> WP_ITM_PUB_VISUAL_01["WP-ITM-PUB-VISUAL-01"]
   WP_MD_REPORT["WP-MD-REPORT"] --> WP_MD_RICH["WP-MD-RICH"]
+  WP_TABLES["WP-TABLES"] --> WP_TABLES_02["WP-TABLES-02"]
   WP_MD_REPORT["WP-MD-REPORT"] --> WP_ITM_05["WP-ITM-05"]
   WP_ITM_PUB_VISUAL_01["WP-ITM-PUB-VISUAL-01"] --> WP_ITM_05["WP-ITM-05"]
   WP_ITM_04["WP-ITM-04"] --> WP_ITM_05["WP-ITM-05"]
