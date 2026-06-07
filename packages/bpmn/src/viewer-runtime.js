@@ -5,7 +5,7 @@ import {
 } from './viewer-model.js';
 import { escapeHtml } from './shared.js';
 
-function createBpmnViewerRuntimeMarkup(model) {
+export function createBpmnViewerRuntimeMarkup(model) {
   return `
     <section
       class="tf-bpmn-viewer"

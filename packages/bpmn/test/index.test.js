@@ -13,6 +13,7 @@ import { contributions as itmContributions, loadItmDocument } from '@textforge/i
 import {
   applyBpmnDiagramInterchangeToXml,
   bpmnCapabilityIds,
+  bpmnViewerSurfaceContribution,
   bpmnViewerSurfaceDocumentPredicate,
   bundledBpmnReferenceAssets,
   collectBpmnMvpScopeDiagnostics,
@@ -127,6 +128,42 @@ test('bpmn viewer surface matches uploaded bpm files without depending on browse
     languageId: 'bpmn-xml',
     mimeType: 'application/octet-stream',
   }), true);
+});
+
+test('bpmn viewer surface mount path resolves runtime helper symbols', async () => {
+  const opened = bpmnViewerSurfaceContribution.open({
+    sourceText: `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="https://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="https://example.org/textforge/bpmn/xml">
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_1" name="Start" />
+  </bpmn:process>
+</bpmn:definitions>`,
+    resource: {
+      resourceId: 'training-bpmn',
+      kind: 'resource',
+      representation: 'text',
+      path: '/docs/examples/bpmn/Training By Design.bpmn',
+      languageId: 'bpmn-xml',
+      mimeType: 'application/bpmn+xml',
+    },
+  });
+  const container = {
+    innerHTML: '',
+    style: {},
+    closest() {
+      return undefined;
+    },
+  };
+
+  const dispose = opened.surface.mount(container);
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  dispose();
+
+  assert.equal(
+    opened.surface.model.diagnostics.some((diagnostic) =>
+      String(diagnostic.message).includes('createBpmnViewerRuntimeMarkup is not defined')),
+    false,
+  );
 });
 
 test('bpmn DI extraction reads preserved bounds, routes, and label bounds from ITM views', () => {

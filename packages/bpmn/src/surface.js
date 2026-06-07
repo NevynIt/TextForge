@@ -1,6 +1,7 @@
 import { createBpmnSurfaceDiagnostic } from './shared.js';
 import {
   createBpmnViewerFailureHtml,
+  createBpmnViewerRuntimeMarkup,
   mountBpmnViewerRuntime,
   resolveBpmnViewerSurfaceModel,
 } from './viewer-runtime.js';
