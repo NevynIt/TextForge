@@ -82,4 +82,4 @@ The implementation order should be value-oriented rather than prerequisite-pure:
 
 ## Registry note
 
-This snapshot does **not** change workpackage statuses. If the project wants the generated `roadmap/views/current-next.md` to reflect this order directly, the registry will need an explicit sequencing field or status/order convention in `roadmap-state.yaml`; otherwise the generated view will continue to reflect status buckets rather than the value-oriented implementation priority.
+This snapshot does **not** change workpackage statuses. The sequence is mirrored in `roadmap-state.yaml` under `value_oriented_planning_sequence` so generated planning views can sort by the value-oriented implementation priority while keeping status, dependency, module, release, and ADR authority in the registry.
