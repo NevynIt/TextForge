@@ -145,7 +145,7 @@ What to test:
 
 - `.csv` and `.tsv` resources keep the text editor as the default open path while exposing the table grid through `Open with`;
 - the table grid can be opened explicitly for both CSV and TSV resources;
-- table-surface editing, structure changes, and failure states behave correctly once the owning `@textforge/tables` runtime is present in the branch/build under test.
+- table-surface editing, structure changes, and failure states behave correctly through the shipped `@textforge/tables` runtime.
 
 How:
 

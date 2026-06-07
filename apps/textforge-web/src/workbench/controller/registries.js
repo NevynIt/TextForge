@@ -13,7 +13,7 @@ import { contributions as pipelineContributionPack } from '@textforge/pipeline';
 import { contributions as diagramContributionPack } from '@textforge/diagrams';
 import { contributions as markdownContributionPack } from '@textforge/markdown';
 import { contributions as itmContributionPack } from '@textforge/itm';
-import { contributions as tablesContributionPack } from '../../../../../packages/tables/src/index.js';
+import { contributions as tablesContributionPack } from '@textforge/tables';
 import { contributions as cytoscapeRendererContributionPack } from '@textforge/renderer-cytoscape';
 import { contributions as jsmindRendererContributionPack } from '@textforge/renderer-jsmind';
 import { contributions as sigmaRendererContributionPack } from '@textforge/renderer-sigma';
