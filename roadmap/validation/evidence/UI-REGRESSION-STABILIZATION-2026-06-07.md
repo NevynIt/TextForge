@@ -18,6 +18,7 @@
 | AC-006 | EA dashboard capability map differs from network topology and React Flow positions survive control changes | Graph tests + source inspection | Pass with manual UI follow-up | `packages/ea-viewer/test/index.test.js`; `packages/ea-viewer/src/viewer-surface.js` |
 | AC-007 | EA Dashboard ITM profile activates translator and graph provider capabilities | Web integration test | Pass | `apps/textforge-web/test/eaWorkbenchIntegration.test.js` |
 | AC-008 | Large retail ITM graph rendering is guarded instead of running during startup | ITM surface test | Pass with manual UI follow-up | `packages/itm/test/index.test.js` |
+| AC-009 | Generated or large SVG assets open in the SVG viewer without eagerly decoding, and incomplete Markdown diagram print exports are blocked with diagnostics | Asset tests + web tests/build | Pass with manual UI follow-up | `packages/assets/test/index.test.js`; `apps/textforge-web/src/workbench/controller/index.js`; `corepack pnpm --filter ./apps/textforge-web build` |
 
 ## Evidence items
 
@@ -35,6 +36,7 @@
 | EV-010 | follow-up build output | `corepack pnpm --filter @textforge/lua build`; `corepack pnpm --filter @textforge/itm build`; `corepack pnpm --filter @textforge/renderer-jsmind build`; `corepack pnpm --filter @textforge/textforge-web build` | Touched package builds passed. Web build passed with the existing `@viz-js/viz` import-meta warning only. |
 | EV-011 | second follow-up test output | `corepack pnpm --filter @textforge/diagrams test`; `corepack pnpm --filter @textforge/renderer-jsmind test`; `corepack pnpm --filter @textforge/renderer-cytoscape test`; `corepack pnpm --filter @textforge/renderer-sigma test`; `corepack pnpm --filter @textforge/textforge-web test` | Covered resilient SVG-to-PNG export, passive embedded jsMind render mounting, and large visual-runtime source guards. |
 | EV-012 | second follow-up build output | `corepack pnpm --filter @textforge/diagrams build`; `corepack pnpm --filter @textforge/renderer-jsmind build`; `corepack pnpm --filter @textforge/renderer-cytoscape build`; `corepack pnpm --filter @textforge/renderer-sigma build`; `corepack pnpm --filter @textforge/textforge-web build` | Touched package builds passed. Web build passed with existing upstream browser externalization/import-meta warnings. |
+| EV-013 | third follow-up test/build output | `corepack pnpm --filter @textforge/assets test`; `corepack pnpm --filter ./apps/textforge-web test`; `corepack pnpm --filter @textforge/assets build`; `corepack pnpm --filter ./apps/textforge-web build` | Covered default SVG viewer safety for generated SVGs and a Markdown print-export guard that blocks incomplete diagram HTML instead of silently downloading it. Web build passed with existing upstream browser externalization/import-meta warnings. |
 
 ## Follow-up correction
 
@@ -57,6 +59,12 @@ Second residual retest found generated diagram PNG rasterization could still fai
 - SVG-to-PNG rasterization now uses Blob URLs and per-diagram error handling; SVG export completes even when a PNG cannot be decoded.
 - Markdown `itm-pub` mindmap hydration now uses a passive embedded jsMind render without toolbar/sidebar runtime controls.
 - Cytoscape, Sigma, and jsMind visual-runtime resolvers pause large ITM sources before synchronous graph resolution and display a background-worker-required warning instead of freezing the UI.
+
+Third residual retest found print HTML could still be downloaded with no rendered Mermaid artifact and generated SVG assets could freeze the viewer on open. Corrections made:
+
+- SVG resources now prefer the read-only SVG viewer surface over the editor by default.
+- Generated or very large text-backed SVG previews pause before browser image decode and require an explicit `Load SVG preview` action.
+- Markdown print HTML export now refuses to download when Mermaid/Graphviz fences are present but the rendered print document has no SVG artifact, or when fence diagnostics identify a diagram render failure.
 
 ## Diagnostics / defects
 

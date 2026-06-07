@@ -8,6 +8,7 @@ import {
   renderMarkdownDocument,
 } from '@textforge/markdown';
 import { workspaceEntryToResourceRef } from '@textforge/workspace';
+import { describeMarkdownPrintDiagramIssue } from '../src/workbench/controller/index.js';
 import { createWorkbenchRegistries } from '../src/workbench/controller/registries.js';
 
 const workspaceRoot = resolve(import.meta.dirname, '..', '..', '..');
@@ -65,4 +66,42 @@ test('workbench registry renders ITM Markdown mindmap and report test profiles',
       assert.match(rendered.html, marker);
     }
   }
+});
+
+test('markdown print export guard blocks incomplete diagram HTML', () => {
+  const resource = createMarkdownResource('diagram.md', `# Diagram
+
+\`\`\`mermaid
+flowchart TD
+  A --> B
+\`\`\`
+`);
+
+  assert.match(
+    describeMarkdownPrintDiagramIssue(resource, {
+      printHtml: '<!doctype html><html><body><figure></figure></body></html>',
+      diagnostics: [],
+    }),
+    /contains no rendered SVG artifact/,
+  );
+
+  assert.match(
+    describeMarkdownPrintDiagramIssue(resource, {
+      printHtml: '<!doctype html><html><body></body></html>',
+      diagnostics: [{
+        code: 'tfmd.fence.render-failed',
+        message: 'Mermaid failed to render.',
+        origin: { fenceName: 'mermaid' },
+      }],
+    }),
+    /Mermaid failed to render/,
+  );
+
+  assert.equal(
+    describeMarkdownPrintDiagramIssue(resource, {
+      printHtml: '<!doctype html><html><body><svg data-block="tfmd-block-1"></svg></body></html>',
+      diagnostics: [],
+    }),
+    undefined,
+  );
 });

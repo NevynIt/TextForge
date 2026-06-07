@@ -150,6 +150,28 @@ const utilitySections = [
   { id: 'registry', label: 'Contribution Packs', icon: 'command' },
 ];
 
+export function describeMarkdownPrintDiagramIssue(resource, rendered) {
+  const sourceHasGeneratedDiagramFence = /```[ \t]*(mermaid|graphviz|dot)\b/i.test(resource?.text ?? '');
+  if (!sourceHasGeneratedDiagramFence) {
+    return undefined;
+  }
+
+  const diagramDiagnostics = (rendered?.diagnostics ?? []).filter((diagnostic) =>
+    diagnostic?.code === 'tfmd.fence.render-failed'
+    || diagnostic?.code === 'tfmd.fence.handler-unavailable'
+    || ['mermaid', 'graphviz', 'dot'].includes(String(diagnostic?.origin?.fenceName ?? '').toLowerCase()));
+  if (diagramDiagnostics.length > 0) {
+    const firstMessage = diagramDiagnostics[0]?.message ?? 'A generated diagram block did not render.';
+    return `${firstMessage} The HTML download was skipped so an incomplete print export is not mistaken for a successful render.`;
+  }
+
+  if (!/<svg[\s>]/i.test(rendered?.printHtml ?? '')) {
+    return 'The Markdown contains Mermaid or Graphviz blocks, but the print HTML contains no rendered SVG artifact. The HTML download was skipped for diagnosis.';
+  }
+
+  return undefined;
+}
+
 export function createTextForgeWorkbenchController() {
   const workbenchTestProfile = readWorkbenchTestProfile();
   const luaBootstrapRecovery = readLuaBootstrapRecoveryState();
@@ -721,6 +743,7 @@ export function createTextForgeWorkbenchController() {
     }
 
     const preferredSurfaceId = options.preferredSurfaceId
+      ?? (entry?.mimeType === 'image/svg+xml' ? '@textforge/assets/svg' : undefined)
       ?? (isMarkdownResource(entry) ? markdownPreviewSurfaceContribution.id : undefined);
     const requestedPlacement = options.placement
       ?? findSessionForResource(entry.id, { sessionKey: options.sessionKey })?.placement
@@ -3744,6 +3767,11 @@ export function createTextForgeWorkbenchController() {
     }
 
     const rendered = await renderMarkdownResource(resource);
+    const diagramIssue = describeMarkdownPrintDiagramIssue(resource, rendered);
+    if (diagramIssue) {
+      showTransientFlag('Markdown print export incomplete', diagramIssue, 'warning');
+      return;
+    }
     const fileName = `${basenameWorkspacePath(resource.path).replace(/\.(md|markdown|tfmd)$/i, '') || 'document'}.html`;
     downloadBytes(fileName, textEncoder.encode(rendered.printHtml), 'text/html');
   }
