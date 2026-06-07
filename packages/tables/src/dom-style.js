@@ -61,6 +61,17 @@ function createStyleElement(documentRef) {
   return style;
 }
 
+function createAgGridThemeStyleElement(documentRef, cssText) {
+  const style = documentRef.createElement('style');
+  style.dataset.textforgeTablesAgGridStyle = 'true';
+  const cspNonce = readCspNonce(documentRef);
+  if (cspNonce) {
+    style.setAttribute('nonce', cspNonce);
+  }
+  style.textContent = cssText;
+  return style;
+}
+
 export function ensureTablesPackageStyle(container) {
   const documentRef = container?.ownerDocument ?? globalThis.document;
   if (!documentRef?.head) {
@@ -73,6 +84,27 @@ export function ensureTablesPackageStyle(container) {
   }
 
   const style = createStyleElement(documentRef);
+  documentRef.head.appendChild(style);
+  return () => {
+    style.remove();
+  };
+}
+
+export function ensureTablesAgGridThemeStyle(container, cssText) {
+  const documentRef = container?.ownerDocument ?? globalThis.document;
+  if (!documentRef?.head || !cssText) {
+    return () => {};
+  }
+
+  const existing = documentRef.head.querySelector('style[data-textforge-tables-ag-grid-style="true"]');
+  if (existing) {
+    if (existing.textContent !== cssText) {
+      existing.textContent = cssText;
+    }
+    return () => {};
+  }
+
+  const style = createAgGridThemeStyleElement(documentRef, cssText);
   documentRef.head.appendChild(style);
   return () => {
     style.remove();

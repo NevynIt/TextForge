@@ -4,6 +4,7 @@ import { parseDelimitedTable, serializeDelimitedTable } from './csv.js';
 import {
   createTablesFailureHtml,
   createTablesRuntimeMarkup,
+  ensureTablesAgGridThemeStyle,
   ensureTablesPackageStyle,
 } from './dom-style.js';
 import {
@@ -487,6 +488,9 @@ async function mountTablesGridRuntime(container, execution, initialParseState, d
       wrapperBorderRadius: 8,
     })
     : agGridCommunity.themeQuartz;
+  const agGridThemeCss = typeof theme?.getCSS === 'function' ? theme.getCSS() : '';
+  const agGridThemeClass = typeof theme?.getCssClass === 'function' ? theme.getCssClass() : '';
+  ensureTablesAgGridThemeStyle(container, agGridThemeCss);
   const gridModules = agGridCommunity.ClientSideRowModelModule
     ? [agGridCommunity.ClientSideRowModelModule]
     : [];
@@ -823,14 +827,16 @@ async function mountTablesGridRuntime(container, execution, initialParseState, d
         { className: 'tf-tables-body' },
         React.createElement(
           'div',
-          { className: 'tf-tables-grid-shell' },
+          {
+            className: ['tf-tables-grid-shell', agGridThemeClass].filter(Boolean).join(' '),
+            'data-tf-tables-grid-theme': agGridThemeClass || undefined,
+          },
           React.createElement(AgGridReact, {
             className: 'tf-tables-grid',
+            containerStyle: { width: '100%', height: '100%' },
             rowData,
             columnDefs,
             modules: gridModules,
-            theme,
-            loadThemeGoogleFonts: false,
             domLayout: 'normal',
             singleClickEdit: !readOnly,
             stopEditingWhenCellsLoseFocus: true,

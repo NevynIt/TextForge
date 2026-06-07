@@ -8,7 +8,12 @@ import {
   renderReadonlyTableModel,
   serializeDelimitedTable,
 } from '../src/index.js';
-import { createTablesFailureHtml, createTablesRuntimeMarkup, ensureTablesPackageStyle } from '../src/dom-style.js';
+import {
+  createTablesFailureHtml,
+  createTablesRuntimeMarkup,
+  ensureTablesAgGridThemeStyle,
+  ensureTablesPackageStyle,
+} from '../src/dom-style.js';
 import { createCsvTsvGridSurfaceContribution } from '../src/grid-surface.js';
 import {
   contributions,
@@ -24,6 +29,9 @@ function createStyleTestContainer() {
     querySelector(selector) {
       if (selector === 'style[data-textforge-tables-style="true"]') {
         return headChildren.find((child) => child.dataset?.textforgeTablesStyle === 'true');
+      }
+      if (selector === 'style[data-textforge-tables-ag-grid-style="true"]') {
+        return headChildren.find((child) => child.dataset?.textforgeTablesAgGridStyle === 'true');
       }
       return undefined;
     },
@@ -299,6 +307,22 @@ test('tables DOM style helper injects a single CSP-safe style tag', () => {
   assert.equal(container.headChildren.length, 1);
   assert.equal(container.headChildren[0].nonce, 'nonce-123');
   assert.match(container.headChildren[0].textContent, /tf-tables-surface/u);
+
+  disposeB();
+  assert.equal(container.headChildren.length, 1);
+  disposeA();
+  assert.equal(container.headChildren.length, 0);
+});
+
+test('tables AG Grid theme helper injects a single CSP-safe style tag', () => {
+  const container = createStyleTestContainer();
+  const disposeA = ensureTablesAgGridThemeStyle(container, '.ag-theme-test{color:red}');
+  const disposeB = ensureTablesAgGridThemeStyle(container, '.ag-theme-test{color:red}');
+
+  assert.equal(container.headChildren.length, 1);
+  assert.equal(container.headChildren[0].nonce, 'nonce-123');
+  assert.equal(container.headChildren[0].dataset.textforgeTablesAgGridStyle, 'true');
+  assert.match(container.headChildren[0].textContent, /\.ag-theme-test/u);
 
   disposeB();
   assert.equal(container.headChildren.length, 1);
