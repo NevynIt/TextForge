@@ -7,7 +7,7 @@
 | Status | Count |
 |---|---:|
 | blocked | 1 |
-| candidate | 16 |
+| candidate | 18 |
 | deferred | 1 |
 | defined | 31 |
 | implemented | 1 |
@@ -38,6 +38,7 @@
 | `WP-ITM-02` | ITM directives, packages, validation, diagnostics | validated | `MOD-ITM` |
 | `WP-ITM-03` | ITM scoped contexts, identity maps, and comments | validated | `MOD-ITM` |
 | `WP-ITM-04` | ITM validation and conformance modules | candidate | `MOD-ITM` |
+| `WP-ITM-05` | Parameterized ITM reports and dashboards | candidate | `MOD-ITM` |
 | `WP-REPO-01` | Repository reference and include resolver | validated | `MOD-REPOSITORY` |
 | `WP-ITM-VISUALS` | ITM static visual projections and publication baseline | validated | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-01` | Visual ITM profile v1 | validated | `MOD-VISUAL-ITM-RENDERERS` |
@@ -80,6 +81,7 @@
 | `WP-SURFACES-ADV` | Advanced tabbed main surfaces | defined | `MOD-SURFACES-UI` |
 | `WP-MD-RICH` | Rich Markdown editing | in-progress | `MOD-MARKDOWN-ITM` |
 | `WP-PIPELINE-EDITOR` | Pipeline/diagram editor surfaces | defined | `MOD-SURFACES-UI` |
+| `WP-ITM-EXPLORATION-01` | Interactive ITM exploration workbench | candidate | `MOD-SURFACES-UI` |
 | `WP-ARCHIMATE-VISUAL` | ArchiMate visual editing investigation | defined | `MOD-ARCHIMATE` |
 | `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | in-progress | `MOD-EA-VIEWER` |
 | `WP-SKETCH` | Sketch and annotation resources | defined | `MOD-SKETCH` |

@@ -17,6 +17,7 @@ Markdown and ITM publication defines the stable ownership boundary for the workp
 - TextForge Markdown compatibility profile
 - Markdown preview/report flows
 - ITM publication blocks
+- parameterized ITM Markdown reports
 - PDF export flow
 
 ### Does not own
@@ -55,6 +56,7 @@ The module is healthy when its workpackages can move independently through the r
 ## Key Decisions
 
 - `ADR-0001` governs roadmap structure and authority.
+- `ADR-0009` proposes parameterized ITM reports and dashboards.
 
 ## Validation Approach
 

@@ -25,6 +25,7 @@ The included workpackage list is generated from `roadmap-state.yaml`.
 | `WP-BPMN-VISUAL-A` | BPMN.io viewer surface | Registry-owned | no |
 | `WP-BPMN-DI-01` | BPMN Diagram Interchange read-only fidelity | Registry-owned | no |
 | `WP-BPMN-VISUAL-B` | ITM/BPMN visual target integration | Registry-owned | no |
+| `WP-ITM-EXPLORATION-01` | Interactive ITM exploration workbench | Registry-owned | no |
 | `WP-BPMN-VISUAL-C` | BPMN modeler/edit/write-back | Registry-owned | no |
 | `WP-TABLES` | Tables, catalogues, and matrices | Registry-owned | no |
 | `WP-ARCHIMATE-SEM` | ArchiMate semantic profile | Registry-owned | no |

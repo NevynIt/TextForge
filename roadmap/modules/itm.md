@@ -19,6 +19,7 @@ ITM defines the stable ownership boundary for the workpackages listed below.
 - ITM profile validation
 - ITM comments/trivia, identity maps, and scoped context semantics
 - ITM validation, diagnostics, and conformance-module semantics
+- ITM parameter declarations and virtual execution
 - semantic target extraction
 
 ### Does not own
@@ -46,6 +47,7 @@ Authoritative dependency data lives in `roadmap-state.yaml`.
 | `WP-ITM-02` | ITM directives, packages, validation, diagnostics | Registry-owned | Domain foundation |
 | `WP-ITM-03` | ITM scoped contexts, identity maps, and comments | Registry-owned | Domain foundation |
 | `WP-ITM-04` | ITM validation and conformance modules | Registry-owned | Domain foundation |
+| `WP-ITM-05` | Parameterized ITM reports and dashboards | Registry-owned | Domain/reporting foundation |
 
 ## Current State
 
@@ -61,6 +63,7 @@ The module is healthy when its workpackages can move independently through the r
 - `ADR-0006` governs ITM scoped contexts, identity maps, comments/trivia, and include/package activation semantics.
 - `ADR-0007` governs ITM type inheritance and context inference.
 - `ADR-0008` proposes ITM validation and conformance-module semantics.
+- `ADR-0009` proposes parameterized ITM reports and dashboards.
 
 ## Validation Approach
 

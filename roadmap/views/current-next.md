@@ -25,6 +25,7 @@
 | `WP-SSO-OIDC` | Generic OIDC / Keycloak adapter | candidate | `MOD-SECURITY-DISTRIBUTION` |
 | `WP-SET-01` | User settings core and local persistence | defined | `MOD-SURFACES-UI` |
 | `WP-ITM-04` | ITM validation and conformance modules | candidate | `MOD-ITM` |
+| `WP-ITM-05` | Parameterized ITM reports and dashboards | candidate | `MOD-ITM` |
 | `WP-VITM-TRANSLATORS` | Visual ITM translator utilities | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-VDELTA-01` | Visual ITM view-delta consumption and capture | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-LIVE-SYNC-01` | Bidirectional source/visual live sync | candidate | `MOD-VISUAL-ITM-RENDERERS` |
@@ -49,6 +50,7 @@
 | `WP-ARCHIMATE-SEM` | ArchiMate semantic profile | defined | `MOD-ARCHIMATE` |
 | `WP-SURFACES-ADV` | Advanced tabbed main surfaces | defined | `MOD-SURFACES-UI` |
 | `WP-PIPELINE-EDITOR` | Pipeline/diagram editor surfaces | defined | `MOD-SURFACES-UI` |
+| `WP-ITM-EXPLORATION-01` | Interactive ITM exploration workbench | candidate | `MOD-SURFACES-UI` |
 | `WP-ARCHIMATE-VISUAL` | ArchiMate visual editing investigation | defined | `MOD-ARCHIMATE` |
 | `WP-SKETCH` | Sketch and annotation resources | defined | `MOD-SKETCH` |
 | `WP-COMMENTS-SIDECAR` | Comments and review sidecars | candidate | `MOD-KNOWLEDGE-WORKSPACE` |

@@ -17,6 +17,7 @@ Surfaces and UI defines the stable ownership boundary for the workpackages liste
 - surface registry/session/open-with behavior
 - command/action projections
 - settings UI and advanced surface capacity
+- interactive ITM exploration workbench and transient surfaces
 - local Lua automation UI integration
 
 ### Does not own
@@ -53,6 +54,7 @@ Authoritative dependency data lives in `roadmap-state.yaml`.
 | `WP-AI-CHAT` | AI client and chat surface | Registry-owned | Optional feature |
 | `WP-SURFACES-ADV` | Advanced tabbed main surfaces | Registry-owned | UX capacity |
 | `WP-PIPELINE-EDITOR` | Pipeline/diagram editor surfaces | Registry-owned | Optional editor feature |
+| `WP-ITM-EXPLORATION-01` | Interactive ITM exploration workbench | Registry-owned | Feature / model exploration |
 
 ## Current State
 
@@ -66,6 +68,7 @@ The module is healthy when its workpackages can move independently through the r
 
 - `ADR-0001` governs roadmap structure and authority.
 - `ADR-0004` governs the browser-first Fengari host and TextForge-owned Lua virtual host.
+- `ADR-0010` proposes the interactive ITM exploration workbench.
 
 ## Validation Approach
 

@@ -92,6 +92,7 @@
         "ITM parsing and serialization",
         "ITM directives and package activation",
         "ITM profile validation",
+        "ITM parameter declarations and virtual execution",
         "semantic target extraction"
       ],
       "depends_on": [
@@ -101,7 +102,8 @@
         "WP-ITM-01",
         "WP-ITM-02",
         "WP-ITM-03",
-        "WP-ITM-04"
+        "WP-ITM-04",
+        "WP-ITM-05"
       ],
       "archive_trace": [
         "archive/registers/package-guides/itm.md",
@@ -109,7 +111,8 @@
         "archive/grilling/legacy-grilling/itm-visuals-grilling.md",
         "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
         "decisions/ADR-0007-itm-type-inheritance-and-context-inference.md",
-        "decisions/ADR-0008-itm-validation-and-conformance-modules.md"
+        "decisions/ADR-0008-itm-validation-and-conformance-modules.md",
+        "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md"
       ]
     },
     "MOD-MARKDOWN-ITM": {
@@ -120,6 +123,7 @@
         "TextForge Markdown compatibility profile",
         "Markdown preview/report flows",
         "ITM publication blocks",
+        "parameterized ITM Markdown reports",
         "PDF export flow"
       ],
       "depends_on": [
@@ -135,7 +139,8 @@
       "archive_trace": [
         "archive/registers/package-guides/markdown.md",
         "archive/registers/specs/legacy-specs/architecture/textforge-markdown-profile.md",
-        "archive/registers/package-guides/pipeline.md"
+        "archive/registers/package-guides/pipeline.md",
+        "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md"
       ]
     },
     "MOD-VISUAL-ITM-RENDERERS": {
@@ -300,6 +305,7 @@
         "surface registry/session/open-with behavior",
         "command/action projections",
         "settings UI and advanced surface capacity",
+        "interactive ITM exploration workbench and transient surfaces",
         "local Lua automation UI integration"
       ],
       "depends_on": [],
@@ -318,6 +324,7 @@
         "WP-AI-CHAT",
         "WP-SURFACES-ADV",
         "WP-PIPELINE-EDITOR",
+        "WP-ITM-EXPLORATION-01",
         "WP-WEB-WORKBENCH-MODULARITY-01"
       ],
       "archive_trace": [
@@ -325,7 +332,8 @@
         "archive/registers/package-guides/ui.md",
         "archive/registers/package-guides/editors.md",
         "archive/grilling/legacy-grilling/phase-4.1-grilling.md",
-        "archive/grilling/legacy-grilling/phase-5-grilling.md"
+        "archive/grilling/legacy-grilling/phase-5-grilling.md",
+        "decisions/ADR-0010-interactive-itm-exploration-workbench.md"
       ]
     },
     "MOD-BACKEND-ENTERPRISE": {
@@ -1063,6 +1071,35 @@
         "docs/reference/specs/itm-format.md"
       ],
       "validation_checklist": "validation/checklists/workpackages/WP-ITM-04-itm-validation-and-conformance-modules.md"
+    },
+    "WP-ITM-05": {
+      "title": "Parameterized ITM reports and dashboards",
+      "path": "workpackages/WP-ITM-05.md",
+      "module": "MOD-ITM",
+      "status": "candidate",
+      "type": "Domain/reporting foundation",
+      "depends_on": [
+        "WP-ITM-03",
+        "WP-ITM-04",
+        "WP-MD-REPORT",
+        "WP-ITM-PUB-VISUAL-01"
+      ],
+      "enables": [
+        "WP-ITM-EXPLORATION-01"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0009"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md",
+        "docs/reference/specs/itm-format.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-05-parameterized-itm-reports-and-dashboards.md"
     },
     "WP-REPO-01": {
       "title": "Repository reference and include resolver",
@@ -2291,6 +2328,34 @@
       ],
       "validation_checklist": null
     },
+    "WP-ITM-EXPLORATION-01": {
+      "title": "Interactive ITM exploration workbench",
+      "path": "workpackages/WP-ITM-EXPLORATION-01.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "candidate",
+      "type": "Feature / model exploration",
+      "depends_on": [
+        "WP-ITM-05",
+        "WP-ITM-04",
+        "WP-ITM-VRESOLVE-01",
+        "WP-SURFACES-ADV",
+        "WP-TABLES"
+      ],
+      "enables": [],
+      "release_candidates": [
+        "R-VISUAL-MODELING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0010"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0010-interactive-itm-exploration-workbench.md",
+        "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-EXPLORATION-01-interactive-itm-exploration-workbench.md"
+    },
     "WP-ARCHIMATE-VISUAL": {
       "title": "ArchiMate visual editing investigation",
       "path": "workpackages/WP-ARCHIMATE-VISUAL.md",
@@ -2721,6 +2786,7 @@
         "WP-ITM-02",
         "WP-ITM-03",
         "WP-ITM-04",
+        "WP-ITM-05",
         "WP-REPO-01",
         "WP-ITM-VISUALS",
         "WP-VITM-01",
@@ -2764,6 +2830,7 @@
         "WP-BPMN-VISUAL-A",
         "WP-BPMN-DI-01",
         "WP-BPMN-VISUAL-B",
+        "WP-ITM-EXPLORATION-01",
         "WP-BPMN-VISUAL-C",
         "WP-TABLES",
         "WP-ARCHIMATE-SEM",
@@ -2882,6 +2949,26 @@
         "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
         "decisions/ADR-0007-itm-type-inheritance-and-context-inference.md",
         "docs/reference/specs/itm-format.md"
+      ]
+    },
+    "ADR-0009": {
+      "title": "Parameterized ITM reports and dashboards",
+      "status": "proposed",
+      "path": "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md",
+      "supersedes": [],
+      "archive_trace": [
+        "decisions/ADR-0008-itm-validation-and-conformance-modules.md",
+        "docs/reference/specs/itm-format.md"
+      ]
+    },
+    "ADR-0010": {
+      "title": "Interactive ITM exploration workbench",
+      "status": "proposed",
+      "path": "decisions/ADR-0010-interactive-itm-exploration-workbench.md",
+      "supersedes": [],
+      "archive_trace": [
+        "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md",
+        "decisions/ADR-0008-itm-validation-and-conformance-modules.md"
       ]
     }
   }
