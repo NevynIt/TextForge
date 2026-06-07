@@ -293,6 +293,29 @@ test('listItmVisualTargets exposes views, viewpoints, and explicit raw-model fal
   assert.equal(targets.some((target) => target.kind === 'raw-model' && target.projection === 'mindmap'), true);
 });
 
+test('ITM graph projection surface defers large profile rendering behind an explicit guard', () => {
+  const graphSurface = contributions.surfaces.find((surface) => surface.id === '@textforge/itm/graph');
+  const largeSource = [
+    '%metadata { title: "Large graph" }',
+    ...Array.from({ length: 1100 }, (_, index) => `&node_${index} [Capability] Node ${index}`),
+  ].join('\n');
+  const opened = graphSurface.open({
+    sourceText: largeSource,
+    resource: {
+      resourceId: 'large-itm',
+      kind: 'resource',
+      representation: 'text',
+      path: '/docs/large.itm',
+      languageId: 'itm',
+      mimeType: 'text/x-itm',
+    },
+  });
+
+  assert.match(opened.surface.model.html, /data-itm-large-profile="true"/);
+  assert.match(opened.surface.model.html, /Continue rendering/);
+  assert.doesNotMatch(opened.surface.model.html, /Resolving graph target/);
+});
+
 test('resolveItmVisualTarget derives Visual ITM with renderer precedence, provenance, and itm-pub parity', async () => {
   const loaded = await loadItmDocument(readFileSync(resolve(docsExamplesDirectory, 'itm-surface-smoke.itm'), 'utf8'), {
     uri: '/docs/examples/itm/test-profiles/itm-surface-smoke.itm',

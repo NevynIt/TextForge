@@ -9,6 +9,7 @@ import {
 import { createEaViewerModel } from './fixture.js';
 import { createFailureHtml, ensurePackageStyle } from './dom-rendering.js';
 import {
+  buildCapabilityGraph,
   buildBusinessGraph,
   buildGlobalGraph,
   createDagreLayoutEngine,
@@ -133,20 +134,42 @@ function ViewerApp({ title, model, diagnostics, modules }) {
     enabledGroups,
   }), [view, detailLevel, showFutureState, timelineYear, showDataFlow, showSecurity, showLifecycle, showDeployment, enabledGroups]);
 
-  const graph = React.useMemo(() => (
-    view === 'business'
-      ? buildBusinessGraph(React, dagre, model)
-      : buildGlobalGraph(React, dagre, model, graphState)
-  ), [view, model, dagre, graphState]);
+  const graph = React.useMemo(() => {
+    if (view === 'business') {
+      return buildBusinessGraph(React, dagre, model);
+    }
+    if (view === 'capability') {
+      return buildCapabilityGraph(React, dagre, model, graphState);
+    }
+    return buildGlobalGraph(React, dagre, model, graphState);
+  }, [view, model, dagre, graphState]);
+  const nodePositionsRef = React.useRef(new Map());
+  const mergeSavedNodePositions = React.useCallback((nextNodes) => nextNodes.map((node) => {
+    const savedPosition = nodePositionsRef.current.get(`${view}:${node.id}`);
+    return savedPosition
+      ? { ...node, position: savedPosition }
+      : node;
+  }), [view]);
   const [nodes, setNodes] = React.useState(graph.nodes);
   const [edges, setEdges] = React.useState(graph.edges);
 
   React.useEffect(() => {
-    setNodes(graph.nodes);
+    setNodes(mergeSavedNodePositions(graph.nodes));
     setEdges(graph.edges);
-  }, [graph]);
+  }, [graph, mergeSavedNodePositions]);
 
-  const onNodesChange = React.useCallback((changes) => setNodes((current) => applyNodeChanges(changes, current)), [applyNodeChanges]);
+  const onNodesChange = React.useCallback((changes) => setNodes((current) => {
+    const nextNodes = applyNodeChanges(changes, current);
+    for (const node of nextNodes) {
+      if (node.position && Number.isFinite(node.position.x) && Number.isFinite(node.position.y)) {
+        nodePositionsRef.current.set(`${view}:${node.id}`, {
+          x: node.position.x,
+          y: node.position.y,
+        });
+      }
+    }
+    return nextNodes;
+  }), [applyNodeChanges, view]);
   const onEdgesChange = React.useCallback((changes) => setEdges((current) => applyEdgeChanges(changes, current)), [applyEdgeChanges]);
 
   const selectedView = viewOptions.find((candidate) => candidate.id === view) ?? viewOptions[0];

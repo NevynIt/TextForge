@@ -1,5 +1,7 @@
 export {
+  eaDashboardLuaTranslatorCapabilityId,
   eaDashboardJsonDocumentPredicate,
+  eaDashboardItmDocumentPredicate,
   eaViewerCapabilityId,
   eaViewerSurfaceId,
 } from './ids.js';
@@ -9,6 +11,7 @@ export {
   normalizeEaDashboardFixture,
 } from './fixture.js';
 export {
+  buildCapabilityGraph,
   buildGlobalGraph,
   createDagreLayoutEngine,
   verifyDagreLayoutEngine,

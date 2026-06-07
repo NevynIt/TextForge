@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 import {
+  buildCapabilityGraph,
   buildGlobalGraph,
   contributions,
   createDagreLayoutEngine,
@@ -22,6 +23,7 @@ test('contribution manifest exposes the EA dashboard viewer surface', () => {
   assert.equal(contributions.packageId, '@textforge/ea-viewer');
   assert.equal(contributions.surfaces.some((surface) => surface.id === '@textforge/ea-viewer/dashboard'), true);
   assert.equal(contributions.capabilities.some((capability) => capability.id === '@textforge/ea-viewer/capability/dashboard'), true);
+  assert.equal(contributions.capabilities.some((capability) => capability.localName === 'ead.translator.lua'), true);
 });
 
 test('recognizes the bundled EA Dashboard Django fixture sample', () => {
@@ -151,6 +153,30 @@ test('renders normal service relations as deconflicted direct offset edges', asy
   assert.deepEqual(graph.edges.map((edge) => edge.source), ['system-20', 'system-20', 'system-20']);
   assert.deepEqual(graph.edges.map((edge) => edge.target), ['system-21', 'system-21', 'system-21']);
   assert.deepEqual(graph.edges.map((edge) => edge.data.offset), [0, -18, 18]);
+});
+
+test('capability map graph is distinct from network topology graph', async () => {
+  const [dagreModule, graphlibModule] = await Promise.all([
+    import('dagre-d3-es/src/dagre/index.js'),
+    import('dagre-d3-es/src/graphlib/index.js'),
+  ]);
+  const dagre = createDagreLayoutEngine(dagreModule, graphlibModule);
+  const result = normalizeEaDashboardFixture(readFileSync(retailSamplePath, 'utf8'));
+  const network = buildGlobalGraph({ createElement: () => null }, dagre, result.model, {
+    view: 'network',
+    detailLevel: 2,
+  });
+  const capability = buildCapabilityGraph({ createElement: () => null }, dagre, result.model, {
+    view: 'capability',
+    detailLevel: 2,
+  });
+
+  assert.equal(network.nodes.some((node) => node.id.startsWith('capability-')), false);
+  assert.equal(capability.nodes.some((node) => node.id.startsWith('capability-')), true);
+  assert.notDeepEqual(
+    capability.nodes.map((node) => node.id).sort(),
+    network.nodes.map((node) => node.id).sort(),
+  );
 });
 
 test('accepts diagrams-only fixtures while reporting partial deployment coverage', () => {

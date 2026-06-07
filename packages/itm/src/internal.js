@@ -179,7 +179,11 @@ const itmBuiltinValidationCapabilityByProvider = Object.freeze({
   requireSourceId: 'itm.relationship-identity',
   requireResolvedTarget: 'itm.relationship-identity',
   requireTargetResolved: 'itm.relationship-identity',
+  requireTargetResolvedOrRoundTripId: 'itm.relationship-identity',
   requireRelationshipIdOrDeriveStableId: 'itm.relationship-identity',
+  'graph.model': 'itm.graph-model',
+  dagre: 'itm.viewpoint',
+  'graph.viewer': 'itm.viewpoint',
 });
 
 function escapeHtml(value) {
@@ -5940,6 +5944,40 @@ function createItmSurfaceMessageHtml(title, message, tone = 'info') {
   return `<section class="tf-itm-publication tf-itm-publication--${tone}"><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></section>`;
 }
 
+function estimateItmProjectionWork(sourceText) {
+  const text = String(sourceText ?? '');
+  const lineCount = text.split(/\r?\n/u).length;
+  const entityCount = (text.match(/^&[A-Za-z0-9_.:-]+/gmu) ?? []).length;
+  const relationshipHintCount = (text.match(/^(?:[A-Za-z0-9_.:-]+\s*(?:=>|->)|@[A-Za-z0-9_.:-]+::[A-Za-z0-9_.:-]+:)/gmu) ?? []).length;
+  const estimatedSeconds = Math.max(2, Math.ceil((entityCount + relationshipHintCount + Math.floor(lineCount / 10)) / 800));
+  return {
+    lineCount,
+    entityCount,
+    relationshipHintCount,
+    estimatedSeconds,
+    expensive: text.length > 750000 || lineCount > 20000 || entityCount > 1000,
+  };
+}
+
+function createLargeItmProjectionGuardHtml(title, estimate) {
+  return `
+<section class="tf-itm-publication tf-itm-publication--warning" data-itm-large-profile="true">
+  <h1>${escapeHtml(title)}</h1>
+  <p>Large ITM graph rendering is queued instead of running during startup.</p>
+  <dl class="tf-itm-summary">
+    <div><dt>Entities</dt><dd>${estimate.entityCount}</dd></div>
+    <div><dt>Lines</dt><dd>${estimate.lineCount}</dd></div>
+    <div><dt>Relationship hints</dt><dd>${estimate.relationshipHintCount}</dd></div>
+    <div><dt>Estimate</dt><dd>${estimate.estimatedSeconds}s+</dd></div>
+  </dl>
+  <p>Continue rendering may block this surface while the graph model and layout are computed.</p>
+  <p>
+    <button type="button" data-itm-large-continue>Continue rendering</button>
+    <button type="button" data-itm-large-cancel>Keep queued</button>
+  </p>
+</section>`.trim();
+}
+
 function createSurfaceIncludeProviders(execution) {
   const includeProviders = [];
   if (execution.workspaceService?.getEntryByPath) {
@@ -5964,12 +6002,17 @@ function createItmProjectionSurfaceContribution(projectionKind, label, descripti
     open(execution = {}) {
       const resourceTitle = execution.resourceTitle ?? execution.resource?.path ?? label;
       const sourceText = execution.sourceText ?? '';
+      const workEstimate = projectionKind === 'graph'
+        ? estimateItmProjectionWork(sourceText)
+        : undefined;
       const surfaceModel = {
         id: `${projectionKind}:${execution.resource?.resourceId ?? 'virtual'}`,
         title: resourceTitle,
         projection: projectionKind,
         html: sourceText.trim()
-          ? createItmSurfaceMessageHtml(resourceTitle, `Resolving ${projectionKind} target...`)
+          ? workEstimate?.expensive
+            ? createLargeItmProjectionGuardHtml(resourceTitle, workEstimate)
+            : createItmSurfaceMessageHtml(resourceTitle, `Resolving ${projectionKind} target...`)
           : createItmSurfaceMessageHtml(resourceTitle, 'No ITM source is available for this surface.', 'error'),
         diagnostics: sourceText.trim()
           ? []
@@ -5988,6 +6031,7 @@ function createItmProjectionSurfaceContribution(projectionKind, label, descripti
         model: surfaceModel,
         mount(container) {
           let disposed = false;
+          const disposeCallbacks = [];
           container.innerHTML = surfaceModel.html;
           if (!sourceText.trim()) {
             return () => {
@@ -5996,7 +6040,7 @@ function createItmProjectionSurfaceContribution(projectionKind, label, descripti
             };
           }
 
-          void (async () => {
+          const runResolution = async () => {
             try {
               const loaded = await loadItmDocument(sourceText, {
                 strict: false,
@@ -6041,10 +6085,41 @@ function createItmProjectionSurfaceContribution(projectionKind, label, descripti
             if (!disposed) {
               container.innerHTML = surfaceModel.html;
             }
-          })();
+          };
+
+          if (workEstimate?.expensive) {
+            const continueButton = container.querySelector?.('[data-itm-large-continue]');
+            const cancelButton = container.querySelector?.('[data-itm-large-cancel]');
+            const handleContinue = () => {
+              if (disposed) {
+                return;
+              }
+              container.innerHTML = createItmSurfaceMessageHtml(
+                resourceTitle,
+                `Resolving ${projectionKind} target after user confirmation. Estimated ${workEstimate.estimatedSeconds}s+.`,
+              );
+              void runResolution();
+            };
+            const handleCancel = () => {
+              surfaceModel.html = createItmSurfaceMessageHtml(
+                resourceTitle,
+                'Large ITM graph rendering is still queued. Use Continue rendering to run the blocking graph layout.',
+              );
+              container.innerHTML = surfaceModel.html;
+            };
+            continueButton?.addEventListener?.('click', handleContinue);
+            cancelButton?.addEventListener?.('click', handleCancel);
+            disposeCallbacks.push(() => continueButton?.removeEventListener?.('click', handleContinue));
+            disposeCallbacks.push(() => cancelButton?.removeEventListener?.('click', handleCancel));
+          } else {
+            void runResolution();
+          }
 
           return () => {
             disposed = true;
+            for (const disposeCallback of disposeCallbacks) {
+              disposeCallback();
+            }
             container.innerHTML = '';
           };
         },

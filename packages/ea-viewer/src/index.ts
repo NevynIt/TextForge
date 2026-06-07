@@ -10,11 +10,14 @@ export {
   normalizeEaDashboardFixture,
 } from './fixture';
 export {
+  eaDashboardLuaTranslatorCapabilityId,
   eaDashboardJsonDocumentPredicate,
+  eaDashboardItmDocumentPredicate,
   eaViewerCapabilityId,
   eaViewerSurfaceId,
 } from './ids';
 export {
+  buildCapabilityGraph,
   buildGlobalGraph,
   createDagreLayoutEngine,
   verifyDagreLayoutEngine,

@@ -1,7 +1,9 @@
 import { createCapability, createContributionManifest } from '@textforge/core';
 
 import {
+  eaDashboardItmDocumentPredicate,
   eaDashboardJsonDocumentPredicate,
+  eaDashboardLuaTranslatorCapabilityId,
   eaViewerCapabilityId,
 } from './ids.js';
 import { eaViewerSurfaceContribution } from './viewer-surface.js';
@@ -21,6 +23,13 @@ export function createEaViewerContributionManifest(overrides = {}) {
         description: 'Open EA Dashboard JSON fixture exports in a local read-only viewer.',
         defaultActive: true,
         documentPredicate: eaDashboardJsonDocumentPredicate,
+      }),
+      createCapability(eaDashboardLuaTranslatorCapabilityId, {
+        localName: 'ead.translator.lua',
+        aliases: ['ead.translator.lua'],
+        description: 'Activate bundled EA Dashboard Lua JSON-to-ITM and ITM-to-JSON translator compatibility.',
+        defaultActive: false,
+        documentPredicate: eaDashboardItmDocumentPredicate,
       }),
     ],
     surfaces: overrides.surfaces ?? [eaViewerSurfaceContribution],

@@ -604,6 +604,76 @@ export function buildGlobalGraph(ReactRef, dagre, model, incomingState = {}) {
   return { nodes: layouted, edges: layoutEdges };
 }
 
+export function buildCapabilityGraph(ReactRef, dagre, model, incomingState = {}) {
+  const state = createDefaultGraphState(incomingState);
+  const enabledGroups = state.enabledGroups ?? {};
+  const nodes = [];
+  const edges = [];
+  const capabilityIds = new Set();
+  const visibleSystems = model.systems.filter((system) => (
+    displayLevelForEntity(system, 'system') <= state.detailLevel
+    && enabledGroups[groupForSystem(system)] !== false
+  ));
+
+  for (const capability of model.capabilities) {
+    capabilityIds.add(capability.id);
+    nodes.push({
+      id: `capability-${capability.id}`,
+      raw: capability,
+      kindLabel: 'Business Capability',
+      title: entityTitle(capability),
+      meta: formatSecurity(capability),
+      style: {
+        border: `2px solid ${formatSecurity(capability).includes('L4') ? '#f97316' : '#10b981'}`,
+        background: 'rgba(6,78,59,.3)',
+      },
+    });
+  }
+
+  for (const system of visibleSystems) {
+    const linkedCapabilities = coerceArray(system.capabilities)
+      .filter((capability) => capabilityIds.has(capability.id));
+    if (linkedCapabilities.length === 0) {
+      continue;
+    }
+    const systemNodeId = `system-${system.id}`;
+    nodes.push({
+      id: systemNodeId,
+      raw: system,
+      kindLabel: 'Supporting System',
+      title: entityTitle(system),
+      meta: `${groupForSystem(system)} / ${formatSecurity(system)}`,
+      style: {
+        border: `2px solid ${groupColor(groupForSystem(system))}`,
+        background: 'rgba(30,64,175,.24)',
+      },
+    });
+    for (const capability of linkedCapabilities) {
+      edges.push({
+        id: `capability-${capability.id}-system-${system.id}`,
+        source: `capability-${capability.id}`,
+        target: systemNodeId,
+        label: state.detailLevel >= 2 ? 'enabled by' : undefined,
+        markerEnd: edgeMarker(groupColor(groupForSystem(system))),
+        style: {
+          stroke: groupColor(groupForSystem(system)),
+          strokeWidth: 1.8,
+        },
+      });
+    }
+  }
+
+  const uniqueNodes = [...new Map(nodes.map((node) => [node.id, node])).values()];
+  const layoutEdges = deconflictEdges(edges);
+  return {
+    nodes: layoutWithDagre(dagre, uniqueNodes, layoutEdges, 'LR').map((node) => ({
+      ...node,
+      data: { label: createNodeLabel(ReactRef, node), raw: node.raw },
+    })),
+    edges: layoutEdges,
+  };
+}
+
 export function buildBusinessGraph(ReactRef, dagre, model) {
   const nodes = [];
   const edges = [];

@@ -48,6 +48,7 @@
 
 %require itm.core ^0.1.0
 %require itm.validation ^0.1.0
+%require itm.relationship-identity ^0.1.0
 %require itm.graph-model ^0.1.0
 %require itm.viewpoint ^0.1.0
 %require itm.roundtrip.meta ^0.1.0
