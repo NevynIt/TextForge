@@ -149,28 +149,51 @@ What to test:
 
 How:
 
-1. Create or upload:
-   - a small `.csv` file with a header row;
-   - a small `.tsv` file with a header row;
-   - a headerless `.csv` file;
-   - a malformed `.csv` file with quoting errors;
-   - if practical, one warn-threshold and one block-threshold sample.
-2. Open the `.csv` resource normally.
-3. Confirm the default surface is the text editor.
-4. Run `Open with` and select `Table grid`.
-5. Repeat the same check for the `.tsv` resource.
-6. In the table grid, if editing is available in the build under test:
-   - edit a cell;
-   - add a row;
-   - delete a row;
-   - add a column;
-   - delete a column;
-   - rename a header;
-   - switch header mode between auto/header/no-header where exposed.
-7. Reopen the edited resource in the text editor and inspect the serialized text.
-8. Open the headerless sample in the grid and toggle header interpretation if the control is present.
-9. Open the malformed sample in the grid.
-10. Open the warn-threshold and block-threshold samples if available.
+1. Open bundled table fixtures under `/.textforge/resources/docs/examples/tables`:
+   - `people.csv`
+   - `inventory.tsv`
+   - `headerless-sales.csv`
+   - `malformed-quotes.csv`
+2. Select `people.csv` from the workspace tree.
+3. Open it normally and confirm the initial surface is the text editor rather than the table grid.
+4. Run `Open with` for `people.csv` and select `Table grid`.
+5. In the grid:
+   - confirm the visible columns are `name`, `role`, and `location`;
+   - confirm there are 3 data rows;
+   - confirm the footer/summary reflects a CSV table rather than a TSV table.
+6. Perform one committed edit in `people.csv`, then reopen it in the text editor:
+   - change one cell value, such as `Berlin` to `Munich`;
+   - add one row;
+   - add one column;
+   - rename one header if the rename control is enabled;
+   - reopen in the text editor and confirm the CSV text was rewritten to match the committed grid state.
+7. Repeat the open-path check for `inventory.tsv`:
+   - open normally and confirm the default surface is still the text editor;
+   - run `Open with` and select `Table grid`;
+   - confirm the grid shows 4 columns and preserves tabular data correctly for TSV input.
+8. Open `headerless-sales.csv` in `Table grid`.
+9. Confirm the first open does not invent a persisted header row:
+   - columns should initially appear as generated labels such as `Column 1`, `Column 2`, and so on;
+   - the first data row should remain `2026-06-01,North,12500,closed`.
+10. If header mode controls are visible, switch between:
+    - `Auto`
+    - `First row is header`
+    - `No header row`
+11. After each header-mode change, verify the interpretation changed as expected:
+    - `No header row` keeps generated column labels and all source rows as data;
+    - `First row is header` promotes the first row into headers and reduces the visible data-row count by one.
+12. Reopen `headerless-sales.csv` in the text editor and confirm that a header row was not silently introduced unless you explicitly committed a mode that serializes one.
+13. Open `malformed-quotes.csv` in `Table grid`.
+14. Confirm the surface shows a table-specific failure panel or diagnostics instead of a blank pane, crash, or misleading editable grid.
+15. Optional threshold checks:
+    - create or upload a warn-threshold sample if you want to verify non-blocking size diagnostics;
+    - create or upload a block-threshold sample if you want to verify refusal to mount unsafe grids.
+
+Notes:
+
+- All four bundled fixtures are ordinary docs resources, so they should already be present after the normal bundled-docs sync.
+- Use the text editor as the source of truth when checking what the grid persisted back to disk.
+- The malformed fixture is intentionally broken and is only for failure-path validation.
 
 Expected:
 

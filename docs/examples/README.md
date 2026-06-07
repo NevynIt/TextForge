@@ -9,3 +9,4 @@ This folder contains bundled example material that the browser-managed workspace
 - `itm/` contains the main-branch ITM example models plus the `itm-visual-projections.md` Markdown fixture for tree, graph, mindmap, catalogue, matrix, and report publication modes.
 - `itm/test-profiles/` contains small smoke fixtures for opening one ITM surface or Markdown publication mode at a time.
 - `ea/` contains the bundled EA Dashboard ITM profile, JSON/ITM Lua translators, a small representative fixture, and the larger retail architecture example bundle in both JSON and ITM forms.
+- `tables/` contains bundled CSV/TSV fixtures for normal grid opens, headerless parsing, and malformed-input diagnostics.
