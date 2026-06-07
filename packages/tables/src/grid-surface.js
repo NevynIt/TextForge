@@ -849,18 +849,28 @@ async function mountTablesGridRuntime(container, execution, initialParseState, d
             rowData,
             columnDefs,
             modules: gridModules,
-            cellSelection: true,
-            suppressMultiRangeSelection: false,
             domLayout: 'normal',
             singleClickEdit: false,
             stopEditingWhenCellsLoseFocus: true,
             suppressMovableColumns: false,
+            ensureDomOrder: true,
+            enableCellTextSelection: true,
+            rowSelection: {
+              mode: 'singleRow',
+              checkboxes: true,
+              headerCheckbox: false,
+              enableClickSelection: false,
+            },
             animateRows: false,
             defaultColDef: {
               editable: !readOnly,
             },
             getRowId: (params) => params.data.__tfRowKey,
             onCellValueChanged,
+            onSelectionChanged: (event) => {
+              const selected = event.api.getSelectedRows?.()?.[0];
+              setSelectedRowKey(selected?.__tfRowKey);
+            },
             onCellFocused,
           }),
         ),

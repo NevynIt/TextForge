@@ -162,8 +162,9 @@ How:
    - confirm the footer/summary reflects a CSV table rather than a TSV table.
 5. Confirm interaction behavior before editing:
    - a single click focuses a cell instead of immediately entering edit mode;
-   - dragging across cells or extending a selection with keyboard modifiers creates a visible range selection;
-   - copy and paste work against the selected cell or selected range.
+   - text inside a cell can be selected and copied with the browser's normal text-selection behavior;
+   - rows can be selected through the checkbox selection column;
+   - do not expect spreadsheet-style multi-cell range selection or whole-column selection in the current Community build.
 6. Perform one committed edit in `people.csv`, then reopen it in the text editor:
    - change one cell value, such as `Berlin` to `Munich`;
    - add one row;
@@ -203,7 +204,9 @@ Expected:
 - both `.csv` and `.tsv` resources open in `@textforge/tables/csv-grid` by default;
 - `Open with` offers `@textforge/editors/code-mirror-text` for both file types;
 - single clicks focus/select cells instead of entering edit mode immediately;
-- range selection works well enough for normal copy/paste flows;
+- text inside a cell can be selected and copied normally;
+- row selection works through the selection checkbox column;
+- spreadsheet-style multi-cell range selection and column selection are not available in the current shipped grid package;
 - committed edits rewrite the backing text resource and are visible when reopened in the text editor;
 - headerless input can be viewed without inventing a persisted header row unless the user explicitly switches modes;
 - malformed CSV shows table-surface diagnostics or a failure panel instead of a blank surface or shell crash;

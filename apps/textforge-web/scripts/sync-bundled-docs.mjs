@@ -18,6 +18,8 @@ const mimeTypeByExtension = {
   '.json': 'application/json',
   '.xml': 'application/xml',
   '.svg': 'image/svg+xml',
+  '.csv': 'text/csv',
+  '.tsv': 'text/tab-separated-values',
 };
 
 const languageIdByExtension = {
@@ -29,6 +31,8 @@ const languageIdByExtension = {
   '.json': 'json',
   '.xml': 'xml',
   '.svg': 'svg',
+  '.csv': 'csv',
+  '.tsv': 'tsv',
 };
 
 const docFilePaths = await collectFiles(docsRoot);
