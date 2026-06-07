@@ -20,6 +20,8 @@ The included workpackage list is generated from `roadmap-state.yaml`.
 | `WP-LINK-INDEX` | Document link, backlink, and mention index | Registry-owned | no |
 | `WP-ITM-01` | ITM parser/model foundation | Registry-owned | yes |
 | `WP-ITM-02` | ITM directives, packages, validation, diagnostics | Registry-owned | yes |
+| `WP-ITM-03` | ITM scoped contexts, identity maps, and comments | Registry-owned | yes |
+| `WP-ITM-04` | ITM validation and conformance modules | Registry-owned | yes |
 | `WP-REPO-01` | Repository reference and include resolver | Registry-owned | yes |
 | `WP-ITM-VISUALS` | ITM static visual projections and publication baseline | Registry-owned | no |
 | `WP-VITM-01` | Visual ITM profile v1 | Registry-owned | no |

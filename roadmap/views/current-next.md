@@ -22,6 +22,7 @@
 | `WP-POLICY-01` | Provider-neutral server policy engine | defined | `MOD-BACKEND-ENTERPRISE` |
 | `WP-SSO-OIDC` | Generic OIDC / Keycloak adapter | candidate | `MOD-SECURITY-DISTRIBUTION` |
 | `WP-SET-01` | User settings core and local persistence | defined | `MOD-SURFACES-UI` |
+| `WP-ITM-04` | ITM validation and conformance modules | candidate | `MOD-ITM` |
 | `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | defined | `MOD-MARKDOWN-ITM` |
 | `WP-VITM-TRANSLATORS` | Visual ITM translator utilities | candidate | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-VDELTA-01` | Visual ITM view-delta consumption and capture | candidate | `MOD-VISUAL-ITM-RENDERERS` |

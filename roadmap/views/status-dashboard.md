@@ -7,7 +7,7 @@
 | Status | Count |
 |---|---:|
 | blocked | 1 |
-| candidate | 15 |
+| candidate | 16 |
 | deferred | 1 |
 | defined | 33 |
 | implemented | 1 |
@@ -37,6 +37,7 @@
 | `WP-ITM-01` | ITM parser/model foundation | validated | `MOD-ITM` |
 | `WP-ITM-02` | ITM directives, packages, validation, diagnostics | validated | `MOD-ITM` |
 | `WP-ITM-03` | ITM scoped contexts, identity maps, and comments | validated | `MOD-ITM` |
+| `WP-ITM-04` | ITM validation and conformance modules | candidate | `MOD-ITM` |
 | `WP-REPO-01` | Repository reference and include resolver | validated | `MOD-REPOSITORY` |
 | `WP-ITM-VISUALS` | ITM static visual projections and publication baseline | validated | `MOD-VISUAL-ITM-RENDERERS` |
 | `WP-VITM-01` | Visual ITM profile v1 | validated | `MOD-VISUAL-ITM-RENDERERS` |

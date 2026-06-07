@@ -100,14 +100,16 @@
       "enables": [
         "WP-ITM-01",
         "WP-ITM-02",
-        "WP-ITM-03"
+        "WP-ITM-03",
+        "WP-ITM-04"
       ],
       "archive_trace": [
         "archive/registers/package-guides/itm.md",
         "archive/registers/specs/legacy-specs/architecture/textforge-rebuild-whitepaper.md",
         "archive/grilling/legacy-grilling/itm-visuals-grilling.md",
         "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
-        "decisions/ADR-0007-itm-type-inheritance-and-context-inference.md"
+        "decisions/ADR-0007-itm-type-inheritance-and-context-inference.md",
+        "decisions/ADR-0008-itm-validation-and-conformance-modules.md"
       ]
     },
     "MOD-MARKDOWN-ITM": {
@@ -1032,6 +1034,35 @@
         "docs/reference/specs/itm-format.md"
       ],
       "validation_checklist": "validation/checklists/workpackages/WP-ITM-03-scoped-contexts-identity-comments.md"
+    },
+    "WP-ITM-04": {
+      "title": "ITM validation and conformance modules",
+      "path": "workpackages/WP-ITM-04.md",
+      "module": "MOD-ITM",
+      "status": "candidate",
+      "type": "Domain foundation",
+      "depends_on": [
+        "WP-ITM-02",
+        "WP-ITM-03"
+      ],
+      "enables": [
+        "WP-BPMN-SEM",
+        "WP-ARCHIMATE-SEM",
+        "WP-TABLES"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0008"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0008-itm-validation-and-conformance-modules.md",
+        "docs/reference/specs/itm-format.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-ITM-04-itm-validation-and-conformance-modules.md"
     },
     "WP-REPO-01": {
       "title": "Repository reference and include resolver",
@@ -2689,6 +2720,7 @@
         "WP-ITM-01",
         "WP-ITM-02",
         "WP-ITM-03",
+        "WP-ITM-04",
         "WP-REPO-01",
         "WP-ITM-VISUALS",
         "WP-VITM-01",
@@ -2838,6 +2870,17 @@
       "supersedes": [],
       "archive_trace": [
         "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
+        "docs/reference/specs/itm-format.md"
+      ]
+    },
+    "ADR-0008": {
+      "title": "ITM validation and conformance modules",
+      "status": "proposed",
+      "path": "decisions/ADR-0008-itm-validation-and-conformance-modules.md",
+      "supersedes": [],
+      "archive_trace": [
+        "decisions/ADR-0006-itm-format-scoped-contexts-and-identity.md",
+        "decisions/ADR-0007-itm-type-inheritance-and-context-inference.md",
         "docs/reference/specs/itm-format.md"
       ]
     }
