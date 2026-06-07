@@ -2310,7 +2310,8 @@
       "deferrable": true,
       "key_adrs": [
         "ADR-0001",
-        "ADR-0013"
+        "ADR-0013",
+        "ADR-0014"
       ],
       "archive_trace": [
         "archive/registers/legacy-workpackages/workpackage-register.md",
@@ -2318,7 +2319,8 @@
         "archive/migration-snapshots/roadmap-before-governance-reset-2026-06-05/workpackages/",
         "legacy source: Phase 11",
         "decisions/ADR-0013-table-surfaces-and-csv-tsv-grid.md",
-        "decisions/ADR-0013-attachments/wp-tables-grilling-report.md"
+        "decisions/ADR-0013-attachments/wp-tables-grilling-report.md",
+        "decisions/ADR-0014-glide-first-csv-tsv-grid-and-ag-fallback.md"
       ],
       "validation_checklist": null
     },
@@ -2338,12 +2340,14 @@
       "production_required": false,
       "deferrable": true,
       "key_adrs": [
-        "ADR-0013"
+        "ADR-0013",
+        "ADR-0014"
       ],
       "archive_trace": [
         "workpackages/WP-TABLES.md",
         "decisions/ADR-0013-table-surfaces-and-csv-tsv-grid.md",
-        "decisions/ADR-0013-attachments/wp-tables-grilling-report.md"
+        "decisions/ADR-0013-attachments/wp-tables-grilling-report.md",
+        "decisions/ADR-0014-glide-first-csv-tsv-grid-and-ag-fallback.md"
       ],
       "validation_checklist": null
     },

@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-TABLES-02`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-TABLES`
-- ADRs: `ADR-0013`
+- ADRs: `ADR-0013`, `ADR-0014`
 - Predecessor: `WP-TABLES`
 
 ## Outcome
@@ -23,7 +23,7 @@ This follow-up extends the `@textforge/tables` contract established by `WP-TABLE
 - Provide CSV/TSV export for diagnostics, catalogues, matrices, and generated semantic views.
 - Keep source modules responsible for semantic extraction and `TableModel` production.
 - Keep `@textforge/tables` responsible for table rendering/export behavior.
-- Preserve AG Grid Community as the editable CSV/TSV grid implementation only.
+- Keep editable CSV/TSV grid implementation details isolated behind `@textforge/tables` contracts.
 
 ## Non-goals
 
@@ -62,7 +62,7 @@ It may add semantic table view contracts for:
 - Diagnostics can be represented as a `TableModel` and exported to CSV/TSV.
 - A catalogue or matrix-style generated table can render through the semantic table path.
 - TanStack Table use is isolated behind TextForge table contracts.
-- AG Grid remains isolated to editable CSV/TSV grid mode.
+- Primary and fallback CSV/TSV grid implementations remain isolated behind TextForge table contracts.
 - Source modules do not duplicate CSV/TSV serialization logic.
 
 ## Evidence Required

@@ -4,6 +4,8 @@
 
 Accepted. Incorporated into the roadmap as implementation guidance for `MOD-TABLES`, `WP-TABLES`, and follow-up `WP-TABLES-02`.
 
+The editable CSV/TSV grid library choice from this ADR is partially superseded by `ADR-0014`. The package boundary, Papa Parse choice, shared `TableModel`, and `WP-TABLES-02` semantic-table direction remain in force.
+
 ## Date
 
 2026-06-07

@@ -52,6 +52,7 @@ The module is healthy when its workpackages can move independently through the r
 
 - `ADR-0001` governs roadmap structure and authority.
 - `ADR-0013` records the table surface, CSV/TSV grid, and semantic table follow-up decisions.
+- `ADR-0014` updates the editable CSV/TSV grid choice to Glide-first with AG fallback while preserving the existing package boundary.
 
 ## Validation Approach
 

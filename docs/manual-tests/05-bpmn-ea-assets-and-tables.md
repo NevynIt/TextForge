@@ -143,9 +143,9 @@ Expected:
 
 What to test:
 
-- `.csv` and `.tsv` resources open in the table grid by default while still exposing the text editor through `Open with`;
+- `.csv` and `.tsv` resources open in the Glide-backed table grid by default while still exposing the AG fallback and text editor through `Open with`;
 - the text editor remains available explicitly for both CSV and TSV resources;
-- table-surface editing, structure changes, and failure states behave correctly through the shipped `@textforge/tables` runtime.
+- table-surface editing, structure changes, selection behavior, fallback opening, and failure states behave correctly through the shipped `@textforge/tables` runtime.
 
 How:
 
@@ -161,10 +161,10 @@ How:
    - confirm there are 3 data rows;
    - confirm the footer/summary reflects a CSV table rather than a TSV table.
 5. Confirm interaction behavior before editing:
-   - a single click focuses a cell instead of immediately entering edit mode;
-   - text inside a cell can be selected and copied with the browser's normal text-selection behavior;
-   - rows can be selected through the checkbox selection column;
-   - do not expect spreadsheet-style multi-cell range selection or whole-column selection in the current Community build.
+   - row selection works through the row-marker or checkbox affordance;
+   - cell and range selection work through the Glide grid interaction model;
+   - whole-column selection is available if exposed by the primary surface;
+   - do not require native browser text selection inside closed grid cells.
 6. Perform one committed edit in `people.csv`, then reopen it in the text editor:
    - change one cell value, such as `Berlin` to `Munich`;
    - add one row;
@@ -189,7 +189,9 @@ How:
 12. Reopen `headerless-sales.csv` in the text editor and confirm that a header row was not silently introduced unless you explicitly committed a mode that serializes one.
 13. Open `malformed-quotes.csv` in `Table grid`.
 14. Confirm the surface shows a table-specific failure panel or diagnostics instead of a blank pane, crash, or misleading editable grid.
-15. Optional threshold checks:
+15. Reopen `people.csv` or `inventory.tsv` through `Open with` using the AG fallback surface.
+16. Confirm the fallback surface still opens, renders the same underlying table content, and can be abandoned without breaking the primary grid default.
+17. Optional threshold checks:
     - create or upload a warn-threshold sample if you want to verify non-blocking size diagnostics;
     - create or upload a block-threshold sample if you want to verify refusal to mount unsafe grids.
 
@@ -202,11 +204,10 @@ Notes:
 Expected:
 
 - both `.csv` and `.tsv` resources open in `@textforge/tables/csv-grid` by default;
-- `Open with` offers `@textforge/editors/code-mirror-text` for both file types;
-- single clicks focus/select cells instead of entering edit mode immediately;
-- text inside a cell can be selected and copied normally;
-- row selection works through the selection checkbox column;
-- spreadsheet-style multi-cell range selection and column selection are not available in the current shipped grid package;
+- `Open with` offers `@textforge/tables/csv-grid-ag-fallback` and `@textforge/editors/code-mirror-text` for both file types;
+- the primary surface supports range, row, and column selection through the grid runtime;
+- native browser text selection inside closed primary-grid cells is not required;
+- the AG fallback surface still opens successfully from `Open with`;
 - committed edits rewrite the backing text resource and are visible when reopened in the text editor;
 - headerless input can be viewed without inventing a persisted header row unless the user explicitly switches modes;
 - malformed CSV shows table-surface diagnostics or a failure panel instead of a blank surface or shell crash;

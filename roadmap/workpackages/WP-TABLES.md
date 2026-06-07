@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-TABLES`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-TABLES`
-- ADRs: `ADR-0001`, `ADR-0013`
+- ADRs: `ADR-0001`, `ADR-0013`, `ADR-0014`
 - Grilling report: `roadmap/decisions/ADR-0013-attachments/wp-tables-grilling-report.md`
 - Follow-up: `WP-TABLES-02`
 
@@ -13,19 +13,20 @@
 
 TextForge adds CSV/TSV as first-class user-facing resource formats with a reusable table contract.
 
-The first implementation provides an alternate AG Grid Community-backed grid surface for CSV/TSV resources, while preserving the normal text editor as the default open mode. The workpackage also establishes the neutral `TableModel`, import/export, diagnostics, and minimal read-only rendering contracts needed for later semantic tables.
+The first implementation provides a Glide Data Grid-backed primary grid surface for CSV/TSV resources, keeps AG Grid Community available as an `Open with` fallback, and preserves the neutral `TableModel`, import/export, diagnostics, and minimal read-only rendering contracts needed for later semantic tables.
 
 ## Scope
 
 - Define `@textforge/tables` as the package-owned table capability.
 - Keep a single package with internal layers for contracts, CSV/TSV parsing, grid adapter, rendering, diagnostics, and export.
-- Define a neutral row-oriented `TableModel` aligned with Papa Parse and AG Grid.
+- Define a neutral row-oriented `TableModel` aligned with Papa Parse and package-owned grid surfaces.
 - Use Papa Parse behind TextForge contracts for CSV/TSV parsing and serialization.
-- Use AG Grid Community only for editable CSV/TSV grid surfaces.
-- Hide AG Grid and Papa Parse APIs from the rest of TextForge.
+- Use Glide Data Grid as the primary editable CSV/TSV grid surface.
+- Keep AG Grid Community available as a temporary fallback CSV/TSV grid surface.
+- Hide Glide Data Grid, AG Grid, and Papa Parse APIs from the rest of TextForge.
 - Register the CSV/TSV grid surface through the existing contribution system.
-- Keep text editor as the default open surface for `.csv` and `.tsv` resources.
-- Expose grid mode through open-with/context-menu/surface switching behavior.
+- Keep the primary grid as the default open surface for `.csv` and `.tsv` resources.
+- Expose AG fallback and text mode through open-with/context-menu/surface switching behavior.
 - Support saved CSV/TSV files and untitled resources whose language is `csv` or `tsv`.
 - Support editable and read-only grid modes through the same surface contract.
 - Support automatic header detection with explicit user override.
@@ -40,7 +41,7 @@ The first implementation provides an alternate AG Grid Community-backed grid sur
 
 ## Non-goals
 
-- Making AG Grid the default renderer for every table in TextForge.
+- Making any CSV/TSV grid library the default renderer for every table in TextForge.
 - Replacing Markdown/HTML static report tables.
 - Migrating all ITM tables, diagnostics tables, catalogues, and matrices in this WP.
 - Introducing TanStack Table in this WP.
@@ -55,7 +56,8 @@ The first implementation provides an alternate AG Grid Community-backed grid sur
 
 - Primary package: `packages/tables` / `@textforge/tables`.
 - Runtime dependency candidates:
-  - `ag-grid-community` and React integration package for the CSV/TSV grid adapter.
+  - `@glideapps/glide-data-grid` and required peers for the primary CSV/TSV grid adapter.
+  - `ag-grid-community` and React integration package for the temporary fallback adapter.
   - `papaparse` for CSV/TSV parsing and serialization.
 - Related packages:
   - `@textforge/core` for language IDs, diagnostics, and contribution contracts.
@@ -112,12 +114,12 @@ Source modules own semantic extraction. They may produce `TableModel`, but `@tex
 
 Implementation evidence should demonstrate:
 
-- CSV and TSV resources still open in the text editor by default.
-- CSV and TSV resources can be opened as a grid from an explicit surface/open-with action.
+- CSV and TSV resources open in the Glide primary grid by default.
+- CSV and TSV resources can be reopened through AG fallback and text surfaces from explicit open-with actions.
 - Untitled `csv` and `tsv` language resources can use grid mode.
 - Grid edits mark the resource dirty and save through the normal resource layer.
 - Papa Parse import/export is wrapped and not leaked to callers.
-- AG Grid is wrapped and not leaked to callers.
+- Glide Data Grid and AG Grid are wrapped and not leaked to callers.
 - Header mode detection and override work for first-row-header and headerless files.
 - Delimiter detection handles comma, tab, semicolon, pipe, quote/escape/newline settings where supported.
 - Dialect-preserving rewrite preserves delimiter/newline/header mode choices.
@@ -127,6 +129,7 @@ Implementation evidence should demonstrate:
 - Large files warn/block grid mode according to conservative constants.
 - The minimal read-only renderer can render a `TableModel` without sorting/filtering.
 - CSV/TSV export helpers can serialize generated table models.
+- Native browser text selection inside closed primary-grid cells is not required.
 
 ## Evidence Required
 
@@ -145,18 +148,17 @@ Implementation evidence should demonstrate:
   - dialect-preserving save;
   - serious malformed-file grid blocking;
   - large-file warning/block thresholds.
-- Surface/contribution tests for CSV/TSV grid availability and text-default behavior.
+- Surface/contribution tests for CSV/TSV grid availability and Glide-primary or AG-fallback open-with behavior.
+- Surface/contribution tests for Glide-primary and AG-fallback open-with ordering.
 - Resource integration tests for dirty/save handoff without table-owned persistence.
 - Diagnostics tests for parser and structural diagnostics.
-- Manual UI evidence for opening, editing, saving, switching surface, and read-only behavior.
+- Manual UI evidence for opening, editing, saving, selection behavior, switching to AG fallback, and read-only behavior.
 - RAPID event entry for material progress or validation.
 
 ## Open Decisions
 
-- Exact AG Grid React package/import strategy.
 - Exact `TableModel` TypeScript names and module export layout.
 - Exact conservative file/row/column limits. Current guidance: warn above approximately 10 MB or 50k rows; block grid mode above approximately 50 MB or 250k rows.
-- Whether any AG Grid Community clipboard behavior is enabled beyond default browser/grid copy-paste.
 - Which existing ITM/Markdown table-like outputs become the first consumers of the generic `TableModel` after this WP.
 
 ## Deferred to WP-TABLES-02
