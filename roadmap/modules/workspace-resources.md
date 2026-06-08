@@ -56,6 +56,7 @@ The module is healthy when its workpackages can move independently through the r
 ## Key Decisions
 
 - `ADR-0001` governs roadmap structure and authority.
+- `ADR-0016` defines provider-neutral workspace synchronization events and keeps IndexedDB/BroadcastChannel mechanics below the workspace abstraction.
 
 ## Validation Approach
 
