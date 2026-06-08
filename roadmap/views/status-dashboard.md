@@ -12,7 +12,7 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 | deferred | 1 |
 | defined | 32 |
 | implemented | 1 |
-| in-progress | 3 |
+| in-progress | 4 |
 | ready | 1 |
 | validated | 25 |
 
@@ -59,6 +59,7 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 | 10 | `WP-API-GOV-01` | API surface governance with API Extractor | candidate | `MOD-DEVELOPER-DOCUMENTATION` |
 | 11 | `WP-SET-01` | User settings core and local persistence | defined | `MOD-SURFACES-UI` |
 | 12 | `WP-SET-UI` | User settings UI | defined | `MOD-SURFACES-UI` |
+| 12.5 | `WP-RES-TYPE-OVERRIDE` | Workspace resource type overrides | in-progress | `MOD-WORKSPACE-RESOURCES` |
 | 13 | `WP-RES-02` | Revisions, dirty state, and conflict diagnostics | defined | `MOD-WORKSPACE-RESOURCES` |
 | 14 | `WP-RES-03` | Multi-resource changesets and provider allowlists | defined | `MOD-WORKSPACE-RESOURCES` |
 | 15 | `WP-SERVICES-LOCAL` | Local service-folder convention | defined | `MOD-WORKSPACE-RESOURCES` |

@@ -44,6 +44,7 @@
       "WP-API-GOV-01": 10,
       "WP-SET-01": 11,
       "WP-SET-UI": 12,
+      "WP-RES-TYPE-OVERRIDE": 12.5,
       "WP-RES-02": 13,
       "WP-RES-03": 14,
       "WP-SERVICES-LOCAL": 15,
@@ -142,6 +143,7 @@
       "depends_on": [],
       "enables": [
         "WP-RES-01",
+        "WP-RES-TYPE-OVERRIDE",
         "WP-RES-02",
         "WP-RES-03",
         "WP-SERVICES-LOCAL"
@@ -739,6 +741,7 @@
       "depends_on": [],
       "enables": [
         "WP-RES-02",
+        "WP-RES-TYPE-OVERRIDE",
         "WP-REPO-01",
         "WP-BE-API",
         "WP-LINK-INDEX",
@@ -765,6 +768,32 @@
       ],
       "validation_checklist": "validation/checklists/workpackages/WP-RES-01-provider-aware-resource-descriptors.md"
     },
+    "WP-RES-TYPE-OVERRIDE": {
+      "title": "Workspace resource type overrides",
+      "path": "workpackages/WP-RES-TYPE-OVERRIDE.md",
+      "module": "MOD-WORKSPACE-RESOURCES",
+      "status": "in-progress",
+      "type": "Workspace authoring UX",
+      "depends_on": [
+        "WP-RES-01"
+      ],
+      "enables": [
+        "WP-RES-02"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "docs/architecture/textforge_workspace_feature_implementation_whitepaper_v4.md",
+        "roadmap/validation/checklists/workpackages/WP-RES-01-provider-aware-resource-descriptors.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-RES-TYPE-OVERRIDE-resource-type-overrides.md"
+    },
     "WP-RES-02": {
       "title": "Revisions, dirty state, and conflict diagnostics",
       "path": "workpackages/WP-RES-02.md",
@@ -772,7 +801,8 @@
       "status": "defined",
       "type": "Core foundation",
       "depends_on": [
-        "WP-RES-01"
+        "WP-RES-01",
+        "WP-RES-TYPE-OVERRIDE"
       ],
       "enables": [
         "WP-RES-03",

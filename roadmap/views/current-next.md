@@ -12,6 +12,7 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 | 3 | `WP-MD-RICH` | Rich Markdown editing | in-progress | `MOD-MARKDOWN-ITM` |
 | 4 | `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | in-progress | `MOD-EA-VIEWER` |
 | 5 | `WP-TABLES` | CSV/TSV grid editor and shared table contract | ready | `MOD-TABLES` |
+| 12.5 | `WP-RES-TYPE-OVERRIDE` | Workspace resource type overrides | in-progress | `MOD-WORKSPACE-RESOURCES` |
 
 ## Next Candidates
 

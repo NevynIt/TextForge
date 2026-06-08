@@ -40,6 +40,7 @@ Authoritative dependency data lives in `roadmap-state.yaml`.
 | WP | Title | Status source | Type |
 |---|---|---|---|
 | `WP-RES-01` | Provider-aware resource descriptors | Registry-owned | Core foundation |
+| `WP-RES-TYPE-OVERRIDE` | Workspace resource type overrides | Registry-owned | Workspace authoring UX |
 | `WP-RES-02` | Revisions, dirty state, and conflict diagnostics | Registry-owned | Core foundation |
 | `WP-RES-03` | Multi-resource changesets and provider allowlists | Registry-owned | Core foundation |
 | `WP-SERVICES-LOCAL` | Local service-folder convention | Registry-owned | Core/service seam |
