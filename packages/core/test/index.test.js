@@ -17,11 +17,14 @@ import {
   createResourceFacts,
   createResourcePredicate,
   createResourceRef,
+  applyResourceTypeOverride,
+  getResourceTypeOption,
   hasResourceCapability,
   createSurfaceContribution,
   createSourcePosition,
   createSourceRange,
   inferLanguageId,
+  listResourceTypeOptions,
   matchesResourcePredicate,
   resolveDocumentContributionContext,
 } from '../src/index.js';
@@ -47,6 +50,34 @@ test('core constructors build stable value objects', () => {
   assert.equal(deriveContributionLocalName('@textforge/example', '@textforge/example/preview'), 'preview');
   assert.equal(deriveCapabilityLocalName('@textforge/example/capability/preview'), 'preview');
   assert.equal(hasResourceCapability(ref, 'resource.write'), true);
+});
+
+test('resource type options expose canonical text metadata overrides', () => {
+  const options = listResourceTypeOptions();
+  const markdown = getResourceTypeOption('markdown');
+  const plaintextResource = createResourceRef('resource-plain', {
+    kind: 'resource',
+    representation: 'text',
+    path: '/docs/new-file.txt',
+    languageId: 'plaintext',
+    mimeType: 'text/plain',
+  });
+  const binaryResource = createResourceRef('resource-pdf', {
+    kind: 'resource',
+    representation: 'bytes',
+    path: '/docs/report.pdf',
+    mimeType: 'application/pdf',
+  });
+
+  assert.equal(options.some((option) => option.languageId === 'bpmn-xml' && option.mimeType === 'application/bpmn+xml'), true);
+  assert.equal(markdown?.mimeType, 'text/markdown');
+  assert.deepEqual(applyResourceTypeOverride(plaintextResource, markdown), {
+    ...plaintextResource,
+    languageId: 'markdown',
+    mimeType: 'text/markdown',
+    fileExtension: 'md',
+  });
+  assert.equal(applyResourceTypeOverride(binaryResource, markdown), binaryResource);
 });
 
 test('command registry filters context-sensitive commands and dispatches local handlers', async () => {

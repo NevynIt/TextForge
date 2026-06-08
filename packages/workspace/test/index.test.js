@@ -708,6 +708,12 @@ test('persisted workspace service hydrates through Dexie and preserves IDs, sele
     languageId: 'text',
     mimeType: 'text/plain',
   });
+  const retaggedText = firstPass.workspace.saveTextResource({
+    resourceId: createdText.id,
+    text: createdText.text,
+    languageId: 'markdown',
+    mimeType: 'text/markdown',
+  });
   const createdSvg = firstPass.workspace.createTextResource({
     path: '/docs/diagram.svg',
     text: '<svg xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6"/></svg>',
@@ -731,9 +737,13 @@ test('persisted workspace service hydrates through Dexie and preserves IDs, sele
   assert.equal(restored.hydrationSource, 'storage');
   assert.equal(restored.workspace.getManifest().selectedResourceId, selectedResource?.id);
   assert.equal(restored.workspace.getEntryByPath('/docs/followup.md')?.text, 'persist me');
+  assert.equal(restored.workspace.getEntryByPath('/docs/followup.md')?.path, '/docs/followup.md');
+  assert.equal(restored.workspace.getEntryByPath('/docs/followup.md')?.languageId, 'markdown');
+  assert.equal(restored.workspace.getEntryByPath('/docs/followup.md')?.mimeType, 'text/markdown');
+  assert.equal(workspaceEntryToResourceRef(restored.workspace.getEntryByPath('/docs/followup.md'))?.fileExtension, 'md');
   assert.equal(
     restored.workspace.getEntryByPath('/docs/followup.md')?.metadata.badge?.key,
-    createdText.metadata.badge?.key,
+    retaggedText.metadata.badge?.key,
   );
   assert.equal(restored.workspace.getEntryByPath('/docs/diagram.svg')?.representation, 'text');
   assert.equal(restored.workspace.getEntryByPath('/docs/diagram.svg')?.text, createdSvg.text);

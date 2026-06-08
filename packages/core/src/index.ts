@@ -60,6 +60,7 @@ export type {
   ResourceProvenance,
   ResourceRef,
   ResourceRepresentation,
+  ResourceTypeOption,
   Severity,
   SourcePosition,
   SourceRange,
@@ -91,11 +92,14 @@ export {
   createResourceRef,
   createSourcePosition,
   createSourceRange,
+  applyResourceTypeOverride,
   getLanguageDefinition,
+  getResourceTypeOption,
   getResourceRepresentation,
   hasResourceCapability,
   inferLanguageId,
   inferResourceRepresentation,
+  listResourceTypeOptions,
   matchesResourcePredicate,
 } from './resources';
 export {

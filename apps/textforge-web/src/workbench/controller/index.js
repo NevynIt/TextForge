@@ -1,10 +1,13 @@
 import {
+  applyResourceTypeOverride,
   createCommandDispatcher,
   createContributionInspectorModel,
   createPipelineValue,
   getLanguageDefinition,
+  getResourceTypeOption,
   inferLanguageId,
   inferResourceRepresentation,
+  listResourceTypeOptions,
 } from '@textforge/core';
 import {
   basenameWorkspacePath,
@@ -190,6 +193,7 @@ export function createTextForgeWorkbenchController() {
   let storageFailure;
   const blobLedger = createBlobUrlLedger(createBlobUrlDriver());
   const languageModes = listTextEditorLanguageModes();
+  const resourceTypeOptions = listResourceTypeOptions();
   const luaExecutionService = createLuaExecutionService();
   const {
     commandRegistry,
@@ -210,6 +214,7 @@ export function createTextForgeWorkbenchController() {
   const activeTextDocuments = new Map();
   const assetLeaseByResourceId = new Map();
   const documentContributionContextByResourceId = new Map();
+  const transientResourceTypeOverrideBySessionId = new Map();
   const luaConsoleStateByResourceId = new Map();
   const luaConsoleSessionStateByResourceId = new Map();
   const listeners = new Set();
@@ -843,6 +848,7 @@ export function createTextForgeWorkbenchController() {
     const mainSession = mainHost.get(sessionId);
     if (mainSession && mainSession.state !== 'closed') {
       mainHost.close(sessionId);
+      transientResourceTypeOverrideBySessionId.delete(sessionId);
       releaseAssetLeaseIfUnused(mainSession.resource.resourceId);
       normalizeActiveSessions();
       emit();
@@ -852,6 +858,7 @@ export function createTextForgeWorkbenchController() {
     const popupSession = popupHost.get(sessionId);
     if (popupSession && popupSession.state !== 'closed') {
       popupHost.close(sessionId);
+      transientResourceTypeOverrideBySessionId.delete(sessionId);
       releaseAssetLeaseIfUnused(popupSession.resource.resourceId);
       normalizeActiveSessions();
       emit();
@@ -1022,7 +1029,39 @@ export function createTextForgeWorkbenchController() {
       }));
   }
 
-  function updateTextResourceLanguage(resourceId, languageId) {
+  function clearTransientResourceTypeOverridesForResource(resourceId) {
+    for (const [sessionId, override] of transientResourceTypeOverrideBySessionId.entries()) {
+      if (override.resourceId === resourceId) {
+        transientResourceTypeOverrideBySessionId.delete(sessionId);
+      }
+    }
+  }
+
+  function createResourceTypeOverride(resourceId, languageId) {
+    const option = getResourceTypeOption(languageId);
+    if (!option) {
+      return undefined;
+    }
+
+    return {
+      resourceId,
+      languageId: option.languageId,
+      mimeType: option.mimeType,
+    };
+  }
+
+  function getEffectiveResourceForSession(resource, session) {
+    const override = session?.id
+      ? transientResourceTypeOverrideBySessionId.get(session.id)
+      : undefined;
+    if (!override || override.resourceId !== resource?.id) {
+      return resource;
+    }
+
+    return applyResourceTypeOverride(resource, override);
+  }
+
+  function updateTextResourceType(resourceId, languageId, options = {}) {
     if (runtime.status !== 'ready') {
       return;
     }
@@ -1031,11 +1070,38 @@ export function createTextForgeWorkbenchController() {
     if (!isWorkspaceResource(currentResource) || currentResource.representation !== 'text') {
       return;
     }
-    if (!isWorkspaceResourceWritable(currentResource)) {
-      throw new Error(`Workspace resource ${currentResource.path} is read-only.`);
+
+    const override = createResourceTypeOverride(resourceId, languageId);
+    if (!override) {
+      return;
     }
 
-    const nextLanguageMode = languageModes.find((mode) => mode.languageId === languageId);
+    if (!isWorkspaceResourceWritable(currentResource)) {
+      const session = options.session;
+      if (!session?.id) {
+        throw new Error(`Workspace resource ${currentResource.path} is read-only.`);
+      }
+
+      transientResourceTypeOverrideBySessionId.set(session.id, override);
+      const effectiveResource = getEffectiveResourceForSession(currentResource, session);
+      const currentDocument = activeTextDocuments.get(resourceId) ?? createTextEditorDocument(
+        workspaceEntryToResourceRef(currentResource),
+        currentResource.text,
+        {
+          languageId: currentResource.languageId,
+          readOnly: true,
+        },
+      );
+      activeTextDocuments.set(resourceId, {
+        ...currentDocument,
+        languageId: override.languageId,
+        resource: workspaceEntryToResourceRef(effectiveResource),
+      });
+      rememberSelection(resourceId);
+      emit();
+      return;
+    }
+
     const currentDocument = activeTextDocuments.get(resourceId) ?? createTextEditorDocument(
       workspaceEntryToResourceRef(currentResource),
       currentResource.text,
@@ -1047,12 +1113,13 @@ export function createTextForgeWorkbenchController() {
     const nextResource = workspace.saveTextResource({
       resourceId,
       text: currentDocument.text,
-      languageId,
-      mimeType: nextLanguageMode?.mimeTypes[0] ?? currentResource.mimeType,
+      languageId: override.languageId,
+      mimeType: override.mimeType,
     });
+    clearTransientResourceTypeOverridesForResource(resourceId);
     activeTextDocuments.set(resourceId, {
       ...currentDocument,
-      languageId,
+      languageId: override.languageId,
       resource: workspaceEntryToResourceRef(nextResource),
     });
     rememberSelection(resourceId);
@@ -1463,20 +1530,21 @@ export function createTextForgeWorkbenchController() {
     };
   }
 
-  function listAvailableSurfaceIdsForEntry(entry, placement, preferredSurfaceIds) {
+  function listAvailableSurfaceIdsForEntry(entry, placement, preferredSurfaceIds, session) {
     if (!entry) {
       return [];
     }
 
-    if (isItmWorkspaceResource(entry)) {
+    const effectiveEntry = getEffectiveResourceForSession(entry, session);
+    if (isItmWorkspaceResource(effectiveEntry)) {
       return [];
     }
 
-    const documentContext = resolveDocumentContributionContextForEntry(entry);
+    const documentContext = resolveDocumentContributionContextForEntry(effectiveEntry);
     return createOpenWithSelection(surfaceRegistry, {
-      resource: workspaceEntryToResourceRef(entry),
+      resource: workspaceEntryToResourceRef(effectiveEntry),
       placement: placement ?? getDefaultSurfacePlacement(surfaceRegistry, {
-        resource: workspaceEntryToResourceRef(entry),
+        resource: workspaceEntryToResourceRef(effectiveEntry),
         allowPopup: true,
         activeCapabilityIds: documentContext?.activeCapabilityIds,
         preferredSurfaceIds,
@@ -1502,6 +1570,7 @@ export function createTextForgeWorkbenchController() {
       openWithTarget,
       activeSession?.placement,
       activeSession ? [activeSession.contributionId] : undefined,
+      activeSession,
     );
 
     return {
@@ -2066,7 +2135,13 @@ export function createTextForgeWorkbenchController() {
       return undefined;
     }
 
-    const cachedContext = documentContributionContextByResourceId.get(entry.id);
+    const cacheKey = [
+      entry.id,
+      entry.representation,
+      entry.representation === 'text' ? entry.languageId ?? '' : '',
+      entry.mimeType ?? '',
+    ].join(':');
+    const cachedContext = documentContributionContextByResourceId.get(cacheKey);
     if (cachedContext?.updatedAt === entry.metadata.updatedAt) {
       if (isMarkdownResource(entry)) {
         tracePreview('document-context:cache-hit', {
@@ -2091,7 +2166,7 @@ export function createTextForgeWorkbenchController() {
         activeFenceHandlers: context.activeMarkdownFenceHandlers.length,
       });
     }
-    documentContributionContextByResourceId.set(entry.id, {
+    documentContributionContextByResourceId.set(cacheKey, {
       updatedAt: entry.metadata.updatedAt,
       context,
     });
@@ -2241,21 +2316,28 @@ export function createTextForgeWorkbenchController() {
     };
   }
 
-  function createLanguageControl(resource, surfaceModel) {
+  function createResourceTypeControl(session, resource) {
+    if (!isWorkspaceResource(resource) || resource.representation !== 'text') {
+      return undefined;
+    }
+
+    const writable = isWorkspaceResourceWritable(resource);
     return {
-      id: 'surface-language-mode',
-      label: 'Language mode',
-      description: surfaceModel.languageMode.parserBacked
-        ? 'Parser-backed CodeMirror mode active.'
-        : 'Metadata only; source-editor fallback remains explicit for this format.',
-      value: surfaceModel.languageMode.languageId,
+      id: 'resource-file-type',
+      label: 'File type',
+      description: writable
+        ? 'Updates workspace metadata and refreshes file associations without renaming the path.'
+        : 'Temporary for this open read-only session; provider metadata is not changed.',
+      value: getResourceTypeOption(resource.languageId)?.languageId
+        ?? inferLanguageId({ path: resource.path, mimeType: resource.mimeType, fallback: 'plaintext' }),
       disabled: false,
-      options: languageModes.map((mode) => ({
-        value: mode.languageId,
-        label: `${mode.label}${mode.parserBacked ? ' - parser-backed' : ' - metadata only'}`,
+      options: resourceTypeOptions.map((option) => ({
+        value: option.languageId,
+        label: option.label,
+        description: `${option.mimeType}${option.extensions.length ? `; .${option.extensions.join(', .')}` : ''}`,
       })),
       onChange(languageId) {
-        updateTextResourceLanguage(resource.id, languageId);
+        updateTextResourceType(resource.id, languageId, { session });
       },
     };
   }
@@ -2632,9 +2714,13 @@ export function createTextForgeWorkbenchController() {
       return createWelcomeView();
     }
 
+    const effectiveResource = getEffectiveResourceForSession(resource, session);
     const contribution = surfaceRegistry.get(session.contributionId);
     const openWith = contribution?.label ?? 'Surface';
-    const controls = [createOpenWithControl(session, resource)].filter(Boolean);
+    const controls = [
+      createOpenWithControl(session, effectiveResource),
+      createResourceTypeControl(session, effectiveResource),
+    ].filter(Boolean);
     const badge = resource.metadata.badge;
     const icon = resolveEntryIcon(resource);
     const resourceTitle = resource.metadata.title ?? basenameWorkspacePath(resource.path) ?? resource.path;
@@ -2642,7 +2728,7 @@ export function createTextForgeWorkbenchController() {
     const luaConsoleSessionState = isLuaConsoleResource(resource)
       ? getLuaConsoleSessionState(resource.id)
       : undefined;
-    const resourceRef = workspaceEntryToResourceRef(resource);
+    const resourceRef = workspaceEntryToResourceRef(effectiveResource);
     tracePreview('createSurfaceView:start', {
       sessionId: session.id,
       contributionId: session.contributionId,
@@ -2652,17 +2738,17 @@ export function createTextForgeWorkbenchController() {
       session,
       contribution,
       resource: resourceRef,
-      workspaceResource: resource,
+      workspaceResource: effectiveResource,
       resourceTitle: surfaceTitle,
-      sourceText: resource.representation === 'text' ? resource.text : undefined,
+      sourceText: effectiveResource.representation === 'text' ? effectiveResource.text : undefined,
       updatedAt: resource.metadata.updatedAt,
       contributionRegistry,
       workspaceService: workspace,
-      documentContext: resolveDocumentContributionContextForEntry(resource),
-      requestPreview: session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(resource)
-        ? () => requestMarkdownPreview(resource)
+      documentContext: resolveDocumentContributionContextForEntry(effectiveResource),
+      requestPreview: session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(effectiveResource)
+        ? () => requestMarkdownPreview(effectiveResource)
         : undefined,
-      onLinkActivate: session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(resource)
+      onLinkActivate: session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(effectiveResource)
         ? (activation) => openMarkdownPreviewLink({
           ...activation,
           placement: session.placement,
@@ -2674,7 +2760,7 @@ export function createTextForgeWorkbenchController() {
         resourceRef,
         resource.text,
         {
-          languageId: resource.languageId,
+          languageId: effectiveResource.languageId,
           readOnly: !isWorkspaceResourceWritable(resource),
         },
       ),
@@ -2694,7 +2780,6 @@ export function createTextForgeWorkbenchController() {
       markSessionCurrent() {
         getHostForPlacement(session.placement).markCurrent(session.id);
       },
-      createLanguageControl,
       getConsoleState() {
         return luaConsoleStateByResourceId.get(resource.id);
       },
@@ -2736,7 +2821,8 @@ export function createTextForgeWorkbenchController() {
     return {
       id: session.id,
       kind: 'surface',
-      mountId: runtimeView?.mountId ?? `${session.id}:${session.contributionId}:${resource.metadata.updatedAt}`,
+      mountId: runtimeView?.mountId
+        ?? `${session.id}:${session.contributionId}:${resource.metadata.updatedAt}:${effectiveResource.languageId ?? ''}:${effectiveResource.mimeType ?? ''}`,
       title: surfaceTitle,
       path: resource.path,
       summary: luaConsoleSessionState?.elevated
@@ -3695,7 +3781,7 @@ export function createTextForgeWorkbenchController() {
       return;
     }
 
-    updateTextResourceLanguage(resource.id, languageId);
+    updateTextResourceType(resource.id, languageId, { session: getActiveCommandSession() });
   }
 
   async function downloadSelectedAssetCommand(commandContext) {

@@ -5,10 +5,12 @@ import type {
   LanguageDefinition,
   LanguageId,
   ResourceBadgeToken,
+  ResourceCapabilityId,
   ResourceFacts,
   ResourcePredicate,
   ResourceRef,
   ResourceRepresentation,
+  ResourceTypeOption,
   Severity,
   SourcePosition,
   SourceRange,
@@ -41,6 +43,15 @@ export declare function matchesResourcePredicate(
   input?: Partial<ResourceRef> & { readonly id?: string },
 ): boolean;
 export declare function getLanguageDefinition(languageId: LanguageId | string | undefined): LanguageDefinition | undefined;
+export declare function listResourceTypeOptions(definitions?: ReadonlyArray<LanguageDefinition>): ReadonlyArray<ResourceTypeOption>;
+export declare function getResourceTypeOption(
+  languageId: LanguageId | string | undefined,
+  definitions?: ReadonlyArray<LanguageDefinition>,
+): ResourceTypeOption | undefined;
+export declare function applyResourceTypeOverride<TResource extends Partial<ResourceRef>>(
+  resource: TResource | undefined,
+  override?: Partial<ResourceTypeOption> & { readonly languageId?: LanguageId | string },
+): TResource | undefined;
 export declare function getResourceRepresentation(resource?: Partial<ResourceRef> & { readonly kind?: string }): ResourceRepresentation | undefined;
 export declare function inferLanguageId(input: {
   readonly path?: string;

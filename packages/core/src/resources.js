@@ -120,6 +120,38 @@ export function getLanguageDefinition(languageId) {
   return languageDefinitions.find((definition) => definition.id === languageId);
 }
 
+export function listResourceTypeOptions(definitions = languageDefinitions) {
+  return definitions
+    .filter((definition) => definition?.sourceEditor && definition.id)
+    .map((definition) => ({
+      id: definition.id,
+      languageId: definition.id,
+      label: definition.label ?? definition.id,
+      mimeType: definition.mimeTypes[0] ?? 'text/plain',
+      mimeTypes: [...(definition.mimeTypes ?? [])],
+      extensions: [...(definition.extensions ?? [])],
+      representation: 'text',
+    }));
+}
+
+export function getResourceTypeOption(languageId, definitions = languageDefinitions) {
+  return listResourceTypeOptions(definitions).find((option) => option.languageId === languageId);
+}
+
+export function applyResourceTypeOverride(resource, override) {
+  if (!resource || resource.representation !== 'text' || !override?.languageId) {
+    return resource;
+  }
+
+  const option = getResourceTypeOption(override.languageId) ?? override;
+  return {
+    ...resource,
+    languageId: option.languageId,
+    mimeType: option.mimeType ?? resource.mimeType,
+    fileExtension: option.extensions?.[0] ?? extensionFromPath(resource.path),
+  };
+}
+
 export function getResourceRepresentation(resource) {
   if (!resource) {
     return undefined;
@@ -149,7 +181,7 @@ export function createResourceFacts(input = {}) {
     path: input.path,
     mimeType: input.mimeType,
     languageId: input.languageId,
-    fileExtension: extensionFromPath(input.path),
+    fileExtension: input.fileExtension ?? extensionFromPath(input.path),
     providerId: input.providerId,
     revision: input.revision,
     capabilityIds: normalizeCapabilityIdArray(input.capabilityIds),

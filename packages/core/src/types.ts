@@ -55,6 +55,7 @@ export interface ResourceRef {
   readonly representation?: ResourceRepresentation;
   readonly mimeType?: string;
   readonly languageId?: LanguageId | string;
+  readonly fileExtension?: string;
   readonly parentResourceId?: string;
   readonly badge?: ResourceBadgeToken;
   readonly providerId?: string;
@@ -146,6 +147,16 @@ export interface LanguageDefinition {
   readonly mimeTypes: ReadonlyArray<string>;
   readonly extensions: ReadonlyArray<string>;
   readonly sourceEditor: true;
+}
+
+export interface ResourceTypeOption {
+  readonly id: LanguageId | string;
+  readonly languageId: LanguageId | string;
+  readonly label: string;
+  readonly mimeType: string;
+  readonly mimeTypes: ReadonlyArray<string>;
+  readonly extensions: ReadonlyArray<string>;
+  readonly representation: 'text';
 }
 
 export interface EditorDiagnosticBridge {

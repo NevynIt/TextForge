@@ -26,11 +26,14 @@ export {
   createResourceRef,
   createSourcePosition,
   createSourceRange,
+  applyResourceTypeOverride,
   getLanguageDefinition,
+  getResourceTypeOption,
   getResourceRepresentation,
   hasResourceCapability,
   inferLanguageId,
   inferResourceRepresentation,
+  listResourceTypeOptions,
   matchesResourcePredicate,
 } from './resources.js';
 export {

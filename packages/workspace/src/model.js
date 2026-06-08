@@ -1,6 +1,7 @@
 import {
   createResourceBadgeToken,
   createResourceRef,
+  getResourceTypeOption,
 } from '@textforge/core';
 
 import {
@@ -525,6 +526,10 @@ export function toResourceRef(entry) {
     representation: entry.kind === 'resource' ? entry.representation : undefined,
     mimeType: 'mimeType' in entry ? entry.mimeType : undefined,
     languageId: entry.kind === 'resource' && entry.representation === 'text' ? entry.languageId : undefined,
+    fileExtension: entry.fileExtension
+      ?? (entry.kind === 'resource' && entry.representation === 'text'
+        ? getResourceTypeOption(entry.languageId)?.extensions[0]
+        : undefined),
     parentResourceId: entry.parentId,
     badge: entry.metadata?.badge,
     providerId: entry.metadata?.providerId,
