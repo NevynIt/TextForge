@@ -140,12 +140,15 @@ import {
   workspaceFolderContextCommandIds,
   workspaceResourceContextCommandIds,
 } from './command-groups.js';
+import { createDelayedTextDocumentCommitter } from './delayed-text-commits.js';
 import { createWorkbenchRegistries } from './registries.js';
 
 const textEncoder = new TextEncoder();
 const textDecoder = new TextDecoder();
 const workspaceDatabaseName = 'textforge-workspace';
 const transientWorkspaceDriver = 'memory';
+const textEditorViewPropagationDelayMs = 2000;
+const textEditorWorkspaceSaveDelayMs = 10000;
 const utilitySections = [
   { id: 'inspector', label: 'Inspector', icon: 'status' },
   { id: 'popups', label: 'Popup Summary', icon: 'utility' },
@@ -212,6 +215,7 @@ export function createTextForgeWorkbenchController() {
     idFactory: createSequentialSessionIdFactory('popup'),
   });
   const activeTextDocuments = new Map();
+  const pendingTextResourceById = new Map();
   const assetLeaseByResourceId = new Map();
   const documentContributionContextByResourceId = new Map();
   const transientResourceTypeOverrideBySessionId = new Map();
@@ -246,6 +250,13 @@ export function createTextForgeWorkbenchController() {
   const commandDispatcher = createCommandDispatcher({
     registry: commandRegistry,
     getContext: buildCommandContext,
+  });
+  const pendingTextResourceUpdatedAt = createTimestampFactory();
+  const delayedTextDocumentCommits = createDelayedTextDocumentCommitter({
+    viewDelayMs: textEditorViewPropagationDelayMs,
+    saveDelayMs: textEditorWorkspaceSaveDelayMs,
+    commitViewDocument: commitDelayedTextDocumentView,
+    commitSavedDocument: commitDelayedTextDocumentSave,
   });
   tracePreview('controller:init', {
     testProfile: typeof window === 'undefined'
@@ -397,11 +408,84 @@ export function createTextForgeWorkbenchController() {
     };
   }
 
+  function createPendingTextResource(resource, document) {
+    return {
+      ...resource,
+      text: document.text,
+      metadata: {
+        ...resource.metadata,
+        updatedAt: pendingTextResourceUpdatedAt(),
+      },
+    };
+  }
+
+  function commitDelayedTextDocumentView(resourceId, document) {
+    const currentResource = workspace.getEntry(resourceId);
+    if (!isWorkspaceResource(currentResource) || currentResource.representation !== 'text') {
+      return document;
+    }
+
+    const nextResource = createPendingTextResource(currentResource, document);
+    pendingTextResourceById.set(resourceId, nextResource);
+    const nextDocument = {
+      ...document,
+      resource: workspaceEntryToResourceRef(nextResource),
+    };
+    activeTextDocuments.set(resourceId, nextDocument);
+    emit();
+    return nextDocument;
+  }
+
+  function commitDelayedTextDocumentSave(resourceId, document) {
+    const currentResource = workspace.getEntry(resourceId);
+    if (
+      !isWorkspaceResource(currentResource)
+      || currentResource.representation !== 'text'
+      || !isWorkspaceResourceWritable(currentResource)
+    ) {
+      pendingTextResourceById.delete(resourceId);
+      return document;
+    }
+
+    const previousPendingResource = pendingTextResourceById.get(resourceId);
+    pendingTextResourceById.delete(resourceId);
+    try {
+      const nextResource = workspace.saveTextResource({
+        resourceId,
+        text: document.text,
+      });
+      const nextDocument = {
+        ...document,
+        resource: workspaceEntryToResourceRef(nextResource),
+      };
+      activeTextDocuments.set(resourceId, nextDocument);
+      return nextDocument;
+    } catch (error) {
+      if (previousPendingResource) {
+        pendingTextResourceById.set(resourceId, previousPendingResource);
+      }
+      throw error;
+    }
+  }
+
+  function scheduleDelayedTextDocumentChange(resourceId, document) {
+    activeTextDocuments.set(resourceId, document);
+    return delayedTextDocumentCommits.schedule(resourceId, document);
+  }
+
+  function flushDelayedTextDocumentSave(resourceId) {
+    return delayedTextDocumentCommits.flush(resourceId);
+  }
+
+  function flushDelayedTextDocumentSaves(options = {}) {
+    return delayedTextDocumentCommits.flushAll(options);
+  }
+
   function getEntry(resourceId) {
     if (!resourceId) {
       return undefined;
     }
-    return workspace.getEntry(resourceId);
+    return pendingTextResourceById.get(resourceId) ?? workspace.getEntry(resourceId);
   }
 
   function getSampleEntry(path) {
@@ -711,6 +795,7 @@ export function createTextForgeWorkbenchController() {
   }
 
   function resetMountedSessions() {
+    flushDelayedTextDocumentSaves();
     for (const session of getOpenSessions()) {
       getHostForPlacement(session.placement).close(session.id);
       releaseAssetLeaseIfUnused(session.resource.resourceId);
@@ -720,6 +805,8 @@ export function createTextForgeWorkbenchController() {
     }
     assetLeaseByResourceId.clear();
     activeTextDocuments.clear();
+    pendingTextResourceById.clear();
+    delayedTextDocumentCommits.clearAll();
     markdownPreviewRequests.clear();
     luaConsoleStateByResourceId.clear();
     luaConsoleSessionStateByResourceId.clear();
@@ -747,6 +834,7 @@ export function createTextForgeWorkbenchController() {
       return undefined;
     }
 
+    flushDelayedTextDocumentSaves({ exceptResourceId: entry.id });
     const preferredSurfaceId = options.preferredSurfaceId
       ?? (entry?.mimeType === 'image/svg+xml' ? '@textforge/assets/svg' : undefined)
       ?? (isMarkdownResource(entry) ? markdownPreviewSurfaceContribution.id : undefined);
@@ -822,6 +910,7 @@ export function createTextForgeWorkbenchController() {
       return;
     }
 
+    flushDelayedTextDocumentSaves({ exceptResourceId: session.resource.resourceId });
     state.activeMainSessionId = session.id;
     state.surfaceFocusPlacement = 'main';
     rememberSelection(session.resource.resourceId);
@@ -838,6 +927,7 @@ export function createTextForgeWorkbenchController() {
       return;
     }
 
+    flushDelayedTextDocumentSaves({ exceptResourceId: session.resource.resourceId });
     state.activePopupSessionId = session.id;
     state.surfaceFocusPlacement = 'popup';
     rememberSelection(session.resource.resourceId);
@@ -847,6 +937,7 @@ export function createTextForgeWorkbenchController() {
   function closeSession(sessionId) {
     const mainSession = mainHost.get(sessionId);
     if (mainSession && mainSession.state !== 'closed') {
+      flushDelayedTextDocumentSave(mainSession.resource.resourceId);
       mainHost.close(sessionId);
       transientResourceTypeOverrideBySessionId.delete(sessionId);
       releaseAssetLeaseIfUnused(mainSession.resource.resourceId);
@@ -857,6 +948,7 @@ export function createTextForgeWorkbenchController() {
 
     const popupSession = popupHost.get(sessionId);
     if (popupSession && popupSession.state !== 'closed') {
+      flushDelayedTextDocumentSave(popupSession.resource.resourceId);
       popupHost.close(sessionId);
       transientResourceTypeOverrideBySessionId.delete(sessionId);
       releaseAssetLeaseIfUnused(popupSession.resource.resourceId);
@@ -1066,6 +1158,7 @@ export function createTextForgeWorkbenchController() {
       return;
     }
 
+    flushDelayedTextDocumentSave(resourceId);
     const currentResource = workspace.getEntry(resourceId);
     if (!isWorkspaceResource(currentResource) || currentResource.representation !== 'text') {
       return;
@@ -1588,7 +1681,7 @@ export function createTextForgeWorkbenchController() {
       return existing;
     }
 
-    const workspaceResource = workspace.getEntry(resource.resourceId);
+    const workspaceResource = getEntry(resource.resourceId);
     if (!isWorkspaceResource(workspaceResource)) {
       return undefined;
     }
@@ -2767,6 +2860,9 @@ export function createTextForgeWorkbenchController() {
       setTextDocument(nextDocument) {
         activeTextDocuments.set(resource.id, nextDocument);
       },
+      scheduleTextEditorDocumentChange(nextDocument) {
+        return scheduleDelayedTextDocumentChange(resource.id, nextDocument);
+      },
       persistTextDocument(nextDocument) {
         const nextResource = workspace.saveTextResource({
           resourceId: resource.id,
@@ -3052,6 +3148,9 @@ export function createTextForgeWorkbenchController() {
       }
 
       const affectedIds = collectAffectedEntryIds(entry);
+      for (const affectedId of affectedIds) {
+        flushDelayedTextDocumentSave(affectedId);
+      }
       const renamed = workspace.renameEntry(entry.id, nextPath);
       await persistWorkspace('workspace.rename-selected');
       state.workspaceTreeEdit = undefined;
@@ -3080,6 +3179,9 @@ export function createTextForgeWorkbenchController() {
 
     try {
       const affectedIds = collectAffectedEntryIds(source);
+      for (const affectedId of affectedIds) {
+        flushDelayedTextDocumentSave(affectedId);
+      }
       const moved = workspace.moveEntry({
         resourceId: source.id,
         parentPath: targetFolder.path,
@@ -3521,6 +3623,7 @@ export function createTextForgeWorkbenchController() {
       return;
     }
 
+    flushDelayedTextDocumentSaves();
     const imported = importWorkspaceFromZip(await readFileBytes(file), {
       existingState: workspace.snapshot(),
       conflictPolicy: policy,
@@ -3540,6 +3643,7 @@ export function createTextForgeWorkbenchController() {
   }
 
   async function exportWorkspaceCommand() {
+    flushDelayedTextDocumentSaves();
     const manifest = workspace.getManifest();
     const bytes = exportWorkspaceToZip(workspace);
     downloadBytes(createZipFilename(manifest.name, 'textforge-workspace'), bytes, 'application/zip');
@@ -3557,6 +3661,7 @@ export function createTextForgeWorkbenchController() {
   }
 
   async function exportSelectedFolderCommand(commandContext) {
+    flushDelayedTextDocumentSaves();
     const entry = resolveTargetEntryForCommands(commandContext);
     if (!entry || entry.kind !== 'folder') {
       return;
@@ -3588,7 +3693,11 @@ export function createTextForgeWorkbenchController() {
   }
 
   async function downloadSelectedFileCommand(commandContext) {
-    const entry = resolveTargetResourceForCommands(commandContext);
+    const target = resolveTargetResourceForCommands(commandContext);
+    if (target) {
+      flushDelayedTextDocumentSave(target.id);
+    }
+    const entry = target ? getEntry(target.id) : undefined;
     if (!entry) {
       return;
     }
@@ -3603,11 +3712,16 @@ export function createTextForgeWorkbenchController() {
   }
 
   async function copySelectedResourceCommand(commandContext) {
-    const entry = resolveTargetResourceForCommands(commandContext);
-    if (!entry) {
+    const target = resolveTargetResourceForCommands(commandContext);
+    if (!target) {
       return;
     }
 
+    flushDelayedTextDocumentSave(target.id);
+    const entry = getEntry(target.id);
+    if (!entry) {
+      return;
+    }
     const copied = createCopiedWorkspaceResource(resolveWorkspaceCopyTargetPath(entry), entry);
     await persistWorkspace('workspace.copy-selected-resource');
     expandFolderAncestors(copied.path);
@@ -3635,6 +3749,9 @@ export function createTextForgeWorkbenchController() {
     }
 
     const affectedIds = collectAffectedEntryIds(entry);
+    for (const affectedId of affectedIds) {
+      flushDelayedTextDocumentSave(affectedId);
+    }
     workspace.deleteEntry(entry.id);
     for (const session of getOpenSessions().filter((candidate) => affectedIds.includes(candidate.resource.resourceId))) {
       closeSession(session.id);
@@ -4370,12 +4487,15 @@ export function createTextForgeWorkbenchController() {
   }
 
   function dispose() {
+    flushDelayedTextDocumentSaves();
     clearTransientFlagTimeout();
     for (const lease of assetLeaseByResourceId.values()) {
       blobLedger.release(lease.id);
     }
     assetLeaseByResourceId.clear();
     activeTextDocuments.clear();
+    pendingTextResourceById.clear();
+    delayedTextDocumentCommits.clearAll();
     markdownPreviewRequests.clear();
     listeners.clear();
     disposePersistedWorkspace();

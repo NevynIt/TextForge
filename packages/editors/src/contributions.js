@@ -29,7 +29,9 @@ codeMirrorTextEditorSurfaceContribution.open = function openTextEditorSurface(ex
       execution.setTextDocument?.(nextDocument);
     },
     onChange(nextDocument) {
-      const persistedDocument = execution.persistTextDocument?.(nextDocument) ?? nextDocument;
+      const persistedDocument = execution.scheduleTextEditorDocumentChange?.(nextDocument)
+        ?? execution.persistTextDocument?.(nextDocument)
+        ?? nextDocument;
       execution.setTextDocument?.(persistedDocument);
       execution.markSessionCurrent?.();
     },
