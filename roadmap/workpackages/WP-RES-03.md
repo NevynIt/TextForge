@@ -5,7 +5,7 @@
 - Workpackage ID: `WP-RES-03`
 - Authoritative state: `roadmap-state.yaml`
 - Module: `MOD-WORKSPACE-RESOURCES`
-- ADRs: `ADR-0001`
+- ADRs: `ADR-0001`, `ADR-0016`
 
 ## Outcome
 
@@ -40,7 +40,7 @@ Define validation evidence before implementation starts.
 
 ## Open Decisions
 
-- No additional ADR extracted during this governance reset unless future implementation uncovers a durable decision.
+- `ADR-0016` records the proposed provider-neutral workspace synchronization event boundary before implementation starts.
 
 ## Archive Trace
 
