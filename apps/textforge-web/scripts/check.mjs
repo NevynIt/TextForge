@@ -189,9 +189,27 @@ for (const requiredMarkdownDiagramSignal of ['markdownPreviewSurfaceContribution
   }
 }
 
-for (const requiredBufferedPreviewSignal of ['currentSurface.update', 'surfaceViewportScrollByViewId.set(view.id', 'scheduleScrollRestore(scrollHost']) {
+for (const requiredBufferedPreviewSignal of [
+  'currentSurface.update',
+  'surfaceViewportScrollByViewId.set(view.id',
+  'scheduleScrollRestore(scrollHost',
+  'rememberMountedSurfaceScroll(mainView)',
+  'key: mainView.id',
+]) {
   if (!workbenchJs.includes(requiredBufferedPreviewSignal)) {
     throw new Error(`workbench source must preserve buffered surface updates and session-keyed scroll restoration: ${requiredBufferedPreviewSignal}`);
+  }
+}
+
+for (const requiredDebouncedPersistenceSignal of [
+  'workbenchUiStatePersistenceDelayMs = 10000',
+  'workspaceSelectionPersistenceDelayMs = 10000',
+  'workbenchUiStatePersistence.schedule(true)',
+  'selectedWorkspaceResourcePersistence.schedule(entryId)',
+  'emit({ persistWorkbenchUiState: false })',
+]) {
+  if (!workbenchJs.includes(requiredDebouncedPersistenceSignal)) {
+    throw new Error(`workbench source must debounce active tab and selected-resource persistence: ${requiredDebouncedPersistenceSignal}`);
   }
 }
 

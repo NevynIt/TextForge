@@ -21,6 +21,7 @@ import {
 import { surfaceViewportScrollByViewId } from '../surface-scroll.js';
 
 const element = React.createElement;
+const surfaceScrollHostSelector = '.tf-surface-frame__viewport, .tf-popup-host__body';
 
 function useWorkbenchSnapshot(controller) {
   return React.useSyncExternalStore(controller.subscribe, controller.snapshot, controller.snapshot);
@@ -63,6 +64,52 @@ function writeSurfaceScroll(scrollHost, scroll) {
   scrollHost.scrollLeft = left;
 }
 
+function findSurfaceScrollHost(mountElement) {
+  if (!mountElement) {
+    return undefined;
+  }
+
+  const explicitHost = mountElement.closest(surfaceScrollHostSelector);
+  if (explicitHost) {
+    return explicitHost;
+  }
+
+  let candidate = mountElement.parentElement;
+  while (candidate) {
+    if (
+      candidate.scrollHeight > candidate.clientHeight
+      || candidate.scrollWidth > candidate.clientWidth
+    ) {
+      return candidate;
+    }
+    candidate = candidate.parentElement;
+  }
+
+  return undefined;
+}
+
+function findMountedSurfaceElement(viewId) {
+  if (!viewId || typeof document === 'undefined') {
+    return undefined;
+  }
+
+  for (const elementNode of document.querySelectorAll('.tf-surface-mount[data-surface-id]')) {
+    if (elementNode.getAttribute('data-surface-id') === viewId) {
+      return elementNode;
+    }
+  }
+
+  return undefined;
+}
+
+function rememberMountedSurfaceScroll(view) {
+  const mountElement = findMountedSurfaceElement(view?.id);
+  const scrollHost = findSurfaceScrollHost(mountElement);
+  if (view?.id && scrollHost) {
+    surfaceViewportScrollByViewId.set(view.id, readSurfaceScroll(scrollHost));
+  }
+}
+
 function SurfaceMount({ view }) {
   const mountRef = React.useRef(null);
   const mountedSurfaceRef = React.useRef();
@@ -102,7 +149,7 @@ function SurfaceMount({ view }) {
       return undefined;
     }
 
-    const scrollHost = mountRef.current.closest('.tf-surface-frame__viewport, .tf-popup-host__body');
+    const scrollHost = findSurfaceScrollHost(mountRef.current);
     const dispose = view.surface.mount(mountRef.current);
     mountedSurfaceRef.current = view.surface;
     const restoreScroll = surfaceViewportScrollByViewId.get(view.id) ?? { top: 0, left: 0 };
@@ -153,7 +200,7 @@ function SurfaceMount({ view }) {
       return;
     }
 
-    const scrollHost = mountRef.current.closest('.tf-surface-frame__viewport, .tf-popup-host__body');
+    const scrollHost = findSurfaceScrollHost(mountRef.current);
     const capturedScroll = readSurfaceScroll(scrollHost);
     surfaceViewportScrollByViewId.set(view.id, capturedScroll);
     const updated = currentSurface.update(mountRef.current, view.surface, {
@@ -1145,11 +1192,14 @@ export function TextForgeWorkbenchApp({ controller }) {
         onCloseTab: controller.actions.closeSession,
         onClose: controller.actions.closeActivePopupSurface,
         onRequestTabContextMenu: controller.actions.openPopupSessionContextMenu,
-        onSelectTab: controller.actions.focusPopupSession,
+        onSelectTab: (tabId) => {
+          rememberMountedSurfaceScroll(snapshot.activePopupView);
+          controller.actions.focusPopupSession(tabId);
+        },
         title: snapshot.activePopupView.title,
       },
       element(SurfaceMount, {
-        key: snapshot.activePopupView.mountId ?? snapshot.activePopupView.id,
+        key: snapshot.activePopupView.id,
         view: snapshot.activePopupView,
       }),
     )
@@ -1242,7 +1292,7 @@ export function TextForgeWorkbenchApp({ controller }) {
       : mainView.kind === 'welcome'
         ? element(WelcomeState, { hydrationSource: snapshot.runtime.hydrationSource })
         : element(SurfaceMount, {
-          key: mainView.mountId ?? mainView.id,
+          key: mainView.id,
           view: mainView,
         });
 
@@ -1338,7 +1388,10 @@ export function TextForgeWorkbenchApp({ controller }) {
           onCloseTab: controller.actions.closeSession,
           onDropFiles: controller.actions.dropFilesOnTabStrip,
           onRequestTabContextMenu: controller.actions.openMainTabContextMenu,
-          onSelectTab: controller.actions.focusMainSession,
+          onSelectTab: (tabId) => {
+            rememberMountedSurfaceScroll(mainView);
+            controller.actions.focusMainSession(tabId);
+          },
         }),
         element(
           'div',

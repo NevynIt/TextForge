@@ -141,6 +141,7 @@ import {
   workspaceResourceContextCommandIds,
 } from './command-groups.js';
 import { createDelayedTextDocumentCommitter } from './delayed-text-commits.js';
+import { createDebouncedLatestCommitter } from './debounced-latest-committer.js';
 import { createWorkbenchRegistries } from './registries.js';
 
 const textEncoder = new TextEncoder();
@@ -149,6 +150,8 @@ const workspaceDatabaseName = 'textforge-workspace';
 const transientWorkspaceDriver = 'memory';
 const textEditorViewPropagationDelayMs = 2000;
 const textEditorWorkspaceSaveDelayMs = 10000;
+const workbenchUiStatePersistenceDelayMs = 10000;
+const workspaceSelectionPersistenceDelayMs = 10000;
 const utilitySections = [
   { id: 'inspector', label: 'Inspector', icon: 'status' },
   { id: 'popups', label: 'Popup Summary', icon: 'utility' },
@@ -258,6 +261,14 @@ export function createTextForgeWorkbenchController() {
     commitViewDocument: commitDelayedTextDocumentView,
     commitSavedDocument: commitDelayedTextDocumentSave,
   });
+  const workbenchUiStatePersistence = createDebouncedLatestCommitter({
+    delayMs: workbenchUiStatePersistenceDelayMs,
+    commit: () => persistWorkbenchUiState(),
+  });
+  const selectedWorkspaceResourcePersistence = createDebouncedLatestCommitter({
+    delayMs: workspaceSelectionPersistenceDelayMs,
+    commit: (resourceId) => persistSelectedWorkspaceResource(resourceId),
+  });
   tracePreview('controller:init', {
     testProfile: typeof window === 'undefined'
       ? null
@@ -327,10 +338,14 @@ export function createTextForgeWorkbenchController() {
     });
   }
 
-  function emit() {
+  function emit(options = {}) {
     cachedSnapshot = undefined;
-    if (runtime.status === 'ready' && !suspendWorkbenchUiStatePersistence) {
-      persistWorkbenchUiState();
+    if (
+      options.persistWorkbenchUiState !== false
+      && runtime.status === 'ready'
+      && !suspendWorkbenchUiStatePersistence
+    ) {
+      workbenchUiStatePersistence.schedule(true);
     }
     for (const listener of listeners) {
       listener();
@@ -649,6 +664,18 @@ export function createTextForgeWorkbenchController() {
     writeWorkbenchUiStateToWorkspace(stateText);
   }
 
+  function persistSelectedWorkspaceResource(resourceId) {
+    if (
+      runtime.status !== 'ready'
+      || typeof workspace.setSelectedResourceId !== 'function'
+      || workspace.getManifest().selectedResourceId === resourceId
+    ) {
+      return;
+    }
+
+    workspace.setSelectedResourceId(resourceId);
+  }
+
   function focusRestoredSession(descriptor) {
     if (!descriptor?.resourceId && !descriptor?.resourcePath) {
       return;
@@ -790,7 +817,7 @@ export function createTextForgeWorkbenchController() {
       expandFolderAncestors(entry.path);
     }
     if (runtime.status === 'ready' && typeof workspace.setSelectedResourceId === 'function') {
-      workspace.setSelectedResourceId(entryId);
+      selectedWorkspaceResourcePersistence.schedule(entryId);
     }
   }
 
@@ -807,6 +834,8 @@ export function createTextForgeWorkbenchController() {
     activeTextDocuments.clear();
     pendingTextResourceById.clear();
     delayedTextDocumentCommits.clearAll();
+    selectedWorkspaceResourcePersistence.clear();
+    workbenchUiStatePersistence.clear();
     markdownPreviewRequests.clear();
     luaConsoleStateByResourceId.clear();
     luaConsoleSessionStateByResourceId.clear();
@@ -4188,7 +4217,7 @@ export function createTextForgeWorkbenchController() {
     }
 
     applyWorkspaceOverlay(baseWorkspace);
-    unsubscribePersistence = baseWorkspace.subscribePersistence?.(() => emit());
+    unsubscribePersistence = baseWorkspace.subscribePersistence?.(() => emit({ persistWorkbenchUiState: false }));
 
     try {
       if (!runtime.skipLuaPreloadOnce) {
@@ -4240,7 +4269,7 @@ export function createTextForgeWorkbenchController() {
         showTransientFlag('Startup action skipped', error?.message ?? 'A startup command failed.');
       }
       suspendWorkbenchUiStatePersistence = false;
-      persistWorkbenchUiState();
+      workbenchUiStatePersistence.schedule(true);
     } catch (error) {
       console.error('TextForge workspace startup failed after storage hydration.', error);
       runtime.status = 'ready';
@@ -4505,6 +4534,8 @@ export function createTextForgeWorkbenchController() {
 
   function dispose() {
     flushDelayedTextDocumentSaves();
+    selectedWorkspaceResourcePersistence.flush();
+    workbenchUiStatePersistence.flush();
     clearTransientFlagTimeout();
     for (const lease of assetLeaseByResourceId.values()) {
       blobLedger.release(lease.id);
@@ -4513,6 +4544,8 @@ export function createTextForgeWorkbenchController() {
     activeTextDocuments.clear();
     pendingTextResourceById.clear();
     delayedTextDocumentCommits.clearAll();
+    selectedWorkspaceResourcePersistence.clear();
+    workbenchUiStatePersistence.clear();
     markdownPreviewRequests.clear();
     listeners.clear();
     disposePersistedWorkspace();
