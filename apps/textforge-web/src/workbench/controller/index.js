@@ -2788,15 +2788,32 @@ export function createTextForgeWorkbenchController() {
   }
 
   function createHydratedMarkdownPreviewSurface(surface, resourceTitle) {
+    let disposeJsmind = () => {};
     return {
       ...surface,
+      baseSurface: surface,
       mount(container) {
         const disposeSurface = surface.mount(container);
-        const disposeJsmind = hydrateItmJsmindPublications(container, resourceTitle);
+        disposeJsmind = hydrateItmJsmindPublications(container, resourceTitle);
         return () => {
           disposeJsmind();
           disposeSurface?.();
         };
+      },
+      update(container, nextSurface, updateOptions = {}) {
+        const nextBaseSurface = nextSurface?.baseSurface ?? nextSurface;
+        if (typeof surface.update !== 'function') {
+          return false;
+        }
+
+        return surface.update(container, nextBaseSurface, {
+          ...updateOptions,
+          onAfterSwap() {
+            disposeJsmind();
+            disposeJsmind = hydrateItmJsmindPublications(container, resourceTitle);
+            updateOptions.onAfterSwap?.();
+          },
+        });
       },
     };
   }

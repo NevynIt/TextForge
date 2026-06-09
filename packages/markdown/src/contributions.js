@@ -81,22 +81,28 @@ export const markdownPreviewSurfaceContribution = {
     const resource = execution.resource;
     const resourceTitle = execution.resourceTitle ?? resource?.path ?? 'Markdown preview';
     const previewState = execution.requestPreview?.();
-    if (previewState?.status === 'ready' && previewState.result) {
+    if ((previewState?.status === 'ready' || previewState?.status === 'rendering') && previewState.result) {
       const surface = createMarkdownPreviewSurface(execution.sourceText ?? '', previewState.result, {
         resource,
         onLinkActivate: execution.onLinkActivate,
       });
+      const renderingUpdatedPreview = previewState.status === 'rendering';
       return {
-        mountId: `${execution.session?.id ?? 'surface'}:${this.id}:${execution.updatedAt ?? 'current'}`,
-        summary: surface.model.summary,
-        detail: `${surface.model.diagnostics.length} diagnostics / ${surface.model.referencedAssets.length} asset references`,
+        mountId: `${execution.session?.id ?? 'surface'}:${this.id}:buffered`,
+        summary: renderingUpdatedPreview
+          ? 'Rendering an updated Markdown preview while keeping the previous preview visible.'
+          : surface.model.summary,
+        detail: renderingUpdatedPreview
+          ? `Updating / ${surface.model.diagnostics.length} diagnostics / ${surface.model.referencedAssets.length} asset references`
+          : `${surface.model.diagnostics.length} diagnostics / ${surface.model.referencedAssets.length} asset references`,
         readOnly: true,
         inspectorSections: [
           {
             eyebrow: 'Preview',
-            icon: 'fileText',
+            icon: renderingUpdatedPreview ? 'status' : 'fileText',
             title: 'TF-MD summary',
             rows: [
+              ...(renderingUpdatedPreview ? [{ label: 'State', value: 'Rendering update' }] : []),
               { label: 'Metadata title', value: String(surface.model.metadata.title ?? resourceTitle) },
               { label: 'Diagnostics', value: String(surface.model.diagnostics.length) },
               { label: 'Assets', value: String(surface.model.referencedAssets.length) },

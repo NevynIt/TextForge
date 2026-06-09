@@ -192,8 +192,172 @@ test('createMarkdownPreviewSurface mounts preview html', async () => {
   assert.equal(container.innerHTML, '');
 });
 
+function createFakeAnimationFrameScheduler() {
+  let nextId = 1;
+  const callbacks = new Map();
+  return {
+    requestAnimationFrame(callback) {
+      const id = nextId;
+      nextId += 1;
+      callbacks.set(id, callback);
+      return id;
+    },
+    cancelAnimationFrame(id) {
+      callbacks.delete(id);
+    },
+    flush() {
+      const pending = [...callbacks.entries()].sort((a, b) => a[0] - b[0]);
+      callbacks.clear();
+      for (const [, callback] of pending) {
+        callback();
+      }
+    },
+    pendingCount() {
+      return callbacks.size;
+    },
+  };
+}
+
+function createFakeDocumentContainer() {
+  class FakeElement {
+    constructor(tagName, ownerDocument) {
+      this.tagName = tagName;
+      this.ownerDocument = ownerDocument;
+      this.innerHTML = '';
+      this.childNodes = [];
+      this.style = {};
+      this.attributes = new Map();
+    }
+
+    setAttribute(name, value) {
+      this.attributes.set(name, value);
+    }
+
+    appendChild(child) {
+      child.parentNode = this;
+      this.childNodes.push(child);
+      return child;
+    }
+
+    replaceChildren(...children) {
+      this.childNodes = children;
+      this.innerHTML = children.map((child) => child.__html ?? child.innerHTML ?? '').join('');
+      for (const child of children) {
+        child.parentNode = this;
+      }
+    }
+
+    remove() {
+      if (!this.parentNode) {
+        return;
+      }
+      this.parentNode.childNodes = this.parentNode.childNodes.filter((child) => child !== this);
+      this.parentNode = undefined;
+    }
+
+    querySelectorAll() {
+      return [];
+    }
+  }
+
+  class FakeTemplate {
+    constructor() {
+      this.content = {
+        __html: '',
+        querySelectorAll: () => [],
+        cloneNode() {
+          return {
+            __html: this.__html,
+          };
+        },
+      };
+    }
+
+    set innerHTML(value) {
+      this.content.__html = value;
+    }
+
+    get innerHTML() {
+      return this.content.__html;
+    }
+  }
+
+  const ownerDocument = {
+    createElement(tagName) {
+      return tagName === 'template'
+        ? new FakeTemplate()
+        : new FakeElement(tagName, ownerDocument);
+    },
+    querySelector() {
+      return undefined;
+    },
+  };
+  const scrollHost = {
+    scrollTop: 140,
+    scrollLeft: 18,
+    scrollHeight: 1000,
+    clientHeight: 300,
+    scrollWidth: 900,
+    clientWidth: 500,
+    scrollTo({ top, left }) {
+      this.scrollTop = top;
+      this.scrollLeft = left;
+    },
+  };
+  const container = new FakeElement('div', ownerDocument);
+  container.closest = () => scrollHost;
+  return { container, scrollHost };
+}
+
+test('createMarkdownPreviewSurface buffers updates and preserves scroll', async () => {
+  const scheduler = createFakeAnimationFrameScheduler();
+  const oldRendered = await renderMarkdownDocument('# Old preview');
+  const nextRendered = await renderMarkdownDocument('# New preview');
+  const oldSurface = createMarkdownPreviewSurface('# Old preview', oldRendered, { scheduler });
+  const nextSurface = createMarkdownPreviewSurface('# New preview', nextRendered, { scheduler });
+  const { container, scrollHost } = createFakeDocumentContainer();
+
+  const dispose = oldSurface.mount(container);
+  assert.match(container.innerHTML, /Old preview/);
+
+  scrollHost.scrollTop = 220;
+  oldSurface.update(container, nextSurface, { scrollHost });
+  assert.match(container.innerHTML, /Old preview/);
+  assert.doesNotMatch(container.innerHTML, /New preview/);
+
+  scrollHost.scrollTop = 0;
+  scheduler.flush();
+  assert.match(container.innerHTML, /New preview/);
+  assert.equal(scrollHost.scrollTop, 220);
+
+  dispose();
+});
+
+test('createMarkdownPreviewSurface cancels stale buffered updates', async () => {
+  const scheduler = createFakeAnimationFrameScheduler();
+  const firstRendered = await renderMarkdownDocument('# First preview');
+  const staleRendered = await renderMarkdownDocument('# Stale preview');
+  const finalRendered = await renderMarkdownDocument('# Final preview');
+  const firstSurface = createMarkdownPreviewSurface('# First preview', firstRendered, { scheduler });
+  const staleSurface = createMarkdownPreviewSurface('# Stale preview', staleRendered, { scheduler });
+  const finalSurface = createMarkdownPreviewSurface('# Final preview', finalRendered, { scheduler });
+  const { container, scrollHost } = createFakeDocumentContainer();
+
+  const dispose = firstSurface.mount(container);
+  firstSurface.update(container, staleSurface, { scrollHost });
+  firstSurface.update(container, finalSurface, { scrollHost });
+
+  assert.equal(scheduler.pendingCount(), 1);
+  scheduler.flush();
+  assert.match(container.innerHTML, /Final preview/);
+  assert.doesNotMatch(container.innerHTML, /Stale preview/);
+
+  dispose();
+});
+
 test('createMarkdownPreviewSurface delegates non-fragment link clicks to the host', async () => {
   const rendered = await renderMarkdownDocument('[Open sibling](./sibling.md)\n\n[Jump](#preview)');
+  const updatedRendered = await renderMarkdownDocument('[Open updated sibling](./updated-sibling.md)');
   const activations = [];
   const listeners = new Map();
   const surface = createMarkdownPreviewSurface('', rendered, {
@@ -262,12 +426,44 @@ test('createMarkdownPreviewSurface delegates non-fragment link clicks to the hos
       throw new Error('Fragment links should not be intercepted.');
     },
   });
+  const updatedSurface = createMarkdownPreviewSurface('', updatedRendered, {
+    resource: {
+      resourceId: 'markdown-link-preview',
+      path: '/docs/preview.md',
+      kind: 'resource',
+      representation: 'text',
+    },
+    onLinkActivate: surface.model.onLinkActivate,
+  });
+  surface.update(container, updatedSurface);
+  clickListener({
+    button: 0,
+    target: {
+      closest() {
+        return {
+          owner: container,
+          getAttribute(name) {
+            return name === 'href' ? './updated-sibling.md' : undefined;
+          },
+        };
+      },
+    },
+    preventDefault() {
+      prevented.push(true);
+    },
+  });
 
-  assert.deepEqual(activations, [{
-    href: './sibling.md',
-    resourcePath: '/docs/preview.md',
-  }]);
-  assert.equal(prevented.length, 1);
+  assert.deepEqual(activations, [
+    {
+      href: './sibling.md',
+      resourcePath: '/docs/preview.md',
+    },
+    {
+      href: './updated-sibling.md',
+      resourcePath: '/docs/preview.md',
+    },
+  ]);
+  assert.equal(prevented.length, 2);
 
   dispose();
   assert.equal(listeners.size, 0);

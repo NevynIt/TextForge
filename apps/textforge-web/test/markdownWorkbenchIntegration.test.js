@@ -105,3 +105,52 @@ flowchart TD
     undefined,
   );
 });
+
+test('markdown preview keeps a stable buffered surface while rendering updates', async () => {
+  const { surfaceRegistry } = createWorkbenchRegistries();
+  const previewContribution = surfaceRegistry.get('@textforge/markdown/preview');
+  const resource = createMarkdownResource('buffered-preview.md', '# Previous preview');
+  const previousResult = await renderMarkdownDocument('# Previous preview');
+  const nextResult = await renderMarkdownDocument('# Next preview');
+  const session = {
+    id: 'main-buffered-preview',
+    placement: 'main',
+  };
+
+  const previousView = previewContribution.open({
+    session,
+    resource: workspaceEntryToResourceRef(resource),
+    sourceText: resource.text,
+    updatedAt: '2026-06-08T00:00:00.000Z',
+    requestPreview: () => ({
+      status: 'ready',
+      result: previousResult,
+    }),
+  });
+  const renderingView = previewContribution.open({
+    session,
+    resource: workspaceEntryToResourceRef(resource),
+    sourceText: '# Next preview',
+    updatedAt: '2026-06-08T00:00:01.000Z',
+    requestPreview: () => ({
+      status: 'rendering',
+      result: previousResult,
+    }),
+  });
+  const nextView = previewContribution.open({
+    session,
+    resource: workspaceEntryToResourceRef(resource),
+    sourceText: '# Next preview',
+    updatedAt: '2026-06-08T00:00:01.000Z',
+    requestPreview: () => ({
+      status: 'ready',
+      result: nextResult,
+    }),
+  });
+
+  assert.equal(previousView.mountId, renderingView.mountId);
+  assert.equal(renderingView.mountId, nextView.mountId);
+  assert.match(renderingView.surface.model.html, /Previous preview/);
+  assert.doesNotMatch(renderingView.surface.model.html, /Rendering Markdown preview/);
+  assert.equal(typeof previousView.surface.update, 'function');
+});

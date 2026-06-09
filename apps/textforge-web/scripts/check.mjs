@@ -189,6 +189,12 @@ for (const requiredMarkdownDiagramSignal of ['markdownPreviewSurfaceContribution
   }
 }
 
+for (const requiredBufferedPreviewSignal of ['currentSurface.update', 'surfaceViewportScrollByViewId.set(view.id', 'scheduleScrollRestore(scrollHost']) {
+  if (!workbenchJs.includes(requiredBufferedPreviewSignal)) {
+    throw new Error(`workbench source must preserve buffered surface updates and session-keyed scroll restoration: ${requiredBufferedPreviewSignal}`);
+  }
+}
+
 if (workbenchJs.includes('phase35')) {
   throw new Error('workbench source must not restore stale phase35 screenshot bootstrap presets');
 }

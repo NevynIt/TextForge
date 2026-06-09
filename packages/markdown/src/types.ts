@@ -106,4 +106,12 @@ export interface MarkdownPreviewSurface {
   readonly contribution: SurfaceContribution;
   readonly model: MarkdownPreviewModel;
   mount(container: HTMLElement): () => void;
+  update?(
+    container: HTMLElement,
+    nextSurface: Pick<MarkdownPreviewSurface, 'model'>,
+    options?: {
+      readonly scrollHost?: HTMLElement;
+      readonly onAfterSwap?: () => void;
+    },
+  ): boolean;
 }

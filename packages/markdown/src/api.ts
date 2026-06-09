@@ -39,4 +39,8 @@ export declare function createMarkdownPreviewModel(source: string, result: Markd
 export declare function createMarkdownPreviewSurface(source: string, result: MarkdownRenderResult, options?: {
   readonly resource?: ResourceRef;
   readonly onLinkActivate?: (activation: MarkdownPreviewLinkActivation) => boolean | void;
+  readonly scheduler?: {
+    requestAnimationFrame?(callback: () => void): number;
+    cancelAnimationFrame?(handle: number): void;
+  };
 }): MarkdownPreviewSurface;

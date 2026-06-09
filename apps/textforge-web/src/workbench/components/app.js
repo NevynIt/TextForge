@@ -26,8 +26,76 @@ function useWorkbenchSnapshot(controller) {
   return React.useSyncExternalStore(controller.subscribe, controller.snapshot, controller.snapshot);
 }
 
+function clampScrollValue(value, maxValue) {
+  const normalizedValue = Math.max(0, value ?? 0);
+  return Number.isFinite(maxValue)
+    ? Math.min(normalizedValue, Math.max(0, maxValue))
+    : normalizedValue;
+}
+
+function readSurfaceScroll(scrollHost) {
+  if (!scrollHost) {
+    return { top: 0, left: 0 };
+  }
+  return {
+    top: scrollHost.scrollTop ?? 0,
+    left: scrollHost.scrollLeft ?? 0,
+  };
+}
+
+function writeSurfaceScroll(scrollHost, scroll) {
+  if (!scrollHost || !scroll) {
+    return;
+  }
+  const maxTop = typeof scrollHost.scrollHeight === 'number' && typeof scrollHost.clientHeight === 'number'
+    ? scrollHost.scrollHeight - scrollHost.clientHeight
+    : Number.POSITIVE_INFINITY;
+  const maxLeft = typeof scrollHost.scrollWidth === 'number' && typeof scrollHost.clientWidth === 'number'
+    ? scrollHost.scrollWidth - scrollHost.clientWidth
+    : Number.POSITIVE_INFINITY;
+  const top = clampScrollValue(scroll.top, maxTop);
+  const left = clampScrollValue(scroll.left, maxLeft);
+  if (typeof scrollHost.scrollTo === 'function') {
+    scrollHost.scrollTo({ top, left });
+    return;
+  }
+  scrollHost.scrollTop = top;
+  scrollHost.scrollLeft = left;
+}
+
 function SurfaceMount({ view }) {
   const mountRef = React.useRef(null);
+  const mountedSurfaceRef = React.useRef();
+  const restoreFrameIdsRef = React.useRef([]);
+
+  const cancelScheduledRestores = React.useCallback(() => {
+    if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
+      for (const frameId of restoreFrameIdsRef.current) {
+        window.cancelAnimationFrame(frameId);
+      }
+    }
+    restoreFrameIdsRef.current = [];
+  }, []);
+
+  const scheduleScrollRestore = React.useCallback((scrollHost, scroll, attempts = 3) => {
+    cancelScheduledRestores();
+    const applyScroll = () => writeSurfaceScroll(scrollHost, scroll);
+    const scheduleNext = (remainingAttempts) => {
+      if (remainingAttempts <= 0 || typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+        applyScroll();
+        return;
+      }
+
+      const frameId = window.requestAnimationFrame(() => {
+        applyScroll();
+        scheduleNext(remainingAttempts - 1);
+      });
+      restoreFrameIdsRef.current.push(frameId);
+    };
+
+    applyScroll();
+    scheduleNext(attempts);
+  }, [cancelScheduledRestores]);
 
   React.useEffect(() => {
     if (!view?.surface || !mountRef.current) {
@@ -36,44 +104,21 @@ function SurfaceMount({ view }) {
 
     const scrollHost = mountRef.current.closest('.tf-surface-frame__viewport, .tf-popup-host__body');
     const dispose = view.surface.mount(mountRef.current);
+    mountedSurfaceRef.current = view.surface;
     const restoreScroll = surfaceViewportScrollByViewId.get(view.id) ?? { top: 0, left: 0 };
-    const restoreFrameIds = [];
     let resizeObserver;
     let removeScrollTracking;
     if (scrollHost) {
-      const applyScroll = () => {
-        if (typeof scrollHost.scrollTo === 'function') {
-          scrollHost.scrollTo({ top: restoreScroll.top, left: restoreScroll.left });
-          return;
-        }
-        scrollHost.scrollTop = restoreScroll.top;
-        scrollHost.scrollLeft = restoreScroll.left;
-      };
       const rememberScroll = () => {
-        surfaceViewportScrollByViewId.set(view.id, {
-          top: scrollHost.scrollTop,
-          left: scrollHost.scrollLeft,
-        });
-      };
-      const scheduleRestore = (attempts) => {
-        if (attempts <= 0 || typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
-          applyScroll();
-          return;
-        }
-
-        const frameId = window.requestAnimationFrame(() => {
-          applyScroll();
-          scheduleRestore(attempts - 1);
-        });
-        restoreFrameIds.push(frameId);
+        surfaceViewportScrollByViewId.set(view.id, readSurfaceScroll(scrollHost));
       };
 
       scrollHost.addEventListener('scroll', rememberScroll, { passive: true });
-      scheduleRestore(3);
+      scheduleScrollRestore(scrollHost, restoreScroll);
 
       if (typeof ResizeObserver === 'function') {
         resizeObserver = new ResizeObserver(() => {
-          applyScroll();
+          writeSurfaceScroll(scrollHost, surfaceViewportScrollByViewId.get(view.id) ?? restoreScroll);
         });
         resizeObserver.observe(scrollHost);
         resizeObserver.observe(mountRef.current);
@@ -85,21 +130,43 @@ function SurfaceMount({ view }) {
     }
 
     return () => {
-      if (typeof window !== 'undefined' && typeof window.cancelAnimationFrame === 'function') {
-        for (const frameId of restoreFrameIds) {
-          window.cancelAnimationFrame(frameId);
-        }
-      }
+      cancelScheduledRestores();
       resizeObserver?.disconnect();
       removeScrollTracking?.();
       if (typeof dispose === 'function') {
         dispose();
       }
+      mountedSurfaceRef.current = undefined;
       if (mountRef.current) {
         mountRef.current.replaceChildren();
       }
     };
-  }, [view?.mountId]);
+  }, [cancelScheduledRestores, scheduleScrollRestore, view?.mountId]);
+
+  React.useEffect(() => {
+    const currentSurface = mountedSurfaceRef.current;
+    if (!view?.surface || !mountRef.current || !currentSurface || currentSurface === view.surface) {
+      return;
+    }
+    if (typeof currentSurface.update !== 'function') {
+      mountedSurfaceRef.current = view.surface;
+      return;
+    }
+
+    const scrollHost = mountRef.current.closest('.tf-surface-frame__viewport, .tf-popup-host__body');
+    const capturedScroll = readSurfaceScroll(scrollHost);
+    surfaceViewportScrollByViewId.set(view.id, capturedScroll);
+    const updated = currentSurface.update(mountRef.current, view.surface, {
+      scrollHost,
+      onAfterSwap() {
+        surfaceViewportScrollByViewId.set(view.id, capturedScroll);
+        scheduleScrollRestore(scrollHost, capturedScroll);
+      },
+    });
+    if (updated !== false) {
+      mountedSurfaceRef.current = view.surface;
+    }
+  }, [scheduleScrollRestore, view?.id, view?.surface]);
 
   return element('div', {
     ref: mountRef,
