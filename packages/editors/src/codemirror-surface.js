@@ -30,11 +30,35 @@ function getCodeMirrorCspNonce() {
   return nonce || undefined;
 }
 
+function isPrimaryPointerEvent(event) {
+  return typeof event.button !== 'number' || event.button === 0;
+}
+
+export function selectCodeMirrorLineFromGutter(view, line, event) {
+  if (!isPrimaryPointerEvent(event)) {
+    return false;
+  }
+
+  event?.stopPropagation?.();
+  const documentLine = view.state.doc.lineAt(line.from);
+  const selectionTo = documentLine.to < view.state.doc.length ? documentLine.to + 1 : documentLine.to;
+  view.dispatch({
+    selection: EditorSelection.range(documentLine.from, selectionTo),
+    scrollIntoView: true,
+  });
+  view.focus();
+  return true;
+}
+
 function createCodeMirrorExtensions({ model, handleUpdate }) {
   const languageExtension = createCodeMirrorLanguageExtension(model.languageMode.languageId);
   const cspNonce = getCodeMirrorCspNonce();
   return [
-    lineNumbers(),
+    lineNumbers({
+      domEventHandlers: {
+        mousedown: selectCodeMirrorLineFromGutter,
+      },
+    }),
     foldGutter(),
     codeFolding(),
     search({

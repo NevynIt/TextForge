@@ -21,6 +21,7 @@ import {
   resolveGoToLinePosition,
   resolveTextEditorLanguageMode,
 } from '../src/index.js';
+import { selectCodeMirrorLineFromGutter } from '../src/codemirror-surface.js';
 
 function createEditorState(doc, selection) {
   return EditorState.create({
@@ -51,6 +52,24 @@ function runStateCommand(command, doc, selection) {
     doc: state.doc.toString(),
     selection: state.selection,
   };
+}
+
+function createMockEditorView(doc) {
+  let state = EditorState.create({ doc });
+  const view = {
+    state,
+    focused: false,
+    dispatch(spec) {
+      const transaction = spec?.state ? spec : state.update(spec);
+      state = transaction.state;
+      view.state = state;
+    },
+    focus() {
+      view.focused = true;
+    },
+  };
+
+  return view;
 }
 
 test('text editor selection and edit helpers preserve document metadata', () => {
@@ -96,6 +115,35 @@ test('text editor surface preserves read-only documents', () => {
 
   assert.equal(surface.model.readOnly, true);
   assert.equal(surface.model.state, 'read-only');
+});
+
+test('line number gutter mousedown selects the corresponding editor line', () => {
+  const view = createMockEditorView('one\ntwo\nthree');
+  const secondLine = view.state.doc.line(2);
+  const event = {
+    button: 0,
+    propagationStopped: false,
+    stopPropagation() {
+      event.propagationStopped = true;
+    },
+  };
+
+  const handled = selectCodeMirrorLineFromGutter(view, { from: secondLine.from }, event);
+
+  assert.equal(handled, true);
+  assert.equal(event.propagationStopped, true);
+  assert.equal(view.focused, true);
+  assert.equal(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to), 'two\n');
+});
+
+test('line number gutter ignores non-primary mouse buttons', () => {
+  const view = createMockEditorView('one\ntwo');
+
+  const handled = selectCodeMirrorLineFromGutter(view, { from: 0 }, { button: 2 });
+
+  assert.equal(handled, false);
+  assert.equal(view.state.selection.main.empty, true);
+  assert.equal(view.focused, false);
 });
 
 test('smart tab inserts spaces and never raw tabs', () => {
