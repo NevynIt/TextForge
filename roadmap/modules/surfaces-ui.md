@@ -16,6 +16,7 @@ Surfaces and UI defines the stable ownership boundary for the workpackages liste
 
 - surface registry/session/open-with behavior
 - command/action projections
+- source editor authoring behavior
 - settings UI and advanced surface capacity
 - interactive ITM exploration workbench and transient surfaces
 - local Lua automation UI integration
@@ -45,6 +46,7 @@ Authoritative dependency data lives in `roadmap-state.yaml`.
 | `WP-05B` | Capability activation and resolver context | Registry-owned | Core gate |
 | `WP-05C` | Pipeline/contribution execution integration | Registry-owned | Core gate |
 | `WP-05D` | Minimal package/capability inspector | Registry-owned | Feature / diagnostics |
+| `WP-SOURCE-EDITOR-01` | Mature CodeMirror source editor authoring | Registry-owned | Feature / authoring UX |
 | `WP-DOC-GRAPH` | Document neighborhood and local graph surface | Registry-owned | Knowledge workspace UI |
 | `WP-SET-01` | User settings core and local persistence | Registry-owned | Core UX foundation |
 | `WP-SET-UI` | User settings UI | Registry-owned | Feature / UX |
@@ -72,6 +74,7 @@ The module is healthy when its workpackages can move independently through the r
 - `ADR-0010` proposes the interactive ITM exploration workbench.
 - `ADR-0011` proposes local AI command/action integration through the shared provider and policy boundary in `MOD-LOCAL-AI`.
 - `ADR-0012` proposes a package-owned React Flow + Dagre ITM graph surface that mounts through ordinary surface/open-with behavior.
+- `ADR-0017` proposes the mature CodeMirror source editor authoring surface and command bridge.
 
 ## Validation Approach
 

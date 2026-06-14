@@ -12,6 +12,7 @@
       "WP-05D": 0,
       "WP-PKG-MODULARITY-01": 0,
       "WP-WEB-WORKBENCH-MODULARITY-01": 0,
+      "WP-SOURCE-EDITOR-01": 0,
       "WP-RES-01": 0,
       "WP-ITM-01": 0,
       "WP-ITM-02": 0,
@@ -404,6 +405,7 @@
       "owns": [
         "surface registry/session/open-with behavior",
         "command/action projections",
+        "source editor authoring behavior",
         "settings UI and advanced surface capacity",
         "interactive ITM exploration workbench and transient surfaces",
         "local Lua automation UI integration"
@@ -414,6 +416,7 @@
         "WP-05B",
         "WP-05C",
         "WP-05D",
+        "WP-SOURCE-EDITOR-01",
         "WP-DOC-GRAPH",
         "WP-SET-01",
         "WP-SET-UI",
@@ -435,7 +438,8 @@
         "archive/grilling/legacy-grilling/phase-5-grilling.md",
         "decisions/ADR-0010-interactive-itm-exploration-workbench.md",
         "decisions/ADR-0011-local-ai-capability-architecture-and-semantic-assistance-layer.md",
-        "decisions/ADR-0012-react-flow-dagre-itm-graph-surface.md"
+        "decisions/ADR-0012-react-flow-dagre-itm-graph-surface.md",
+        "decisions/ADR-0017-mature-codemirror-authoring-surface.md"
       ]
     },
     "MOD-LOCAL-AI": {
@@ -3118,6 +3122,35 @@
       "archive_trace": [],
       "validation_checklist": null
     },
+    "WP-SOURCE-EDITOR-01": {
+      "title": "Mature CodeMirror source editor authoring",
+      "path": "workpackages/WP-SOURCE-EDITOR-01.md",
+      "module": "MOD-SURFACES-UI",
+      "status": "implemented",
+      "type": "Feature / authoring UX",
+      "depends_on": [
+        "WP-05A",
+        "WP-05B",
+        "WP-05C"
+      ],
+      "enables": [
+        "WP-ITM-01",
+        "WP-ITM-02",
+        "WP-LUA"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": true,
+      "deferrable": false,
+      "key_adrs": [
+        "ADR-0017"
+      ],
+      "archive_trace": [
+        "decisions/ADR-0017-mature-codemirror-authoring-surface.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-SOURCE-EDITOR-01-mature-codemirror-authoring.md"
+    },
     "WP-API-DOCS-01": {
       "title": "Public API documentation with TSDoc and TypeDoc",
       "path": "workpackages/WP-API-DOCS-01.md",
@@ -3182,6 +3215,7 @@
         "WP-05B",
         "WP-05C",
         "WP-05D",
+        "WP-SOURCE-EDITOR-01",
         "WP-RES-01",
         "WP-RES-02",
         "WP-RES-03",
@@ -3408,6 +3442,16 @@
         "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md",
         "decisions/ADR-0010-interactive-itm-exploration-workbench.md",
         "workpackages/WP-EA-VIEWER-01.md"
+      ]
+    },
+    "ADR-0017": {
+      "title": "Mature CodeMirror authoring surface",
+      "status": "proposed",
+      "path": "decisions/ADR-0017-mature-codemirror-authoring-surface.md",
+      "supersedes": [],
+      "archive_trace": [
+        "workpackages/WP-SOURCE-EDITOR-01.md",
+        "validation/checklists/workpackages/WP-SOURCE-EDITOR-01-mature-codemirror-authoring.md"
       ]
     }
   }

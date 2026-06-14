@@ -11,7 +11,7 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 | candidate | 25 |
 | deferred | 1 |
 | defined | 32 |
-| implemented | 1 |
+| implemented | 2 |
 | in-progress | 4 |
 | ready | 1 |
 | validated | 25 |
@@ -46,6 +46,7 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 | 0 | `WP-BPMN-VISUAL-B` | ITM/BPMN visual target integration | validated | `MOD-BPMN` |
 | 0 | `WP-PKG-MODULARITY-01` | Package root modularization | validated | `MOD-ROADMAP-GOVERNANCE` |
 | 0 | `WP-WEB-WORKBENCH-MODULARITY-01` | Web workbench modularization | validated | `MOD-SURFACES-UI` |
+| 0 | `WP-SOURCE-EDITOR-01` | Mature CodeMirror source editor authoring | implemented | `MOD-SURFACES-UI` |
 | 1 | `WP-MD-REPORT` | Markdown + ITM report generation | defined | `MOD-MARKDOWN-ITM` |
 | 2 | `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | in-progress | `MOD-MARKDOWN-ITM` |
 | 3 | `WP-MD-RICH` | Rich Markdown editing | in-progress | `MOD-MARKDOWN-ITM` |
