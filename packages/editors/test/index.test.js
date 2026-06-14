@@ -21,7 +21,10 @@ import {
   resolveGoToLinePosition,
   resolveTextEditorLanguageMode,
 } from '../src/index.js';
-import { selectCodeMirrorLineFromGutter } from '../src/codemirror-surface.js';
+import {
+  createCodeMirrorGutterLineSelection,
+  selectCodeMirrorLineFromGutter,
+} from '../src/codemirror-surface.js';
 
 function createEditorState(doc, selection) {
   return EditorState.create({
@@ -55,10 +58,18 @@ function runStateCommand(command, doc, selection) {
 }
 
 function createMockEditorView(doc) {
-  let state = EditorState.create({ doc });
+  let state = EditorState.create({
+    doc,
+    extensions: [EditorState.allowMultipleSelections.of(true)],
+  });
   const view = {
+    documentTop: 0,
     state,
     focused: false,
+    lineBlockAtHeight(height) {
+      const lineNumber = Math.min(Math.max(Math.floor(height / 10) + 1, 1), state.doc.lines);
+      return { from: state.doc.line(lineNumber).from };
+    },
     dispatch(spec) {
       const transaction = spec?.state ? spec : state.update(spec);
       state = transaction.state;
@@ -70,6 +81,21 @@ function createMockEditorView(doc) {
   };
 
   return view;
+}
+
+function createFakeEventDocument() {
+  const listeners = new Map();
+  return {
+    listeners,
+    addEventListener(type, handler) {
+      listeners.set(type, handler);
+    },
+    removeEventListener(type, handler) {
+      if (listeners.get(type) === handler) {
+        listeners.delete(type);
+      }
+    },
+  };
 }
 
 test('text editor selection and edit helpers preserve document metadata', () => {
@@ -134,6 +160,57 @@ test('line number gutter mousedown selects the corresponding editor line', () =>
   assert.equal(event.propagationStopped, true);
   assert.equal(view.focused, true);
   assert.equal(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to), 'two\n');
+});
+
+test('line number gutter drag selects the corresponding editor line range', () => {
+  const view = createMockEditorView('one\ntwo\nthree\nfour');
+  const eventDocument = createFakeEventDocument();
+  const secondLine = view.state.doc.line(2);
+  const event = {
+    button: 0,
+    view: { document: eventDocument },
+    stopPropagation() {},
+  };
+
+  const handled = selectCodeMirrorLineFromGutter(view, { from: secondLine.from }, event);
+  const moveEvent = {
+    clientY: 20,
+    defaultPrevented: false,
+    preventDefault() {
+      moveEvent.defaultPrevented = true;
+    },
+  };
+  eventDocument.listeners.get('mousemove')(moveEvent);
+
+  assert.equal(handled, true);
+  assert.equal(moveEvent.defaultPrevented, true);
+  assert.equal(view.state.sliceDoc(view.state.selection.main.from, view.state.selection.main.to), 'two\nthree\n');
+
+  eventDocument.listeners.get('mouseup')();
+  assert.equal(eventDocument.listeners.has('mousemove'), false);
+  assert.equal(eventDocument.listeners.has('mouseup'), false);
+});
+
+test('line number gutter ctrl-click adds the corresponding editor line selection', () => {
+  const view = createMockEditorView('one\ntwo\nthree');
+  const firstLine = view.state.doc.line(1);
+  const thirdLine = view.state.doc.line(3);
+  view.dispatch({
+    selection: createCodeMirrorGutterLineSelection(view, firstLine.from),
+  });
+
+  const handled = selectCodeMirrorLineFromGutter(view, { from: thirdLine.from }, {
+    button: 0,
+    ctrlKey: true,
+    stopPropagation() {},
+  });
+
+  assert.equal(handled, true);
+  assert.equal(view.state.selection.ranges.length, 2);
+  assert.deepEqual(
+    view.state.selection.ranges.map((range) => view.state.sliceDoc(range.from, range.to)),
+    ['one\n', 'three'],
+  );
 });
 
 test('line number gutter ignores non-primary mouse buttons', () => {

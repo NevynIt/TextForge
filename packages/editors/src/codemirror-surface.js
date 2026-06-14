@@ -34,19 +34,78 @@ function isPrimaryPointerEvent(event) {
   return typeof event.button !== 'number' || event.button === 0;
 }
 
+function isAdditiveSelectionEvent(event) {
+  return event?.ctrlKey === true || event?.metaKey === true;
+}
+
+function getLineSelectionRange(doc, anchorPosition, headPosition = anchorPosition) {
+  const anchorLine = doc.lineAt(anchorPosition);
+  const headLine = doc.lineAt(headPosition);
+  const firstLine = anchorLine.number <= headLine.number ? anchorLine : headLine;
+  const lastLine = anchorLine.number <= headLine.number ? headLine : anchorLine;
+  const selectionTo = lastLine.to < doc.length ? lastLine.to + 1 : lastLine.to;
+  return EditorSelection.range(firstLine.from, selectionTo);
+}
+
+function getLineBlockFromPointerEvent(view, event, fallbackLine) {
+  if (
+    typeof event?.clientY !== 'number'
+    || typeof view.documentTop !== 'number'
+    || typeof view.lineBlockAtHeight !== 'function'
+  ) {
+    return fallbackLine;
+  }
+
+  return view.lineBlockAtHeight(event.clientY - view.documentTop);
+}
+
+function getEventDocument(view, event) {
+  return event?.view?.document
+    ?? view.dom?.ownerDocument
+    ?? (typeof document === 'undefined' ? undefined : document);
+}
+
+export function createCodeMirrorGutterLineSelection(view, anchorPosition, headPosition = anchorPosition, baseRanges = []) {
+  return EditorSelection.create([
+    ...baseRanges,
+    getLineSelectionRange(view.state.doc, anchorPosition, headPosition),
+  ], baseRanges.length);
+}
+
+export function selectCodeMirrorLineRangeFromGutter(view, anchorPosition, headPosition = anchorPosition, baseRanges = []) {
+  view.dispatch({
+    selection: createCodeMirrorGutterLineSelection(view, anchorPosition, headPosition, baseRanges),
+    scrollIntoView: true,
+  });
+}
+
 export function selectCodeMirrorLineFromGutter(view, line, event) {
   if (!isPrimaryPointerEvent(event)) {
     return false;
   }
 
   event?.stopPropagation?.();
-  const documentLine = view.state.doc.lineAt(line.from);
-  const selectionTo = documentLine.to < view.state.doc.length ? documentLine.to + 1 : documentLine.to;
-  view.dispatch({
-    selection: EditorSelection.range(documentLine.from, selectionTo),
-    scrollIntoView: true,
-  });
+  const anchorPosition = line.from;
+  const baseRanges = isAdditiveSelectionEvent(event) ? view.state.selection.ranges : [];
+  selectCodeMirrorLineRangeFromGutter(view, anchorPosition, anchorPosition, baseRanges);
   view.focus();
+
+  const eventDocument = getEventDocument(view, event);
+  if (eventDocument) {
+    const handleMouseMove = (moveEvent) => {
+      moveEvent?.preventDefault?.();
+      const headLine = getLineBlockFromPointerEvent(view, moveEvent, line);
+      selectCodeMirrorLineRangeFromGutter(view, anchorPosition, headLine.from, baseRanges);
+    };
+    const handleMouseUp = () => {
+      eventDocument.removeEventListener('mousemove', handleMouseMove);
+      eventDocument.removeEventListener('mouseup', handleMouseUp);
+    };
+
+    eventDocument.addEventListener('mousemove', handleMouseMove);
+    eventDocument.addEventListener('mouseup', handleMouseUp);
+  }
+
   return true;
 }
 
