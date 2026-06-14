@@ -2,7 +2,7 @@
 
 ## Status
 
-Implementation evidence in progress.
+Implemented and automated validation passed. Browser UI validation is intentionally manual per repository guidance.
 
 ## Automated Checks
 
@@ -12,6 +12,13 @@ Implementation evidence in progress.
 | `corepack pnpm --filter @textforge/editors lint` | Passed | Editors package checks passed. |
 | `corepack pnpm --filter @textforge/editors build` | Passed | `node --check src/index.js` passed. |
 | `corepack pnpm --filter @textforge/textforge-web lint` | Passed | Web shell checks passed after command bridge wiring. |
+| `corepack pnpm lint` | Passed | Workspace lint passed across 22 projects. |
+| `corepack pnpm typecheck` | Passed | Workspace typecheck passed across 22 projects. |
+| `corepack pnpm test` | Passed | Workspace tests passed; editor package reported 16 passing tests. |
+| `corepack pnpm build` | Passed | Workspace build completed, including web dist, single-file, small single-file, and zip artifacts. Vite reported existing upstream browser externalization/import.meta warnings. |
+| `node roadmap/scripts/generate-views.mjs` | Passed | Regenerated roadmap status views after adding the workpackage and ADR. |
+| `corepack pnpm roadmap:dependency-map:check` | Passed | Dependency-map validation passed. |
+| `corepack pnpm roadmap:dependency-map:publish:check` | Passed | Published dependency-map documentation matched generated output after regeneration. |
 
 ## Manual UI Checks Requested
 
