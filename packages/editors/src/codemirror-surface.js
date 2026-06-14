@@ -1,34 +1,19 @@
-import { indentWithTab } from '@codemirror/commands';
-import { EditorSelection, EditorState } from '@codemirror/state';
-import { HighlightStyle, codeFolding, foldGutter, syntaxHighlighting } from '@codemirror/language';
+import { EditorSelection, EditorState, Prec } from '@codemirror/state';
+import { codeFolding, foldGutter } from '@codemirror/language';
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search';
-import { tags } from '@lezer/highlight';
-import { crosshairCursor, drawSelection, EditorView, keymap, lineNumbers, rectangularSelection } from '@codemirror/view';
+import { crosshairCursor, EditorView, keymap, lineNumbers, rectangularSelection } from '@codemirror/view';
 import {
   clampTextSelection,
   createTextEditorDocument,
   createTextEditorSelection,
   selectionToSourceRange,
 } from './document.js';
+import { createCodeMirrorBaselineExtensions, createCodeMirrorBaselineTheme } from './codemirror-baseline.js';
+import { createCodeMirrorEditorCommandTarget, createCodeMirrorEditorKeymap } from './codemirror-commands.js';
 import { createCodeMirrorLanguageExtension } from './language-modes.js';
 import { createEditorSurfaceMarkup } from './surface-markup.js';
 import { createTextEditorSurfaceModel } from './surface-model.js';
 import { codeMirrorTextEditorSurfaceContribution } from './surface-contribution.js';
-
-const textForgeHighlightStyle = HighlightStyle.define([
-  { tag: [tags.keyword, tags.operatorKeyword, tags.modifier], color: '#67e8f9' },
-  { tag: [tags.atom, tags.bool, tags.number], color: '#f4b860' },
-  { tag: [tags.string, tags.special(tags.string), tags.regexp, tags.url], color: '#86efac' },
-  { tag: [tags.propertyName, tags.attributeName], color: '#93c5fd' },
-  { tag: [tags.typeName, tags.className, tags.tagName, tags.labelName, tags.namespace], color: '#5eead4' },
-  { tag: [tags.comment, tags.quote, tags.meta], color: '#94a3b8', fontStyle: 'italic' },
-  { tag: tags.heading, color: '#f4b860', fontWeight: '700' },
-  { tag: [tags.bracket, tags.punctuation, tags.separator], color: '#cbd5e1' },
-  { tag: tags.link, color: '#93c5fd', textDecoration: 'underline' },
-  { tag: tags.strong, fontWeight: '700' },
-  { tag: tags.emphasis, fontStyle: 'italic' },
-  { tag: tags.invalid, color: '#fca5a5', textDecoration: 'underline wavy' },
-]);
 
 function createCodeMirrorSelection(selection, text) {
   const clamped = clampTextSelection(selection, text);
@@ -56,17 +41,17 @@ function createCodeMirrorExtensions({ model, handleUpdate }) {
       top: true,
     }),
     highlightSelectionMatches(),
-    drawSelection(),
     rectangularSelection(),
     crosshairCursor(),
+    ...createCodeMirrorBaselineExtensions(),
     ...(languageExtension ? [languageExtension] : []),
-    syntaxHighlighting(textForgeHighlightStyle),
     EditorState.allowMultipleSelections.of(true),
     EditorState.readOnly.of(model.readOnly),
     EditorView.editable.of(!model.readOnly),
     ...(model.readOnly ? [EditorView.contentAttributes.of({ tabindex: '0', 'aria-readonly': 'true' })] : []),
     EditorView.lineWrapping,
-    keymap.of([...searchKeymap, indentWithTab]),
+    Prec.highest(keymap.of(createCodeMirrorEditorKeymap())),
+    keymap.of(searchKeymap),
     EditorView.domEventHandlers({
       blur() {
         return false;
@@ -74,6 +59,7 @@ function createCodeMirrorExtensions({ model, handleUpdate }) {
     }),
     EditorView.updateListener.of(handleUpdate),
     ...(cspNonce ? [EditorView.cspNonce.of(cspNonce)] : []),
+    createCodeMirrorBaselineTheme(),
     EditorView.theme({
       '&': {
         minHeight: '100%',
@@ -185,7 +171,13 @@ function createCodeMirrorExtensions({ model, handleUpdate }) {
   ];
 }
 
-export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], onChange, onUpdate } = {}) {
+export function createCodeMirrorTextEditorSurface({
+  document,
+  diagnostics = [],
+  onChange,
+  onMountCommandTarget,
+  onUpdate,
+} = {}) {
   const baseDocument = document ?? createTextEditorDocument(
     { resourceId: 'text-editor-document', kind: 'resource', representation: 'text' },
     '',
@@ -278,6 +270,9 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
         state,
         parent: editorHost,
       });
+      const disposeCommandTarget = typeof onMountCommandTarget === 'function'
+        ? onMountCommandTarget(createCodeMirrorEditorCommandTarget(view))
+        : undefined;
       const restoreScrollTop = currentDocument.viewState?.scrollTop;
       const restoreScrollLeft = currentDocument.viewState?.scrollLeft;
       if (typeof restoreScrollTop === 'number') {
@@ -305,6 +300,7 @@ export function createCodeMirrorTextEditorSurface({ document, diagnostics = [], 
       editorHost.dataset.editorEngine = 'codemirror-6';
       editorHost.textforgeCodeMirrorView = view;
       return () => {
+        disposeCommandTarget?.();
         view.scrollDOM.removeEventListener('scroll', handleScroll);
         view.dom.removeEventListener('focusin', handleFocus);
         view.dom.removeEventListener('focusout', handleBlur);

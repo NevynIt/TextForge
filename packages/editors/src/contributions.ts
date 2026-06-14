@@ -22,6 +22,8 @@ export declare function createEditorCommandContributions(
   languageModes?: ReadonlyArray<TextEditorLanguageModeConfig>,
 ): ReadonlyArray<CommandContribution>;
 
+export declare function createCodeMirrorEditorCommandContributions(): ReadonlyArray<CommandContribution>;
+
 export declare function createEditorContributionManifest(
   languageModes?: ReadonlyArray<TextEditorLanguageModeConfig>,
 ): ContributionManifest;

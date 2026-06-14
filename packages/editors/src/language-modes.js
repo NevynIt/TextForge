@@ -3,6 +3,7 @@ import { markdown as markdownLanguage } from '@codemirror/lang-markdown';
 import { xml as xmlLanguage } from '@codemirror/lang-xml';
 import { yaml as yamlLanguage } from '@codemirror/lang-yaml';
 import { StreamLanguage } from '@codemirror/language';
+import { EditorState } from '@codemirror/state';
 import { lua as luaMode } from '@codemirror/legacy-modes/mode/lua';
 import {
   getLanguageDefinition,
@@ -25,9 +26,32 @@ const parserBackedLanguageFactories = {
 
 const parserBackedLanguageIds = new Set(Object.keys(parserBackedLanguageFactories));
 
+const languageCommentTokens = {
+  markdown: { block: { open: '<!--', close: '-->' } },
+  itm: { line: '//' },
+  lua: { line: '--' },
+  xml: { block: { open: '<!--', close: '-->' } },
+  'bpmn-xml': { block: { open: '<!--', close: '-->' } },
+  'archimate-exchange-xml': { block: { open: '<!--', close: '-->' } },
+  svg: { block: { open: '<!--', close: '-->' } },
+  yaml: { line: '#' },
+};
+
+function createLanguageDataExtension(languageId) {
+  const commentTokens = languageCommentTokens[languageId];
+  return commentTokens
+    ? EditorState.languageData.of(() => [{ commentTokens }])
+    : undefined;
+}
+
 export function createCodeMirrorLanguageExtension(languageId) {
   const factory = languageId ? parserBackedLanguageFactories[languageId] : undefined;
-  return typeof factory === 'function' ? factory() : undefined;
+  const languageExtension = typeof factory === 'function' ? factory() : undefined;
+  const languageDataExtension = createLanguageDataExtension(languageId);
+  if (languageExtension && languageDataExtension) {
+    return [languageExtension, languageDataExtension];
+  }
+  return languageExtension ?? languageDataExtension;
 }
 
 export function createTextEditorLanguageModeConfig(languageId, resource) {

@@ -3,6 +3,7 @@ import { editorCapabilities } from './capabilities.js';
 import { listTextEditorLanguageModes } from './language-modes.js';
 import { createTextEditorDocument } from './document.js';
 import { createCodeMirrorTextEditorSurface } from './codemirror-surface.js';
+import { codeMirrorEditorCommandIds, codeMirrorEditorCommandMetadata } from './codemirror-commands.js';
 import { codeMirrorTextEditorSurfaceContribution } from './surface-contribution.js';
 
 codeMirrorTextEditorSurfaceContribution.open = function openTextEditorSurface(execution = {}) {
@@ -25,6 +26,9 @@ codeMirrorTextEditorSurfaceContribution.open = function openTextEditorSurface(ex
   const surface = createCodeMirrorTextEditorSurface({
     document,
     diagnostics: execution.diagnostics ?? [],
+    onMountCommandTarget: execution.session?.id && typeof execution.registerEditorCommandTarget === 'function'
+      ? (target) => execution.registerEditorCommandTarget(execution.session.id, target)
+      : undefined,
     onUpdate(nextDocument) {
       execution.setTextDocument?.(nextDocument);
     },
@@ -53,24 +57,47 @@ codeMirrorTextEditorSurfaceContribution.open = function openTextEditorSurface(ex
 
 export { codeMirrorTextEditorSurfaceContribution };
 
-export function createEditorCommandContributions(languageModes = listTextEditorLanguageModes()) {
-  return languageModes.map((mode) =>
-    createCommand(`editor.set-language:${mode.languageId}`, `Set language: ${mode.label}`, {
+export function createCodeMirrorEditorCommandContributions() {
+  return codeMirrorEditorCommandIds.map((commandId) => {
+    const metadata = codeMirrorEditorCommandMetadata[commandId];
+    return createCommand(commandId, metadata.label, {
       category: 'editor',
-      capabilities: ['@textforge/editors/capability/language-mode'],
-      description: mode.parserBacked
-        ? `Set the selected text resource to ${mode.label} using the parser-backed source editor mode.`
-        : `Set the selected text resource to ${mode.label}; this format remains metadata-only in Phase 3.3.`,
-      keywords: ['editor', 'language', 'mode', mode.languageId, mode.label],
-      menu: { id: 'editor', label: 'Editor', groupOrder: 30, order: 10 },
+      capabilities: ['@textforge/editors/capability/source'],
+      description: metadata.description,
+      hotkey: metadata.hotkey,
+      keywords: metadata.keywords,
+      menu: { id: 'editor', label: 'Editor', groupOrder: 30, order: metadata.order },
       when: {
         workspaceReady: true,
-        selectionRequired: true,
-        selectionKinds: ['resource'],
-        selectionRepresentations: ['text'],
+        activeSurfaceRequired: true,
+        activeSurfaceResourceRepresentations: ['text'],
+        activeSurfaceContributionIds: [codeMirrorTextEditorSurfaceContribution.id],
       },
-    }),
-  );
+    });
+  });
+}
+
+export function createEditorCommandContributions(languageModes = listTextEditorLanguageModes()) {
+  return [
+    ...createCodeMirrorEditorCommandContributions(),
+    ...languageModes.map((mode) =>
+      createCommand(`editor.set-language:${mode.languageId}`, `Set language: ${mode.label}`, {
+        category: 'editor',
+        capabilities: ['@textforge/editors/capability/language-mode'],
+        description: mode.parserBacked
+          ? `Set the selected text resource to ${mode.label} using the parser-backed source editor mode.`
+          : `Set the selected text resource to ${mode.label}; this format remains metadata-only in Phase 3.3.`,
+        keywords: ['editor', 'language', 'mode', mode.languageId, mode.label],
+        menu: { id: 'editor', label: 'Editor', groupOrder: 30, order: 10 },
+        when: {
+          workspaceReady: true,
+          selectionRequired: true,
+          selectionKinds: ['resource'],
+          selectionRepresentations: ['text'],
+        },
+      }),
+    ),
+  ];
 }
 
 export function createEditorContributionManifest(languageModes = listTextEditorLanguageModes()) {

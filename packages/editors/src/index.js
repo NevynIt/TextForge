@@ -19,8 +19,25 @@ export {
 export { createTextEditorSurfaceModel } from './surface-model.js';
 export { createCodeMirrorTextEditorSurface } from './codemirror-surface.js';
 export {
+  INDENT_UNIT,
+  dedentSmartIndentation,
+  insertIndentedNewline,
+  insertSmartIndentation,
+  resolveGoToLinePosition,
+  spacesToNextIndentStop,
+} from './codemirror-indentation.js';
+export {
+  codeMirrorEditorCommandIds,
+  codeMirrorEditorCommandMap,
+  codeMirrorEditorCommandMetadata,
+  createCodeMirrorEditorCommandTarget,
+  deleteSelectedLines,
+  runCodeMirrorEditorCommand,
+} from './codemirror-commands.js';
+export {
   codeMirrorTextEditorSurfaceContribution,
   contributions,
+  createCodeMirrorEditorCommandContributions,
   createEditorCommandContributions,
   createEditorContributionManifest,
 } from './contributions.js';
