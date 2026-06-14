@@ -41,6 +41,7 @@ import {
   listOpenSurfaceSessions,
 } from '@textforge/surfaces';
 import {
+  codeMirrorEditorCommandIds,
   createTextEditorDocument,
   listTextEditorLanguageModes,
   sourceRangeToSelection,
@@ -218,6 +219,7 @@ export function createTextForgeWorkbenchController() {
     idFactory: createSequentialSessionIdFactory('popup'),
   });
   const activeTextDocuments = new Map();
+  const editorCommandTargetsBySessionId = new Map();
   const pendingTextResourceById = new Map();
   const assetLeaseByResourceId = new Map();
   const documentContributionContextByResourceId = new Map();
@@ -732,6 +734,15 @@ export function createTextForgeWorkbenchController() {
 
   function findSessionById(sessionId) {
     return getOpenSessions().find((session) => session.id === sessionId && session.state !== 'closed');
+  }
+
+  function registerEditorCommandTarget(sessionId, target) {
+    editorCommandTargetsBySessionId.set(sessionId, target);
+    return () => {
+      if (editorCommandTargetsBySessionId.get(sessionId) === target) {
+        editorCommandTargetsBySessionId.delete(sessionId);
+      }
+    };
   }
 
   function findSessionForResource(resourceId, options = {}) {
@@ -2922,6 +2933,7 @@ export function createTextForgeWorkbenchController() {
       markSessionCurrent() {
         getHostForPlacement(session.placement).markCurrent(session.id);
       },
+      registerEditorCommandTarget,
       getConsoleState() {
         return luaConsoleStateByResourceId.get(resource.id);
       },
@@ -3312,6 +3324,15 @@ export function createTextForgeWorkbenchController() {
   function resolveTargetSessionForCommands(commandContext) {
     const sessionId = commandContext?.target?.activeSurface?.sessionId;
     return sessionId ? findSessionById(sessionId) : getActiveCommandSession();
+  }
+
+  function executeEditorSurfaceCommand(commandId, commandContext) {
+    const session = resolveTargetSessionForCommands(commandContext);
+    const target = session ? editorCommandTargetsBySessionId.get(session.id) : undefined;
+    if (!target || typeof target.execute !== 'function') {
+      return false;
+    }
+    return target.execute(commandId);
   }
 
   function openContextMenu(model) {
@@ -4135,6 +4156,11 @@ export function createTextForgeWorkbenchController() {
     for (const languageMode of languageModes) {
       commandDispatcher.register(`editor.set-language:${languageMode.languageId}`, ({ command, context }) =>
         setEditorLanguageCommand(command.id, context));
+    }
+
+    for (const commandId of codeMirrorEditorCommandIds) {
+      commandDispatcher.register(commandId, ({ command, context }) =>
+        executeEditorSurfaceCommand(command.id, context));
     }
   }
 
