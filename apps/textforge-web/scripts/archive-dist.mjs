@@ -1,7 +1,9 @@
-import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+import { cp, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+
+import { resolveReleaseVersion } from './release-version.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const appDir = path.resolve(scriptDir, '..');
@@ -10,19 +12,7 @@ const distDir = path.join(appDir, 'dist');
 const releasesDir = path.join(appDir, 'releases');
 const versionConfigPath = path.join(appDir, 'release-version.json');
 const releaseStatePath = path.join(repoDir, 'tmp', 'textforge-web-release-state.json');
-const releaseMajor = 2;
-
-async function readJson(filePath, fallback) {
-  try {
-    const raw = await readFile(filePath, 'utf8');
-    return JSON.parse(raw);
-  } catch (error) {
-    if (error && error.code === 'ENOENT') {
-      return fallback;
-    }
-    throw error;
-  }
-}
+const archiveRootDir = path.join(repoDir, 'tmp', `textforge-web-release-root-${process.pid}`);
 
 function run(command, args, options = {}) {
   return new Promise((resolve, reject) => {
@@ -43,25 +33,11 @@ function run(command, args, options = {}) {
   });
 }
 
-function assertMinor(value) {
-  if (!Number.isInteger(value) || value < 0) {
-    throw new Error(`release-version.json must contain a non-negative integer minor value, got ${value}`);
-  }
-  return value;
-}
-
-function getPatchForBuild(state, minor) {
-  if (!state || state.minor !== minor || !Number.isInteger(state.nextPatch) || state.nextPatch < 1) {
-    return 1;
-  }
-  return state.nextPatch;
-}
-
 function toPowerShellLiteral(value) {
   return `'${String(value).replace(/'/g, "''")}'`;
 }
 
-async function zipDist(zipPath) {
+async function zipDirectoryContents(sourceDir, zipPath) {
   if (process.platform === 'win32') {
     const powershell = path.join(
       process.env.SystemRoot ?? 'C:\\Windows',
@@ -70,7 +46,7 @@ async function zipDist(zipPath) {
       'v1.0',
       'powershell.exe'
     );
-    const command = `Compress-Archive -LiteralPath ${toPowerShellLiteral(distDir)} -DestinationPath ${toPowerShellLiteral(zipPath)} -CompressionLevel Optimal`;
+    const command = `Get-ChildItem -LiteralPath ${toPowerShellLiteral(sourceDir)} -Force | Compress-Archive -DestinationPath ${toPowerShellLiteral(zipPath)} -CompressionLevel Optimal`;
 
     await run(
       powershell,
@@ -84,31 +60,44 @@ async function zipDist(zipPath) {
     return;
   }
 
-  await run('zip', ['-rq', zipPath, path.basename(distDir)], { cwd: appDir });
+  await run('zip', ['-rq', zipPath, '.'], { cwd: sourceDir });
 }
 
 await stat(distDir);
 await mkdir(releasesDir, { recursive: true });
 
-const versionConfig = await readJson(versionConfigPath, null);
-if (!versionConfig) {
-  throw new Error(`Missing release version config at ${versionConfigPath}`);
-}
-
-const minor = assertMinor(versionConfig.minor);
-const state = await readJson(releaseStatePath, null);
-const patch = getPatchForBuild(state, minor);
-const version = `${releaseMajor}.${minor}.${patch}`;
+const { currentCommit, minor, patch, version, markerFileName, state } = resolveReleaseVersion({
+  repoDir,
+  versionConfigPath,
+  releaseStatePath,
+});
 const archiveName = `TextForge ${version}.zip`;
 const archivePath = path.join(releasesDir, archiveName);
 
 await rm(archivePath, { force: true });
-await zipDist(archivePath);
+await rm(archiveRootDir, { recursive: true, force: true });
+await mkdir(archiveRootDir, { recursive: true });
+await cp(distDir, archiveRootDir, { recursive: true });
+await writeFile(path.join(archiveRootDir, markerFileName), '', 'utf8');
+try {
+  await zipDirectoryContents(archiveRootDir, archivePath);
+} finally {
+  await rm(archiveRootDir, { recursive: true, force: true });
+}
 
 await mkdir(path.dirname(releaseStatePath), { recursive: true });
+const sameBuiltCommit = currentCommit && state?.minor === minor && state?.lastBuiltCommit === currentCommit;
+const nextPatch = sameBuiltCommit
+  ? Math.max(state.nextPatch ?? patch + 1, patch + 1)
+  : patch + 1;
 await writeFile(
   releaseStatePath,
-  `${JSON.stringify({ minor, nextPatch: patch + 1 }, null, 2)}\n`,
+  `${JSON.stringify({
+    minor,
+    nextPatch,
+    lastBuiltCommit: currentCommit,
+    lastBuiltPatch: patch,
+  }, null, 2)}\n`,
   'utf8'
 );
 

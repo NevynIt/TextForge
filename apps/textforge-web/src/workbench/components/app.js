@@ -22,6 +22,9 @@ import { surfaceViewportScrollByViewId } from '../surface-scroll.js';
 
 const element = React.createElement;
 const surfaceScrollHostSelector = '.tf-surface-frame__viewport, .tf-popup-host__body';
+const textForgeAppVersion = typeof __TEXTFORGE_VERSION__ === 'string'
+  ? __TEXTFORGE_VERSION__
+  : '0.0.0';
 
 function useWorkbenchSnapshot(controller) {
   return React.useSyncExternalStore(controller.subscribe, controller.snapshot, controller.snapshot);
@@ -1319,6 +1322,7 @@ export function TextForgeWorkbenchApp({ controller }) {
           menuGroups: snapshot.commandMenus,
           onCommandPress: handleCommandPress,
           onOpenCommandPalette: () => setCommandPaletteOpen(true),
+          subtitle: `Version ${textForgeAppVersion}`,
           toolbarSlots: snapshot.chromeModel.toolbarSlots,
         }),
         sidebar: element(TextForgeWorkspaceSidebar, {

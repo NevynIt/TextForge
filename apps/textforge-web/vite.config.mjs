@@ -3,8 +3,11 @@ import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 
+import { resolveReleaseVersion } from './scripts/release-version.mjs';
+
 const require = createRequire(import.meta.url);
 const rootDir = fileURLToPath(new URL('.', import.meta.url));
+const repoDir = resolve(rootDir, '..', '..');
 const loaderEntry = resolve(rootDir, 'src/scriptLoader.js');
 const browserFsShim = resolve(rootDir, 'src/node-compat/fs.js');
 const browserFsPromisesShim = resolve(rootDir, 'src/node-compat/fs-promises.js');
@@ -13,6 +16,14 @@ const browserFengariLualibShim = resolve(rootDir, 'src/fengari-browser/lualib.cj
 const browserOsShim = resolve(rootDir, 'src/node-compat/os.js');
 const fengariLuaconfEntry = require.resolve('fengari/src/luaconf.js');
 const fengariLualibEntry = require.resolve('fengari/src/lualib.js');
+const releaseVersion = resolveReleaseVersion({
+  repoDir,
+  versionConfigPath: resolve(rootDir, 'release-version.json'),
+  releaseStatePath: resolve(repoDir, 'tmp/textforge-web-release-state.json'),
+});
+const textForgeDefine = {
+  __TEXTFORGE_VERSION__: JSON.stringify(releaseVersion.version),
+};
 
 function resolveFengariBrowserHostImport(source, importer) {
   if (source === 'fengari/src/luaconf.js' || source === fengariLuaconfEntry) {
@@ -60,10 +71,11 @@ export default defineConfig(({ command }) => ({
   ],
   define: command === 'build'
     ? {
+        ...textForgeDefine,
         'process.env.NODE_ENV': JSON.stringify('production'),
         'process.env.LOG': 'undefined',
       }
-    : undefined,
+    : textForgeDefine,
   resolve: {
     alias: [
       { find: 'fs/promises', replacement: browserFsPromisesShim },
