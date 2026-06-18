@@ -255,6 +255,7 @@ export function createTextForgeWorkbenchController() {
   const listeners = new Set();
   let cachedSnapshot;
   let cachedWorkspaceTree;
+  let pendingSnapshotEmit = false;
   let bootstrapApplied = false;
   let suspendWorkbenchUiStatePersistence = false;
   let lastPersistedWorkbenchUiStateText;
@@ -377,9 +378,25 @@ export function createTextForgeWorkbenchController() {
     ) {
       workbenchUiStatePersistence.schedule(true);
     }
-    for (const listener of listeners) {
-      listener();
+
+    if (pendingSnapshotEmit) {
+      return;
     }
+
+    pendingSnapshotEmit = true;
+    const notifyListeners = () => {
+      pendingSnapshotEmit = false;
+      for (const listener of listeners) {
+        listener();
+      }
+    };
+
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(notifyListeners);
+      return;
+    }
+
+    globalThis.setTimeout(notifyListeners, 0);
   }
 
   const markdownPreviewRequests = createMarkdownPreviewRequestManager({
@@ -4748,6 +4765,7 @@ export function createTextForgeWorkbenchController() {
     selectedWorkspaceResourcePersistence.clear();
     workbenchUiStatePersistence.clear();
     markdownPreviewRequests.clear();
+    pendingSnapshotEmit = false;
     listeners.clear();
     disposePersistedWorkspace();
   }
