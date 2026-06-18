@@ -25,10 +25,12 @@ function createDefaultWorkspaceSeedState(options = {}) {
 
 export function createPersistentWorkspaceService(baseWorkspace, storage, options = {}) {
   const now = options.now ?? (() => new Date().toISOString());
+  const autoSaveDelayMs = options.autoSaveDelayMs ?? 750;
   const listeners = new Set();
   let pendingState;
   let pendingReason;
   let flushQueued = false;
+  let autoSaveTimer;
   let writeChain = Promise.resolve(baseWorkspace.snapshot());
   let persistenceStatus = {
     state: 'idle',
@@ -55,6 +57,7 @@ export function createPersistentWorkspaceService(baseWorkspace, storage, options
   }
 
   async function flushPendingPersistence() {
+    clearAutoSaveTimer();
     while (pendingState) {
       const stateToPersist = pendingState;
       const reasonToPersist = pendingReason;
@@ -88,7 +91,17 @@ export function createPersistentWorkspaceService(baseWorkspace, storage, options
     return baseWorkspace.snapshot();
   }
 
+  function clearAutoSaveTimer() {
+    if (autoSaveTimer === undefined) {
+      return;
+    }
+
+    globalThis.clearTimeout(autoSaveTimer);
+    autoSaveTimer = undefined;
+  }
+
   function queuePersistence(reason = 'mutation') {
+    clearAutoSaveTimer();
     pendingState = baseWorkspace.snapshot();
     pendingReason = reason;
     persistenceStatus = {
@@ -108,7 +121,29 @@ export function createPersistentWorkspaceService(baseWorkspace, storage, options
   }
 
   function persistLater(reason) {
-    void queuePersistence(reason).catch(() => undefined);
+    const shouldEmit = persistenceStatus.state !== 'persisting'
+      || persistenceStatus.pendingReason !== reason
+      || persistenceStatus.error;
+    persistenceStatus = {
+      ...persistenceStatus,
+      state: 'persisting',
+      pendingReason: reason,
+      error: undefined,
+    };
+    if (shouldEmit) {
+      emitPersistence();
+    }
+
+    if (autoSaveTimer !== undefined) {
+      pendingReason = reason;
+      return;
+    }
+
+    pendingReason = reason;
+    autoSaveTimer = globalThis.setTimeout(() => {
+      autoSaveTimer = undefined;
+      void queuePersistence(pendingReason ?? reason).catch(() => undefined);
+    }, autoSaveDelayMs);
   }
 
   function wrapMutation(methodName, reason) {
@@ -149,6 +184,12 @@ export function createPersistentWorkspaceService(baseWorkspace, storage, options
       };
     },
     whenIdle() {
+      if (autoSaveTimer !== undefined) {
+        return queuePersistence(pendingReason ?? 'auto-save').then(() => baseWorkspace.snapshot(), () => {
+          throw persistenceStatus.error;
+        });
+      }
+
       return writeChain.then(() => baseWorkspace.snapshot(), () => {
         throw persistenceStatus.error;
       });
@@ -167,6 +208,7 @@ export function createPersistentWorkspaceService(baseWorkspace, storage, options
       return queuePersistence('reset-storage');
     },
     disposePersistence() {
+      clearAutoSaveTimer();
       listeners.clear();
       storage.close?.();
     },

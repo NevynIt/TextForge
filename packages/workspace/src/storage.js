@@ -54,6 +54,64 @@ function getWorkspaceDexieTables(database) {
   };
 }
 
+function compareJsonValue(left, right) {
+  return JSON.stringify(left ?? {}) === JSON.stringify(right ?? {});
+}
+
+function compareBytes(left, right) {
+  if (left === right) {
+    return true;
+  }
+
+  if (!(left instanceof Uint8Array) || !(right instanceof Uint8Array) || left.byteLength !== right.byteLength) {
+    return false;
+  }
+
+  for (let index = 0; index < left.byteLength; index += 1) {
+    if (left[index] !== right[index]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+function compareManifestRecord(left, right) {
+  return left?.workspaceId === right?.workspaceId
+    && left?.name === right?.name
+    && left?.rootPath === right?.rootPath
+    && left?.createdAt === right?.createdAt
+    && left?.updatedAt === right?.updatedAt
+    && left?.selectedResourceId === right?.selectedResourceId;
+}
+
+function compareFolderRecord(left, right) {
+  return left?.id === right?.id
+    && left?.kind === right?.kind
+    && left?.path === right?.path
+    && left?.parentId === right?.parentId
+    && compareJsonValue(left?.metadata, right?.metadata);
+}
+
+function compareResourceRecord(left, right) {
+  if (
+    left?.id !== right?.id
+    || left?.kind !== right?.kind
+    || left?.representation !== right?.representation
+    || left?.path !== right?.path
+    || left?.parentId !== right?.parentId
+    || left?.mimeType !== right?.mimeType
+    || !compareJsonValue(left?.metadata, right?.metadata)
+  ) {
+    return false;
+  }
+
+  if (left?.representation === 'text') {
+    return left?.text === right?.text && left?.languageId === right?.languageId;
+  }
+
+  return compareBytes(left?.bytes, right?.bytes);
+}
+
 function createWorkspaceDexieDatabase(databaseName = defaultWorkspaceDexieDatabaseName) {
   const database = new Dexie(databaseName);
   database.version(1).stores(legacyWorkspaceDexieSchema);
@@ -161,6 +219,7 @@ export async function openWorkspaceDexieStorage(options = {}) {
   async function saveState(input) {
     const state = cloneWorkspaceState(snapshotWorkspaceState(input));
     const savedAt = state.manifest.updatedAt;
+    const folders = state.folders.map((folder) => cloneWorkspaceFolder(folder));
     const resources = state.resources.map((resource) => cloneWorkspaceResource(resource));
 
     try {
@@ -171,22 +230,50 @@ export async function openWorkspaceDexieStorage(options = {}) {
         tables.folders,
         tables.resources,
         async () => {
-          await Promise.all([
-            tables.system.clear(),
-            tables.manifests.clear(),
-            tables.folders.clear(),
-            tables.resources.clear(),
+          const [manifestRecords, folderRecords, resourceRecords] = await Promise.all([
+            tables.manifests.toArray(),
+            tables.folders.toArray(),
+            tables.resources.toArray(),
           ]);
+          const existingManifestById = new Map(manifestRecords.map((record) => [record.workspaceId, record]));
+          const existingFolderById = new Map(folderRecords.map((record) => [record.id, record]));
+          const existingResourceById = new Map(resourceRecords.map((record) => [record.id, record]));
+          const nextFolderIds = new Set(folders.map((folder) => folder.id));
+          const nextResourceIds = new Set(resources.map((resource) => resource.id));
+          const deletedManifestIds = manifestRecords
+            .map((record) => record.workspaceId)
+            .filter((workspaceId) => workspaceId !== state.manifest.workspaceId);
+          const deletedFolderIds = folderRecords
+            .map((record) => record.id)
+            .filter((id) => !nextFolderIds.has(id));
+          const deletedResourceIds = resourceRecords
+            .map((record) => record.id)
+            .filter((id) => !nextResourceIds.has(id));
+          const changedFolders = folders.filter((folder) => !compareFolderRecord(existingFolderById.get(folder.id), folder));
+          const changedResources = resources.filter((resource) => !compareResourceRecord(existingResourceById.get(resource.id), resource));
+          const manifest = cloneWorkspaceManifestRecord(state.manifest);
+
           await tables.system.bulkPut([
             { key: workspaceSchemaRecordKey, value: workspaceDexieSchemaVersion },
             { key: workspaceSavedAtRecordKey, value: savedAt },
           ]);
-          await tables.manifests.put(cloneWorkspaceManifestRecord(state.manifest));
-          if (state.folders.length > 0) {
-            await tables.folders.bulkPut(state.folders.map((folder) => cloneWorkspaceFolder(folder)));
+          if (deletedManifestIds.length > 0) {
+            await tables.manifests.bulkDelete(deletedManifestIds);
           }
-          if (resources.length > 0) {
-            await tables.resources.bulkPut(resources);
+          if (!compareManifestRecord(existingManifestById.get(manifest.workspaceId), manifest)) {
+            await tables.manifests.put(manifest);
+          }
+          if (deletedFolderIds.length > 0) {
+            await tables.folders.bulkDelete(deletedFolderIds);
+          }
+          if (changedFolders.length > 0) {
+            await tables.folders.bulkPut(changedFolders);
+          }
+          if (deletedResourceIds.length > 0) {
+            await tables.resources.bulkDelete(deletedResourceIds);
+          }
+          if (changedResources.length > 0) {
+            await tables.resources.bulkPut(changedResources);
           }
         },
       );

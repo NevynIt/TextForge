@@ -9,6 +9,7 @@ import {
   createWorkspaceOverlayService,
   createWorkspaceArchiveManifest,
   createPersistedWorkspaceService,
+  createPersistentWorkspaceService,
   createSequentialIdFactory,
   createDefaultWorkspaceRepositoryRoots,
   createWorkspaceManifest,
@@ -686,6 +687,59 @@ test('workspace import conflict policies are explicit when merging imported arch
     existingState: existingWorkspace.snapshot(),
     conflictPolicy: 'replace',
   }).state.resources.some((resource) => resource.path === '/guides/new.md'), true);
+});
+
+test('persistent workspace service coalesces automatic saves before snapshotting', async () => {
+  const baseWorkspace = createWorkspaceService({
+    workspaceId: 'workspace-persist-coalesce',
+    idFactory: createSequentialIdFactory('coalesce'),
+    now: fixedNow,
+  });
+  const savedStates = [];
+  const storage = {
+    kind: 'indexeddb',
+    driver: 'dexie',
+    browserManaged: true,
+    databaseName: 'workspace-persist-coalesce',
+    schemaVersion: workspaceDexieSchemaVersion,
+    async saveState(input) {
+      const state = input.snapshot ? input.snapshot() : input;
+      savedStates.push(state);
+      return state;
+    },
+    async clear() {},
+    close() {},
+  };
+  const workspace = createPersistentWorkspaceService(baseWorkspace, storage, {
+    autoSaveDelayMs: 100000,
+    now: fixedNow,
+  });
+  let persistenceNotifications = 0;
+  workspace.subscribePersistence(() => {
+    persistenceNotifications += 1;
+  });
+
+  workspace.createFolder({ path: '/docs' });
+  workspace.createTextResource({
+    path: '/docs/one.md',
+    text: '# One\n',
+    languageId: 'markdown',
+    mimeType: 'text/markdown',
+  });
+  workspace.createTextResource({
+    path: '/docs/two.md',
+    text: '# Two\n',
+    languageId: 'markdown',
+    mimeType: 'text/markdown',
+  });
+
+  assert.equal(savedStates.length, 0);
+  await workspace.whenIdle();
+
+  assert.equal(savedStates.length, 1);
+  assert.equal(savedStates[0].resources.length, 2);
+  assert.equal(persistenceNotifications <= 4, true);
+  workspace.disposePersistence();
 });
 
 test('persisted workspace service hydrates through Dexie and preserves IDs, selection, and resource content', async () => {

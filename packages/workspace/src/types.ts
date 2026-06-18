@@ -366,6 +366,7 @@ export interface CreatePersistedWorkspaceServiceOptions extends WorkspaceService
   readonly storage?: WorkspaceDexieStorage;
   readonly storageOptions?: WorkspaceStorageOptions;
   readonly seed?: WorkspaceState | WorkspaceService | (() => WorkspaceState | WorkspaceService);
+  readonly autoSaveDelayMs?: number;
 }
 
 export interface HydratedWorkspaceServiceResult {
