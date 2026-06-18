@@ -10,6 +10,7 @@ import {
   createMarkdownSnippet,
   parseMarkdownCapabilityRequirements,
   renderMarkdownDocument,
+  scanMdppDirectives,
 } from '../src/index.js';
 import {
   contributions as itmContributions,
@@ -697,6 +698,148 @@ test('renderMarkdownDocument forwards itm package-rule diagnostics through the f
     result.diagnostics.some((diagnostic) => diagnostic.code === 'itm.validation.provider-unavailable'),
     true,
   );
+});
+
+test('renderMarkdownDocument parses md++ directives, metadata, requirements, and semantic HTML', async () => {
+  const source = `[md:profile]: md++
+[md:profile-version]: 0.14
+[md:title]: <mdpp smoke>
+[md:status]: draft
+[md:require]: diagram.mermaid
+
+# Title {#title .hero data-kind=main}
+
+| A | B |
+|---|---|
+| 1 | 2 |
+`;
+  const scanned = scanMdppDirectives(source);
+  const result = await renderMarkdownDocument(source);
+
+  assert.equal(scanned.metadata.title, 'mdpp smoke');
+  assert.equal(parseMarkdownCapabilityRequirements(source)[0]?.name, 'diagram.mermaid');
+  assert.equal(result.profile, 'mdpp');
+  assert.equal(result.metadata.title, 'mdpp smoke');
+  assert.match(result.html, /class="tfmd-preview mdpp-document"/);
+  assert.match(result.html, /class="mdpp-heading hero"/);
+  assert.match(result.html, /data-kind="main"/);
+  assert.match(result.html, /class="mdpp-table"/);
+  assert.doesNotMatch(result.html, /\[md:profile\]/);
+});
+
+test('renderMarkdownDocument resolves md++ includes, repository aliases, stylesheets, and themes', async () => {
+  const resources = new Map([
+    ['/docs/child.md', 'Included paragraph. {.lead}\n'],
+    ['/docs/shared/chapter.md', 'Repository chapter.\n'],
+    ['/docs/theme.md', '## colors\nprimary: #204080\n\n## class lead\nfont-weight: bold\n'],
+    ['/docs/doc.css', '.mdpp-document .custom { color: red; }\n'],
+  ]);
+  const result = await renderMarkdownDocument(`[md:profile]: md++
+[md:repository:shared]: ./shared
+[md:theme]: ./theme.md
+[md:stylesheet]: ./doc.css
+[md:include]: ./child.md
+[md:include]: shared:chapter.md
+
+# Root
+`, {
+    resource: {
+      resourceId: 'root',
+      path: '/docs/root.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+    resolveTextResource({ ref, basePath, repositoryAliases }) {
+      const normalizedRef = String(ref);
+      const repositoryMatch = normalizedRef.match(/^([A-Za-z][A-Za-z0-9_-]*):(.*)$/u);
+      const effectiveRef = repositoryMatch && repositoryAliases?.[repositoryMatch[1]]
+        ? `${repositoryAliases[repositoryMatch[1]]}/${repositoryMatch[2]}`
+        : normalizedRef;
+      const baseDirectory = String(basePath ?? '/docs/root.md').replace(/\/[^/]*$/u, '');
+      const path = effectiveRef.startsWith('./')
+        ? `${baseDirectory}/${effectiveRef.slice(2)}`.replace('/./', '/')
+        : effectiveRef.startsWith('/docs/')
+          ? effectiveRef
+          : `${baseDirectory}/${effectiveRef}`;
+      const normalizedPath = path.replace('/shared/./', '/shared/').replace('/./', '/');
+      const text = resources.get(normalizedPath);
+      return text ? { text, path: normalizedPath, mimeType: 'text/markdown' } : undefined;
+    },
+  });
+
+  assert.match(result.html, /Included paragraph/);
+  assert.match(result.html, /Repository chapter/);
+  assert.match(result.styleSheet, /--mdpp-colors-primary: #204080/);
+  assert.match(result.styleSheet, /\.mdpp-document \.lead/);
+  assert.match(result.styleSheet, /\.mdpp-document \.custom/);
+  assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'MDPP0200'), false);
+});
+
+test('renderMarkdownDocument detects md++ include failures, cycles, and duplicate anchors', async () => {
+  const resources = new Map([
+    ['/docs/a.md', '[md:include]: ./b.md\n'],
+    ['/docs/b.md', '[md:include]: ./a.md\n'],
+  ]);
+  const result = await renderMarkdownDocument(`[md:profile]: md++
+[md:include]: ./a.md
+[md:include]: ./missing.md
+
+# First {#dup}
+# Second {#dup}
+`, {
+    resource: {
+      resourceId: 'root',
+      path: '/docs/root.md',
+      kind: 'resource',
+      representation: 'text',
+      languageId: 'markdown',
+      mimeType: 'text/markdown',
+    },
+    resolveTextResource({ ref, basePath }) {
+      const baseDirectory = String(basePath ?? '/docs/root.md').replace(/\/[^/]*$/u, '');
+      const path = String(ref).startsWith('./') ? `${baseDirectory}/${String(ref).slice(2)}` : String(ref);
+      const text = resources.get(path);
+      return text ? { text, path, mimeType: 'text/markdown' } : undefined;
+    },
+  });
+
+  assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'MDPP0200'), true);
+  assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'MDPP0201'), true);
+  assert.equal(result.diagnostics.some((diagnostic) => diagnostic.code === 'MDPP0006'), true);
+});
+
+test('renderMarkdownDocument absorbs md++ DOT models and renders model references', async () => {
+  const renderedContents = [];
+  const result = await renderMarkdownDocument(`[md:profile]: md++
+
+\`\`\`dot model=system
+digraph G {
+  A -> B;
+}
+\`\`\`
+
+\`\`\`diagram.dot.render source=system
+caption: System graph
+\`\`\`
+`, {
+    fenceHandlers: {
+      async dot({ content, blockId }) {
+        renderedContents.push(content);
+        return {
+          html: `<svg data-block="${blockId}" data-dot-length="${content.length}"></svg>`,
+          generatedResources: [],
+        };
+      },
+    },
+  });
+
+  assert.equal(renderedContents.length, 1);
+  assert.match(renderedContents[0], /A -> B/);
+  assert.match(result.html, /data-dot-length=/);
+  assert.doesNotMatch(result.html, /model=system/);
+  assert.deepEqual(result.mdpp?.models.map((model) => model.name), ['system']);
 });
 
 test('renderMarkdownDocument surfaces provider-backed repository resolver diagnostics from itm fences', async () => {

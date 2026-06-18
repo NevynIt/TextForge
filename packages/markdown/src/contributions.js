@@ -21,7 +21,7 @@ export const markdownCapabilities = [
   createCapability('@textforge/markdown/capability/preview', {
     description: 'Render Markdown and TF-MD source through the package preview surface.',
     localName: 'tf-md',
-    aliases: ['markdown', 'preview'],
+    aliases: ['markdown', 'preview', 'mdpp', 'md++', 'core'],
     defaultActive: true,
     scope: 'document',
     documentPredicate: markdownDocumentPredicate,
@@ -29,13 +29,22 @@ export const markdownCapabilities = [
   createCapability('@textforge/markdown/capability/local-assets', {
     description: 'Resolve local workspace asset references inside Markdown content.',
     localName: 'local-assets',
+    aliases: ['include', 'resource', 'repository.file'],
     defaultActive: true,
     scope: 'document',
     documentPredicate: markdownDocumentPredicate,
   }),
   createCapability('@textforge/markdown/capability/math', {
     description: 'Render inline and block KaTeX markup in the Markdown preview.',
-    aliases: ['katex'],
+    aliases: ['katex', 'math.latex'],
+    defaultActive: true,
+    scope: 'document',
+    documentPredicate: markdownDocumentPredicate,
+  }),
+  createCapability('@textforge/markdown/capability/mdpp-presentation', {
+    description: 'Resolve basic md++ theme, stylesheet, and semantic HTML presentation data.',
+    localName: 'mdpp-presentation',
+    aliases: ['theme', 'stylesheet', 'layout.grid'],
     defaultActive: true,
     scope: 'document',
     documentPredicate: markdownDocumentPredicate,

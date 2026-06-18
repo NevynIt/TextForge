@@ -8,6 +8,7 @@ import {
   replaceInlineStyleSpans,
 } from './processor.js';
 import { emitMarkdownTrace } from './support.js';
+import { preprocessMdppDocument } from './mdpp.js';
 import { createTfmdStyleSheet, scanTfmdBlocks } from './tfmd.js';
 
 export async function renderMarkdownDocument(source, options = {}) {
@@ -15,18 +16,38 @@ export async function renderMarkdownDocument(source, options = {}) {
     sourceLength: source.length,
     resourcePath: options.resource?.path,
   });
-  const scanned = scanTfmdBlocks(source);
+  const mdpp = await preprocessMdppDocument(source, options);
+  emitMarkdownTrace(options, 'renderMarkdownDocument:mdpp-preprocessed', {
+    profile: mdpp.profile,
+    sourceLength: mdpp.source.length,
+    diagnostics: mdpp.diagnostics.length,
+    requirements: mdpp.requirements.length,
+  });
+  const scanned = scanTfmdBlocks(mdpp.source);
+  const metadata = {
+    ...scanned.metadata,
+    ...mdpp.metadata,
+  };
+  const requirements = [
+    ...scanned.requirements,
+    ...mdpp.requirements,
+  ];
+  const profile = mdpp.profile === 'mdpp'
+    ? 'mdpp'
+    : scanned.requirements.length > 0 || Object.keys(scanned.metadata).length > 0 || Object.keys(scanned.styles).length > 0
+      ? 'tfmd'
+      : 'markdown';
   emitMarkdownTrace(options, 'renderMarkdownDocument:scanned', {
     strippedLength: scanned.source.length,
     diagnostics: scanned.diagnostics.length,
-    requirements: scanned.requirements.length,
+    requirements: requirements.length,
     styles: Object.keys(scanned.styles).length,
   });
   const contributionContext = options.contributionContext
     ?? (options.contributionRegistry?.resolveDocumentContext
       ? options.contributionRegistry.resolveDocumentContext({
         document: options.resource,
-        explicitRequirements: scanned.requirements,
+        explicitRequirements: requirements,
       })
       : undefined);
   emitMarkdownTrace(options, 'renderMarkdownDocument:context', {
@@ -43,9 +64,11 @@ export async function renderMarkdownDocument(source, options = {}) {
       : undefined);
   const environment = createMarkdownItEnvironment({
     diagnostics: [
+      ...mdpp.diagnostics,
       ...scanned.diagnostics,
       ...(contributionContext?.diagnostics ?? []),
     ],
+    profile,
     sourceResource: options.resource,
     resolveAssetReference: options.resolveAssetReference,
   });
@@ -70,9 +93,15 @@ export async function renderMarkdownDocument(source, options = {}) {
     diagnostics: environment.diagnostics.length,
     referencedAssets: environment.referencedAssets.length,
   });
-  const styleSheet = createTfmdStyleSheet(scanned.styles);
+  const styleSheet = [
+    mdpp.styleSheet,
+    createTfmdStyleSheet(scanned.styles),
+  ].filter(Boolean).join('\n');
+  const articleClass = profile === 'mdpp'
+    ? 'tfmd-preview mdpp-document'
+    : 'tfmd-preview';
   const html = `
-<article class="tfmd-preview">
+<article class="${articleClass}">
   ${styleSheet ? `<style>${styleSheet}</style>` : ''}
   ${bodyHtml}
 </article>
@@ -82,18 +111,25 @@ export async function renderMarkdownDocument(source, options = {}) {
     bodyHtml,
     printHtml: '',
     resolvedSource,
-    metadata: scanned.metadata,
+    profile,
+    metadata,
     styles: scanned.styles,
     styleSheet,
     diagnostics: environment.diagnostics,
     referencedAssets: environment.referencedAssets,
     generatedResources: environment.generatedResources,
     capabilityContext: contributionContext,
+    mdpp: mdpp.mdpp
+      ? {
+        ...mdpp.mdpp,
+        models: environment.mdppModels ?? mdpp.mdpp.models,
+      }
+      : undefined,
   };
   return {
     ...result,
     printHtml: createPrintOptimizedHtmlDocument(result, {
-      title: String(scanned.metadata.title ?? options.resource?.path ?? 'TextForge Markdown'),
+      title: String(metadata.title ?? options.resource?.path ?? 'TextForge Markdown'),
     }),
   };
 }

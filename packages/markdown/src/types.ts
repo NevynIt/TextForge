@@ -17,6 +17,23 @@ export interface TfmdMetadata {
   readonly [key: string]: string | number | boolean | null | undefined;
 }
 
+export interface MdppResourceResult {
+  readonly text?: string;
+  readonly path?: string;
+  readonly mimeType?: string;
+  readonly diagnostics?: ReadonlyArray<Diagnostic>;
+}
+
+export interface MdppRenderMetadata {
+  readonly directives: ReadonlyArray<Readonly<Record<string, unknown>>>;
+  readonly repositories: Readonly<Record<string, Readonly<Record<string, unknown>>>>;
+  readonly includedResources: ReadonlyArray<Readonly<Record<string, unknown>>>;
+  readonly stylesheets: ReadonlyArray<Readonly<Record<string, unknown>>>;
+  readonly themes: ReadonlyArray<Readonly<Record<string, unknown>>>;
+  readonly layouts: ReadonlyArray<Readonly<Record<string, unknown>>>;
+  readonly models: ReadonlyArray<Readonly<Record<string, unknown>>>;
+}
+
 export interface MarkdownReferencedAsset {
   readonly resourceId?: string;
   readonly path?: string;
@@ -66,6 +83,13 @@ export interface MarkdownRenderOptions {
     readonly sourceResource?: ResourceRef;
     readonly href: string;
   }) => MarkdownReferencedAsset | undefined;
+  readonly resolveTextResource?: (input: {
+    readonly ref: string;
+    readonly basePath?: string;
+    readonly role: 'include' | 'theme' | 'stylesheet' | string;
+    readonly sourceResource?: ResourceRef;
+    readonly repositoryAliases?: Readonly<Record<string, string>>;
+  }) => MdppResourceResult | undefined | Promise<MdppResourceResult | undefined>;
   readonly fenceHandlers?: Readonly<Partial<Record<'mermaid' | 'dot' | 'graphviz', MarkdownFenceHandler>>>;
 }
 
@@ -74,7 +98,9 @@ export interface MarkdownRenderResult {
   readonly bodyHtml: string;
   readonly printHtml: string;
   readonly resolvedSource: string;
+  readonly profile: 'markdown' | 'tfmd' | 'mdpp';
   readonly metadata: TfmdMetadata;
+  readonly mdpp?: MdppRenderMetadata;
   readonly styles: TfmdStyleMap;
   readonly styleSheet: string;
   readonly diagnostics: ReadonlyArray<Diagnostic>;

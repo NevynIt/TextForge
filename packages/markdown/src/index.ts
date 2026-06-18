@@ -2,6 +2,8 @@ export type {
   MarkdownFenceExecution,
   MarkdownFenceHandler,
   MarkdownFenceResult,
+  MdppRenderMetadata,
+  MdppResourceResult,
   MarkdownPreviewLinkActivation,
   MarkdownPreviewModel,
   MarkdownPreviewSurface,
@@ -23,5 +25,6 @@ export {
   markdownPreviewSurfaceContribution,
   parseMarkdownCapabilityRequirements,
   renderMarkdownDocument,
+  scanMdppDirectives,
   tfmdFenceAliases,
 } from './api.js';

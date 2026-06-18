@@ -24,7 +24,7 @@ function parseFenceInfo(rawInfo) {
     };
   }
 
-  const [kindToken, ...parameterTokens] = trimmed.split(/\s+/);
+  const [kindToken, ...parameterTokens] = trimmed.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/gu) ?? [];
   const parameters = {};
   for (const token of parameterTokens) {
     const separatorIndex = token.indexOf('=');
@@ -48,6 +48,26 @@ function parseFenceInfo(rawInfo) {
     kind: kindToken.toLowerCase(),
     parameters,
   };
+}
+
+function ensureMdppModelState(sharedState) {
+  if (!sharedState.mdppModels) {
+    sharedState.mdppModels = {
+      byName: new Map(),
+      entries: [],
+    };
+  }
+  return sharedState.mdppModels;
+}
+
+function createMdppFenceDiagnostic(code, message, severity = 'warning', overrides = {}) {
+  return createMarkdownDiagnostic(code, message, severity, {
+    ...overrides,
+    origin: {
+      subsystem: 'mdpp',
+      ...overrides.origin,
+    },
+  });
 }
 
 function resolveMarkdownFenceHandlerRegistry(options = {}) {
@@ -127,9 +147,38 @@ export async function resolveKnownFencedBlocks(source, options, environment) {
       continue;
     }
 
-    const handlerContribution = fenceHandlerRegistry.handlers[kind];
+    if (fence.parameters?.model) {
+      const modelName = String(fence.parameters.model).trim();
+      const mdppModels = ensureMdppModelState(sharedState);
+      if (mdppModels.byName.has(modelName)) {
+        environment.diagnostics.push(createMdppFenceDiagnostic(
+          'MDPP0301',
+          `Duplicate md++ model name '${modelName}'.`,
+          'error',
+          {
+            origin: {
+              fenceName: kind,
+              model: modelName,
+            },
+          },
+        ));
+        continue;
+      }
+      const model = {
+        name: modelName,
+        kind,
+        content: blockContent,
+        blockId: `tfmd-block-${++blockCounter}`,
+      };
+      mdppModels.byName.set(modelName, model);
+      mdppModels.entries.push(model);
+      continue;
+    }
+
+    const handlerKey = kind === 'diagram.dot.render' ? 'dot' : kind;
+    const handlerContribution = fenceHandlerRegistry.handlers[handlerKey];
     if (!handlerContribution?.render) {
-      if (fenceHandlerRegistry.knownFenceNames?.has(kind)) {
+      if (fenceHandlerRegistry.knownFenceNames?.has(handlerKey)) {
         environment.diagnostics.push(createMarkdownDiagnostic(
           'tfmd.fence.handler-unavailable',
           `No active renderer is available for the ${kind} fenced block.`,
@@ -152,10 +201,34 @@ export async function resolveKnownFencedBlocks(source, options, environment) {
         kind,
         contentLength: blockContent.length,
       });
+      let renderContent = blockContent;
+      let renderKind = kind;
+      if (kind === 'diagram.dot.render') {
+        const sourceModel = String(fence.parameters?.source ?? '').trim();
+        const model = ensureMdppModelState(sharedState).byName.get(sourceModel);
+        if (!model) {
+          environment.diagnostics.push(createMdppFenceDiagnostic(
+            'MDPP0304',
+            `md++ model '${sourceModel || '(missing)'}' cannot be rendered because it is not registered.`,
+            'warning',
+            {
+              origin: {
+                fenceName: kind,
+                model: sourceModel,
+              },
+            },
+          ));
+          output += rawFence;
+          continue;
+        }
+        renderContent = model.content;
+        renderKind = model.kind;
+      }
+
       const result = await handlerContribution.render({
-        content: blockContent,
+        content: renderContent,
         blockId,
-        blockKind: kind,
+        blockKind: renderKind,
         fence,
         contributionContext: options.contributionContext,
         contributionRegistry: options.contributionRegistry,
@@ -203,6 +276,7 @@ export async function resolveKnownFencedBlocks(source, options, environment) {
   }
 
   output += source.slice(lastIndex);
+  environment.mdppModels = sharedState.mdppModels?.entries ?? [];
   emitMarkdownTrace(options, 'resolveKnownFencedBlocks:done', {
     outputLength: output.length,
     fenceCount: blockCounter,

@@ -68,6 +68,50 @@ test('workbench registry renders ITM Markdown mindmap and report test profiles',
   }
 });
 
+test('workbench registry renders md++ documents with workspace-backed includes and requirements', async () => {
+  const { contributionRegistry } = createWorkbenchRegistries();
+  const source = `[md:profile]: md++
+[md:require]: diagram.mermaid
+[md:theme]: ./theme.md
+[md:include]: ./chapter.md
+
+# Root
+`;
+  const resource = {
+    ...createMarkdownResource('root.md', source),
+    path: '/docs/mdpp/root.md',
+  };
+  const resourceRef = workspaceEntryToResourceRef(resource);
+  const resourceMap = new Map([
+    ['/docs/mdpp/chapter.md', 'Included md++ content. {.lead}\n'],
+    ['/docs/mdpp/theme.md', '## class lead\nfont-weight: bold\n'],
+  ]);
+  const contributionContext = contributionRegistry.resolveDocumentContext({
+    document: resourceRef,
+    explicitRequirements: parseMarkdownCapabilityRequirements(source),
+  });
+  const rendered = await renderMarkdownDocument(source, {
+    resource: resourceRef,
+    sourceUpdatedAt: resource.metadata.updatedAt,
+    contributionRegistry,
+    contributionContext,
+    resolveTextResource({ ref, basePath }) {
+      const baseDirectory = String(basePath ?? '/docs/mdpp/root.md').replace(/\/[^/]*$/u, '');
+      const path = String(ref).startsWith('./') ? `${baseDirectory}/${String(ref).slice(2)}` : String(ref);
+      const text = resourceMap.get(path);
+      return text ? { text, path, mimeType: 'text/markdown' } : undefined;
+    },
+  });
+
+  assert.equal(rendered.profile, 'mdpp');
+  assert.match(rendered.html, /Included md\+\+ content/);
+  assert.match(rendered.styleSheet, /\.mdpp-document \.lead/);
+  assert.equal(
+    contributionContext.activeCapabilityIds.some((capabilityId) => capabilityId === '@textforge/diagrams/capability/mermaid'),
+    true,
+  );
+});
+
 test('markdown print export guard blocks incomplete diagram HTML', () => {
   const resource = createMarkdownResource('diagram.md', `# Diagram
 

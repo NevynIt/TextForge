@@ -25,6 +25,9 @@ export declare const markdownFenceHandlerContributions: ReadonlyArray<MarkdownFe
 export declare function createMarkdownContributionManifest(): ContributionManifest;
 export declare const contributions: ContributionManifest;
 export declare function parseMarkdownCapabilityRequirements(source?: string): ReadonlyArray<CapabilityRequirement>;
+export declare function scanMdppDirectives(source?: string, options?: {
+  readonly path?: string;
+}): Readonly<Record<string, unknown>>;
 export declare function createMarkdownSnippet(kind: 'image' | 'mermaid' | 'graphviz', options?: {
   readonly href?: string;
   readonly alt?: string;

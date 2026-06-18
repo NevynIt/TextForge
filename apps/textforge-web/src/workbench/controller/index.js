@@ -25,6 +25,7 @@ import {
   joinWorkspacePath,
   normalizeWorkspacePath,
   resetWorkspaceDexieStorage,
+  resolveWorkspaceRepositoryLocation,
   workspaceDexieSchemaVersion,
   workspaceEntryToResourceRef,
   workspaceProviderIds,
@@ -2334,6 +2335,52 @@ export function createTextForgeWorkbenchController() {
     };
   }
 
+  function resolveMdppRepositoryQualifiedRef(ref, repositoryAliases = {}) {
+    const match = String(ref ?? '').trim().match(/^([A-Za-z][A-Za-z0-9_-]*):(.*)$/u);
+    if (!match) {
+      return ref;
+    }
+    const [, repositoryName, repositoryPath] = match;
+    const repositoryLocation = repositoryAliases[repositoryName];
+    if (!repositoryLocation) {
+      return ref;
+    }
+    return `${String(repositoryLocation).replace(/[\\/]+$/u, '')}/${String(repositoryPath).replace(/^[/\\]+/u, '')}`;
+  }
+
+  async function resolveMarkdownTextResource({ ref, basePath, repositoryAliases }) {
+    const normalizedRef = resolveMdppRepositoryQualifiedRef(ref, repositoryAliases);
+    let resolved = resolveWorkspaceRepositoryLocation(normalizedRef, {
+      basePath,
+      repositoryAliases,
+    });
+    if (
+      resolved.status !== 'resolved'
+      && normalizedRef
+      && !String(normalizedRef).startsWith('/')
+      && !String(normalizedRef).startsWith('./')
+      && !String(normalizedRef).startsWith('../')
+      && !/^[A-Za-z][A-Za-z0-9+.-]*:\/\//u.test(String(normalizedRef))
+    ) {
+      resolved = resolveWorkspaceRepositoryLocation(`./${normalizedRef}`, {
+        basePath,
+        repositoryAliases,
+      });
+    }
+    if (resolved.status !== 'resolved' || !resolved.resolvedPath) {
+      return undefined;
+    }
+    const entry = workspace.getEntryByPath?.(resolved.resolvedPath);
+    if (!entry || entry.kind !== 'resource' || entry.representation !== 'text') {
+      return undefined;
+    }
+    return {
+      text: entry.text,
+      path: entry.path,
+      mimeType: entry.mimeType,
+    };
+  }
+
   function openMarkdownPreviewLink(input) {
     const sourceResourcePath = input?.resource?.path;
     if (!sourceResourcePath) {
@@ -2371,6 +2418,7 @@ export function createTextForgeWorkbenchController() {
       resource: workspaceEntryToResourceRef(resource),
       sourceUpdatedAt: resource.metadata.updatedAt,
       resolveAssetReference: resolveMarkdownAssetReference,
+      resolveTextResource: resolveMarkdownTextResource,
       contributionRegistry,
       contributionContext,
       trace: tracePreview,

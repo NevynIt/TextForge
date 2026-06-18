@@ -16,3 +16,4 @@ export { renderMarkdownDocument } from './render.js';
 export { createMarkdownSnippet } from './snippets.js';
 export { tfmdFenceAliases } from './support.js';
 export { parseMarkdownCapabilityRequirements } from './tfmd.js';
+export { scanMdppDirectives } from './mdpp.js';

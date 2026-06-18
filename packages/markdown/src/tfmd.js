@@ -1,4 +1,5 @@
 import { createMarkdownDiagnostic, tfmdFenceAliases } from './support.js';
+import { scanMdppDirectives } from './mdpp.js';
 
 function parseScalar(value) {
   const trimmed = String(value ?? '').trim();
@@ -199,7 +200,10 @@ export function scanTfmdBlocks(source) {
 }
 
 export function parseMarkdownCapabilityRequirements(source = '') {
-  return scanTfmdBlocks(source).requirements;
+  return [
+    ...scanTfmdBlocks(source).requirements,
+    ...scanMdppDirectives(source).requirements,
+  ];
 }
 
 export function createTfmdStyleSheet(styles) {
