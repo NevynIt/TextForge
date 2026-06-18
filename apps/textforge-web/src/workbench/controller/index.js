@@ -1292,17 +1292,17 @@ export function createTextForgeWorkbenchController() {
     return getEntry(state.selectedWorkspaceItemId) ?? getDefaultSelection();
   }
 
-  function getSelectedFolderPath(commandContext) {
+  function getSelectedFolderPath(commandContext, options = {}) {
     const targetEntry = resolveTargetEntryForCommands(commandContext);
     const entry = targetEntry ?? getSelectedEntry();
     if (!entry) {
-      return '/';
+      return options.emptyFallbackPath ?? '/';
     }
 
     const preferredPath = entry.kind === 'folder' ? entry.path : dirnameWorkspacePath(entry.path);
     const preferredFolder = workspace.getEntryByPath(preferredPath);
     if (preferredFolder?.kind === 'folder' && !supportsWorkspaceCapability(preferredFolder, 'resource.create-child')) {
-      return '/docs';
+      return options.readOnlyFallbackPath ?? '/docs';
     }
 
     return preferredPath;
@@ -1323,6 +1323,26 @@ export function createTextForgeWorkbenchController() {
       counter += 1;
     }
     return candidate;
+  }
+
+  function resolveChildFolderPath(basePath, requestedPath) {
+    const normalizedBasePath = normalizeWorkspacePath(basePath);
+    const trimmedPath = String(requestedPath ?? '').trim();
+    if (!trimmedPath) {
+      throw new Error('Folder import path cannot be empty.');
+    }
+
+    const normalizedRequestedPath = trimmedPath.startsWith('/')
+      ? normalizeWorkspacePath(trimmedPath)
+      : normalizeWorkspacePath(joinWorkspacePath(normalizedBasePath, trimmedPath));
+    if (
+      normalizedRequestedPath === normalizedBasePath
+      || !normalizedRequestedPath.startsWith(`${normalizedBasePath === '/' ? '' : normalizedBasePath}/`)
+    ) {
+      throw new Error(`Folder import path must be under ${normalizedBasePath}.`);
+    }
+
+    return normalizedRequestedPath;
   }
 
   function getWorkspaceEntryName(entry) {
@@ -3807,17 +3827,21 @@ export function createTextForgeWorkbenchController() {
     }
 
     try {
+      const basePath = getSelectedFolderPath(commandContext, {
+        emptyFallbackPath: '/upload',
+        readOnlyFallbackPath: '/upload',
+      });
       const suggestedFolderName = sanitizeFilenameSegment(
         file.name.replace(/\.zip$/i, ''),
         'imported-folder',
       );
-      const defaultPath = joinWorkspacePath(getSelectedFolderPath(commandContext), suggestedFolderName);
+      const defaultPath = joinWorkspacePath(basePath, suggestedFolderName);
       const requestedPath = window.prompt('Folder import path', defaultPath);
       if (!requestedPath) {
         return;
       }
 
-      const targetFolderPath = assertWorkspacePathAvailable(requestedPath);
+      const targetFolderPath = assertWorkspacePathAvailable(resolveChildFolderPath(basePath, requestedPath));
       const archive = importWorkspaceFolderFromZip(await readFileBytes(file));
       await importFolderArchiveIntoPath(targetFolderPath, archive);
     } catch (error) {

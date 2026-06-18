@@ -47,6 +47,8 @@ export function downloadBytes(filename, bytes, mimeType = 'application/octet-str
   window.setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+const filePickerCancelDelayMs = 500;
+
 export function pickLocalFile({ accept } = {}) {
   return new Promise((resolve) => {
     const input = document.createElement('input');
@@ -72,7 +74,7 @@ export function pickLocalFile({ accept } = {}) {
         if (!input.files?.length) {
           finish(undefined);
         }
-      }, 0);
+      }, filePickerCancelDelayMs);
     }
 
     input.addEventListener('change', () => finish(input.files?.[0]));
