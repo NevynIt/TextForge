@@ -6,6 +6,7 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 
 ```mermaid
 graph TD
+  WP_MDPP_BASIC["WP-MDPP-BASIC"] --> WP_MD_REPORT["WP-MD-REPORT"]
   WP_MD_REPORT["WP-MD-REPORT"] --> WP_ITM_PUB_VISUAL_01["WP-ITM-PUB-VISUAL-01"]
   WP_MD_REPORT["WP-MD-REPORT"] --> WP_MD_RICH["WP-MD-RICH"]
   WP_TABLES["WP-TABLES"] --> WP_TABLES_02["WP-TABLES-02"]

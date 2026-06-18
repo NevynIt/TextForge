@@ -26,6 +26,7 @@ The implementation order should be value-oriented rather than prerequisite-pure:
 
 | Priority | Workpackage | Reason |
 |---:|---|---|
+| 0.9 | `WP-MDPP-BASIC` | Adds the portable md++ parser/rendering foundation for richer Markdown reports without adopting the full md++ runtime. |
 | 1 | `WP-MD-REPORT` | Missing base for the report/document slice. It enables `WP-ITM-PUB-VISUAL-01`, `WP-MD-RICH`, and later AI Markdown assistance. |
 | 2 | `WP-ITM-PUB-VISUAL-01` | Already in progress; gives Markdown reports reusable model-backed visual publication. |
 | 3 | `WP-MD-RICH` | Already in progress; improves the document authoring workflow. |
@@ -52,6 +53,7 @@ The implementation order should be value-oriented rather than prerequisite-pure:
 | Order | Implement | Why this order |
 |---:|---|---|
 | 0 | Treat as already done / do not reopen: contribution spine, `WP-RES-01`, `WP-ITM-01`, `WP-ITM-02`, `WP-ITM-03`, `WP-REPO-01`, Visual ITM baseline/renderers, Lua base, BPMN read-only chain | These are already validated or implemented and should be used as foundations, not re-sequenced. |
+| 0.9 | `WP-MDPP-BASIC` | Add source-order md++ directives, includes, repository-qualified resources, embedded model/render blocks, and basic mdpp HTML semantics before widening report generation. |
 | 1 | `WP-MD-REPORT` | Missing base for the report/document slice. It enables both `WP-ITM-PUB-VISUAL-01` and `WP-MD-RICH`. |
 | 2 | Finish `WP-ITM-PUB-VISUAL-01` and `WP-MD-RICH` | Both are already in progress and become coherent once report generation is stable. |
 | 3 | Finish `WP-EA-VIEWER-01` | Already in progress; gives an early visible dashboard win and proves the React Flow/Dagre interaction pattern. |

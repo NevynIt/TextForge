@@ -32,6 +32,7 @@
       "WP-BPMN-VISUAL-A": 0,
       "WP-BPMN-DI-01": 0,
       "WP-BPMN-VISUAL-B": 0,
+      "WP-MDPP-BASIC": 0.9,
       "WP-MD-REPORT": 1,
       "WP-ITM-PUB-VISUAL-01": 2,
       "WP-MD-RICH": 3,
@@ -217,6 +218,7 @@
       "status": "defined",
       "owns": [
         "TextForge Markdown compatibility profile",
+        "basic md++ parser and embedded renderer",
         "Markdown preview/report flows",
         "ITM publication blocks",
         "parameterized ITM Markdown reports",
@@ -227,6 +229,7 @@
         "MOD-REPOSITORY"
       ],
       "enables": [
+        "WP-MDPP-BASIC",
         "WP-ITM-PUB-VISUAL-01",
         "WP-MD-REPORT",
         "WP-MD-RICH",
@@ -235,6 +238,7 @@
       "archive_trace": [
         "archive/registers/package-guides/markdown.md",
         "archive/registers/specs/legacy-specs/architecture/textforge-markdown-profile.md",
+        "docs/reference/specs/mdpp/v0.14/",
         "archive/registers/package-guides/pipeline.md",
         "decisions/ADR-0009-parameterized-itm-reports-and-dashboards.md"
       ]
@@ -1907,6 +1911,38 @@
       ],
       "validation_checklist": null
     },
+    "WP-MDPP-BASIC": {
+      "title": "Basic md++ parser and embedded renderer",
+      "path": "workpackages/WP-MDPP-BASIC.md",
+      "module": "MOD-MARKDOWN-ITM",
+      "status": "in-progress",
+      "type": "Feature",
+      "depends_on": [
+        "WP-05C",
+        "WP-REPO-01"
+      ],
+      "enables": [
+        "WP-MD-REPORT",
+        "WP-MD-RICH",
+        "WP-ITM-PUB-VISUAL-01",
+        "WP-PDF-EXPORT",
+        "WP-AI-MD-ASSIST"
+      ],
+      "release_candidates": [
+        "R-LOCAL-AUTHORING-MVP"
+      ],
+      "production_required": false,
+      "deferrable": true,
+      "key_adrs": [
+        "ADR-0001"
+      ],
+      "archive_trace": [
+        "docs/reference/specs/mdpp/v0.14/",
+        "docs/reference/specs/markdown_profile.md",
+        "roadmap/modules/markdown-itm.md"
+      ],
+      "validation_checklist": "validation/checklists/workpackages/WP-MDPP-BASIC-basic-mdpp-parser-renderer.md"
+    },
     "WP-MD-REPORT": {
       "title": "Markdown + ITM report generation",
       "path": "workpackages/WP-MD-REPORT.md",
@@ -1915,7 +1951,8 @@
       "type": "Feature",
       "depends_on": [
         "WP-ITM-01",
-        "WP-REPO-01"
+        "WP-REPO-01",
+        "WP-MDPP-BASIC"
       ],
       "enables": [
         "WP-ITM-PUB-VISUAL-01",

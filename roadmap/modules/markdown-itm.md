@@ -15,6 +15,7 @@ Markdown and ITM publication defines the stable ownership boundary for the workp
 ### Owns
 
 - TextForge Markdown compatibility profile
+- basic md++ parser and embedded renderer
 - Markdown preview/report flows
 - ITM publication blocks
 - parameterized ITM Markdown reports
@@ -30,6 +31,7 @@ Markdown and ITM publication defines the stable ownership boundary for the workp
 
 - TF-MD profile
 - markdown fence contribution contracts
+- basic md++ parser/render contract
 - itm-pub publication contract
 
 ## Dependencies
@@ -41,6 +43,7 @@ Authoritative dependency data lives in `roadmap-state.yaml`.
 | WP | Title | Status source | Type |
 |---|---|---|---|
 | `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | Registry-owned | Domain / feature |
+| `WP-MDPP-BASIC` | Basic md++ parser and embedded renderer | Registry-owned | Feature |
 | `WP-MD-REPORT` | Markdown + ITM report generation | Registry-owned | Feature |
 | `WP-MD-RICH` | Rich Markdown editing | Registry-owned | Optional editor feature |
 | `WP-PDF-EXPORT` | PDF generation/export | Registry-owned | Optional export |

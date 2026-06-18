@@ -8,6 +8,7 @@ Planning order follows `docs/architecture/value-oriented-implementation-sequence
 
 | Plan | WP | Title | Status | Module |
 |---:|---|---|---|---|
+| 0.9 | `WP-MDPP-BASIC` | Basic md++ parser and embedded renderer | in-progress | `MOD-MARKDOWN-ITM` |
 | 2 | `WP-ITM-PUB-VISUAL-01` | Shared visual pipeline for itm-pub | in-progress | `MOD-MARKDOWN-ITM` |
 | 3 | `WP-MD-RICH` | Rich Markdown editing | in-progress | `MOD-MARKDOWN-ITM` |
 | 4 | `WP-EA-VIEWER-01` | Exact EA dashboard viewer surface | in-progress | `MOD-EA-VIEWER` |
