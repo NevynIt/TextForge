@@ -8,7 +8,10 @@ import {
   renderMarkdownDocument,
 } from '@textforge/markdown';
 import { workspaceEntryToResourceRef } from '@textforge/workspace';
-import { describeMarkdownPrintDiagramIssue } from '../src/workbench/controller/index.js';
+import {
+  describeMarkdownPrintDiagramIssue,
+  rebaseImportedFolderArchive,
+} from '../src/workbench/controller/index.js';
 import { createWorkbenchRegistries } from '../src/workbench/controller/registries.js';
 
 const workspaceRoot = resolve(import.meta.dirname, '..', '..', '..');
@@ -148,6 +151,35 @@ flowchart TD
     }),
     undefined,
   );
+});
+
+test('folder ZIP import rebases archives with a single top-level folder', () => {
+  const readmeBytes = new TextEncoder().encode('# Guide\n');
+  const imageBytes = new Uint8Array([1, 2, 3]);
+  const rebased = rebaseImportedFolderArchive({
+    folders: ['project', 'project/docs', 'project/images'],
+    files: [
+      { path: 'project/docs/readme.md', bytes: readmeBytes },
+      { path: 'project/images/logo.png', bytes: imageBytes },
+    ],
+  });
+
+  assert.deepEqual(rebased.folders, ['docs', 'images']);
+  assert.deepEqual(rebased.files.map((file) => file.path), ['docs/readme.md', 'images/logo.png']);
+  assert.equal(rebased.files[0]?.bytes, readmeBytes);
+  assert.equal(rebased.files[1]?.bytes, imageBytes);
+});
+
+test('folder ZIP import leaves mixed-root archives unchanged', () => {
+  const archive = {
+    folders: ['docs'],
+    files: [
+      { path: 'docs/readme.md', bytes: new Uint8Array([1]) },
+      { path: 'root-note.md', bytes: new Uint8Array([2]) },
+    ],
+  };
+
+  assert.equal(rebaseImportedFolderArchive(archive), archive);
 });
 
 test('markdown preview keeps a stable buffered surface while rendering updates', async () => {

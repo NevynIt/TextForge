@@ -183,6 +183,28 @@ export function describeMarkdownPrintDiagramIssue(resource, rendered) {
   return undefined;
 }
 
+export function rebaseImportedFolderArchive(archive) {
+  const archivePaths = [...archive.folders, ...archive.files.map((file) => file.path)];
+  if (archivePaths.length === 0 || !archivePaths.some((path) => path.includes('/'))) {
+    return archive;
+  }
+
+  const firstSegment = archivePaths[0].split('/')[0];
+  if (!firstSegment || !archivePaths.every((path) => path === firstSegment || path.startsWith(`${firstSegment}/`))) {
+    return archive;
+  }
+
+  return {
+    folders: archive.folders
+      .map((path) => path === firstSegment ? '' : path.slice(firstSegment.length + 1))
+      .filter(Boolean),
+    files: archive.files.map((file) => ({
+      ...file,
+      path: file.path.startsWith(`${firstSegment}/`) ? file.path.slice(firstSegment.length + 1) : file.path,
+    })),
+  };
+}
+
 export function createTextForgeWorkbenchController() {
   const workbenchTestProfile = readWorkbenchTestProfile();
   const luaBootstrapRecovery = readLuaBootstrapRecoveryState();
@@ -1497,28 +1519,6 @@ export function createTextForgeWorkbenchController() {
     return currentFolder;
   }
 
-  function rebaseImportedArchive(archive) {
-    const archivePaths = [...archive.folders, ...archive.files.map((file) => file.path)];
-    if (archivePaths.length === 0 || !archivePaths.some((path) => path.includes('/'))) {
-      return archive;
-    }
-
-    const firstSegment = archivePaths[0].split('/')[0];
-    if (!firstSegment || !archivePaths.every((path) => path === firstSegment || path.startsWith(`${firstSegment}/`))) {
-      return archive;
-    }
-
-    return {
-      folders: archive.folders
-        .map((path) => path === firstSegment ? '' : path.slice(firstSegment.length + 1))
-        .filter(Boolean),
-      files: archive.files.map((file) => ({
-        ...file,
-        path: file.path.startsWith(`${firstSegment}/`) ? file.path.slice(firstSegment.length + 1) : file.path,
-      })),
-    };
-  }
-
   function createWorkspaceResourceFromBytes(path, bytes, mimeType) {
     const nextPath = createAvailableWorkspacePath(path);
     const title = basenameWorkspacePath(nextPath);
@@ -1575,25 +1575,39 @@ export function createTextForgeWorkbenchController() {
 
   async function importFolderArchiveIntoPath(folderPath, archive) {
     const normalizedFolderPath = normalizeWorkspacePath(folderPath);
-    const rebasedArchive = rebaseImportedArchive(archive);
+    const rebasedArchive = rebaseImportedFolderArchive(archive);
     const targetFolder = ensureWorkspaceFolder(normalizedFolderPath);
+    const importedFolders = [];
+    const importedResources = [];
 
     for (const nestedFolder of rebasedArchive.folders) {
-      ensureWorkspaceFolder(joinWorkspacePath(normalizedFolderPath, nestedFolder));
+      importedFolders.push(ensureWorkspaceFolder(joinWorkspacePath(normalizedFolderPath, nestedFolder)));
     }
 
     for (const fileEntry of rebasedArchive.files) {
-      createWorkspaceResourceFromBytes(
+      importedResources.push(createWorkspaceResourceFromBytes(
         joinWorkspacePath(normalizedFolderPath, fileEntry.path),
         fileEntry.bytes,
         undefined,
-      );
+      ));
     }
 
     await persistWorkspace('workspace.import-folder-zip');
-    expandFolderAncestors(targetFolder.path);
-    rememberSelection(targetFolder.id);
-    emit();
+    expandFolderPath(targetFolder.path);
+
+    const visibleEntry = importedResources[0] ?? importedFolders[0] ?? targetFolder;
+    if (importedResources[0]) {
+      openResourceEntry(importedResources[0], { placement: 'main' });
+    } else {
+      rememberSelection(visibleEntry.id);
+      emit();
+    }
+
+    showTransientFlag(
+      'Folder ZIP imported',
+      `Imported ${importedResources.length} file${importedResources.length === 1 ? '' : 's'} and ${importedFolders.length + 1} folder${importedFolders.length + 1 === 1 ? '' : 's'} into ${targetFolder.path}.`,
+      'info',
+    );
   }
 
   function getActiveCommandSession() {
@@ -3792,19 +3806,23 @@ export function createTextForgeWorkbenchController() {
       return;
     }
 
-    const suggestedFolderName = sanitizeFilenameSegment(
-      file.name.replace(/\.zip$/i, ''),
-      'imported-folder',
-    );
-    const defaultPath = joinWorkspacePath(getSelectedFolderPath(commandContext), suggestedFolderName);
-    const requestedPath = window.prompt('Folder import path', defaultPath);
-    if (!requestedPath) {
-      return;
-    }
+    try {
+      const suggestedFolderName = sanitizeFilenameSegment(
+        file.name.replace(/\.zip$/i, ''),
+        'imported-folder',
+      );
+      const defaultPath = joinWorkspacePath(getSelectedFolderPath(commandContext), suggestedFolderName);
+      const requestedPath = window.prompt('Folder import path', defaultPath);
+      if (!requestedPath) {
+        return;
+      }
 
-    const targetFolderPath = assertWorkspacePathAvailable(requestedPath);
-    const archive = importWorkspaceFolderFromZip(await readFileBytes(file));
-    await importFolderArchiveIntoPath(targetFolderPath, archive);
+      const targetFolderPath = assertWorkspacePathAvailable(requestedPath);
+      const archive = importWorkspaceFolderFromZip(await readFileBytes(file));
+      await importFolderArchiveIntoPath(targetFolderPath, archive);
+    } catch (error) {
+      window.alert(error?.message ?? 'Could not import folder ZIP.');
+    }
   }
 
   async function downloadSelectedFileCommand(commandContext) {
