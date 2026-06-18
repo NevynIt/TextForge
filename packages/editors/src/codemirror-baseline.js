@@ -123,7 +123,7 @@ export function createCodeMirrorBaselineTheme() {
       outline: '1px solid rgba(248, 113, 113, 0.55)',
     },
     '.cm-highlightSpace': {
-      backgroundImage: 'radial-gradient(circle at center, rgba(148, 163, 184, 0.34) 0, rgba(148, 163, 184, 0.34) 1px, transparent 1.5px)',
+      backgroundImage: 'radial-gradient(circle at center, rgba(148, 163, 184, 0.18) 0, rgba(148, 163, 184, 0.18) 1px, transparent 1.5px)',
       backgroundPosition: 'center',
       backgroundRepeat: 'no-repeat',
     },
