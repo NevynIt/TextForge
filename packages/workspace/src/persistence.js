@@ -156,6 +156,7 @@ export function createPersistentWorkspaceService(baseWorkspace, storage, options
 
   return {
     workspaceId: baseWorkspace.workspaceId,
+    getRevision: () => baseWorkspace.getRevision?.() ?? 0,
     storage,
     snapshot: () => baseWorkspace.snapshot(),
     query: (queryValue) => baseWorkspace.query(queryValue),

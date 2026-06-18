@@ -142,7 +142,9 @@ test('workspace service normalizes paths and mutates entries', () => {
     now: () => '2026-05-23T00:00:00.000Z',
   });
 
+  const initialRevision = workspace.getRevision();
   const docs = workspace.createFolder({ path: '/docs' });
+  const folderRevision = workspace.getRevision();
   const notes = workspace.createTextResource({ path: '/docs/notes.md', text: '# Notes', languageId: 'markdown' });
   const updated = workspace.saveTextResource({
     resourceId: notes.id,
@@ -151,6 +153,8 @@ test('workspace service normalizes paths and mutates entries', () => {
     mimeType: 'text/yaml',
   });
   const renamed = workspace.renameEntry(notes.id, '/docs/renamed-notes.md');
+  const renamedRevision = workspace.getRevision();
+  workspace.setSelectedResourceId(renamed?.id);
 
   assert.equal(normalizeWorkspacePath('docs/../docs/notes.md'), '/docs/notes.md');
   assert.equal(docs.path, '/docs');
@@ -159,6 +163,9 @@ test('workspace service normalizes paths and mutates entries', () => {
   assert.equal(updated.mimeType, 'text/yaml');
   assert.equal(renamed?.path, '/docs/renamed-notes.md');
   assert.equal(renamed?.metadata.title, 'renamed-notes.md');
+  assert.equal(folderRevision > initialRevision, true);
+  assert.equal(renamedRevision > folderRevision, true);
+  assert.equal(workspace.getRevision(), renamedRevision);
   assert.equal(createWorkspaceTreeItems(workspace.snapshot()).length >= 2, true);
 });
 

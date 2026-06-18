@@ -37,6 +37,7 @@ export function createWorkspaceService(options = {}) {
   let manifest = initialState.manifest;
   let folders = initialState.folders;
   let resources = initialState.resources;
+  let revision = 0;
   let existingIds = new Set();
   const baseIdFactory = options.idFactory ?? createSequentialIdFactory(
     options.workspaceId ?? manifest.workspaceId ?? 'workspace-entry',
@@ -89,6 +90,7 @@ export function createWorkspaceService(options = {}) {
       selectedResourceId: normalizeSelectedResourceId(manifest.selectedResourceId),
     };
     rebuildKnownIds();
+    revision += 1;
     return snapshot();
   }
 
@@ -102,6 +104,7 @@ export function createWorkspaceService(options = {}) {
       selectedResourceId: normalizeSelectedResourceId(manifest.selectedResourceId),
     };
     rebuildKnownIds();
+    revision += 1;
   }
 
   function snapshot() {
@@ -402,6 +405,7 @@ export function createWorkspaceService(options = {}) {
 
   return {
     workspaceId: manifest.workspaceId,
+    getRevision: () => revision,
     snapshot,
     query,
     getEntry,

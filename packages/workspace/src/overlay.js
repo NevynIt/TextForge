@@ -101,6 +101,9 @@ export function createWorkspaceOverlayService(baseWorkspace, options) {
 
   const overlaidWorkspace = {
     ...baseWorkspace,
+    getRevision() {
+      return baseWorkspace.getRevision?.() ?? 0;
+    },
     snapshot() {
       return getMergedState();
     },

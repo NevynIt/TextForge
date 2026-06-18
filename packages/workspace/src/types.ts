@@ -288,6 +288,7 @@ export type WorkspaceMutation =
 
 export interface WorkspaceService {
   readonly workspaceId: string;
+  getRevision(): number;
   snapshot(): WorkspaceState;
   query(query: WorkspaceQuery): ReadonlyArray<WorkspaceEntry>;
   getEntry(resourceId: string): WorkspaceEntry | undefined;

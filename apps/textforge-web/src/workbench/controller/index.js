@@ -15,7 +15,6 @@ import {
   createPersistedWorkspaceService,
   createSequentialIdFactory,
   createWorkspaceService,
-  listWorkspaceBadgeDiagnostics,
   createWorkspaceTreeItems,
   dirnameWorkspacePath,
   exportWorkspaceFolderToZip,
@@ -255,6 +254,7 @@ export function createTextForgeWorkbenchController() {
   const luaConsoleSessionStateByResourceId = new Map();
   const listeners = new Set();
   let cachedSnapshot;
+  let cachedWorkspaceTree;
   let bootstrapApplied = false;
   let suspendWorkbenchUiStatePersistence = false;
   let lastPersistedWorkbenchUiStateText;
@@ -461,6 +461,49 @@ export function createTextForgeWorkbenchController() {
 
   function recordElapsed(label, startedAt, detail = '') {
     recordPerformanceEvent(label, readNow() - startedAt, detail);
+  }
+
+  function createWorkspaceTreeCacheKey(manifest) {
+    return [
+      manifest.workspaceId,
+      workspace.getRevision?.() ?? manifest.updatedAt,
+      state.workspaceTreeCollapsed ? 'collapsed' : 'expanded',
+      state.expandedFolderIds.join('\u0000'),
+    ].join('\u0001');
+  }
+
+  function getCachedWorkspaceTree() {
+    if (runtime.status !== 'ready') {
+      return {
+        treeItems: [],
+        workspaceManifest: undefined,
+      };
+    }
+
+    const workspaceManifest = workspace.getManifest();
+    if (state.workspaceTreeCollapsed) {
+      return {
+        treeItems: [],
+        workspaceManifest,
+      };
+    }
+
+    const cacheKey = createWorkspaceTreeCacheKey(workspaceManifest);
+    if (cachedWorkspaceTree?.cacheKey === cacheKey) {
+      return cachedWorkspaceTree;
+    }
+
+    const treeStartedAt = readNow();
+    const workspaceSnapshot = workspace.snapshot();
+    const allTreeItems = createWorkspaceTreeItems(workspaceSnapshot);
+    const treeItems = createVisibleTreeItems(allTreeItems);
+    cachedWorkspaceTree = {
+      cacheKey,
+      treeItems,
+      workspaceManifest: workspaceSnapshot.manifest,
+    };
+    recordElapsed('snapshot.workspace-tree', treeStartedAt, `${treeItems.length}/${allTreeItems.length} visible tree items`);
+    return cachedWorkspaceTree;
   }
 
   function yieldToBrowser() {
@@ -4478,15 +4521,8 @@ export function createTextForgeWorkbenchController() {
   function buildSnapshot() {
     const snapshotStartedAt = readNow();
     normalizeActiveSessions();
-    let treeItems = [];
-    let workspaceSnapshotForTree;
-    if (runtime.status === 'ready') {
-      const treeStartedAt = readNow();
-      workspaceSnapshotForTree = workspace.snapshot();
-      const allTreeItems = createWorkspaceTreeItems(workspaceSnapshotForTree);
-      treeItems = createVisibleTreeItems(allTreeItems);
-      recordElapsed('snapshot.workspace-tree', treeStartedAt, `${treeItems.length}/${allTreeItems.length} visible tree items`);
-    }
+    const workspaceTree = getCachedWorkspaceTree();
+    const treeItems = workspaceTree.treeItems;
     const mainSessions = listMainSessions();
     const popupSessions = listPopupSessions();
     const persistenceStatus = runtime.status === 'ready'
@@ -4560,9 +4596,6 @@ export function createTextForgeWorkbenchController() {
     const selectedResourceId = runtime.status === 'ready'
       ? state.selectedWorkspaceItemId
       : undefined;
-    const badgeDiagnostics = runtime.status === 'ready'
-      ? listWorkspaceBadgeDiagnostics(workspaceSnapshotForTree ?? workspace.snapshot())
-      : [];
     const elevatedLuaConsoleCount = runtime.status === 'ready'
       ? [...luaConsoleSessionStateByResourceId.values()].filter((sessionState) => sessionState?.elevated === true).length
       : 0;
@@ -4580,7 +4613,7 @@ export function createTextForgeWorkbenchController() {
       workspaceTree: createWorkspaceTreeFrameModel({
         items: treeItems,
         rootLabel: runtime.status === 'ready'
-          ? (workspaceSnapshotForTree ?? workspace.snapshot()).manifest.name ?? 'Workspace root'
+          ? workspaceTree.workspaceManifest?.name ?? 'Workspace root'
           : 'Browser-managed workspace',
         selectedResourceId,
       }),
@@ -4605,17 +4638,6 @@ export function createTextForgeWorkbenchController() {
               tone: 'info',
               icon: 'utility',
               detail: 'Popup surfaces stay in a floating overlay outside the main document strip.',
-            }),
-          ]
-          : []),
-        ...(badgeDiagnostics.length > 0
-          ? [
-            createStatusBadge({
-              id: 'badge-status',
-              label: `${badgeDiagnostics.length} badge repair${badgeDiagnostics.length === 1 ? '' : 's'}`,
-              tone: 'warning',
-              icon: 'warning',
-              detail: 'A resource badge key was repaired to keep identity badges unique and deterministic.',
             }),
           ]
           : []),
@@ -4685,7 +4707,6 @@ export function createTextForgeWorkbenchController() {
       contributionInspectorModel,
       documentContributionContext,
       inspectedDocumentEntry: isWorkspaceResource(inspectedDocumentEntry) ? inspectedDocumentEntry : undefined,
-      badgeDiagnostics,
       popupFrame,
       visualTargetPicker: state.visualTargetPicker
         ? {

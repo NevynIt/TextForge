@@ -104,7 +104,7 @@ export declare function resetWorkspaceDexieStorage(options?: WorkspaceStorageOpt
 export declare function createPersistentWorkspaceService(
   baseWorkspace: WorkspaceService,
   storage: WorkspaceDexieStorage,
-  options?: Pick<WorkspaceServiceOptions, 'now'>,
+  options?: Pick<CreatePersistedWorkspaceServiceOptions, 'now' | 'autoSaveDelayMs'>,
 ): PersistentWorkspaceService;
 export declare function createPersistedWorkspaceService(
   options?: CreatePersistedWorkspaceServiceOptions,
