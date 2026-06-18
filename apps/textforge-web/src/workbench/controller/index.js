@@ -154,6 +154,10 @@ const textEditorViewPropagationDelayMs = 2000;
 const textEditorWorkspaceSaveDelayMs = 10000;
 const workbenchUiStatePersistenceDelayMs = 10000;
 const workspaceSelectionPersistenceDelayMs = 10000;
+const performanceEventLimit = 8;
+const performanceRecordThresholdMs = 10;
+const performanceStatusThresholdMs = 50;
+const importYieldBatchSize = 25;
 const utilitySections = [
   { id: 'inspector', label: 'Inspector', icon: 'status' },
   { id: 'popups', label: 'Popup Summary', icon: 'utility' },
@@ -269,6 +273,7 @@ export function createTextForgeWorkbenchController() {
     contextMenu: undefined,
     transientFlag: undefined,
     visualTargetPicker: undefined,
+    performanceEvents: [],
   };
   const runtime = {
     status: workbenchRecoveryMode.active ? 'recovery' : 'loading',
@@ -429,6 +434,33 @@ export function createTextForgeWorkbenchController() {
         emit();
       }, 3200);
     }
+  }
+
+  function readNow() {
+    return typeof performance !== 'undefined' && typeof performance.now === 'function'
+      ? performance.now()
+      : Date.now();
+  }
+
+  function recordPerformanceEvent(label, durationMs, detail = '') {
+    const roundedDurationMs = Math.round(durationMs * 100) / 100;
+    if (roundedDurationMs < performanceRecordThresholdMs) {
+      return;
+    }
+
+    const event = {
+      id: `${Date.now()}:${label}`,
+      label,
+      durationMs: roundedDurationMs,
+      detail,
+      recordedAt: new Date().toISOString(),
+    };
+    state.performanceEvents = [event, ...state.performanceEvents].slice(0, performanceEventLimit);
+    tracePreview('performance', event);
+  }
+
+  function recordElapsed(label, startedAt, detail = '') {
+    recordPerformanceEvent(label, readNow() - startedAt, detail);
   }
 
   function yieldToBrowser() {
@@ -1325,26 +1357,6 @@ export function createTextForgeWorkbenchController() {
     return candidate;
   }
 
-  function resolveChildFolderPath(basePath, requestedPath) {
-    const normalizedBasePath = normalizeWorkspacePath(basePath);
-    const trimmedPath = String(requestedPath ?? '').trim();
-    if (!trimmedPath) {
-      throw new Error('Folder import path cannot be empty.');
-    }
-
-    const normalizedRequestedPath = trimmedPath.startsWith('/')
-      ? normalizeWorkspacePath(trimmedPath)
-      : normalizeWorkspacePath(joinWorkspacePath(normalizedBasePath, trimmedPath));
-    if (
-      normalizedRequestedPath === normalizedBasePath
-      || !normalizedRequestedPath.startsWith(`${normalizedBasePath === '/' ? '' : normalizedBasePath}/`)
-    ) {
-      throw new Error(`Folder import path must be under ${normalizedBasePath}.`);
-    }
-
-    return normalizedRequestedPath;
-  }
-
   function getWorkspaceEntryName(entry) {
     return basenameWorkspacePath(entry?.path ?? '') || entry?.metadata?.title || entry?.id || '';
   }
@@ -1593,32 +1605,56 @@ export function createTextForgeWorkbenchController() {
     return uploadedResources;
   }
 
-  async function importFolderArchiveIntoPath(folderPath, archive) {
+  async function importFolderArchiveIntoPath(folderPath, archive, options = {}) {
+    const totalStartedAt = readNow();
     const normalizedFolderPath = normalizeWorkspacePath(folderPath);
+    const rebaseStartedAt = readNow();
     const rebasedArchive = rebaseImportedFolderArchive(archive);
+    recordElapsed(
+      'folder-zip.rebase',
+      rebaseStartedAt,
+      `${archive.folders.length} folders, ${archive.files.length} files`,
+    );
     const targetFolder = ensureWorkspaceFolder(normalizedFolderPath);
     const importedFolders = [];
     const importedResources = [];
 
-    for (const nestedFolder of rebasedArchive.folders) {
+    const folderStartedAt = readNow();
+    for (const [index, nestedFolder] of rebasedArchive.folders.entries()) {
       importedFolders.push(ensureWorkspaceFolder(joinWorkspacePath(normalizedFolderPath, nestedFolder)));
+      if ((index + 1) % importYieldBatchSize === 0) {
+        await yieldToBrowser();
+      }
     }
+    recordElapsed('folder-zip.create-folders', folderStartedAt, `${importedFolders.length} folders`);
 
-    for (const fileEntry of rebasedArchive.files) {
+    const fileStartedAt = readNow();
+    for (const [index, fileEntry] of rebasedArchive.files.entries()) {
       importedResources.push(createWorkspaceResourceFromBytes(
         joinWorkspacePath(normalizedFolderPath, fileEntry.path),
         fileEntry.bytes,
         undefined,
       ));
+      if ((index + 1) % importYieldBatchSize === 0) {
+        await yieldToBrowser();
+      }
     }
+    recordElapsed('folder-zip.create-files', fileStartedAt, `${importedResources.length} files`);
 
+    const persistStartedAt = readNow();
     await persistWorkspace('workspace.import-folder-zip');
+    recordElapsed('folder-zip.persist', persistStartedAt, targetFolder.path);
     expandFolderPath(targetFolder.path);
+    recordElapsed(
+      'folder-zip.import-total',
+      totalStartedAt,
+      `${importedResources.length} files into ${targetFolder.path}`,
+    );
 
-    const visibleEntry = importedResources[0] ?? importedFolders[0] ?? targetFolder;
-    if (importedResources[0]) {
+    if (importedResources[0] && options.openFirst !== false) {
       openResourceEntry(importedResources[0], { placement: 'main' });
     } else {
+      const visibleEntry = importedFolders[0] ?? targetFolder;
       rememberSelection(visibleEntry.id);
       emit();
     }
@@ -3821,12 +3857,17 @@ export function createTextForgeWorkbenchController() {
   }
 
   async function importFolderZipCommand(commandContext) {
+    const totalStartedAt = readNow();
     const file = await pickLocalFile({ accept: '.zip,application/zip' });
     if (!file) {
       return;
     }
 
     try {
+      const readStartedAt = readNow();
+      const fileBytes = await readFileBytes(file);
+      recordElapsed('folder-zip.read-file', readStartedAt, `${file.name}: ${fileBytes.byteLength} bytes`);
+
       const basePath = getSelectedFolderPath(commandContext, {
         emptyFallbackPath: '/upload',
         readOnlyFallbackPath: '/upload',
@@ -3836,14 +3877,16 @@ export function createTextForgeWorkbenchController() {
         'imported-folder',
       );
       const defaultPath = joinWorkspacePath(basePath, suggestedFolderName);
-      const requestedPath = window.prompt('Folder import path', defaultPath);
-      if (!requestedPath) {
-        return;
-      }
-
-      const targetFolderPath = assertWorkspacePathAvailable(resolveChildFolderPath(basePath, requestedPath));
-      const archive = importWorkspaceFolderFromZip(await readFileBytes(file));
-      await importFolderArchiveIntoPath(targetFolderPath, archive);
+      const targetFolderPath = createAvailableWorkspacePath(defaultPath);
+      const unzipStartedAt = readNow();
+      const archive = importWorkspaceFolderFromZip(fileBytes);
+      recordElapsed(
+        'folder-zip.unzip',
+        unzipStartedAt,
+        `${archive.folders.length} folders, ${archive.files.length} files`,
+      );
+      await importFolderArchiveIntoPath(targetFolderPath, archive, { openFirst: false });
+      recordElapsed('folder-zip.command-total', totalStartedAt, targetFolderPath);
     } catch (error) {
       window.alert(error?.message ?? 'Could not import folder ZIP.');
     }
@@ -4433,10 +4476,17 @@ export function createTextForgeWorkbenchController() {
   }
 
   function buildSnapshot() {
+    const snapshotStartedAt = readNow();
     normalizeActiveSessions();
-    const treeItems = runtime.status === 'ready'
-      ? createVisibleTreeItems(createWorkspaceTreeItems(workspace.snapshot()))
-      : [];
+    let treeItems = [];
+    let workspaceSnapshotForTree;
+    if (runtime.status === 'ready') {
+      const treeStartedAt = readNow();
+      workspaceSnapshotForTree = workspace.snapshot();
+      const allTreeItems = createWorkspaceTreeItems(workspaceSnapshotForTree);
+      treeItems = createVisibleTreeItems(allTreeItems);
+      recordElapsed('snapshot.workspace-tree', treeStartedAt, `${treeItems.length}/${allTreeItems.length} visible tree items`);
+    }
     const mainSessions = listMainSessions();
     const popupSessions = listPopupSessions();
     const persistenceStatus = runtime.status === 'ready'
@@ -4511,7 +4561,7 @@ export function createTextForgeWorkbenchController() {
       ? state.selectedWorkspaceItemId
       : undefined;
     const badgeDiagnostics = runtime.status === 'ready'
-      ? listWorkspaceBadgeDiagnostics(workspace.snapshot())
+      ? listWorkspaceBadgeDiagnostics(workspaceSnapshotForTree ?? workspace.snapshot())
       : [];
     const elevatedLuaConsoleCount = runtime.status === 'ready'
       ? [...luaConsoleSessionStateByResourceId.values()].filter((sessionState) => sessionState?.elevated === true).length
@@ -4530,7 +4580,7 @@ export function createTextForgeWorkbenchController() {
       workspaceTree: createWorkspaceTreeFrameModel({
         items: treeItems,
         rootLabel: runtime.status === 'ready'
-          ? workspace.snapshot().manifest.name ?? 'Workspace root'
+          ? (workspaceSnapshotForTree ?? workspace.snapshot()).manifest.name ?? 'Workspace root'
           : 'Browser-managed workspace',
         selectedResourceId,
       }),
@@ -4602,8 +4652,22 @@ export function createTextForgeWorkbenchController() {
             }),
           ]
           : []),
+        ...(state.performanceEvents[0]?.durationMs >= performanceStatusThresholdMs
+          ? [
+            createStatusBadge({
+              id: 'performance-status',
+              label: `${state.performanceEvents[0].label}: ${Math.round(state.performanceEvents[0].durationMs)} ms`,
+              tone: 'warning',
+              icon: 'warning',
+              detail: state.performanceEvents
+                .map((event) => `${event.label} ${event.durationMs} ms${event.detail ? ` - ${event.detail}` : ''}`)
+                .join('\n'),
+            }),
+          ]
+          : []),
       ].filter(Boolean),
     });
+    recordElapsed('snapshot.build', snapshotStartedAt, `${treeItems.length} tree items`);
 
     return {
       runtime: {
