@@ -37,16 +37,6 @@ const chrome = createWorkbenchChromeModel({
       representation: 'text',
       depth: 1,
       detail: 'MARKDOWN',
-      badge: {
-        key: 'markdown-notes',
-        fingerprint: 'markdown:notes',
-        shape: 'hex',
-        accent: 'teal',
-        mark: 'stack',
-        placement: 'center',
-        variant: 1,
-        label: 'MARKDOWN',
-      },
     }],
     selectedResourceId: 'resource-1',
   }),
@@ -79,7 +69,6 @@ const html = renderToStaticMarkup(
         activeResource: {
           title: 'notes.md',
           detail: 'MARKDOWN • Main surface',
-          badge: chrome.workspaceTree.items[0].badge,
           icon: 'fileText',
         },
         brandTitle: chrome.brandTitle,
@@ -117,7 +106,7 @@ const html = renderToStaticMarkup(
         title: 'No popup sessions',
       }, React.createElement('p', null, 'Empty states stay local.')),
       React.createElement(TextForgeResourceBadge, {
-        badge: chrome.workspaceTree.items[0].badge,
+        badge: chrome.surfaceFrame.tabs[0].badge,
         label: 'notes.md badge',
       }),
     ),

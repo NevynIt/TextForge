@@ -3226,9 +3226,7 @@ export function createTextForgeWorkbenchController() {
       title: entry.metadata.title ?? entry.path,
       path: entry.path,
       kind: entry.kind,
-      badge: entry.metadata.badge,
       icon: resolveEntryIcon(entry),
-      attention: entry.metadata.badge?.repairedFromKey ? 'warning' : undefined,
       detail: entry.kind === 'folder'
         ? 'Folder selection drives workspace-scoped commands like create, import, export, rename, and delete.'
         : entry.representation === 'text'
@@ -3295,9 +3293,7 @@ export function createTextForgeWorkbenchController() {
       title: activeSession?.title ?? entry.metadata.title ?? basenameWorkspacePath(entry.path) ?? entry.path,
       detail: `${kindDetail} / ${activeSession?.placement === 'popup' ? 'Popup surface' : 'Main surface'}${powerSessionActive ? ' / Power session' : ''}`,
       placement: activeSession?.placement ?? 'main',
-      badge: entry.metadata.badge,
       icon: resolveEntryIcon(entry),
-      attention: entry.metadata.badge?.repairedFromKey ? 'warning' : undefined,
     };
   }
 

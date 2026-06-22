@@ -8,7 +8,6 @@ import {
   TextForgeEmptyState,
   TextForgeInspectorCard,
   TextForgePopupHost,
-  TextForgeResourceBadge,
   TextForgeSelectField,
   TextForgeSessionTabStrip,
   TextForgeStatusRail,
@@ -509,13 +508,6 @@ function SurfaceDetails({ view }) {
       element(
         'div',
         { className: 'tf-surface-details__identity' },
-        element(TextForgeResourceBadge, {
-          active: true,
-          attention: view.badge?.repairedFromKey ? 'warning' : undefined,
-          badge: view.badge,
-          label: `${view.title} badge`,
-          size: 'regular',
-        }),
         element(
           'div',
           { className: 'tf-surface-details__copy' },

@@ -1,15 +1,12 @@
-import type { ResourceBadgeToken } from '@textforge/core';
 import type { ReactNode } from 'react';
 import type { IconName } from './icons';
-import type { CommandMenuGroup, CommandMenuItem, ResourceAttention, StatusBadge, SurfaceFrame, ToolbarSlot, WorkspaceTreeFrame } from './models';
+import type { CommandMenuGroup, CommandMenuItem, StatusBadge, SurfaceFrame, ToolbarSlot, WorkspaceTreeFrame } from './models';
 
 export interface TextForgeTopBarProps {
   readonly activeResource?: {
     readonly title: string;
     readonly detail?: string;
     readonly icon?: IconName;
-    readonly attention?: ResourceAttention;
-    readonly badge?: ResourceBadgeToken;
   };
   readonly brandTitle: string;
   readonly commandPaletteLabel?: string;

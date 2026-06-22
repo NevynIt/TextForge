@@ -53,7 +53,7 @@ export const docsIndex = {
       notes: [
         'Treat Markdown and structured model files as canonical workspace inputs.',
         'Keep generated previews and exports as derived resources.',
-        'Use deterministic resource badges so tree, tabs, header, and inspector keep the same orientation cues.',
+        'Use deterministic resource badges in document tabs while keeping the workspace tree, header, and inspector chrome light.',
         'When imported badge metadata collides, repair it deterministically and surface the local diagnostic in shell chrome.',
       ],
     },

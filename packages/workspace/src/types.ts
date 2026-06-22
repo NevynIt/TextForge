@@ -389,9 +389,7 @@ export interface WorkspaceTreeItem {
   readonly depth: number;
   readonly expanded: boolean;
   readonly active: boolean;
-  readonly badge?: ResourceBadgeToken;
   readonly detail?: string;
-  readonly attention?: 'warning';
 }
 
 export interface WorkspacePipelineValue<TValue = unknown> extends PipelineValue<TValue> {

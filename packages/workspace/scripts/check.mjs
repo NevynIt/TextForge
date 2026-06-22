@@ -83,9 +83,11 @@ assert.equal(workspace.saveTextResource({
 
 const items = createWorkspaceTreeItems(workspace.snapshot());
 assert.equal(items.find((item) => item.id === text.id)?.detail, 'YAML');
-assert.equal(Boolean(items.find((item) => item.id === text.id)?.badge?.key), true);
-assert.equal(['center', 'top', 'right', 'bottom', 'left'].includes(items.find((item) => item.id === text.id)?.badge?.placement ?? ''), true);
-assert.equal(Object.hasOwn(items.find((item) => item.id === text.id)?.badge ?? {}, 'rotation'), false);
+assert.equal(Object.hasOwn(items.find((item) => item.id === text.id) ?? {}, 'badge'), false);
+assert.equal(Object.hasOwn(items.find((item) => item.id === text.id) ?? {}, 'attention'), false);
+assert.equal(Boolean(workspace.getEntry(text.id)?.metadata.badge?.key), true);
+assert.equal(['center', 'top', 'right', 'bottom', 'left'].includes(workspace.getEntry(text.id)?.metadata.badge?.placement ?? ''), true);
+assert.equal(Object.hasOwn(workspace.getEntry(text.id)?.metadata.badge ?? {}, 'rotation'), false);
 assert.equal(listWorkspaceBadgeDiagnostics(workspace.snapshot()).length, 0);
 
 const moved = workspace.moveEntry({ resourceId: text.id, parentPath: '/docs', title: 'guide.md' });

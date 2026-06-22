@@ -534,21 +534,6 @@ export function TextForgeWorkspaceSidebar({
                 : element('span', { className: 'tf-tree__label' }, item.label),
               !isEditing && item.detail ? element('span', { className: 'tf-tree__detail' }, item.detail) : null,
             ),
-            element(
-              'span',
-              { className: 'tf-tree__meta' },
-              item.badge
-                ? element(TextForgeResourceBadge, {
-                  active: item.id === workspaceTree.selectedResourceId,
-                  attention: item.attention,
-                  badge: item.badge,
-                  label: `${item.label} badge`,
-                })
-                : null,
-              item.attention === 'warning'
-                ? element(IconGlyph, { className: 'tf-tree__attention', name: 'warning', size: 12.5 })
-                : null,
-            ),
           ),
         );
       })());

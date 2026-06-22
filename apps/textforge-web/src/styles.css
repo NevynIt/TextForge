@@ -1378,16 +1378,6 @@ body {
   text-align: left;
 }
 
-.tf-tree__meta {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.tf-tree__attention {
-  color: var(--warning);
-}
-
 .tf-selection {
   display: flex;
   align-items: center;

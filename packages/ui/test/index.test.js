@@ -29,16 +29,6 @@ test('ui package renders react shell primitives from chrome models', () => {
         representation: 'text',
         depth: 1,
         detail: 'MARKDOWN',
-        badge: {
-          key: 'markdown-notes',
-          fingerprint: 'markdown:notes',
-          shape: 'hex',
-          accent: 'teal',
-          mark: 'stack',
-          placement: 'center',
-          variant: 1,
-          label: 'MARKDOWN',
-        },
       }],
       selectedResourceId: 'resource-1',
     }),
@@ -83,7 +73,6 @@ test('ui package renders react shell primitives from chrome models', () => {
           activeResource: {
             title: 'notes.md',
             detail: 'MARKDOWN • Main surface',
-            badge: chrome.workspaceTree.items[0].badge,
             icon: 'fileText',
           },
           utilityOpen: true,
@@ -137,7 +126,7 @@ test('ui package renders react shell primitives from chrome models', () => {
           title: 'No popup sessions',
         }, React.createElement('p', null, 'Empty states stay local.')),
         React.createElement(TextForgeResourceBadge, {
-          badge: chrome.workspaceTree.items[0].badge,
+          badge: chrome.surfaceFrame.tabs[0].badge,
           label: 'notes.md badge',
         }),
       ),

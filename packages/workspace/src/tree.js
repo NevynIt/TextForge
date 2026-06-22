@@ -56,9 +56,7 @@ export function createWorkspaceTreeItems(state) {
       depth,
       expanded: entry.kind === 'folder' ? (entry.childIds.length > 0) : false,
       active: state.manifest.selectedResourceId === entry.id,
-      badge: entry.metadata.badge,
       detail: describeWorkspaceEntryDetail(entry, childCountByParentId),
-      attention: entry.metadata?.badge?.repairedFromKey ? 'warning' : undefined,
     };
   });
 }

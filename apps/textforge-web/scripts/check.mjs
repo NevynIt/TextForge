@@ -153,7 +153,7 @@ for (const requiredPhase5Signal of ['resolveDocumentContext', 'createContributio
   }
 }
 
-for (const requiredReadabilitySignal of ['TextForgeResourceBadge', 'TextForgeInspectorCard', 'TextForgeEmptyState']) {
+for (const requiredReadabilitySignal of ['TextForgeSessionTabStrip', 'TextForgeInspectorCard', 'TextForgeEmptyState']) {
   if (!workbenchJs.includes(requiredReadabilitySignal)) {
     throw new Error(`workbench source must surface ${requiredReadabilitySignal} for the readable shell`);
   }

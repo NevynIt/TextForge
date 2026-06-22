@@ -61,8 +61,6 @@ export interface WorkspaceTreeItem {
   readonly expanded?: boolean;
   readonly hasChildren?: boolean;
   readonly active?: boolean;
-  readonly attention?: ResourceAttention;
-  readonly badge?: ResourceBadgeToken;
   readonly movable?: boolean;
 }
 

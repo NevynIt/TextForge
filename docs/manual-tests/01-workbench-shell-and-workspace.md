@@ -30,7 +30,7 @@ What to test:
 
 - selecting folders and resources updates the active selection;
 - folder expand/collapse state is predictable;
-- badges remain visible and consistent.
+- document tab badges remain visible and consistent after resources are opened.
 
 How:
 
@@ -43,9 +43,9 @@ How:
 Expected:
 
 - selected tree row, active tab, surface header, and inspector refer to the same resource;
-- each resource has a stable badge token in the tree and tab;
+- each opened resource has a stable badge token in its document tab;
 - badge tokens do not change just because the user switches tabs or collapses a folder;
-- folder counts and labels remain readable.
+- the workspace tree stays focused on folder counts and labels without badge or warning-icon chrome.
 
 ## Create, Edit, Rename, And Delete User Resources
 

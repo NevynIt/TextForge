@@ -281,7 +281,8 @@ test('workspace badges stay deterministic and duplicate stored badges are repair
   assert.equal(diagnostics.length, 1);
   assert.equal(['/docs/notes.md', '/docs/intro.md'].includes(diagnostics[0]?.path), true);
   assert.equal(['center', 'top', 'right', 'bottom', 'left'].includes(diagnostics[0]?.badge?.placement ?? ''), true);
-  assert.equal(createWorkspaceTreeItems(restoredState).every((item) => Boolean(item.badge?.key)), true);
+  assert.equal(createWorkspaceTreeItems(restoredState).every((item) => !Object.hasOwn(item, 'badge')), true);
+  assert.equal(createWorkspaceTreeItems(restoredState).every((item) => !Object.hasOwn(item, 'attention')), true);
 });
 
 test('workspace tree folder counts derive from the live overlay state', () => {

@@ -16,7 +16,7 @@ This yields `8 × 8 × 8 × 5 = 2560` base badge variants before collision-repai
 - Badges identify resources by stable local metadata, not by remote assets or arbitrary icon picking.
 - Badge assignment is deterministic from resource kind, language or MIME cues, and stable identity inputs, with deterministic collision repair when duplicates occur.
 - Placement replaces the earlier rotation dimension. Mark placement must remain visibly distinct at compact sizes.
-- Badges stay compact and readable across the workspace tree, tabs, active-resource header, and inspector.
+- Badges stay compact and readable in document tabs. The workspace tree, active-resource header, and inspector avoid badge chrome to keep their DOM light.
 - Important state such as open, dirty, protected, or diagnostics may be layered onto the badge or adjacent chrome, but the base identity remains stable.
 
 ## React icon policy
