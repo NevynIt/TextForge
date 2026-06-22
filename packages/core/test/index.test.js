@@ -107,6 +107,15 @@ test('command registry filters context-sensitive commands and dispatches local h
             selectionLanguageIds: ['lua'],
           },
         }),
+        createCommand('markdown.export-preview-diagram-svg', 'Export diagram SVG', {
+          menu: { id: 'markdown', label: 'Markdown', groupOrder: 35, order: 10 },
+          when: {
+            workspaceReady: true,
+            selectionRequired: true,
+            selectionKinds: ['resource'],
+            availableSurfaceIds: ['@textforge/markdown/generated-diagram'],
+          },
+        }),
       ],
     }),
     createContributionManifest('@textforge/surfaces', {
@@ -178,6 +187,19 @@ test('command registry filters context-sensitive commands and dispatches local h
     registry.resolve(textContext).some((command) => command.id === 'workspace.export-folder' && command.visible),
     false,
   );
+  assert.equal(
+    registry.resolve({
+      ...textContext,
+      availableSurfaceIds: ['@textforge/markdown/generated-diagram'],
+      target: {
+        generatedDiagram: {
+          blockId: 'tfmd-block-1',
+          svgText: '<svg />',
+        },
+      },
+    }).some((command) => command.id === 'markdown.export-preview-diagram-svg' && command.visible),
+    true,
+  );
 
   const calls = [];
   const dispatcher = createCommandDispatcher({
@@ -188,6 +210,7 @@ test('command registry filters context-sensitive commands and dispatches local h
         calls.push({ id: command.id, kind: context.selection?.kind });
         return 'ok';
       },
+      'markdown.export-preview-diagram-svg': ({ context }) => context.target?.generatedDiagram?.svgText,
     },
   });
 
@@ -195,6 +218,20 @@ test('command registry filters context-sensitive commands and dispatches local h
   assert.equal(result.handled, true);
   assert.deepEqual(calls, [{ id: 'workspace.export', kind: 'folder' }]);
   assert.equal((await dispatcher.execute('surface.close')).handled, false);
+  assert.equal((await dispatcher.execute('markdown.export-preview-diagram-svg', {
+    context: {
+      ...textContext,
+      availableSurfaceIds: ['@textforge/markdown/generated-diagram'],
+      target: {
+        selection: textContext.selection,
+        generatedDiagram: {
+          blockId: 'tfmd-block-1',
+          svgText: '<svg />',
+        },
+        availableSurfaceIds: ['@textforge/markdown/generated-diagram'],
+      },
+    },
+  })).value, '<svg />');
 });
 
 test('contribution registry resolves active fence handlers and emits active conflict diagnostics', () => {

@@ -154,6 +154,17 @@ export function createCommandContext(overrides = {}) {
               ?? (overrides.target.activeSurface.resourceKind === 'binary' ? 'bytes' : undefined),
           }
           : undefined,
+        generatedDiagram: overrides.target.generatedDiagram
+          ? {
+            blockId: overrides.target.generatedDiagram.blockId,
+            blockKind: overrides.target.generatedDiagram.blockKind,
+            svgText: overrides.target.generatedDiagram.svgText,
+            path: overrides.target.generatedDiagram.path,
+            title: overrides.target.generatedDiagram.title,
+            sourceResourceId: overrides.target.generatedDiagram.sourceResourceId,
+            sourcePath: overrides.target.generatedDiagram.sourcePath,
+          }
+          : undefined,
         availableSurfaceIds: overrides.target.availableSurfaceIds ?? [],
       }
       : undefined,

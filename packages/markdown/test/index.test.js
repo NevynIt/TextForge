@@ -34,6 +34,7 @@ test('markdown package exposes preview contribution and command surface', () => 
   assert.equal(contributions.packageId, '@textforge/markdown');
   assert.equal(contributions.surfaces[0]?.id, '@textforge/markdown/preview');
   assert.equal(contributions.commands.some((command) => command.id === 'markdown.export-generated-diagrams'), true);
+  assert.equal(contributions.commands.some((command) => command.id === 'markdown.export-preview-diagram-svg'), true);
   assert.match(createMarkdownSnippet('mermaid'), /```mermaid/);
 });
 
@@ -465,6 +466,88 @@ test('createMarkdownPreviewSurface delegates non-fragment link clicks to the hos
     },
   ]);
   assert.equal(prevented.length, 2);
+
+  dispose();
+  assert.equal(listeners.size, 0);
+});
+
+test('createMarkdownPreviewSurface delegates generated diagram context menus to the host', async () => {
+  const rendered = await renderMarkdownDocument(`\`\`\`mermaid
+flowchart TD
+  A --> B
+\`\`\`
+`, {
+    fenceHandlers: {
+      async mermaid({ blockId }) {
+        return {
+          html: `<svg data-block="${blockId}"></svg>`,
+          svg: `<svg data-block="${blockId}"></svg>`,
+        };
+      },
+    },
+  });
+  const activations = [];
+  const listeners = new Map();
+  const surface = createMarkdownPreviewSurface('', rendered, {
+    resource: {
+      resourceId: 'markdown-diagram-preview',
+      path: '/docs/preview.md',
+      kind: 'resource',
+      representation: 'text',
+    },
+    onGeneratedDiagramContextMenu(activation) {
+      activations.push({
+        blockId: activation.blockId,
+        blockKind: activation.blockKind,
+        svgText: activation.svgText,
+      });
+      return true;
+    },
+  });
+  const container = {
+    innerHTML: '',
+    addEventListener(type, listener) {
+      listeners.set(type, listener);
+    },
+    removeEventListener(type) {
+      listeners.delete(type);
+    },
+    contains(node) {
+      return node?.owner === this;
+    },
+  };
+  const block = {
+    owner: container,
+    className: 'tfmd-block tfmd-block--mermaid',
+    getAttribute(name) {
+      return name === 'data-block-id' ? 'tfmd-block-1' : undefined;
+    },
+    querySelector(selector) {
+      return selector === 'svg'
+        ? { outerHTML: '<svg data-block="tfmd-block-1"></svg>' }
+        : undefined;
+    },
+  };
+  const prevented = [];
+
+  const dispose = surface.mount(container);
+  listeners.get('contextmenu')?.({
+    target: {
+      closest(selector) {
+        return selector === '.tfmd-block[data-block-id]' ? block : undefined;
+      },
+    },
+    preventDefault() {
+      prevented.push(true);
+    },
+  });
+
+  assert.deepEqual(activations, [{
+    blockId: 'tfmd-block-1',
+    blockKind: 'mermaid',
+    svgText: '<svg data-block="tfmd-block-1"></svg>',
+  }]);
+  assert.equal(prevented.length, 1);
 
   dispose();
   assert.equal(listeners.size, 0);

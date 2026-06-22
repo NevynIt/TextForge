@@ -66,6 +66,7 @@ import {
 } from '@textforge/renderer-jsmind';
 import {
   createMarkdownSnippet,
+  markdownGeneratedDiagramSurfaceId,
   parseMarkdownCapabilityRequirements,
   markdownPreviewSurfaceContribution,
   renderMarkdownDocument,
@@ -141,6 +142,7 @@ import {
 } from '../session-restore.js';
 import {
   mainSessionContextCommandIds,
+  markdownGeneratedDiagramContextCommandIds,
   popupSessionContextCommandIds,
   workspaceFolderContextCommandIds,
   workspaceResourceContextCommandIds,
@@ -3087,6 +3089,9 @@ export function createTextForgeWorkbenchController() {
           placement: session.placement,
         })
         : undefined,
+      onGeneratedDiagramContextMenu: session.contributionId === markdownPreviewSurfaceContribution.id && isMarkdownResource(effectiveResource)
+        ? (activation) => openMarkdownGeneratedDiagramContextMenu(session, effectiveResource, activation)
+        : undefined,
       getAssetLease: () => getAssetLease(resourceRef),
       describeGeneratedResource: () => describeGeneratedResource(resource),
       getTextDocument: () => activeTextDocuments.get(resource.id) ?? createTextEditorDocument(
@@ -3455,12 +3460,13 @@ export function createTextForgeWorkbenchController() {
     state.selectedWorkspaceItemId = preferredEntry?.id ?? getDefaultSelection()?.id;
   }
 
-  function createContextMenuModel(kind, targetId, x, y) {
+  function createContextMenuModel(kind, targetId, x, y, details = {}) {
     return {
       kind,
       targetId,
       x,
       y,
+      ...details,
     };
   }
 
@@ -3494,6 +3500,21 @@ export function createTextForgeWorkbenchController() {
     };
   }
 
+  function createMarkdownGeneratedDiagramTarget(model) {
+    const session = findSessionById(model.sessionId);
+    const entry = getEntry(model.resourceId);
+    if (!session || !isMarkdownResource(entry)) {
+      return undefined;
+    }
+
+    return {
+      selection: createCommandSelection(entry),
+      activeSurface: createCommandSurfaceContext(session, entry),
+      generatedDiagram: model.generatedDiagram,
+      availableSurfaceIds: [markdownGeneratedDiagramSurfaceId],
+    };
+  }
+
   function resolveTargetEntryForCommands(commandContext) {
     const resourceId = commandContext?.target?.selection?.resourceId;
     return resourceId ? getEntry(resourceId) : getSelectedEntry();
@@ -3507,6 +3528,10 @@ export function createTextForgeWorkbenchController() {
   function resolveTargetSessionForCommands(commandContext) {
     const sessionId = commandContext?.target?.activeSurface?.sessionId;
     return sessionId ? findSessionById(sessionId) : getActiveCommandSession();
+  }
+
+  function resolveTargetGeneratedDiagramForCommands(commandContext) {
+    return commandContext?.target?.generatedDiagram;
   }
 
   function executeEditorSurfaceCommand(commandId, commandContext) {
@@ -3533,6 +3558,28 @@ export function createTextForgeWorkbenchController() {
 
   function openPopupSessionContextMenu(sessionId, anchor) {
     openContextMenu(createContextMenuModel('popup-session', sessionId, anchor.x, anchor.y));
+  }
+
+  function openMarkdownGeneratedDiagramContextMenu(session, resource, activation) {
+    const event = activation?.event;
+    if (!session || !isMarkdownResource(resource) || !activation?.svgText) {
+      return false;
+    }
+
+    openContextMenu(createContextMenuModel('markdown-generated-diagram', session.id, event?.clientX ?? 0, event?.clientY ?? 0, {
+      sessionId: session.id,
+      resourceId: resource.id,
+      generatedDiagram: {
+        blockId: activation.blockId,
+        blockKind: activation.blockKind,
+        svgText: activation.svgText,
+        path: activation.descriptor?.path,
+        title: activation.descriptor?.title,
+        sourceResourceId: resource.id,
+        sourcePath: resource.path,
+      },
+    }));
+    return true;
   }
 
   async function openVisualTargetPickerForResource(resource, placement = 'main') {
@@ -3663,7 +3710,9 @@ export function createTextForgeWorkbenchController() {
 
     const target = model.kind === 'workspace-item'
       ? createWorkspaceItemTarget(model.targetId)
-      : createSessionTarget(model.targetId);
+      : model.kind === 'markdown-generated-diagram'
+        ? createMarkdownGeneratedDiagramTarget(model)
+        : createSessionTarget(model.targetId);
     if (!target) {
       return undefined;
     }
@@ -3675,7 +3724,9 @@ export function createTextForgeWorkbenchController() {
     const visibleCommands = commandRegistry.resolve(commandContext).filter((command) => command.visible);
     const allowedIds = model.kind === 'workspace-item'
       ? (target.selection?.kind === 'folder' ? workspaceFolderContextCommandIds : workspaceResourceContextCommandIds)
-      : (model.kind === 'main-session' ? mainSessionContextCommandIds : popupSessionContextCommandIds);
+      : model.kind === 'markdown-generated-diagram'
+        ? markdownGeneratedDiagramContextCommandIds
+        : (model.kind === 'main-session' ? mainSessionContextCommandIds : popupSessionContextCommandIds);
     const targetEntry = resolveTargetEntryForCommands(commandContext);
     const hideOpenWithCommands = isItmWorkspaceResource(targetEntry);
     const items = visibleCommands.filter((command) => {
@@ -4306,6 +4357,25 @@ export function createTextForgeWorkbenchController() {
     }
   }
 
+  async function exportMarkdownPreviewDiagramSvgCommand(commandContext) {
+    const generatedDiagram = resolveTargetGeneratedDiagramForCommands(commandContext);
+    if (!generatedDiagram?.svgText) {
+      return;
+    }
+
+    const descriptorName = generatedDiagram.title
+      ?? (generatedDiagram.path ? basenameWorkspacePath(generatedDiagram.path) : undefined);
+    const fallbackName = [
+      basenameWorkspacePath(generatedDiagram.sourcePath ?? '').replace(/\.(md|markdown|tfmd)$/i, ''),
+      generatedDiagram.blockKind,
+      generatedDiagram.blockId,
+    ].filter(Boolean).join('-') || 'markdown-diagram';
+    const fileName = descriptorName?.toLowerCase().endsWith('.svg')
+      ? descriptorName
+      : `${sanitizeFilenameSegment(descriptorName ?? fallbackName, 'markdown-diagram')}.svg`;
+    downloadBytes(fileName, textEncoder.encode(generatedDiagram.svgText), 'image/svg+xml');
+  }
+
   async function dropFilesOnWorkspaceFolder(folderId, files) {
     const folder = getEntry(folderId);
     if (!folder || folder.kind !== 'folder' || files.length === 0) {
@@ -4365,7 +4435,8 @@ export function createTextForgeWorkbenchController() {
       .register('markdown.insert-mermaid-block', ({ context }) => insertMarkdownSnippetCommand('mermaid', context))
       .register('markdown.insert-graphviz-block', ({ context }) => insertMarkdownSnippetCommand('graphviz', context))
       .register('markdown.export-print-html', ({ context }) => exportMarkdownPrintHtmlCommand(context))
-      .register('markdown.export-generated-diagrams', ({ context }) => exportMarkdownGeneratedDiagramsCommand(context));
+      .register('markdown.export-generated-diagrams', ({ context }) => exportMarkdownGeneratedDiagramsCommand(context))
+      .register('markdown.export-preview-diagram-svg', ({ context }) => exportMarkdownPreviewDiagramSvgCommand(context));
 
     for (const surfaceContribution of surfaceRegistry.list()) {
       commandDispatcher.register(`surface.open-with:${surfaceContribution.id}`, ({ command, context }) =>

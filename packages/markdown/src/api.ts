@@ -20,6 +20,7 @@ export declare const tfmdFenceAliases: ReadonlyArray<string>;
 export declare const markdownDocumentPredicate: ResourcePredicate;
 export declare const markdownCapabilities: ReadonlyArray<Capability>;
 export declare const markdownPreviewSurfaceContribution: SurfaceContribution;
+export declare const markdownGeneratedDiagramSurfaceId: string;
 export declare const markdownCommandContributions: ReadonlyArray<CommandContribution>;
 export declare const markdownFenceHandlerContributions: ReadonlyArray<MarkdownFenceHandlerContribution>;
 export declare function createMarkdownContributionManifest(): ContributionManifest;
@@ -42,6 +43,14 @@ export declare function createMarkdownPreviewModel(source: string, result: Markd
 export declare function createMarkdownPreviewSurface(source: string, result: MarkdownRenderResult, options?: {
   readonly resource?: ResourceRef;
   readonly onLinkActivate?: (activation: MarkdownPreviewLinkActivation) => boolean | void;
+  readonly onGeneratedDiagramContextMenu?: (activation: {
+    readonly event: Event;
+    readonly resource?: ResourceRef;
+    readonly blockId: string;
+    readonly blockKind?: string;
+    readonly svgText: string;
+    readonly descriptor?: unknown;
+  }) => boolean | void;
   readonly scheduler?: {
     requestAnimationFrame?(callback: () => void): number;
     cancelAnimationFrame?(handle: number): void;

@@ -3,6 +3,7 @@ export {
   markdownCommandContributions,
   markdownDocumentPredicate,
   markdownFenceHandlerContributions,
+  markdownGeneratedDiagramSurfaceId,
   markdownPreviewSurfaceContribution,
   contributions,
   createMarkdownContributionManifest,

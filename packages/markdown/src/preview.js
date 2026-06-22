@@ -27,16 +27,18 @@ export function createMarkdownPreviewSurface(source, result, options = {}) {
         return () => {};
       }
 
-      const state = createMarkdownPreviewMountState(container, options);
+      const state = createMarkdownPreviewMountState(container, options, model);
       container[markdownPreviewMountStateKey] = state;
       renderMarkdownPreviewHtml(container, model.html);
       if (typeof container.addEventListener === 'function') {
         container.addEventListener('click', state.handleLinkClick);
+        container.addEventListener('contextmenu', state.handleGeneratedDiagramContextMenu);
       }
       return () => {
         state.dispose();
         if (typeof container.removeEventListener === 'function') {
           container.removeEventListener('click', state.handleLinkClick);
+          container.removeEventListener('contextmenu', state.handleGeneratedDiagramContextMenu);
         }
         container.innerHTML = '';
         delete container[markdownPreviewMountStateKey];
@@ -48,16 +50,18 @@ export function createMarkdownPreviewSurface(source, result, options = {}) {
         return false;
       }
 
-      const state = container[markdownPreviewMountStateKey] ?? createMarkdownPreviewMountState(container, options);
+      const state = container[markdownPreviewMountStateKey] ?? createMarkdownPreviewMountState(container, options, nextSurface.model);
       container[markdownPreviewMountStateKey] = state;
+      state.setModel(nextSurface.model);
       state.scheduleBufferedSwap(nextHtml, updateOptions);
       return true;
     },
   };
 }
 
-function createMarkdownPreviewMountState(container, options = {}) {
+function createMarkdownPreviewMountState(container, options = {}, initialModel) {
   const scheduler = options.scheduler ?? globalThis;
+  let model = initialModel;
   let disposed = false;
   let updateVersion = 0;
   let pendingFrameId;
@@ -80,6 +84,10 @@ function createMarkdownPreviewMountState(container, options = {}) {
 
     pendingFrameId = undefined;
     callback();
+  }
+
+  function setModel(nextModel) {
+    model = nextModel;
   }
 
   function handleLinkClick(event) {
@@ -113,6 +121,63 @@ function createMarkdownPreviewMountState(container, options = {}) {
       resource: options.resource,
     })) {
       event.preventDefault();
+    }
+  }
+
+  function findGeneratedDiagramDescriptor(blockId) {
+    return (model?.generatedResources ?? []).find((descriptor) =>
+      descriptor?.blockId === blockId
+      && descriptor?.representation === 'text'
+      && descriptor?.mimeType === 'image/svg+xml'
+      && typeof descriptor?.text === 'string');
+  }
+
+  function inferBlockKind(block, descriptor) {
+    if (descriptor?.blockKind) {
+      return descriptor.blockKind;
+    }
+
+    const className = typeof block?.className === 'string' ? block.className : '';
+    const match = className.match(/\btfmd-block--([A-Za-z0-9_-]+)/);
+    return match?.[1];
+  }
+
+  function handleGeneratedDiagramContextMenu(event) {
+    if (!options.onGeneratedDiagramContextMenu || event?.defaultPrevented) {
+      return;
+    }
+
+    const target = event?.target;
+    const block = typeof target?.closest === 'function'
+      ? target.closest('.tfmd-block[data-block-id]')
+      : undefined;
+    if (!block || (typeof container.contains === 'function' && !container.contains(block))) {
+      return;
+    }
+
+    const blockId = String(block.getAttribute?.('data-block-id') ?? '').trim();
+    if (!blockId) {
+      return;
+    }
+
+    const svgElement = typeof block.querySelector === 'function'
+      ? block.querySelector('svg')
+      : undefined;
+    const descriptor = findGeneratedDiagramDescriptor(blockId);
+    const svgText = descriptor?.text ?? svgElement?.outerHTML;
+    if (!svgText) {
+      return;
+    }
+
+    if (options.onGeneratedDiagramContextMenu({
+      event,
+      resource: options.resource,
+      blockId,
+      blockKind: inferBlockKind(block, descriptor),
+      svgText,
+      descriptor,
+    })) {
+      event.preventDefault?.();
     }
   }
 
@@ -151,7 +216,9 @@ function createMarkdownPreviewMountState(container, options = {}) {
   }
 
   return {
+    setModel,
     handleLinkClick,
+    handleGeneratedDiagramContextMenu,
     scheduleBufferedSwap,
     dispose,
   };

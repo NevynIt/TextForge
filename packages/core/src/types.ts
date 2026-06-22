@@ -227,9 +227,20 @@ export interface CommandContextSurface {
   readonly freshness?: string;
 }
 
+export interface CommandContextGeneratedDiagram {
+  readonly blockId?: string;
+  readonly blockKind?: string;
+  readonly svgText?: string;
+  readonly path?: string;
+  readonly title?: string;
+  readonly sourceResourceId?: string;
+  readonly sourcePath?: string;
+}
+
 export interface CommandContextTarget {
   readonly selection?: CommandContextSelection;
   readonly activeSurface?: CommandContextSurface;
+  readonly generatedDiagram?: CommandContextGeneratedDiagram;
   readonly availableSurfaceIds?: ReadonlyArray<string>;
 }
 

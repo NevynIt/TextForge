@@ -40,3 +40,7 @@ export const popupSessionContextCommandIds = [
   'workspace.download-selected-file',
   'diagram.export-selected-svg',
 ];
+
+export const markdownGeneratedDiagramContextCommandIds = [
+  'markdown.export-preview-diagram-svg',
+];

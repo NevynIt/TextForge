@@ -22,6 +22,7 @@ export {
   createPrintOptimizedHtmlDocument,
   markdownCommandContributions,
   markdownDocumentPredicate,
+  markdownGeneratedDiagramSurfaceId,
   markdownPreviewSurfaceContribution,
   parseMarkdownCapabilityRequirements,
   renderMarkdownDocument,

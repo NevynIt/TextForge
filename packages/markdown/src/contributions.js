@@ -94,6 +94,7 @@ export const markdownPreviewSurfaceContribution = {
       const surface = createMarkdownPreviewSurface(execution.sourceText ?? '', previewState.result, {
         resource,
         onLinkActivate: execution.onLinkActivate,
+        onGeneratedDiagramContextMenu: execution.onGeneratedDiagramContextMenu,
       });
       const renderingUpdatedPreview = previewState.status === 'rendering';
       return {
@@ -158,6 +159,8 @@ export const markdownPreviewSurfaceContribution = {
     };
   },
 };
+
+export const markdownGeneratedDiagramSurfaceId = '@textforge/markdown/generated-diagram';
 
 export const markdownCommandContributions = [
   createCommand('markdown.insert-image-reference', 'Insert image reference', {
@@ -227,6 +230,22 @@ export const markdownCommandContributions = [
       selectionRequired: true,
       selectionKinds: ['resource'],
       availableSurfaceIds: ['@textforge/markdown/preview'],
+    },
+  }),
+  createCommand('markdown.export-preview-diagram-svg', 'Export this diagram as SVG', {
+    category: 'markdown',
+    capabilities: ['@textforge/markdown/capability/preview'],
+    description: 'Download the generated SVG diagram targeted from the Markdown preview context menu.',
+    keywords: ['markdown', 'diagram', 'svg', 'export', 'download', 'context'],
+    menu: { id: 'markdown', label: 'Markdown', groupOrder: 35, order: 55 },
+    when: {
+      workspaceReady: true,
+      selectionRequired: true,
+      selectionKinds: ['resource'],
+      selectionRepresentations: ['text'],
+      activeSurfaceRequired: true,
+      activeSurfaceContributionIds: ['@textforge/markdown/preview'],
+      availableSurfaceIds: [markdownGeneratedDiagramSurfaceId],
     },
   }),
 ];
