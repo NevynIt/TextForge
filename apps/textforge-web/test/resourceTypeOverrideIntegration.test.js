@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { applyResourceTypeOverride } from '@textforge/core';
+import { standaloneDiagramPreviewSurfaceId } from '@textforge/diagrams';
 import { createOpenWithSelection } from '@textforge/surfaces';
 import { workspaceEntryToResourceRef } from '@textforge/workspace';
 import { createWorkbenchRegistries } from '../src/workbench/controller/registries.js';
@@ -48,6 +49,36 @@ test('effective resource type metadata changes open-with routing without renamin
   assert.equal(listSurfaceIdsForResource(surfaceRegistry, markdownResource).includes('@textforge/markdown/preview'), true);
   assert.equal(listSurfaceIdsForResource(surfaceRegistry, bpmnResource).includes('@textforge/bpmn/viewer'), true);
   assert.equal(listSurfaceIdsForResource(surfaceRegistry, csvResource).includes('@textforge/tables/csv-grid'), true);
+});
+
+test('standalone diagram types route to diagram preview and SVG export command', () => {
+  const { commandRegistry, surfaceRegistry } = createWorkbenchRegistries();
+  const dotResource = createTextResource({
+    id: 'diagram-dot',
+    path: '/docs/graph.dot',
+    languageId: 'dot',
+    mimeType: 'text/vnd.graphviz',
+    text: 'digraph G { A -> B; }',
+  });
+  const mermaidResource = createTextResource({
+    id: 'diagram-mermaid',
+    path: '/docs/flow.mmd',
+    languageId: 'mermaid',
+    mimeType: 'text/x-mermaid',
+    text: 'flowchart TD\n  A --> B',
+  });
+
+  assert.equal(listSurfaceIdsForResource(surfaceRegistry, dotResource).includes(standaloneDiagramPreviewSurfaceId), true);
+  assert.equal(listSurfaceIdsForResource(surfaceRegistry, mermaidResource).includes(standaloneDiagramPreviewSurfaceId), true);
+
+  const visibleCommandIds = commandRegistry.resolve({
+    runtimeStatus: 'ready',
+    workspaceReady: true,
+    selection: workspaceEntryToResourceRef(dotResource),
+    availableSurfaceIds: [standaloneDiagramPreviewSurfaceId],
+  }).filter((command) => command.visible).map((command) => command.id);
+
+  assert.equal(visibleCommandIds.includes('diagram.export-selected-svg'), true);
 });
 
 test('read-only effective type override leaves provider resource metadata unchanged', () => {

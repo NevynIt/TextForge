@@ -7,9 +7,14 @@ import {
   createDiagramGeneratedResources,
   createGeneratedDiagramPath,
   createGraphvizFenceHandler,
+  getStandaloneDiagramKind,
   hasRenderedSvgPayload,
+  isStandaloneDiagramResource,
   renderGraphvizToSvg,
   renderMermaidToSvg,
+  renderStandaloneDiagramToSvg,
+  standaloneDiagramPreviewSurfaceContribution,
+  standaloneDiagramPreviewSurfaceId,
 } from '../src/index.js';
 
 test('graphviz rendering produces svg output', async () => {
@@ -53,6 +58,36 @@ test('diagram package can describe generated svg and png resources', () => {
 
   assert.equal(resources[0]?.representation, 'text');
   assert.equal(resources[1]?.representation, 'bytes');
+});
+
+test('standalone diagram contributions expose preview and SVG export support', async () => {
+  const dotResource = {
+    representation: 'text',
+    languageId: 'dot',
+    mimeType: 'text/vnd.graphviz',
+    path: '/docs/example.dot',
+  };
+
+  assert.equal(getStandaloneDiagramKind(dotResource), 'dot');
+  assert.equal(isStandaloneDiagramResource(dotResource), true);
+  assert.equal(standaloneDiagramPreviewSurfaceContribution.id, standaloneDiagramPreviewSurfaceId);
+  assert.equal(contributions.surfaces.some((surface) => surface.id === standaloneDiagramPreviewSurfaceId), true);
+  assert.equal(contributions.commands.some((command) => command.id === 'diagram.export-selected-svg'), true);
+  assert.match(await renderStandaloneDiagramToSvg('digraph G { A -> B; }', { kind: 'dot' }), /<svg/i);
+});
+
+test('standalone diagram detection supports Mermaid extensions', () => {
+  assert.equal(getStandaloneDiagramKind({
+    representation: 'text',
+    languageId: 'plaintext',
+    mimeType: 'text/plain',
+    path: '/docs/flow.mmd',
+  }), 'mermaid');
+  assert.equal(isStandaloneDiagramResource({
+    representation: 'bytes',
+    languageId: 'mermaid',
+    path: '/docs/flow.mmd',
+  }), false);
 });
 
 test('mermaid output guard rejects stylesheet-only empty svg artifacts', () => {

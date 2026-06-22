@@ -13,6 +13,7 @@ export const workspaceResourceContextCommandIds = [
   'workspace.copy-selected-resource',
   'lua.run-selected-resource',
   'lua.promote-selected-to-automation',
+  'diagram.export-selected-svg',
   'workspace.download-selected-file',
   'workspace.rename-selected',
   'workspace.delete-selected',
@@ -26,6 +27,7 @@ export const mainSessionContextCommandIds = [
   'surface.close-active',
   'surface.close-all',
   'workspace.download-selected-file',
+  'diagram.export-selected-svg',
 ];
 
 export const popupSessionContextCommandIds = [
@@ -36,4 +38,5 @@ export const popupSessionContextCommandIds = [
   'surface.close-active',
   'surface.close-all',
   'workspace.download-selected-file',
+  'diagram.export-selected-svg',
 ];

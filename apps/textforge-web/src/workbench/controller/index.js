@@ -54,7 +54,11 @@ import {
   renderBpmnPublicationSvg,
 } from '@textforge/bpmn';
 import {
+  getStandaloneDiagramKind,
+  isStandaloneDiagramResource,
   rasterizeSvgToPngBytes,
+  renderStandaloneDiagramToSvg,
+  standaloneDiagramPreviewSurfaceContribution,
 } from '@textforge/diagrams';
 import {
   createJsMindSurfaceModel,
@@ -992,6 +996,7 @@ export function createTextForgeWorkbenchController() {
     flushDelayedTextDocumentSaves({ exceptResourceId: entry.id });
     const preferredSurfaceId = options.preferredSurfaceId
       ?? (entry?.mimeType === 'image/svg+xml' ? '@textforge/assets/svg' : undefined)
+      ?? (isStandaloneDiagramResource(entry) ? standaloneDiagramPreviewSurfaceContribution.id : undefined)
       ?? (isMarkdownResource(entry) ? markdownPreviewSurfaceContribution.id : undefined);
     const requestedPlacement = options.placement
       ?? findSessionForResource(entry.id, { sessionKey: options.sessionKey })?.placement
@@ -4200,6 +4205,26 @@ export function createTextForgeWorkbenchController() {
     downloadBytes(`${baseName}.png`, pngBytes, 'image/png');
   }
 
+  async function exportSelectedDiagramSvgCommand(commandContext) {
+    const target = resolveTargetResourceForCommands(commandContext);
+    if (target) {
+      flushDelayedTextDocumentSave(target.id);
+    }
+    const resource = target ? getEntry(target.id) : undefined;
+    if (!isStandaloneDiagramResource(resource)) {
+      return;
+    }
+
+    const svg = await renderStandaloneDiagramToSvg(resource.text, {
+      kind: getStandaloneDiagramKind(resource),
+      resource: workspaceEntryToResourceRef(resource),
+      document: globalThis.document,
+      id: resource.id,
+    });
+    const baseName = basenameWorkspacePath(resource.path).replace(/\.(mmd|mermaid|dot|gv)$/i, '') || 'diagram';
+    downloadBytes(`${baseName}.svg`, textEncoder.encode(svg), 'image/svg+xml');
+  }
+
   async function insertMarkdownSnippetCommand(kind, commandContext) {
     const resource = resolveTargetResourceForCommands(commandContext);
     if (!isMarkdownResource(resource)) {
@@ -4335,6 +4360,7 @@ export function createTextForgeWorkbenchController() {
       .register('asset.download-selected', ({ context }) => downloadSelectedAssetCommand(context))
       .register('asset.export-selected-svg', ({ context }) => exportSelectedSvgCommand(context))
       .register('asset.export-selected-png', ({ context }) => exportSelectedPngCommand(context))
+      .register('diagram.export-selected-svg', ({ context }) => exportSelectedDiagramSvgCommand(context))
       .register('markdown.insert-image-reference', ({ context }) => insertMarkdownSnippetCommand('image', context))
       .register('markdown.insert-mermaid-block', ({ context }) => insertMarkdownSnippetCommand('mermaid', context))
       .register('markdown.insert-graphviz-block', ({ context }) => insertMarkdownSnippetCommand('graphviz', context))

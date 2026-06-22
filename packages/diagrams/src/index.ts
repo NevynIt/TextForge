@@ -24,6 +24,18 @@ export {
   diagramPipelineContributions,
 } from './pipelines.js';
 export {
+  createStandaloneDiagramPreviewSurface,
+  diagramCommandContributions,
+  getStandaloneDiagramKind,
+  isStandaloneDiagramResource,
+  renderStandaloneDiagramToSvg,
+  standaloneDiagramFileExtensions,
+  standaloneDiagramLanguageIds,
+  standaloneDiagramMimeTypes,
+  standaloneDiagramPreviewSurfaceContribution,
+  standaloneDiagramPreviewSurfaceId,
+} from './standalone.js';
+export {
   hasRenderedSvgPayload,
   rasterizeSvgToPngBytes,
   renderGraphvizToSvg,

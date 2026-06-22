@@ -9,7 +9,7 @@ export function resolveCommandIcon(commandId) {
     return 'export';
   }
 
-  if (commandId.startsWith('asset.export-selected')) {
+  if (commandId.startsWith('asset.export-selected') || commandId.startsWith('diagram.export-')) {
     return 'fileImage';
   }
 

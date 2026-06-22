@@ -951,13 +951,15 @@ select {
 
 .tf-surface-mount,
 .editor-frame,
-.asset-viewer {
+.asset-viewer,
+.diagram-preview {
   height: 100%;
   min-height: 0;
 }
 
 .editor-frame,
-.asset-viewer {
+.asset-viewer,
+.diagram-preview {
   display: grid;
   gap: 14px;
   border: 1px solid var(--line);
@@ -1081,6 +1083,36 @@ select {
   margin: 0;
   padding: 14px;
   white-space: pre-wrap;
+}
+
+.diagram-preview {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.diagram-preview__stage {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 280px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-muted);
+  padding: 16px;
+}
+
+.diagram-preview__stage svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.diagram-preview__message {
+  margin: 0;
+  color: var(--muted);
+}
+
+.diagram-preview__message--error {
+  color: var(--danger);
 }
 
 @media (max-width: 1180px) {
